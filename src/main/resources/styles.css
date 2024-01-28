@@ -1,0 +1,25 @@
+graph {
+    fill-color: #96eedc;
+}
+
+node {
+    size: 15px;
+    text-alignment: under;
+    text-padding: 5px;
+}
+
+edge {
+    shape: line;
+    arrow-size: 12px, 12px;
+    text-alignment: above;
+    text-padding: 5px;
+}
+
+edge.listref {
+    fill-color: #006e00;
+}
+
+node.origin {
+    size: 30px;
+    fill-color: #ee0505;
+}
