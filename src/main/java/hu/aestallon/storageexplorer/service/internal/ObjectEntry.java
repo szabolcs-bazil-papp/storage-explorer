@@ -58,7 +58,7 @@ public class ObjectEntry implements StorageEntry {
     if (o == null || getClass() != o.getClass())
       return false;
     ObjectEntry that = (ObjectEntry) o;
-    return Objects.equals(Uris.latest(uri), Uris.latest(that.uri));
+    return Uris.equalIgnoringVersion(uri, that.uri);
   }
 
   @Override

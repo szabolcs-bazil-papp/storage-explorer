@@ -68,7 +68,7 @@ public class MapEntry implements StorageEntry {
     if (o == null || getClass() != o.getClass())
       return false;
     MapEntry mapEntry = (MapEntry) o;
-    return Objects.equals(Uris.latest(uri), Uris.latest(mapEntry.uri));
+    return Uris.equalIgnoringVersion(uri, mapEntry.uri);
   }
 
   @Override

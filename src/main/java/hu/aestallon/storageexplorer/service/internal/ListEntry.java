@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import org.smartbit4all.api.collection.CollectionApi;
+import org.smartbit4all.api.collection.StoredList;
 import hu.aestallon.storageexplorer.util.Uris;
 
 public class ListEntry implements StorageEntry {
@@ -40,7 +41,6 @@ public class ListEntry implements StorageEntry {
     final String terminalElement = pathElements[pathElements.length - 1];
     this.name = terminalElement.substring(0, terminalElement.lastIndexOf('-'));
   }
-
 
   @Override
   public URI uri() {
@@ -72,7 +72,7 @@ public class ListEntry implements StorageEntry {
     if (o == null || getClass() != o.getClass())
       return false;
     ListEntry listEntry = (ListEntry) o;
-    return Objects.equals(Uris.latest(uri), Uris.latest(listEntry.uri));
+    return Uris.equalIgnoringVersion(uri, listEntry.uri);
   }
 
   @Override
