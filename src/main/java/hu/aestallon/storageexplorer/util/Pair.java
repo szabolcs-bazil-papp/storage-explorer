@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -50,6 +51,11 @@ public final class Pair<A, B> {
 
   public static <A, B> Function<Pair<A, Optional<B>>, Stream<Pair<A, B>>> streamOnB() {
     return pair -> pair.b.stream().flatMap(it -> Stream.of(Pair.of(pair.a, it)));
+  }
+
+  public static <A, B> Consumer<? super Pair<? extends A, ? extends B>> putIntoMap(
+      Map<? super A, ? super B> m) {
+    return pair -> m.put(pair.a(), pair.b());
   }
 
   private final A a;

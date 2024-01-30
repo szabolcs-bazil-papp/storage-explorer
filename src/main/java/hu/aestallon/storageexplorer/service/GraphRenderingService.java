@@ -23,7 +23,7 @@ import org.graphstream.graph.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import static java.util.stream.Collectors.collectingAndThen;
+import hu.aestallon.storageexplorer.service.internal.UriProperty;
 import static java.util.stream.Collectors.toMap;
 
 @Service
@@ -77,6 +77,8 @@ public class GraphRenderingService {
           .forEach(target -> nodeAdditionService.add(graph, it, target))));
       referrers = referrers.values().stream()
           .flatMap(Set::stream)
+          .distinct()
+          .filter(it -> !NodeAdditionService.containsNode(graph, it))
           .collect(toMap(
               Function.identity(),
               it -> incomingEdgeDiscoveryService.execute(graph, it)));

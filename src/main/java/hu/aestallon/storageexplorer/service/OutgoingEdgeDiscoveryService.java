@@ -18,25 +18,24 @@ package hu.aestallon.storageexplorer.service;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Set;
-import java.util.function.BiPredicate;
+import java.util.stream.Collectors;
 import org.graphstream.graph.Graph;
-import org.smartbit4all.core.object.ObjectApi;
-import org.smartbit4all.core.object.ObjectNode;
 import org.springframework.stereotype.Service;
+import hu.aestallon.storageexplorer.service.internal.StorageIndex;
+import hu.aestallon.storageexplorer.service.internal.UriProperty;
 import hu.aestallon.storageexplorer.util.GraphContainmentPredicate;
-import hu.aestallon.storageexplorer.util.ObjectMaps;
 import hu.aestallon.storageexplorer.util.Pair;
 import hu.aestallon.storageexplorer.util.Uris;
-import static java.util.stream.Collectors.toSet;
 
 @Service
 public class OutgoingEdgeDiscoveryService {
 
   private static final GraphContainmentPredicate ANY_CONNECTION = (g, u) -> true;
-  private final ObjectApi objectApi;
 
-  public OutgoingEdgeDiscoveryService(ObjectApi objectApi) {
-    this.objectApi = objectApi;
+  private final StorageIndex storageIndex;
+
+  public OutgoingEdgeDiscoveryService(StorageIndex storageIndex) {
+    this.storageIndex = storageIndex;
   }
 
   public Set<UriProperty> execute(Graph graph, URI uri) {
@@ -48,24 +47,16 @@ public class OutgoingEdgeDiscoveryService {
   }
 
   private Set<UriProperty> findConnectionsSatisfying(Graph graph, URI uri,
-      GraphContainmentPredicate condition) {
-    final ObjectNode node;
-    try {
-      node = objectApi.load(uri);
-    } catch (Throwable t) {
-      return Collections.emptySet();
-    }
-    return ObjectMaps
-        .flatten(node.getObjectAsMap())
-        .entrySet().stream()
-        .filter(it -> !UriProperty.OWN.equals(it.getKey()))
-        .map(Pair::of)
-        .map(Pair.onB(Uris::parse))
-        .flatMap(Pair.streamOnB())
-        .filter(it -> condition.test(graph, it.b()))
-        .map(it -> UriProperty.parse(it.a(), it.b()))
+                                                     GraphContainmentPredicate condition) {
+    return storageIndex.refs()
+        .filter(pair -> condition.test(graph, pair.a().uri()))
+        .filter(pair -> Uris.equalIgnoringVersion(pair.a().uri(), uri))
+        .findFirst()
+        .map(Pair::b)
+        .orElseGet(Collections::emptySet)
+        .stream()
         .filter(it -> NodeAdditionService.edgeMissing(graph, uri, it.uri))
-        .collect(toSet());
+        .collect(Collectors.toSet());
   }
 
 }

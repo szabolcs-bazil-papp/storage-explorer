@@ -24,6 +24,7 @@ import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
 import org.springframework.stereotype.Service;
 import com.google.common.base.Strings;
+import hu.aestallon.storageexplorer.service.internal.UriProperty;
 import hu.aestallon.storageexplorer.util.Attributes;
 import hu.aestallon.storageexplorer.util.Uris;
 

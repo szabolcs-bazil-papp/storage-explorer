@@ -15,6 +15,7 @@
 
 package hu.aestallon.storageexplorer.ui;
 
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.IOException;
@@ -47,42 +48,43 @@ import hu.aestallon.storageexplorer.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.util.Attributes;
 
 @Component
-public class StorageGraph {
+public class GraphView extends JPanel {
 
-  private static final Logger log = LoggerFactory.getLogger(StorageGraph.class);
+  private static final Logger log = LoggerFactory.getLogger(GraphView.class);
   public static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm");
 
   private Graph graph;
   private Viewer viewer;
   private ViewPanel panel;
   private SpriteManager sprites;
+  private KeyListener screenshotListener;
 
   private final GraphRenderingService graphRenderingService;
   private final ObjectMapper objectMapper;
+  private MouseListener clickHandler;
 
-  public StorageGraph(GraphRenderingService graphRenderingService, ObjectMapper objectMapper) {
+  public GraphView(GraphRenderingService graphRenderingService, ObjectMapper objectMapper) {
+    super(new GridLayout(1, 1));
     this.graphRenderingService = graphRenderingService;
     this.objectMapper = objectMapper;
   }
 
-  ViewPanel init() {
+  void initOnUri(URI uri) {
+    if (clickHandler != null) {
+      clickHandler.doPump.set(false);
+    }
+    if (screenshotListener != null) {
+      panel.removeKeyListener(screenshotListener);
+    }
+    if (panel != null) {
+      remove(panel);
+    }
+    if (graph != null) {
+      graph.clear();
+    }
     graph = new MultiGraph("fs");
     sprites = new SpriteManager(graph);
-    viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
-    ViewerPipe pipe = viewer.newViewerPipe();
-    MouseListener list = new MouseListener(pipe);
-    pipe.addViewerListener(list);
 
-    pipe.addSink(graph);
-    panel = (ViewPanel) viewer.addDefaultView(false);
-    panel.enableMouseOptions();
-    panel.addKeyListener(new ScreenshotListener());
-    CompletableFuture.runAsync(list::pump);
-    return panel;
-  }
-
-  void initOnUri(URI uri) {
-    graph.clear();
     graph.setAttribute("ui.stylesheet", "url('./styles.css')");
     graphRenderingService.render(graph, uri);
     graph.nodes()
@@ -90,13 +92,24 @@ public class StorageGraph {
         .filter(it -> it.getDegree() == 0
             || "null".equals(String.valueOf(it.getAttribute(Attributes.OBJECT_AS_MAP))))
         .forEach(it -> graph.removeNode(it.getId()));
+
+    viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
+
     viewer.enableAutoLayout();
+
+    panel = (ViewPanel) viewer.addDefaultView(false);
+    panel.enableMouseOptions();
+
     ViewerPipe pipe = viewer.newViewerPipe();
-    MouseListener list = new MouseListener(pipe);
-    pipe.addViewerListener(list);
+    clickHandler = new MouseListener(pipe);
+    pipe.addViewerListener(clickHandler);
 
     pipe.addSink(graph);
-    CompletableFuture.runAsync(list::pump);
+    CompletableFuture.runAsync(clickHandler::pump);
+    screenshotListener = new ScreenshotListener();
+    panel.addKeyListener(screenshotListener);
+    add(panel);
+    revalidate();
   }
 
   private final class MouseListener implements ViewerListener {

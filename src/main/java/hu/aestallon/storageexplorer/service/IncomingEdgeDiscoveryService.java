@@ -15,43 +15,33 @@
 
 package hu.aestallon.storageexplorer.service;
 
-import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.graphstream.graph.Graph;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import hu.aestallon.storageexplorer.util.IO;
-import static hu.aestallon.storageexplorer.util.Uris.equalsIgnoringVersion;
+import hu.aestallon.storageexplorer.service.internal.StorageEntry;
+import hu.aestallon.storageexplorer.service.internal.StorageIndex;
+import hu.aestallon.storageexplorer.util.Pair;
+import hu.aestallon.storageexplorer.util.Uris;
 
 @Service
 public class IncomingEdgeDiscoveryService {
 
-  private final String fsBaseDirectory;
+  private final StorageIndex storageIndex;
 
-  public IncomingEdgeDiscoveryService(@Value("${fs.base.directory:./fs}") String fsBaseDirectory) {
-    this.fsBaseDirectory = fsBaseDirectory;
+  public IncomingEdgeDiscoveryService(StorageIndex storageIndex) {
+    this.storageIndex = storageIndex;
   }
 
   public Set<URI> execute(Graph graph, URI uri) {
-    try (final var files = Files.walk(Path.of(fsBaseDirectory))) {
-      return files
-          .filter(p -> p.toFile().isFile())
-          .map(IO::read)
-          .filter(it -> it.contains(uri.toString()))
-          .flatMap(IO.findObjectUri().andThen(Optional::stream))
-          .filter(equalsIgnoringVersion(uri).negate())
-          .filter(it -> !it.getScheme().endsWith("-collections")) // TODO: Handle collections!
-          .filter(it -> NodeAdditionService.edgeMissing(graph, it, uri))
-          .collect(Collectors.toSet());
-    } catch (IOException e) {
-      return Collections.emptySet();
-    }
+    return storageIndex.refs()
+        .filter(it -> !it.a().uri().getScheme().contains("viewcontext"))
+        .filter(it -> it.b().stream().map(u -> u.uri).anyMatch(Uris.equalsIgnoringVersion(uri)))
+        .filter(it -> NodeAdditionService.edgeMissing(graph, it.a().uri(), uri))
+        .map(Pair::a)
+        .map(StorageEntry::uri)
+        .collect(Collectors.toSet());
   }
 
 }

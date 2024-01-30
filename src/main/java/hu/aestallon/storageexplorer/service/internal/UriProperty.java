@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.service;
+package hu.aestallon.storageexplorer.service.internal;
 
 import java.net.URI;
 import java.util.Objects;
@@ -22,16 +22,16 @@ import org.springframework.util.Assert;
 
 public final class UriProperty {
 
-  static final String OWN = "uri";
+  public static final String OWN = "uri";
 
-  static UriProperty standalone(String propertyName, URI uri) {
+  public static UriProperty standalone(String propertyName, URI uri) {
     Assert.notNull(propertyName, "java.lang.String propertyName must not be null!");
     Assert.notNull(uri, "java.net.URI uri must not be null!");
 
     return new UriProperty(propertyName, uri, -1);
   }
 
-  static UriProperty listElement(String propertyName, URI uri, int idx) {
+  public static UriProperty listElement(String propertyName, URI uri, int idx) {
     Assert.notNull(propertyName, "java.lang.String propertyName must not be null!");
     Assert.notNull(uri, "java.net.URI uri must not be null!");
     if (idx < 0) {
@@ -41,7 +41,7 @@ public final class UriProperty {
     return new UriProperty(propertyName, uri, idx);
   }
 
-  static UriProperty parse(String propertyName, URI uri) {
+  public static UriProperty parse(String propertyName, URI uri) {
     Assert.notNull(propertyName, "java.lang.String propertyName must not be null!");
     Assert.notNull(uri, "java.net.URI uri must not be null!");
 
@@ -74,9 +74,9 @@ public final class UriProperty {
     }
   }
 
-  final String propertyName;
-  final URI uri;
-  final int position;
+  public final String propertyName;
+  public final URI uri;
+  public final int position;
 
   private UriProperty(String propertyName, URI uri, int position) {
     this.propertyName = propertyName;
@@ -84,17 +84,17 @@ public final class UriProperty {
     this.position = position;
   }
 
-  boolean isStandalone() {
+  public boolean isStandalone() {
     return position < 0;
   }
 
-  String label() {
+  public String label() {
     if (isStandalone()) {
       return propertyName;
     }
 
     final String[] pathElements = propertyName.split("\\.");
-    final String prefix = (isInt(pathElements[pathElements.length - 1]))
+    final String prefix = (isInt(pathElements[pathElements.length - 1]) && propertyName.lastIndexOf('.') > 0)
         ? propertyName.substring(0, propertyName.lastIndexOf('.'))
         : propertyName;
     return prefix + " (" + position + ")";

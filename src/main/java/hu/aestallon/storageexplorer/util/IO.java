@@ -58,6 +58,14 @@ public final class IO {
     if (binaryData.isEmpty()) {
       return StringConstant.EMPTY;
     }
+    if (binaryData.size() == 1) {
+      try (var in = binaryData.get(0).inputStream()) {
+        return "{\"uri\":\"" + StreamUtils.copyToString(in, StandardCharsets.UTF_8);
+      } catch (IOException e) {
+        log.error(e.getMessage(), e);
+        return StringConstant.EMPTY;
+      }
+    }
     try (var in = binaryData.get(binaryData.size() - 1).inputStream()) {
       return StreamUtils.copyToString(in, StandardCharsets.UTF_8);
     } catch (IOException e) {

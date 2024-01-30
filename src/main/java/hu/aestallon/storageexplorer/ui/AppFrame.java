@@ -22,15 +22,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class AppFrame extends JFrame {
 
-  private final StorageGraph storageGraph;
 
-  public AppFrame(StorageGraph storageGraph) {
-    this.storageGraph = storageGraph;
+  private final MainView mainView;
 
+  public AppFrame(MainView mainView) {
+    this.mainView = null;
     setTitle("Storage Explorer");
     setSize(900, 600);
     setDefaultCloseOperation(EXIT_ON_CLOSE);
     initMenu();
+    add(mainView);
   }
 
   private void initMenu() {
@@ -43,7 +44,7 @@ public class AppFrame extends JFrame {
       final var textfield = new JTextField("URI", 20);
       final var ok = new JButton("OK");
       ok.addActionListener(e -> {
-        storageGraph.initOnUri(URI.create(textfield.getText()));
+        mainView.storageGraph().initOnUri(URI.create(textfield.getText()));
         dialog.dispose();
       });
       pane.add(textfield);
@@ -63,7 +64,6 @@ public class AppFrame extends JFrame {
   }
 
   public void launch() {
-    add(storageGraph.init());
     setVisible(true);
   }
 
