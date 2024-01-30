@@ -36,7 +36,6 @@ public class IncomingEdgeDiscoveryService {
 
   public Set<URI> execute(Graph graph, URI uri) {
     return storageIndex.refs()
-        .filter(it -> !it.a().uri().getScheme().contains("viewcontext"))
         .filter(it -> it.b().stream().map(u -> u.uri).anyMatch(Uris.equalsIgnoringVersion(uri)))
         .filter(it -> NodeAdditionService.edgeMissing(graph, it.a().uri(), uri))
         .map(Pair::a)

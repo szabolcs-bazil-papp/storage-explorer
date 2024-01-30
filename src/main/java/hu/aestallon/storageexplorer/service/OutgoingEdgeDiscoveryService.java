@@ -49,13 +49,13 @@ public class OutgoingEdgeDiscoveryService {
   private Set<UriProperty> findConnectionsSatisfying(Graph graph, URI uri,
                                                      GraphContainmentPredicate condition) {
     return storageIndex.refs()
-        .filter(pair -> condition.test(graph, pair.a().uri()))
         .filter(pair -> Uris.equalIgnoringVersion(pair.a().uri(), uri))
         .findFirst()
-        .map(Pair::b)
-        .orElseGet(Collections::emptySet)
         .stream()
+        .flatMap(it -> it.b().stream())
+        .filter(it -> condition.test(graph, it.uri))
         .filter(it -> NodeAdditionService.edgeMissing(graph, uri, it.uri))
+        .filter(it -> storageIndex.get(it.uri).isPresent())
         .collect(Collectors.toSet());
   }
 
