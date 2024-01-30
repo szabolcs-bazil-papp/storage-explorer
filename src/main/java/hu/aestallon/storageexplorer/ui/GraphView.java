@@ -45,6 +45,7 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hu.aestallon.storageexplorer.service.GraphRenderingService;
+import hu.aestallon.storageexplorer.service.internal.StorageEntry;
 import hu.aestallon.storageexplorer.util.Attributes;
 
 @Component
@@ -69,7 +70,7 @@ public class GraphView extends JPanel {
     this.objectMapper = objectMapper;
   }
 
-  void initOnUri(URI uri) {
+  void init(StorageEntry storageEntry) {
     if (clickHandler != null) {
       clickHandler.doPump.set(false);
     }
@@ -86,7 +87,7 @@ public class GraphView extends JPanel {
     sprites = new SpriteManager(graph);
 
     graph.setAttribute("ui.stylesheet", "url('./styles.css')");
-    graphRenderingService.render(graph, uri);
+    graphRenderingService.render(graph, storageEntry);
     graph.nodes()
         .filter(Objects::nonNull)
         .filter(it -> it.getDegree() == 0

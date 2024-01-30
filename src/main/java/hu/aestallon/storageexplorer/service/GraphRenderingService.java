@@ -23,6 +23,7 @@ import org.graphstream.graph.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import hu.aestallon.storageexplorer.service.internal.StorageEntry;
 import hu.aestallon.storageexplorer.service.internal.UriProperty;
 import static java.util.stream.Collectors.toMap;
 
@@ -43,10 +44,10 @@ public class GraphRenderingService {
     this.outgoingEdgeDiscoveryService = outgoingEdgeDiscoveryService;
   }
 
-  public void render(Graph graph, URI uri) {
-    nodeAdditionService.addOrigin(graph, uri);
-    renderOutgoingReferences(graph, uri);
-    renderIncomingReferences(graph, uri);
+  public void render(Graph graph, StorageEntry storageEntry) {
+    nodeAdditionService.addOrigin(graph, storageEntry);
+    renderOutgoingReferences(graph, storageEntry.uri());
+    renderIncomingReferences(graph, storageEntry.uri());
   }
 
   private void renderOutgoingReferences(Graph graph, URI uri) {

@@ -38,23 +38,6 @@ public class AppFrame extends JFrame {
     final var menubar = new JMenuBar();
     final var popup = new JMenu("Commands");
     final var selectNode = new JMenuItem("Select node...");
-    selectNode.addActionListener(it -> {
-      final var dialog = new JFrame("Enter URI");
-      final var pane = new JPanel();
-      final var textfield = new JTextField("URI", 20);
-      final var ok = new JButton("OK");
-      ok.addActionListener(e -> {
-        mainView.storageGraph().initOnUri(URI.create(textfield.getText()));
-        dialog.dispose();
-      });
-      pane.add(textfield);
-      pane.add(ok);
-      dialog.add(pane);
-      dialog.setSize(200, 200);
-      dialog.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-      dialog.setLocationRelativeTo(this);
-      dialog.setVisible(true);
-    });
 
     popup.add(selectNode);
 

@@ -30,6 +30,7 @@ import hu.aestallon.storageexplorer.model.tree.StorageInstance;
 import hu.aestallon.storageexplorer.model.tree.StorageList;
 import hu.aestallon.storageexplorer.model.tree.StorageMap;
 import hu.aestallon.storageexplorer.model.tree.StorageObject;
+import hu.aestallon.storageexplorer.service.internal.StorageEntry;
 import hu.aestallon.storageexplorer.service.internal.StorageIndex;
 
 @Component
@@ -57,7 +58,7 @@ public class MainTreeView extends JPanel {
       Object userObject = treeNode.getUserObject();
       log.info("TREE SELECTION - User Object [ {} ]", userObject);
       if (userObject instanceof Clickable) {
-        graphView.initOnUri(((Clickable) userObject).uri());
+        storageIndex.get(((Clickable) userObject).uri()).ifPresent(graphView::init);
       }
     });
     treePanel = new JScrollPane(tree);
@@ -86,6 +87,7 @@ public class MainTreeView extends JPanel {
         throw new RuntimeException(e);
       }
     }
+
     private static final ImageIcon LIST =
         new ImageIcon(foo("/icons/list.png"));
     private static final ImageIcon MAP =

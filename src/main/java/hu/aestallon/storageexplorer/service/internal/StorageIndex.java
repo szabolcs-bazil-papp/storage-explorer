@@ -16,6 +16,7 @@
 package hu.aestallon.storageexplorer.service.internal;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.util.IO;
 import hu.aestallon.storageexplorer.util.Pair;
+import hu.aestallon.storageexplorer.util.Uris;
 
 @Service
 public class StorageIndex {
@@ -88,6 +90,12 @@ public class StorageIndex {
 
   public Path fsBaseDirectory() {
     return Path.of(fsBaseDirectory);
+  }
+
+  public Optional<StorageEntry> get(URI uri) {
+    return cache.keySet().stream()
+        .filter(it -> Uris.equalIgnoringVersion(it.uri(), uri))
+        .findAny();
   }
 
 }

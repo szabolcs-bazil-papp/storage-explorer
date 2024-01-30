@@ -20,10 +20,13 @@ import java.util.Map;
 import org.graphstream.graph.Edge;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
 import org.springframework.stereotype.Service;
 import com.google.common.base.Strings;
+import hu.aestallon.storageexplorer.service.internal.StorageEntry;
 import hu.aestallon.storageexplorer.service.internal.UriProperty;
 import hu.aestallon.storageexplorer.util.Attributes;
 import hu.aestallon.storageexplorer.util.Uris;
@@ -31,6 +34,7 @@ import hu.aestallon.storageexplorer.util.Uris;
 @Service
 public class NodeAdditionService {
 
+  private static final Logger log = LoggerFactory.getLogger(NodeAdditionService.class);
 
   static String stringKey(URI uri) {
     return Uris.latest(uri).toString();
@@ -66,7 +70,8 @@ public class NodeAdditionService {
 
     final Node fromNode = getOrAddNode(graph, from);
     final Node toNode = getOrAddNode(graph, to.uri);
-    if (fromNode == null || toNode == null || to.uri == null || !Strings.isNullOrEmpty(to.uri.getFragment())) {
+    if (fromNode == null || toNode == null || to.uri == null || !Strings.isNullOrEmpty(
+        to.uri.getFragment())) {
       return;
     }
 
@@ -108,8 +113,34 @@ public class NodeAdditionService {
     return graphNode;
   }
 
-  public void addOrigin(Graph graph, URI uri) {
-    final Node node = add(graph, uri);
+  private Node add(Graph graph, StorageEntry storageEntry) {
+    final var strKey = stringKey(storageEntry.uri());
+    final Node graphNode = graph.addNode(strKey);
+    final ObjectNode objectNode;
+    try {
+      objectNode = objectApi.load(storageEntry.uri());
+    } catch (Throwable t) {
+      log.error("Error loading [ {} ]", storageEntry);
+      log.error(t.getMessage());
+      return null;
+    }
+
+    final String type = getTypeNameFromQualifiedName(objectNode.getData().getQualifiedName());
+
+    graphNode.setAttributes(Map.of(
+        Attributes.LABEL, type,
+        Attributes.OBJECT_AS_MAP, objectNode.getObjectAsMap(),
+        Attributes.NODE_DATA, objectNode.getData(),
+        Attributes.TYPE_NAME, type));
+    return graphNode;
+  }
+
+  public void addOrigin(Graph graph, StorageEntry storageEntry) {
+    final Node node = add(graph, storageEntry);
+    if (node == null) {
+      return;
+    }
+
     node.setAttribute(Attributes.STYLE_CLASS, "origin");
   }
 
