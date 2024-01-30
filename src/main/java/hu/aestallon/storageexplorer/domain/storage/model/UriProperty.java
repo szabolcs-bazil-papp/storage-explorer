@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.service.internal;
+package hu.aestallon.storageexplorer.domain.storage.model;
 
 import java.net.URI;
 import java.util.Objects;
@@ -94,9 +94,10 @@ public final class UriProperty {
     }
 
     final String[] pathElements = propertyName.split("\\.");
-    final String prefix = (isInt(pathElements[pathElements.length - 1]) && propertyName.lastIndexOf('.') > 0)
-        ? propertyName.substring(0, propertyName.lastIndexOf('.'))
-        : propertyName;
+    final String prefix =
+        (isInt(pathElements[pathElements.length - 1]) && propertyName.lastIndexOf('.') > 0)
+            ? propertyName.substring(0, propertyName.lastIndexOf('.'))
+            : propertyName;
     return prefix + " (" + position + ")";
   }
 

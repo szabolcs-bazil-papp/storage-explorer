@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.service.internal;
+package hu.aestallon.storageexplorer.domain.storage.service;
 
 import java.io.IOException;
 import java.net.URI;
@@ -22,7 +22,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,9 +29,9 @@ import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.util.IO;
 import hu.aestallon.storageexplorer.util.Pair;
-import hu.aestallon.storageexplorer.util.Uris;
 
 @Service
 public class StorageIndex {
@@ -42,7 +41,7 @@ public class StorageIndex {
   private final String fsBaseDirectory;
   private final ObjectApi objectApi;
   private final CollectionApi collectionApi;
-  private final Map<StorageEntry, Set<UriProperty>> cache;
+  private final Map<URI, StorageEntry> cache;
 
   public StorageIndex(@Value("${fs.base.directory:./fs}") String fsBaseDirectory,
                       ObjectApi objectApi, CollectionApi collectionApi) {
@@ -63,39 +62,23 @@ public class StorageIndex {
           .flatMap(IO.findObjectUri().andThen(Optional::stream))
           .map(uri -> StorageEntry.create(uri, objectApi, collectionApi))
           .flatMap(Optional::stream)
-          .map(it -> Pair.of(it, load(it)))
-          .flatMap(Pair.streamOnB())
+          .map(it -> Pair.of(it.uri(), it))
           .forEach(Pair.putIntoMap(cache));
     } catch (IOException e) {
       log.error(e.getMessage(), e);
     }
   }
 
-  private Optional<Set<UriProperty>> load(StorageEntry se) {
-    try {
-      return Optional.of(se.uriProperties());
-    } catch (Throwable t) {
-      log.error(t.getMessage(), t);
-      return Optional.empty();
-    }
-  }
-
   public Stream<StorageEntry> entities() {
-    return cache.keySet().stream();
-  }
-
-  public Stream<Pair<StorageEntry, Set<UriProperty>>> refs() {
-    return cache.entrySet().stream().map(Pair::of);
+    return cache.values().stream();
   }
 
   public Path fsBaseDirectory() {
     return Path.of(fsBaseDirectory);
   }
 
-  public Optional<StorageEntry> get(URI uri) {
-    return cache.keySet().stream()
-        .filter(it -> Uris.equalIgnoringVersion(it.uri(), uri))
-        .findAny();
+  public Optional<StorageEntry> get(final URI uri) {
+    return Optional.ofNullable(cache.get(uri));
   }
 
 }

@@ -18,7 +18,7 @@ package hu.aestallon.storageexplorer.model.tree;
 import java.net.URI;
 import java.util.Enumeration;
 import javax.swing.tree.TreeNode;
-import hu.aestallon.storageexplorer.service.internal.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
 
 public class StorageList implements WrappableToMutable, Clickable {
 

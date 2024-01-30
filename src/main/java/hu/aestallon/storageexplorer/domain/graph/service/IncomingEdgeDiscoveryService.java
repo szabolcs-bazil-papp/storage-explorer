@@ -13,17 +13,13 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.service;
+package hu.aestallon.storageexplorer.domain.graph.service;
 
-import java.net.URI;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.graphstream.graph.Graph;
 import org.springframework.stereotype.Service;
-import hu.aestallon.storageexplorer.service.internal.StorageEntry;
-import hu.aestallon.storageexplorer.service.internal.StorageIndex;
-import hu.aestallon.storageexplorer.util.Pair;
-import hu.aestallon.storageexplorer.util.Uris;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 
 @Service
 public class IncomingEdgeDiscoveryService {
@@ -34,13 +30,10 @@ public class IncomingEdgeDiscoveryService {
     this.storageIndex = storageIndex;
   }
 
-  public Set<URI> execute(Graph graph, URI uri) {
-    return storageIndex.refs()
-        .filter(it -> it.b().stream().map(u -> u.uri).anyMatch(Uris.equalsIgnoringVersion(uri)))
-        .filter(it -> NodeAdditionService.edgeMissing(graph, it.a().uri(), uri))
-        .map(Pair::a)
-        .map(StorageEntry::uri)
-        .collect(Collectors.toSet());
+  public Stream<StorageEntry> execute(Graph graph, StorageEntry storageEntry) {
+    return storageIndex.entities()
+        .filter(it -> it.references(storageEntry))
+        .filter(it -> NodeAdditionService.edgeMissing(graph, it, storageEntry));
   }
 
 }

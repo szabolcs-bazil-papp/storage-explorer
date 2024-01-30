@@ -19,7 +19,6 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.IOException;
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
@@ -44,8 +43,8 @@ import org.smartbit4all.core.utility.StringConstant;
 import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import hu.aestallon.storageexplorer.service.GraphRenderingService;
-import hu.aestallon.storageexplorer.service.internal.StorageEntry;
+import hu.aestallon.storageexplorer.domain.graph.service.GraphRenderingService;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.util.Attributes;
 
 @Component
@@ -90,8 +89,7 @@ public class GraphView extends JPanel {
     graphRenderingService.render(graph, storageEntry);
     graph.nodes()
         .filter(Objects::nonNull)
-        .filter(it -> it.getDegree() == 0
-            || "null".equals(String.valueOf(it.getAttribute(Attributes.OBJECT_AS_MAP))))
+        .filter(it -> it.getDegree() == 0)
         .forEach(it -> graph.removeNode(it.getId()));
 
     viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
@@ -136,7 +134,7 @@ public class GraphView extends JPanel {
     public void buttonPushed(String s) {
       final Node node = graph.getNode(s);
 
-      final Object objectAsMap = node.getAttribute(Attributes.OBJECT_AS_MAP);
+      final Object objectAsMap = "placeholder";
       final String typeName = String.valueOf(node.getAttribute(Attributes.TYPE_NAME));
       SwingUtilities.invokeLater(() -> {
         final var dialog = new JFrame(typeName);

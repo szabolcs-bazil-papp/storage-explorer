@@ -30,8 +30,7 @@ import hu.aestallon.storageexplorer.model.tree.StorageInstance;
 import hu.aestallon.storageexplorer.model.tree.StorageList;
 import hu.aestallon.storageexplorer.model.tree.StorageMap;
 import hu.aestallon.storageexplorer.model.tree.StorageObject;
-import hu.aestallon.storageexplorer.service.internal.StorageEntry;
-import hu.aestallon.storageexplorer.service.internal.StorageIndex;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 
 @Component
 public class MainTreeView extends JPanel {

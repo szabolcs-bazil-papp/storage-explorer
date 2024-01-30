@@ -24,11 +24,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeNode;
-import hu.aestallon.storageexplorer.service.internal.ListEntry;
-import hu.aestallon.storageexplorer.service.internal.MapEntry;
-import hu.aestallon.storageexplorer.service.internal.ObjectEntry;
-import hu.aestallon.storageexplorer.service.internal.StorageEntry;
-import hu.aestallon.storageexplorer.service.internal.StorageIndex;
+import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import static java.util.stream.Collectors.groupingBy;
 
 public class StorageInstance implements WrappableToMutable {

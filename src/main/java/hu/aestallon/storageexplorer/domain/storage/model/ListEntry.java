@@ -13,23 +13,24 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.service.internal;
+package hu.aestallon.storageexplorer.domain.storage.model;
 
 import java.net.URI;
-import java.util.Objects;
+import java.util.HashSet;
 import java.util.Set;
 import org.smartbit4all.api.collection.CollectionApi;
 import hu.aestallon.storageexplorer.util.Uris;
-import static java.util.stream.Collectors.toSet;
 
-public class MapEntry implements StorageEntry {
+public class ListEntry implements StorageEntry {
 
   private final URI uri;
   private final CollectionApi collectionApi;
   private final String schema;
   private final String name;
 
-  public MapEntry(URI uri, CollectionApi collectionApi) {
+  private Set<UriProperty> uriProperties;
+
+  ListEntry(URI uri, CollectionApi collectionApi) {
     this.uri = uri;
     this.collectionApi = collectionApi;
 
@@ -39,6 +40,8 @@ public class MapEntry implements StorageEntry {
     final String pathElements[] = uri.getPath().split("/");
     final String terminalElement = pathElements[pathElements.length - 1];
     this.name = terminalElement.substring(0, terminalElement.lastIndexOf('-'));
+
+    refresh();
   }
 
   @Override
@@ -56,9 +59,18 @@ public class MapEntry implements StorageEntry {
 
   @Override
   public Set<UriProperty> uriProperties() {
-    return collectionApi.map(schema, name).uris().entrySet().stream()
-        .map(e -> UriProperty.standalone(e.getKey(), e.getValue()))
-        .collect(toSet());
+    return uriProperties;
+  }
+
+  @Override
+  public void refresh() {
+    final var list = collectionApi.list(schema, name).uris();
+    final var uriProperties = new HashSet<UriProperty>();
+    for (int i = 0; i < list.size(); i++) {
+      uriProperties.add(UriProperty.listElement(String.valueOf(i), list.get(i), i));
+    }
+
+    this.uriProperties = uriProperties;
   }
 
   @Override
@@ -67,12 +79,18 @@ public class MapEntry implements StorageEntry {
       return true;
     if (o == null || getClass() != o.getClass())
       return false;
-    MapEntry mapEntry = (MapEntry) o;
-    return Uris.equalIgnoringVersion(uri, mapEntry.uri);
+    ListEntry listEntry = (ListEntry) o;
+    return Uris.equalIgnoringVersion(uri, listEntry.uri);
   }
 
   @Override
   public int hashCode() {
     return uri.hashCode();
   }
+
+  @Override
+  public String toString() {
+    return "LIST (" + schema + "/" + name + ")";
+  }
+
 }

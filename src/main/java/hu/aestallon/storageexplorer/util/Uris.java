@@ -66,4 +66,14 @@ public final class Uris {
     return Optional.empty();
   }
 
+  public static String getTypeName(final URI uri) {
+    final String[] typeElements = uri.getPath().split("/")[1].split("_");
+    return typeElements[typeElements.length - 1];
+  }
+
+  public static String getUuid(final URI uri) {
+    final var pathElements = uri.getPath().split("/");
+    return pathElements[pathElements.length - 1];
+  }
+
 }

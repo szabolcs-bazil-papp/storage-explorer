@@ -21,12 +21,10 @@ public final class Attributes {
 
   public static final String LABEL = "ui.label";
 
-  public static final String OBJECT_AS_MAP = "ui.oam";
-
-  public static final String NODE_DATA = "ui.nodedata";
-
   public static final String STYLE_CLASS = "ui.class";
 
   public static final String TYPE_NAME = "sb4.type";
+
+  public static final String STORAGE_ENTRY = "storage.entry";
 
 }

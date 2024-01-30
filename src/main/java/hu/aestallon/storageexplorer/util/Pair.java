@@ -49,6 +49,10 @@ public final class Pair<A, B> {
     return Collectors.toMap(Pair::a, Pair::b, (x, y) -> y, HashMap::new);
   }
 
+  public static <A, B> Function<Pair<Optional<A>, B>, Stream<Pair<A, B>>> streamOnA() {
+    return pair -> pair.a.stream().flatMap(it -> Stream.of(Pair.of(it, pair.b)));
+  }
+
   public static <A, B> Function<Pair<A, Optional<B>>, Stream<Pair<A, B>>> streamOnB() {
     return pair -> pair.b.stream().flatMap(it -> Stream.of(Pair.of(pair.a, it)));
   }

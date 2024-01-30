@@ -13,12 +13,13 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.service.internal;
+package hu.aestallon.storageexplorer.domain.storage.model;
 
 import java.net.URI;
-import java.util.Objects;
 import java.util.Set;
 import org.smartbit4all.core.object.ObjectApi;
+import org.smartbit4all.core.object.ObjectNode;
+import org.smartbit4all.core.utility.StringConstant;
 import hu.aestallon.storageexplorer.util.ObjectMaps;
 import hu.aestallon.storageexplorer.util.Pair;
 import hu.aestallon.storageexplorer.util.Uris;
@@ -28,10 +29,18 @@ public class ObjectEntry implements StorageEntry {
 
   private final URI uri;
   private final ObjectApi objectApi;
+  private final String typeName;
+  private final String uuid;
+  private Set<UriProperty> uriProperties;
+  private String displayName;
 
-  public ObjectEntry(URI uri, ObjectApi objectApi) {
+  ObjectEntry(URI uri, ObjectApi objectApi) {
     this.uri = uri;
     this.objectApi = objectApi;
+    this.typeName = Uris.getTypeName(uri);
+    this.uuid = Uris.getUuid(uri);
+
+    refresh();
   }
 
   @Override
@@ -41,7 +50,18 @@ public class ObjectEntry implements StorageEntry {
 
   @Override
   public Set<UriProperty> uriProperties() {
-    return ObjectMaps.flatten(objectApi.load(uri).getObjectAsMap())
+    return uriProperties;
+  }
+
+  @Override
+  public void refresh() {
+    final var objectNode = objectApi.load(uri);
+    uriProperties = initUriProperties(objectNode);
+    displayName = initDisplayName(objectNode);
+  }
+
+  private Set<UriProperty> initUriProperties(final ObjectNode objectNode) {
+    return ObjectMaps.flatten(objectNode.getObjectAsMap())
         .entrySet().stream()
         .filter(it -> !UriProperty.OWN.equals(it.getKey()))
         .map(Pair::of)
@@ -49,6 +69,28 @@ public class ObjectEntry implements StorageEntry {
         .flatMap(Pair.streamOnB())
         .map(it -> UriProperty.parse(it.a(), it.b()))
         .collect(toSet());
+  }
+
+  private String initDisplayName(final ObjectNode objectNode) {
+    final Object name = objectNode.getValue("name");
+    if (name != null) {
+      return String.valueOf(name);
+    }
+
+    final Object dataName = objectNode.getValue("data", "name");
+    if (dataName != null) {
+      return String.valueOf(dataName);
+    }
+
+    return StringConstant.EMPTY;
+  }
+
+  public String uuid() {
+    return uuid;
+  }
+
+  public String typeName() {
+    return typeName;
   }
 
   @Override
@@ -64,6 +106,13 @@ public class ObjectEntry implements StorageEntry {
   @Override
   public int hashCode() {
     return uri.hashCode();
+  }
+
+  @Override
+  public String toString() {
+    return (displayName.isEmpty())
+        ? typeName
+        : typeName + " (" + displayName + ")";
   }
 
 }
