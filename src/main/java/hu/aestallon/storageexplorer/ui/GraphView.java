@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.graph.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.ui.dialog.entryinspector.StorageEntryInspectorDialogFactory;
 import hu.aestallon.storageexplorer.util.Attributes;
 
 @Component
@@ -57,11 +58,14 @@ public class GraphView extends JPanel {
   private KeyListener screenshotListener;
 
   private final GraphRenderingService graphRenderingService;
+  private final StorageEntryInspectorDialogFactory storageEntryInspectorDialogFactory;
   private MouseListener clickHandler;
 
-  public GraphView(GraphRenderingService graphRenderingService) {
+  public GraphView(GraphRenderingService graphRenderingService,
+                   StorageEntryInspectorDialogFactory storageEntryInspectorDialogFactory) {
     super(new GridLayout(1, 1));
     this.graphRenderingService = graphRenderingService;
+    this.storageEntryInspectorDialogFactory = storageEntryInspectorDialogFactory;
   }
 
   void init(StorageEntry storageEntry) {
@@ -138,9 +142,9 @@ public class GraphView extends JPanel {
         return;
       }
 
-      SwingUtilities.invokeLater(() -> {
-        log.info("[[[ {} ]]]", entry);
-      });
+      SwingUtilities.invokeLater(() -> storageEntryInspectorDialogFactory.showDialog(
+          (StorageEntry) entry,
+          GraphView.this));
     }
 
     @Override
