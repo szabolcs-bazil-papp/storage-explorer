@@ -15,46 +15,20 @@
 
 package hu.aestallon.storageexplorer.model.tree;
 
-import java.net.URI;
-import java.util.Enumeration;
-import javax.swing.tree.TreeNode;
+import javax.swing.tree.DefaultMutableTreeNode;
 import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-public class StorageList implements WrappableToMutable, Clickable {
+public class StorageList extends DefaultMutableTreeNode implements Clickable {
 
-  private final String name;
-  private final StorageInstance parent;
-  private final URI uri;
 
-  public StorageList(ListEntry listEntry, StorageInstance parent) {
-    this.name = listEntry.schema() + "/" + listEntry.name();
-    this.uri = listEntry.uri();
-    this.parent = parent;
+  public StorageList(ListEntry listEntry) {
+    super(listEntry, false);
   }
 
   @Override
-  public URI uri() {
-    return uri;
-  }
-
-  @Override
-  public TreeNode getChildAt(int childIndex) {
-    return null;
-  }
-
-  @Override
-  public int getChildCount() {
-    return 0;
-  }
-
-  @Override
-  public TreeNode getParent() {
-    return parent;
-  }
-
-  @Override
-  public int getIndex(TreeNode node) {
-    return -1;
+  public StorageEntry storageEntry() {
+    return (StorageEntry) userObject;
   }
 
   @Override
@@ -68,12 +42,9 @@ public class StorageList implements WrappableToMutable, Clickable {
   }
 
   @Override
-  public Enumeration<? extends TreeNode> children() {
-    return null;
+  public String toString() {
+    final var listEntry = (ListEntry) userObject;
+    return listEntry.schema() + " / " + listEntry.name();
   }
 
-  @Override
-  public String toString() {
-    return name;
-  }
 }

@@ -39,10 +39,7 @@ import org.graphstream.ui.view.ViewerListener;
 import org.graphstream.ui.view.ViewerPipe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.core.utility.StringConstant;
 import org.springframework.stereotype.Component;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import hu.aestallon.storageexplorer.domain.graph.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.util.Attributes;
@@ -60,13 +57,11 @@ public class GraphView extends JPanel {
   private KeyListener screenshotListener;
 
   private final GraphRenderingService graphRenderingService;
-  private final ObjectMapper objectMapper;
   private MouseListener clickHandler;
 
-  public GraphView(GraphRenderingService graphRenderingService, ObjectMapper objectMapper) {
+  public GraphView(GraphRenderingService graphRenderingService) {
     super(new GridLayout(1, 1));
     this.graphRenderingService = graphRenderingService;
-    this.objectMapper = objectMapper;
   }
 
   void init(StorageEntry storageEntry) {
@@ -133,32 +128,19 @@ public class GraphView extends JPanel {
     @Override
     public void buttonPushed(String s) {
       final Node node = graph.getNode(s);
-
-      final Object objectAsMap = "placeholder";
-      final String typeName = String.valueOf(node.getAttribute(Attributes.TYPE_NAME));
-      SwingUtilities.invokeLater(() -> {
-        final var dialog = new JFrame(typeName);
-        final var pane = new JPanel();
-        final var textarea = new JTextArea();
-        textarea.setEnabled(false);
-        textarea.setText(typeName + StringConstant.SPACE + prettyPrint(objectAsMap));
-        pane.add(textarea);
-        dialog.add(pane);
-        dialog.setLocationRelativeTo(panel);
-        dialog.setSize(250, 250);
-        dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        dialog.pack();
-        dialog.setVisible(true);
-      });
-    }
-
-    private String prettyPrint(Object o) {
-      try {
-        return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(o);
-      } catch (JsonProcessingException e) {
-        log.error(e.getMessage(), e);
-        return StringConstant.EMPTY;
+      final Object entry = node.getAttribute(Attributes.STORAGE_ENTRY);
+      if (!(entry instanceof StorageEntry)) {
+        JOptionPane.showMessageDialog(
+            GraphView.this,
+            "No entry under node!",
+            "Error",
+            JOptionPane.ERROR_MESSAGE);
+        return;
       }
+
+      SwingUtilities.invokeLater(() -> {
+        log.info("[[[ {} ]]]", entry);
+      });
     }
 
     @Override

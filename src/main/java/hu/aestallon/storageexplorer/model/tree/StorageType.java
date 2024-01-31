@@ -15,85 +15,15 @@
 
 package hu.aestallon.storageexplorer.model.tree;
 
-import java.net.URI;
-import java.util.Enumeration;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import javax.swing.tree.TreeNode;
+import javax.swing.tree.DefaultMutableTreeNode;
+import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 
-public class StorageType implements WrappableToMutable {
+public class StorageType extends DefaultMutableTreeNode {
 
-  private final String name;
-  private final StorageSchema parent;
-
-  private final List<StorageObject> children;
-
-  public StorageType(String name, StorageSchema parent, Set<URI> uris) {
-    this.name = name;
-    this.parent = parent;
-    this.children = uris.stream()
-        .map(it -> {
-          final var pathElements = it.getPath().split("/");
-          final var uuid = pathElements[pathElements.length - 1];
-          return new StorageObject(uuid, this, it);
-        })
-        .collect(Collectors.toList());
-  }
-
-  @Override
-  public TreeNode getChildAt(int childIndex) {
-    return children.get(childIndex);
-  }
-
-  @Override
-  public int getChildCount() {
-    return children.size();
-  }
-
-  @Override
-  public TreeNode getParent() {
-    return parent;
-  }
-
-  @Override
-  public int getIndex(TreeNode node) {
-    if (!(node instanceof StorageObject)) {
-      return -1;
-    }
-
-    return children.indexOf(node);
-  }
-
-  @Override
-  public boolean getAllowsChildren() {
-    return true;
-  }
-
-  @Override
-  public boolean isLeaf() {
-    return children.isEmpty();
-  }
-
-  @Override
-  public Enumeration<? extends TreeNode> children() {
-    final var iterator = children.iterator();
-    return new Enumeration<>() {
-      @Override
-      public boolean hasMoreElements() {
-        return iterator.hasNext();
-      }
-
-      @Override
-      public TreeNode nextElement() {
-        return iterator.next();
-      }
-    };
-  }
-
-  @Override
-  public String toString() {
-    return name;
+  public StorageType(String name, List<ObjectEntry> objectEntries) {
+    super(name, true);
+    objectEntries.forEach(it -> add(new StorageObject(it)));
   }
 
 }

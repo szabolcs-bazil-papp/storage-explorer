@@ -15,88 +15,18 @@
 
 package hu.aestallon.storageexplorer.model.tree;
 
-import java.net.URI;
-import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import javax.swing.tree.TreeNode;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
+import java.util.stream.Collectors;
+import javax.swing.tree.DefaultMutableTreeNode;
+import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 
-public final class StorageSchema implements WrappableToMutable {
+public final class StorageSchema extends DefaultMutableTreeNode {
 
-  private final StorageInstance parent;
-  private final String name;
-  private final List<StorageType> children;
-
-  StorageSchema(String name, Set<URI> uris, StorageInstance parent) {
-    this.name = name;
-    this.parent = parent;
-    this.children = uris.stream()
-        .collect(groupingBy(it -> {
-          final String[] typeElements = it.getPath().split("/")[1].split("_");
-          return typeElements[typeElements.length - 1];
-        }))
-        .entrySet().stream()
-        .map(e -> new StorageType(e.getKey(), this, new HashSet<>(e.getValue())))
-        .collect(toList());
-  }
-
-
-  @Override
-  public TreeNode getChildAt(int childIndex) {
-    return children.get(childIndex);
-  }
-
-  @Override
-  public int getChildCount() {
-    return children.size();
-  }
-
-  @Override
-  public TreeNode getParent() {
-    return parent;
-  }
-
-  @Override
-  public int getIndex(TreeNode node) {
-    if (!(node instanceof StorageType)) {
-      return -1;
-    }
-
-    return children.indexOf(node);
-  }
-
-  @Override
-  public boolean getAllowsChildren() {
-    return true;
-  }
-
-  @Override
-  public boolean isLeaf() {
-    return children.isEmpty();
-  }
-
-  @Override
-  public Enumeration<? extends TreeNode> children() {
-    final var iterator = children.iterator();
-    return new Enumeration<>() {
-      @Override
-      public boolean hasMoreElements() {
-        return iterator.hasNext();
-      }
-
-      @Override
-      public TreeNode nextElement() {
-        return iterator.next();
-      }
-    };
-  }
-
-  @Override
-  public String toString() {
-    return name;
+  StorageSchema(String name, List<ObjectEntry> objectEntries) {
+    super(name, true);
+    objectEntries.stream()
+        .collect(Collectors.groupingBy(ObjectEntry::typeName))
+        .forEach((type, entries) -> add(new StorageType(type, entries)));
   }
 
 }

@@ -25,12 +25,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StreamUtils;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.model.tree.Clickable;
 import hu.aestallon.storageexplorer.model.tree.StorageInstance;
 import hu.aestallon.storageexplorer.model.tree.StorageList;
 import hu.aestallon.storageexplorer.model.tree.StorageMap;
 import hu.aestallon.storageexplorer.model.tree.StorageObject;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 
 @Component
 public class MainTreeView extends JPanel {
@@ -52,12 +52,12 @@ public class MainTreeView extends JPanel {
       final var treeNode = (DefaultMutableTreeNode) e.getPath().getLastPathComponent();
       log.info("TREE SELECTION [ {} ]", treeNode);
       if (treeNode == null) {
+
         return;
       }
-      Object userObject = treeNode.getUserObject();
-      log.info("TREE SELECTION - User Object [ {} ]", userObject);
-      if (userObject instanceof Clickable) {
-        storageIndex.get(((Clickable) userObject).uri()).ifPresent(graphView::init);
+
+      if (treeNode instanceof Clickable) {
+        graphView.init(((Clickable) treeNode).storageEntry());
       }
     });
     treePanel = new JScrollPane(tree);
@@ -66,11 +66,7 @@ public class MainTreeView extends JPanel {
 
   private JTree initTree() {
     final var root = new DefaultMutableTreeNode("Storage Explorer");
-    root.add(new StorageInstance(
-        storageIndex.fsBaseDirectory(),
-        storageIndex,
-        root).wrap());
-
+    root.add(new StorageInstance(storageIndex.fsBaseDirectory(), storageIndex));
     return new JTree(root, true);
   }
 
@@ -99,15 +95,12 @@ public class MainTreeView extends JPanel {
                                                            boolean expanded, boolean leaf, int row,
                                                            boolean hasFocus) {
       super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
-      if (value instanceof DefaultMutableTreeNode) {
-        Object userObject = ((DefaultMutableTreeNode) value).getUserObject();
-        if (userObject instanceof StorageList) {
-          setIcon(LIST);
-        } else if (userObject instanceof StorageMap) {
-          setIcon(MAP);
-        } else if (userObject instanceof StorageObject) {
-          setIcon(OBJ);
-        }
+      if (value instanceof StorageList) {
+        setIcon(LIST);
+      } else if (value instanceof StorageMap) {
+        setIcon(MAP);
+      } else if (value instanceof StorageObject) {
+        setIcon(OBJ);
       }
       return this;
     }

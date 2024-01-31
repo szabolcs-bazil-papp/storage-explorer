@@ -15,10 +15,10 @@
 
 package hu.aestallon.storageexplorer.model.tree;
 
-import java.net.URI;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
 public interface Clickable {
 
-  URI uri();
+  StorageEntry storageEntry();
 
 }

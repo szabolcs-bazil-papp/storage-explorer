@@ -15,46 +15,19 @@
 
 package hu.aestallon.storageexplorer.model.tree;
 
-import java.net.URI;
-import java.util.Enumeration;
-import javax.swing.tree.TreeNode;
+import javax.swing.tree.DefaultMutableTreeNode;
 import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-public class StorageMap implements Clickable, WrappableToMutable {
+public class StorageMap extends DefaultMutableTreeNode implements Clickable {
 
-  private final String name;
-  private final StorageInstance parent;
-  private final URI uri;
-
-  public StorageMap(MapEntry mapEntry, StorageInstance parent) {
-    this.name = mapEntry.schema() + "/" + mapEntry.name();
-    this.uri = mapEntry.uri();
-    this.parent = parent;
+  public StorageMap(MapEntry mapEntry) {
+    super(mapEntry, false);
   }
 
   @Override
-  public URI uri() {
-    return uri;
-  }
-
-  @Override
-  public TreeNode getChildAt(int childIndex) {
-    return null;
-  }
-
-  @Override
-  public int getChildCount() {
-    return 0;
-  }
-
-  @Override
-  public TreeNode getParent() {
-    return parent;
-  }
-
-  @Override
-  public int getIndex(TreeNode node) {
-    return -1;
+  public StorageEntry storageEntry() {
+    return (StorageEntry) userObject;
   }
 
   @Override
@@ -68,13 +41,9 @@ public class StorageMap implements Clickable, WrappableToMutable {
   }
 
   @Override
-  public Enumeration<? extends TreeNode> children() {
-    return null;
-  }
-
-  @Override
   public String toString() {
-    return name;
+    final var mapEntry = (MapEntry) userObject;
+    return mapEntry.schema() + " / " + mapEntry.name();
   }
 
 }
