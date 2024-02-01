@@ -19,6 +19,7 @@ import java.net.URI;
 import java.util.Objects;
 import java.util.OptionalInt;
 import org.springframework.util.Assert;
+import hu.aestallon.storageexplorer.util.Uris;
 
 public final class UriProperty {
 
@@ -28,7 +29,7 @@ public final class UriProperty {
     Assert.notNull(propertyName, "java.lang.String propertyName must not be null!");
     Assert.notNull(uri, "java.net.URI uri must not be null!");
 
-    return new UriProperty(propertyName, uri, -1);
+    return new UriProperty(propertyName, Uris.latest(uri), -1);
   }
 
   public static UriProperty listElement(String propertyName, URI uri, int idx) {
@@ -38,7 +39,7 @@ public final class UriProperty {
       throw new IllegalArgumentException("idx [ " + idx + " ] must not be negative!");
     }
 
-    return new UriProperty(propertyName, uri, idx);
+    return new UriProperty(propertyName, Uris.latest(uri), idx);
   }
 
   public static UriProperty parse(String propertyName, URI uri) {

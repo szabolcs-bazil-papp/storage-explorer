@@ -30,21 +30,22 @@ public interface StorageEntry {
   Logger log = LoggerFactory.getLogger(StorageEntry.class);
 
   static Optional<StorageEntry> create(URI uri, ObjectApi objectApi, CollectionApi collectionApi) {
-    final String uriString = uri.toString();
+    final URI latestUri = objectApi.getLatestUri(uri);
+    final String uriString = latestUri.toString();
     try {
-      if (uriString.contains("-collections:/storedlist")) {
-        return Optional.of(new ListEntry(uri, collectionApi));
-      } else if (uriString.contains("-collections:/storedmap")) {
-        return Optional.of(new MapEntry(uri, collectionApi));
+      if (uriString.contains("storedlist")) {
+        return Optional.of(new ListEntry(latestUri, collectionApi));
+      } else if (uriString.contains("storedmap")) {
+        return Optional.of(new MapEntry(latestUri, collectionApi));
       } else if (!uriString.contains("storedRef") && !uriString.contains("storedSeq")) {
-        return Optional.of(new ObjectEntry(uri, objectApi));
+        return Optional.of(new ObjectEntry(latestUri, objectApi));
       }
     } catch (Exception e) {
-      log.error("Cannot initialise StorageEntry [ {} ]: [ {} ]", uri, e.getMessage());
+      log.error("Cannot initialise StorageEntry [ {} ]: [ {} ]", latestUri, e.getMessage());
       log.debug(e.getMessage(), e);
     }
 
-    log.warn("Cannot yet deal with URI TYPE of [ {} ]", uri);
+    log.warn("Cannot yet deal with URI TYPE of [ {} ]", latestUri);
     return Optional.empty();
   }
 
