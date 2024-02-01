@@ -15,15 +15,19 @@
 
 package hu.aestallon.storageexplorer.domain.graph.service;
 
+import java.net.URI;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import org.graphstream.graph.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.UriProperty;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.util.Pair;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toMap;
@@ -37,17 +41,26 @@ public class GraphRenderingService {
   private final NodeAdditionService nodeAdditionService;
   private final IncomingEdgeDiscoveryService incomingEdgeDiscoveryService;
   private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
+  private final StorageIndex storageIndex;
+  private final int graphTraversalLimit;
 
   public GraphRenderingService(NodeAdditionService nodeAdditionService,
                                IncomingEdgeDiscoveryService incomingEdgeDiscoveryService,
-                               OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService) {
+                               OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService,
+                               StorageIndex storageIndex,
+                               @Value("${graph.traversal.limit:-1}") int graphTraversalLimit) {
     this.nodeAdditionService = nodeAdditionService;
     this.incomingEdgeDiscoveryService = incomingEdgeDiscoveryService;
     this.outgoingEdgeDiscoveryService = outgoingEdgeDiscoveryService;
+    this.storageIndex = storageIndex;
+    this.graphTraversalLimit = graphTraversalLimit;
   }
 
   public void render(Graph graph, StorageEntry storageEntry) {
-    nodeAdditionService.addOrigin(graph, storageEntry);
+    if (!NodeAdditionService.containsNode(graph, storageEntry)) {
+      nodeAdditionService.addOrigin(graph, storageEntry);
+    }
+
     renderOutgoingReferences(graph, storageEntry);
     renderIncomingReferences(graph, storageEntry);
   }
@@ -56,6 +69,7 @@ public class GraphRenderingService {
     Map<StorageEntry, Set<Pair<StorageEntry, Set<UriProperty>>>> refs = outgoingEdgeDiscoveryService
         .execute(graph, storageEntry)
         .collect(collectingAndThen(toSet(), s -> Map.of(storageEntry, s)));
+    int c = 0;
     do {
       log.info("OUTGOING REFERENCES: [ {} ]", refs);
       refs.forEach(
@@ -69,7 +83,7 @@ public class GraphRenderingService {
               it -> outgoingEdgeDiscoveryService
                   .execute(graph, it)
                   .collect(toSet())));
-    } while (refs.values().stream().flatMap(Set::stream).findAny().isPresent());
+    } while ((++c < graphTraversalLimit || graphTraversalLimit < 1) && hasValues(refs));
   }
 
   private void renderIncomingReferences(Graph graph, StorageEntry storageEntry) {
@@ -77,6 +91,7 @@ public class GraphRenderingService {
         storageEntry,
         incomingEdgeDiscoveryService.execute(graph, storageEntry).
             collect(toSet()));
+    int c = 0;
     do {
       log.info("INCOMING REFERENCES: [ {} ]", referrers);
       referrers.values().stream()
@@ -88,11 +103,25 @@ public class GraphRenderingService {
       referrers = referrers.values().stream()
           .flatMap(Set::stream)
           .distinct()
-          .filter(it -> !NodeAdditionService.containsNode(graph, it))
           .collect(toMap(
               Function.identity(),
-              it -> incomingEdgeDiscoveryService.execute(graph, it).collect(toSet())));
-    } while (referrers.values().stream().flatMap(Set::stream).findAny().isPresent());
+              it -> incomingEdgeDiscoveryService
+                  .execute(graph, it)
+                  .filter(r -> NodeAdditionService.edgeMissing(graph, r, it))
+                  .collect(toSet())));
+    } while ((++c < graphTraversalLimit || graphTraversalLimit < 1) && hasValues(referrers));
+  }
+
+  private static boolean hasValues(Map<?, ? extends Set<?>> m) {
+    return m.values().stream().flatMap(Set::stream).findAny().isPresent();
+  }
+
+  public Optional<StorageEntry> getStorageEntry(String uriString) {
+    return getStorageEntry(URI.create(uriString));
+  }
+
+  public Optional<StorageEntry> getStorageEntry(URI uri) {
+    return storageIndex.get(uri);
   }
 
 }
