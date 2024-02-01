@@ -18,32 +18,32 @@ package hu.aestallon.storageexplorer.ui;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Optional;
 import javax.swing.*;
 import org.graphstream.graph.Graph;
-import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.MultiGraph;
 import org.graphstream.stream.file.FileSinkImages;
 import org.graphstream.stream.file.images.Resolutions;
+import org.graphstream.ui.graphicGraph.GraphicElement;
+import org.graphstream.ui.graphicGraph.GraphicGraph;
 import org.graphstream.ui.spriteManager.SpriteManager;
 import org.graphstream.ui.swing.util.SwingFileSinkImages;
 import org.graphstream.ui.swing_viewer.SwingViewer;
 import org.graphstream.ui.swing_viewer.ViewPanel;
+import org.graphstream.ui.swing_viewer.util.MouseOverMouseManager;
+import org.graphstream.ui.view.View;
 import org.graphstream.ui.view.Viewer;
-import org.graphstream.ui.view.ViewerListener;
-import org.graphstream.ui.view.ViewerPipe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.graph.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.ui.dialog.entryinspector.StorageEntryInspectorDialogFactory;
-import hu.aestallon.storageexplorer.util.Attributes;
 
 @Component
 public class GraphView extends JPanel {
@@ -59,7 +59,6 @@ public class GraphView extends JPanel {
 
   private final GraphRenderingService graphRenderingService;
   private final StorageEntryInspectorDialogFactory storageEntryInspectorDialogFactory;
-  private MouseListener clickHandler;
 
   public GraphView(GraphRenderingService graphRenderingService,
                    StorageEntryInspectorDialogFactory storageEntryInspectorDialogFactory) {
@@ -69,9 +68,6 @@ public class GraphView extends JPanel {
   }
 
   void init(StorageEntry storageEntry) {
-    if (clickHandler != null) {
-      clickHandler.doPump.set(false);
-    }
     if (screenshotListener != null) {
       panel.removeKeyListener(screenshotListener);
     }
@@ -85,11 +81,9 @@ public class GraphView extends JPanel {
     sprites = new SpriteManager(graph);
 
     graph.setAttribute("ui.stylesheet", "url('./styles.css')");
+    graph.setAttribute("ui.antialias");
+    graph.setAttribute("ui.quality");
     graphRenderingService.render(graph, storageEntry);
-    graph.nodes()
-        .filter(Objects::nonNull)
-        .filter(it -> it.getDegree() == 0)
-        .forEach(it -> graph.removeNode(it.getId()));
 
     viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
 
@@ -97,69 +91,94 @@ public class GraphView extends JPanel {
 
     panel = (ViewPanel) viewer.addDefaultView(false);
     panel.enableMouseOptions();
+    panel.setMouseManager(new GraphViewMouseManager());
 
-    ViewerPipe pipe = viewer.newViewerPipe();
-    clickHandler = new MouseListener(pipe);
-    pipe.addViewerListener(clickHandler);
-
-    pipe.addSink(graph);
-    CompletableFuture.runAsync(clickHandler::pump);
     screenshotListener = new ScreenshotListener();
     panel.addKeyListener(screenshotListener);
     add(panel);
     revalidate();
   }
 
-  private final class MouseListener implements ViewerListener {
+  private void showNodePopup(final StorageEntry entry, final int x, final int y) {
+    final var popup = new NodePopupMenu(entry, graph, graphRenderingService);
+    popup.show(GraphView.this, x, y);
+  }
 
-    private final AtomicBoolean doPump = new AtomicBoolean(true);
-    private final ViewerPipe pipe;
+  private final class GraphViewMouseManager extends MouseOverMouseManager {
 
-    private MouseListener(ViewerPipe pipe) {this.pipe = pipe;}
+    @Override
+    public void init(GraphicGraph graphicGraph, View view) {
+      super.init(graphicGraph, view);
+      view.addListener("Mouse", this);
+    }
 
+    @Override
+    public void release() {
+      super.release();
+      view.removeListener("Mouse", this);
+    }
 
-    void pump() {
-      while (doPump.get()) {
-        pipe.pump();
+    @Override
+    public void mouseClicked(MouseEvent e) {
+      super.mouseClicked(e);
+
+      final var entry = getStorageEntry(e);
+      if (entry.isEmpty()) {
+        return;
+      }
+
+      if (e.getButton() == MouseEvent.BUTTON1) {
+        storageEntryInspectorDialogFactory.showDialog(entry.get(), GraphView.this);
       }
     }
 
     @Override
-    public void viewClosed(String s) {
-      doPump.set(false);
+    public void mousePressed(MouseEvent e) {
+      super.mousePressed(e);
+
+      final var entry = getStorageEntry(e);
+      if (entry.isEmpty()) {
+        return;
+      }
+
+      if (e.getButton() == MouseEvent.BUTTON3) {
+          showNodePopup(entry.get(), e.getX(), e.getY());
+      }
     }
 
-    @Override
-    public void buttonPushed(String s) {
-      final Node node = graph.getNode(s);
-      final Object entry = node.getAttribute(Attributes.STORAGE_ENTRY);
-      if (!(entry instanceof StorageEntry)) {
+    private Optional<StorageEntry> getStorageEntry(MouseEvent e) {
+      final GraphicElement node = view.findGraphicElementAt(getManagedTypes(), e.getX(), e.getY());
+      if (node == null) {
+        return Optional.empty();
+      }
+
+      final String id = node.getId();
+      if (Strings.isNullOrEmpty(id)) {
         JOptionPane.showMessageDialog(
             GraphView.this,
             "No entry under node!",
             "Error",
             JOptionPane.ERROR_MESSAGE);
-        return;
+        return Optional.empty();
       }
 
-      SwingUtilities.invokeLater(() -> storageEntryInspectorDialogFactory.showDialog(
-          (StorageEntry) entry,
-          GraphView.this));
+      final var entry = graphRenderingService.getStorageEntry(id);
+      if (entry.isEmpty()) {
+        JOptionPane.showMessageDialog(
+            GraphView.this,
+            "Id [ " + id + " ] is unknown!",
+            "Error",
+            JOptionPane.ERROR_MESSAGE);
+        return Optional.empty();
+      }
+      return entry;
     }
-
-    @Override
-    public void buttonReleased(String s) {}
-
-    @Override
-    public void mouseOver(String s) {}
-
-    @Override
-    public void mouseLeft(String s) {}
 
   }
 
 
   private final class ScreenshotListener implements KeyListener {
+
     @Override
     public void keyTyped(KeyEvent e) {}
 
@@ -173,7 +192,6 @@ public class GraphView extends JPanel {
         } catch (IOException ex) {
           log.error(ex.getMessage(), ex);
         }
-
       }
     }
 
