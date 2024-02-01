@@ -41,8 +41,8 @@ public class StorageInstance extends DefaultMutableTreeNode {
                 ? 1
                 : 0)
         .collect(groupingBy(Object::getClass));
-    sortAndAdd(collections.getOrDefault(ListEntry.class, new ArrayList<>()));
-    sortAndAdd(collections.getOrDefault(MapEntry.class, new ArrayList<>()));
+    sortAndAdd(collections.getOrDefault(StorageList.class, new ArrayList<>()));
+    sortAndAdd(collections.getOrDefault(StorageMap.class, new ArrayList<>()));
 
     index.entities()
         .filter(ObjectEntry.class::isInstance)
