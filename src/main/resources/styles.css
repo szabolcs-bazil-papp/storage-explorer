@@ -5,14 +5,14 @@ graph {
 node {
     size: 15px;
     text-alignment: under;
-    text-padding: 5px;
+    text-padding: 10px;
 }
 
 edge {
     shape: line;
-    arrow-size: 12px, 12px;
+    arrow-size: 12px, 6px;
     text-alignment: above;
-    text-padding: 5px;
+    text-padding: 25px, 25px;
 }
 
 edge.listref {

@@ -15,12 +15,12 @@
 
 package hu.aestallon.storageexplorer;
 
-import javax.swing.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
+import com.formdev.flatlaf.FlatIntelliJLaf;
 import hu.aestallon.storageexplorer.ui.AppFrame;
 
 @SpringBootApplication
@@ -28,7 +28,7 @@ public class StorageExplorerApplication {
 
   public static void main(String[] args) {
     System.setProperty("org.graphstream.ui", "swing");
-
+    FlatIntelliJLaf.setup();
     new SpringApplicationBuilder(StorageExplorerApplication.class)
         .web(WebApplicationType.NONE)
         .headless(false)
@@ -39,7 +39,6 @@ public class StorageExplorerApplication {
   @Bean
   CommandLineRunner frameLauncher(AppFrame appFrame) {
     return args -> {
-      UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
       appFrame.launch();
     };
   }
