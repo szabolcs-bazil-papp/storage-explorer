@@ -16,8 +16,11 @@
 package hu.aestallon.storageexplorer.ui.dialog.entryinspector;
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.net.URI;
 import javax.swing.*;
@@ -28,6 +31,7 @@ import org.smartbit4all.core.object.ObjectNode;
 import org.smartbit4all.domain.data.storage.ObjectStorageImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.util.Uris;
 
@@ -37,14 +41,17 @@ public class ObjectEntryInspectorDialog extends JFrame {
 
   private final ObjectEntry objectEntry;
   private final ObjectMapper objectMapper;
+  private final StorageEntryInspectorDialogFactory factory;
   private ObjectNode objectNode;
 
-  public ObjectEntryInspectorDialog(ObjectEntry objectEntry, ObjectMapper objectMapper) {
+  public ObjectEntryInspectorDialog(ObjectEntry objectEntry, ObjectMapper objectMapper,
+                                    StorageEntryInspectorDialogFactory factory) {
     super(objectEntry.toString());
 
     this.objectEntry = objectEntry;
     this.objectNode = objectEntry.load();
     this.objectMapper = objectMapper;
+    this.factory = factory;
 
     add(nodePane());
     pack();
@@ -72,10 +79,6 @@ public class ObjectEntryInspectorDialog extends JFrame {
     return (boxed == null) ? 0 : boxed;
   }
 
-  private JScrollPane objectMapPane() {
-    return objectMapPane(objectNode);
-  }
-
   private JScrollPane objectMapPane(final ObjectNode objectNode) {
     final var textarea = objectAsMapTextarea(objectNode);
     return new JScrollPane(
@@ -93,7 +96,29 @@ public class ObjectEntryInspectorDialog extends JFrame {
     // textarea.setFocusable(false);
     textarea.setOpaque(false);
     textarea.setFont(getMonoType().deriveFont(12f));
+    addJumpAction(textarea);
+
     return textarea;
+  }
+
+  private void addJumpAction(final JTextArea component) {
+    final var ctrlShiftI = KeyStroke.getKeyStroke(
+        KeyEvent.VK_I,
+        KeyEvent.CTRL_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK);
+    component.getInputMap().put(ctrlShiftI, "jumpToRef");
+    component.getActionMap().put("jumpToRef", new AbstractAction() {
+
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        final JTextArea textArea = (JTextArea) e.getSource();
+        final String selectedText = textArea.getSelectedText();
+        if (Strings.isNullOrEmpty(selectedText)) {
+          return;
+        }
+        Uris.parse(selectedText).ifPresent(factory::showDialogOnUri);
+      }
+
+    });
   }
 
   private Component versionPane(final ObjectNode objectNode) {
@@ -111,9 +136,9 @@ public class ObjectEntryInspectorDialog extends JFrame {
     final var objectAsMapTextarea = objectAsMapTextarea(objectNode);
     final var pane = objectAsMapScrollPane(objectAsMapTextarea);
     container.add(label);
-    container.add(separator);
+    //container.add(separator);
     container.add(pane);
-
+    //container.add(Box.createVerticalGlue());
     return container;
   }
 
@@ -124,15 +149,6 @@ public class ObjectEntryInspectorDialog extends JFrame {
         ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
     );
     pane.setAlignmentX(Component.LEFT_ALIGNMENT);
-    pane.addComponentListener(new ComponentAdapter() {
-
-      @Override
-      public void componentResized(ComponentEvent e) {
-        final var size = e.getComponent().getSize();
-        objectAsMapTextarea.setPreferredSize(size);
-      }
-
-    });
     return pane;
   }
 
