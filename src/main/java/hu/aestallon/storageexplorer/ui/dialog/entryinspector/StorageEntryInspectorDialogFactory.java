@@ -16,30 +16,54 @@
 package hu.aestallon.storageexplorer.ui.dialog.entryinspector;
 
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.HashSet;
+import java.util.Set;
+import javax.swing.*;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
-import hu.aestallon.storageexplorer.model.tree.StorageList;
-import hu.aestallon.storageexplorer.model.tree.StorageMap;
-import hu.aestallon.storageexplorer.model.tree.StorageObject;
 
 @Service
 public class StorageEntryInspectorDialogFactory {
 
   private final ObjectMapper objectMapper;
+  private final Set<StorageEntry> openedDialogs;
 
   public StorageEntryInspectorDialogFactory(ObjectMapper objectMapper) {
     this.objectMapper = objectMapper;
+    this.openedDialogs = new HashSet<>();
   }
 
   public void showDialog(StorageEntry storageEntry, Component parent) {
-    if (storageEntry instanceof StorageMap) {
-
-    } else if (storageEntry instanceof StorageList) {
-
-    } else if (storageEntry instanceof StorageObject) {
-
+    if (openedDialogs.contains(storageEntry)) {
+      return;
     }
+    openedDialogs.add(storageEntry);
+
+    final JFrame dialog;
+    if (storageEntry instanceof MapEntry) {
+      return;
+    } else if (storageEntry instanceof ListEntry) {
+      return;
+    } else if (storageEntry instanceof ObjectEntry) {
+      dialog = new ObjectEntryInspectorDialog((ObjectEntry) storageEntry, objectMapper);
+    } else {
+      throw new IllegalArgumentException(storageEntry + " is not interpreted!");
+    }
+    dialog.addWindowListener(new WindowAdapter() {
+      @Override
+      public void windowClosing(WindowEvent e) {
+        openedDialogs.remove(storageEntry);
+      }
+
+    });
+    dialog.setLocationRelativeTo(parent);
+    dialog.setVisible(true);
   }
 
 }

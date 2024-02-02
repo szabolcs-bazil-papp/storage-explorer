@@ -93,6 +93,11 @@ public class ObjectEntry implements StorageEntry {
     return typeName;
   }
 
+  public ObjectNode load() {
+    // TODO: Add VersionInfo to Entry -> what to load, what can be loaded!
+    return objectApi.loadLatest(uri);
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o)
