@@ -98,6 +98,10 @@ public class ObjectEntry implements StorageEntry {
     return objectApi.loadLatest(uri);
   }
 
+  public ObjectNode load(final long version) {
+    return objectApi.load(Uris.atVersion(uri, version));
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o)

@@ -76,4 +76,13 @@ public final class Uris {
     return pathElements[pathElements.length - 1];
   }
 
+  public static long getVersion(final URI uri) {
+    final Long boxed = ObjectStorageImpl.getUriVersion(uri);
+    return (boxed == null) ? -1L : boxed;
+  }
+
+  public static URI atVersion(final URI uri, final long version) {
+    return ObjectStorageImpl.getUriWithVersion(uri, version);
+  }
+
 }
