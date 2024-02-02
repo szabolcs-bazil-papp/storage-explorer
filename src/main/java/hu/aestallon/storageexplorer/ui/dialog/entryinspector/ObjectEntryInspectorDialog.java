@@ -29,6 +29,7 @@ import org.smartbit4all.domain.data.storage.ObjectStorageImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.util.Uris;
 
 public class ObjectEntryInspectorDialog extends JFrame {
 
@@ -51,9 +52,11 @@ public class ObjectEntryInspectorDialog extends JFrame {
 
   private JTabbedPane nodePane() {
     final var pane = new JTabbedPane(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
-    final long versionNr = objectNode.getVersionNr();
+    final long versionNr = versionNr();
     if (versionNr == 0L) {
-      pane.addTab("0", versionPane(objectNode));
+      pane.addTab(
+          Uris.isSingleVersion(objectEntry.uri()) ? "SINGLE" : "00",
+          versionPane(objectNode));
     } else {
       for (int i = 0; i <= versionNr; i++) {
         final var versionedNode = objectEntry.load(i);
@@ -62,6 +65,11 @@ public class ObjectEntryInspectorDialog extends JFrame {
     }
     pane.setSelectedIndex((int) versionNr);
     return pane;
+  }
+
+  private long versionNr() {
+    final Long boxed = objectNode.getVersionNr();
+    return (boxed == null) ? 0 : boxed;
   }
 
   private JScrollPane objectMapPane() {
@@ -78,17 +86,17 @@ public class ObjectEntryInspectorDialog extends JFrame {
   }
 
   private JTextArea objectAsMapTextarea(final ObjectNode objectNode) {
-    final var textarea = new JTextArea(getObjectAsMap(objectNode), 15, 80);
+    final var textarea = new JTextArea(getObjectAsMap(objectNode), 0, 80);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
     textarea.setEditable(false);
-    textarea.setFocusable(false);
+    // textarea.setFocusable(false);
     textarea.setOpaque(false);
     textarea.setFont(getMonoType().deriveFont(12f));
     return textarea;
   }
 
-  private JScrollPane versionPane(final ObjectNode objectNode) {
+  private Component versionPane(final ObjectNode objectNode) {
     final var container = new JPanel();
     container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
     container.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -101,23 +109,27 @@ public class ObjectEntryInspectorDialog extends JFrame {
     separator.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     final var objectAsMapTextarea = objectAsMapTextarea(objectNode);
-    objectAsMapTextarea.setAlignmentX(Component.LEFT_ALIGNMENT);
-
+    final var pane = objectAsMapScrollPane(objectAsMapTextarea);
     container.add(label);
     container.add(separator);
-    container.add(objectAsMapTextarea);
+    container.add(pane);
 
+    return container;
+  }
+
+  private static JScrollPane objectAsMapScrollPane(JTextArea objectAsMapTextarea) {
     final var pane = new JScrollPane(
-        container,
+        objectAsMapTextarea,
         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
         ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
     );
+    pane.setAlignmentX(Component.LEFT_ALIGNMENT);
     pane.addComponentListener(new ComponentAdapter() {
 
       @Override
       public void componentResized(ComponentEvent e) {
-        Dimension size = e.getComponent().getSize();
-        container.setPreferredSize(size);
+        final var size = e.getComponent().getSize();
+        objectAsMapTextarea.setPreferredSize(size);
       }
 
     });

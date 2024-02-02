@@ -85,4 +85,8 @@ public final class Uris {
     return ObjectStorageImpl.getUriWithVersion(uri, version);
   }
 
+  public static boolean isSingleVersion(final URI uri) {
+    return uri.toString().endsWith("-s");
+  }
+
 }
