@@ -39,6 +39,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
+import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.misc.MonospaceFontProvider;
 import hu.aestallon.storageexplorer.util.Uris;
 
@@ -203,7 +204,7 @@ public class StorageEntryInspectorViewFactory {
   }
 
   void addRenderAction(final StorageEntry storageEntry, final JToolBar toolbar) {
-    toolbar.add(new AbstractAction("Render") {
+    toolbar.add(new AbstractAction(null, IconProvider.GRAPH) {
       @Override
       public void actionPerformed(ActionEvent e) {
         eventPublisher.publishEvent(new ViewController.GraphRenderingRequest(storageEntry));

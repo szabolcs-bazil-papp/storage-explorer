@@ -24,8 +24,12 @@ public final class IconProvider {
 
   private IconProvider() {}
 
-  private static byte[] loadIcon(String loc) {
-    InputStream resourceAsStream = IconProvider.class.getResourceAsStream(loc);
+  private static String location(final String iconName) {
+    return String.format("/icons/%s.png", iconName);
+  }
+
+  private static byte[] loadIcon(String iconName) {
+    InputStream resourceAsStream = IconProvider.class.getResourceAsStream(location(iconName));
 
     try {
       return StreamUtils.copyToByteArray(resourceAsStream);
@@ -34,7 +38,8 @@ public final class IconProvider {
     }
   }
 
-  public static final ImageIcon LIST = new ImageIcon(loadIcon("/icons/list.png"));
-  public static final ImageIcon MAP = new ImageIcon(loadIcon("/icons/map.png"));
-  public static final ImageIcon OBJ = new ImageIcon(loadIcon("/icons/object.png"));
+  public static final ImageIcon LIST = new ImageIcon(loadIcon("list"));
+  public static final ImageIcon MAP = new ImageIcon(loadIcon("map"));
+  public static final ImageIcon OBJ = new ImageIcon(loadIcon("obj"));
+  public static final ImageIcon GRAPH = new ImageIcon(loadIcon("graph"));
 }
