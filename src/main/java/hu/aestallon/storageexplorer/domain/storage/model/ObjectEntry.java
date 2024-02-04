@@ -16,16 +16,22 @@
 package hu.aestallon.storageexplorer.domain.storage.model;
 
 import java.net.URI;
+import java.util.Objects;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
 import org.smartbit4all.core.utility.StringConstant;
+import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.util.ObjectMaps;
 import hu.aestallon.storageexplorer.util.Pair;
 import hu.aestallon.storageexplorer.util.Uris;
 import static java.util.stream.Collectors.toSet;
 
 public class ObjectEntry implements StorageEntry {
+
+  private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
 
   private final URI uri;
   private final ObjectApi objectApi;
@@ -98,6 +104,24 @@ public class ObjectEntry implements StorageEntry {
     return objectApi.loadLatest(uri);
   }
 
+  public ObjectEntryLoadResult tryLoad() {
+    try {
+      final ObjectNode objectNode = load();
+      if (objectNode == null) {
+        return ObjectEntryLoadResult.err(null);
+      }
+      return ObjectEntryLoadResult.ok(objectNode);
+    } catch (Throwable t) {
+      final String msg = String.format("Could not load Object Entry [ %s ] : %s",
+          uri,
+          t.getMessage());
+      log.error(msg);
+      log.error(t.getMessage(), t);
+
+      return ObjectEntryLoadResult.err(msg);
+    }
+  }
+
   public ObjectNode load(final long version) {
     return objectApi.load(Uris.atVersion(uri, version));
   }
@@ -122,6 +146,68 @@ public class ObjectEntry implements StorageEntry {
     return (displayName.isEmpty())
         ? typeName
         : typeName + " (" + displayName + ")";
+  }
+
+  public static final class ObjectEntryLoadResult {
+
+    static ObjectEntryLoadResult ok(final ObjectNode objectNode) {
+      return new ObjectEntryLoadResult(objectNode, StringConstant.EMPTY);
+    }
+
+    static ObjectEntryLoadResult err(final String errorMessage) {
+      return Strings.isNullOrEmpty(errorMessage)
+          ? new ObjectEntryLoadResult(null, "Loading node failed for unknown reason.")
+          : new ObjectEntryLoadResult(null, errorMessage);
+    }
+
+    private final ObjectNode objectNode;
+    private final String errorMessage;
+
+    private ObjectEntryLoadResult(ObjectNode objectNode, String errorMessage) {
+      this.objectNode = objectNode;
+      this.errorMessage = errorMessage;
+    }
+
+    public ObjectNode objectNode() {
+      return objectNode;
+    }
+
+    public String errorMessage() {
+      return errorMessage;
+    }
+
+    public boolean isOk() {
+      return objectNode != null;
+    }
+
+    public boolean isErr() {
+      return !isOk();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o)
+        return true;
+      if (o == null || getClass() != o.getClass())
+        return false;
+      ObjectEntryLoadResult that = (ObjectEntryLoadResult) o;
+      return Objects.equals(objectNode, that.objectNode) && Objects.equals(
+          errorMessage, that.errorMessage);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(objectNode, errorMessage);
+    }
+
+    @Override
+    public String toString() {
+      return "ObjectEntryLoadResult{" +
+          "objectNode=" + objectNode +
+          ", errorMessage='" + errorMessage + '\'' +
+          '}';
+    }
+
   }
 
 }

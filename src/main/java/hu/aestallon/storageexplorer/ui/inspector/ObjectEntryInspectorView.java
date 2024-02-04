@@ -33,17 +33,27 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   private final ObjectEntry objectEntry;
   private final ObjectMapper objectMapper;
   private final StorageEntryInspectorViewFactory factory;
-  private ObjectNode objectNode;
+  private final ObjectNode objectNode;
 
   public ObjectEntryInspectorView(ObjectEntry objectEntry, ObjectMapper objectMapper,
                                   StorageEntryInspectorViewFactory factory) {
     super(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
 
     this.objectEntry = objectEntry;
-    objectNode = objectEntry.load();
     this.objectMapper = objectMapper;
     this.factory = factory;
 
+    final var result = objectEntry.tryLoad();
+    if (result.isOk()) {
+      objectNode = result.objectNode();
+      setUpObjectNodeDisplay(objectEntry);
+    } else {
+      objectNode = null;
+      setUpLoadingErrorDisplay(result);
+    }
+  }
+
+  private void setUpObjectNodeDisplay(ObjectEntry objectEntry) {
     final long versionNr = versionNr();
     if (versionNr == 0L) {
       addTab(
@@ -56,7 +66,6 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       }
     }
     setSelectedIndex((int) versionNr);
-
   }
 
   private long versionNr() {
@@ -96,7 +105,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     separator.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     final var objectAsMapTextarea = objectAsMapTextarea(objectNode);
-    final var pane = objectAsMapScrollPane(objectAsMapTextarea);
+    final var pane = textAreaContainerPane(objectAsMapTextarea);
 
     container.add(toolbar);
     container.add(label);
@@ -106,7 +115,36 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     return container;
   }
 
-  private static JScrollPane objectAsMapScrollPane(JTextArea objectAsMapTextarea) {
+  private void setUpLoadingErrorDisplay(final ObjectEntry.ObjectEntryLoadResult loadResult) {
+    addTab("ERROR", errorPane(loadResult));
+    setSelectedIndex(0);
+  }
+
+  private JComponent errorPane(final ObjectEntry.ObjectEntryLoadResult loadResult) {
+    final var container = new JPanel();
+    container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+    container.setBorder(new EmptyBorder(5, 5, 5, 5));
+
+    final var label = new JLabel(objectEntry.toString() + " LOADING ERROR");
+    label.setFont(UIManager.getFont("h3.font"));
+    label.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+    container.add(label);
+    container.add(errorMessageDisplay(loadResult.errorMessage()));
+    return container;
+  }
+
+  private JScrollPane errorMessageDisplay(final String errorMessage) {
+    final var textarea = new JTextArea(errorMessage, 0, 80);
+    textarea.setWrapStyleWord(true);
+    textarea.setLineWrap(true);
+    textarea.setEditable(false);
+    textarea.setOpaque(false);
+    textarea.setFont(factory.monospaceFontProvider().getFont());
+    return textAreaContainerPane(textarea);
+  }
+
+  private static JScrollPane textAreaContainerPane(JTextArea objectAsMapTextarea) {
     final var pane = new JScrollPane(
         objectAsMapTextarea,
         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
