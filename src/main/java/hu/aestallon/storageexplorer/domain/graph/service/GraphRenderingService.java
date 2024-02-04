@@ -45,18 +45,21 @@ public class GraphRenderingService {
   private final IncomingEdgeDiscoveryService incomingEdgeDiscoveryService;
   private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
   private final StorageIndex storageIndex;
-  private final int graphTraversalLimit;
+  private final int inboundLimit;
+  private final int outboundLimit;
 
   public GraphRenderingService(NodeAdditionService nodeAdditionService,
                                IncomingEdgeDiscoveryService incomingEdgeDiscoveryService,
                                OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService,
                                StorageIndex storageIndex,
-                               @Value("${graph.traversal.limit:-1}") int graphTraversalLimit) {
+                               @Value("${graph.traversal.inbound:0}") int inboundLimit,
+                               @Value("${graph.traversal.outbound:-1}") int outboundLimit) {
     this.nodeAdditionService = nodeAdditionService;
     this.incomingEdgeDiscoveryService = incomingEdgeDiscoveryService;
     this.outgoingEdgeDiscoveryService = outgoingEdgeDiscoveryService;
     this.storageIndex = storageIndex;
-    this.graphTraversalLimit = graphTraversalLimit;
+    this.inboundLimit = inboundLimit;
+    this.outboundLimit = outboundLimit;
   }
 
   public void render(Graph graph, StorageEntry storageEntry) {
@@ -64,8 +67,12 @@ public class GraphRenderingService {
       nodeAdditionService.addOrigin(graph, storageEntry);
     }
 
-    renderOutgoingReferences(graph, storageEntry);
-    renderIncomingReferences(graph, storageEntry);
+    if (outboundLimit != 0) {
+      renderOutgoingReferences(graph, storageEntry);
+    }
+    if (inboundLimit != 0) {
+      renderIncomingReferences(graph, storageEntry);
+    }
   }
 
   private void renderOutgoingReferences(Graph graph, StorageEntry storageEntry) {
@@ -86,7 +93,7 @@ public class GraphRenderingService {
               it -> outgoingEdgeDiscoveryService
                   .execute(graph, it)
                   .collect(toSet())));
-    } while ((++c < graphTraversalLimit || graphTraversalLimit < 1) && hasValues(refs));
+    } while ((++c < outboundLimit || outboundLimit < 0) && hasValues(refs));
   }
 
   private void renderIncomingReferences(Graph graph, StorageEntry storageEntry) {
@@ -112,7 +119,7 @@ public class GraphRenderingService {
                   .execute(graph, it)
                   .filter(r -> NodeAdditionService.edgeMissing(graph, r, it))
                   .collect(toSet())));
-    } while ((++c < graphTraversalLimit || graphTraversalLimit < 1) && hasValues(referrers));
+    } while ((++c < inboundLimit || inboundLimit < 1) && hasValues(referrers));
   }
 
   private static boolean hasValues(Map<?, ? extends Set<?>> m) {
