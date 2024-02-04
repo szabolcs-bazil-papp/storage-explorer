@@ -125,7 +125,9 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
       return columnIndex == 0
-          ? Integer.parseInt(uris.get(rowIndex).propertyName())
+          ? (storageEntry instanceof ListEntry)
+            ? Integer.parseInt(uris.get(rowIndex).propertyName())
+            : uris.get(rowIndex).propertyName()
           : uris.get(rowIndex).uri();
     }
 
