@@ -86,6 +86,23 @@ public class ExplorerView extends JPanel {
     revalidate();
   }
 
+  public void closeGraphView() {
+    if (!graphViewOpen()) {
+      return;
+    }
+    graphView.discard();
+    if (inspectorContainerOpen()) {
+      remove(contentPane);
+      add(inspectorContainerView);
+
+      displayMode = DisplayMode.INSPECTORS_ONLY;
+    } else {
+      remove(graphView);
+      displayMode = DisplayMode.NONE;
+    }
+    revalidate();
+  }
+
   private void initContentPane() {
     contentPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, graphView, inspectorContainerView);
     contentPane.getLeftComponent().setPreferredSize(new Dimension(1_000, 500));

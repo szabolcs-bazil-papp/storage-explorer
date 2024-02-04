@@ -64,6 +64,10 @@ public class ViewController {
   }
 
 
+  public static final class GraphViewCloseRequest {
+  }
+
+
   private final ExplorerView explorerView;
   private final MainTreeView mainTreeView;
   private final GraphView graphView;
@@ -105,6 +109,11 @@ public class ViewController {
   @EventListener
   public void onGraphSelectionRequest(GraphSelectionRequest e) {
     graphView.select(e.storageEntry);
+  }
+
+  @EventListener
+  public void onGraphViewCloseRequest(GraphViewCloseRequest e) {
+    explorerView.closeGraphView();
   }
 
 }

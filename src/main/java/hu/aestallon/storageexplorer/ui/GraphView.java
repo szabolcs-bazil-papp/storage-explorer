@@ -16,6 +16,7 @@
 package hu.aestallon.storageexplorer.ui;
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -47,6 +48,7 @@ import hu.aestallon.storageexplorer.domain.graph.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.misc.GraphStylingProvider;
+import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 
 @Component
 public class GraphView extends JPanel {
@@ -66,10 +68,26 @@ public class GraphView extends JPanel {
 
   public GraphView(ApplicationEventPublisher eventPublisher,
                    GraphRenderingService graphRenderingService) {
-    super(new GridLayout(1, 1));
+    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     setMinimumSize(new Dimension(500, 500));
+
     this.eventPublisher = eventPublisher;
     this.graphRenderingService = graphRenderingService;
+
+    initToolbar();
+  }
+
+  private void initToolbar() {
+    final var toolbar = new JToolBar();
+    toolbar.add(Box.createHorizontalGlue());
+    toolbar.add(new AbstractAction(null, IconProvider.CLOSE) {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        eventPublisher.publishEvent(new ViewController.GraphViewCloseRequest());
+      }
+    });
+    toolbar.setPreferredSize(new Dimension(500, 40));
+    add(toolbar);
   }
 
   public void init(StorageEntry storageEntry) {
@@ -101,7 +119,23 @@ public class GraphView extends JPanel {
     screenshotListener = new ScreenshotListener();
     panel.addKeyListener(screenshotListener);
     add(panel);
+    setVisible(true);
     revalidate();
+  }
+
+  public void discard() {
+    setVisible(false);
+    if (panel != null) {
+      remove(panel);
+      panel = null;
+    }
+    viewer = null;
+    sprites = null;
+    if (graph != null) {
+      graph.clear();
+      graph = null;
+    }
+    screenshotListener = null;
   }
 
   public void select(final StorageEntry storageEntry) {
