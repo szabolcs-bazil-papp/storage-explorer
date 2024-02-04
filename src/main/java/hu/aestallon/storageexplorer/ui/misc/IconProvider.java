@@ -42,4 +42,5 @@ public final class IconProvider {
   public static final ImageIcon MAP = new ImageIcon(loadIcon("map"));
   public static final ImageIcon OBJ = new ImageIcon(loadIcon("object"));
   public static final ImageIcon GRAPH = new ImageIcon(loadIcon("graph"));
+  public static final ImageIcon CLOSE = new ImageIcon(loadIcon("close"));
 }
