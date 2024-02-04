@@ -46,6 +46,7 @@ import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.graph.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
+import hu.aestallon.storageexplorer.ui.misc.GraphStylingProvider;
 
 @Component
 public class GraphView extends JPanel {
@@ -84,7 +85,7 @@ public class GraphView extends JPanel {
     graph = new MultiGraph("fs");
     sprites = new SpriteManager(graph);
 
-    graph.setAttribute("ui.stylesheet", "url('./styles.css')");
+    graph.setAttribute("ui.stylesheet", GraphStylingProvider.LIGHT);
     graph.setAttribute("ui.antialias");
     graph.setAttribute("ui.quality");
     graphRenderingService.render(graph, storageEntry);
