@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import org.graphstream.graph.Graph;
+import org.graphstream.graph.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.UriProperty;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
+import hu.aestallon.storageexplorer.util.Attributes;
 import hu.aestallon.storageexplorer.util.Pair;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toMap;
@@ -42,18 +44,21 @@ public class GraphRenderingService {
   private final IncomingEdgeDiscoveryService incomingEdgeDiscoveryService;
   private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
   private final StorageIndex storageIndex;
-  private final int graphTraversalLimit;
+  private final int inboundLimit;
+  private final int outboundLimit;
 
   public GraphRenderingService(NodeAdditionService nodeAdditionService,
                                IncomingEdgeDiscoveryService incomingEdgeDiscoveryService,
                                OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService,
                                StorageIndex storageIndex,
-                               @Value("${graph.traversal.limit:-1}") int graphTraversalLimit) {
+                               @Value("${graph.traversal.inbound:0}") int inboundLimit,
+                               @Value("${graph.traversal.outbound:-1}") int outboundLimit) {
     this.nodeAdditionService = nodeAdditionService;
     this.incomingEdgeDiscoveryService = incomingEdgeDiscoveryService;
     this.outgoingEdgeDiscoveryService = outgoingEdgeDiscoveryService;
     this.storageIndex = storageIndex;
-    this.graphTraversalLimit = graphTraversalLimit;
+    this.inboundLimit = inboundLimit;
+    this.outboundLimit = outboundLimit;
   }
 
   public void render(Graph graph, StorageEntry storageEntry) {
@@ -61,8 +66,12 @@ public class GraphRenderingService {
       nodeAdditionService.addOrigin(graph, storageEntry);
     }
 
-    renderOutgoingReferences(graph, storageEntry);
-    renderIncomingReferences(graph, storageEntry);
+    if (outboundLimit != 0) {
+      renderOutgoingReferences(graph, storageEntry);
+    }
+    if (inboundLimit != 0) {
+      renderIncomingReferences(graph, storageEntry);
+    }
   }
 
   private void renderOutgoingReferences(Graph graph, StorageEntry storageEntry) {
@@ -83,7 +92,7 @@ public class GraphRenderingService {
               it -> outgoingEdgeDiscoveryService
                   .execute(graph, it)
                   .collect(toSet())));
-    } while ((++c < graphTraversalLimit || graphTraversalLimit < 1) && hasValues(refs));
+    } while ((++c < outboundLimit || outboundLimit < 0) && hasValues(refs));
   }
 
   private void renderIncomingReferences(Graph graph, StorageEntry storageEntry) {
@@ -109,7 +118,7 @@ public class GraphRenderingService {
                   .execute(graph, it)
                   .filter(r -> NodeAdditionService.edgeMissing(graph, r, it))
                   .collect(toSet())));
-    } while ((++c < graphTraversalLimit || graphTraversalLimit < 1) && hasValues(referrers));
+    } while ((++c < inboundLimit || inboundLimit < 1) && hasValues(referrers));
   }
 
   private static boolean hasValues(Map<?, ? extends Set<?>> m) {
@@ -122,6 +131,23 @@ public class GraphRenderingService {
 
   public Optional<StorageEntry> getStorageEntry(URI uri) {
     return storageIndex.get(uri);
+  }
+
+  public void changeHighlight(final Graph graph, final StorageEntry from, final StorageEntry to) {
+    Node fromNode = NodeAdditionService.getNode(graph, from);
+    if (fromNode != null) {
+      Object attribute = fromNode.getAttribute(Attributes.STYLE_CLASS);
+      boolean addOrigin = attribute != null && String.valueOf(attribute).contains("origin");
+      fromNode.removeAttribute(Attributes.STYLE_CLASS);
+      if (addOrigin) fromNode.setAttribute(Attributes.STYLE_CLASS, "origin");
+    }
+
+    final Node toNode = NodeAdditionService.getNode(graph, to);
+    if (toNode != null) {
+      Object attribute = toNode.getAttribute(Attributes.STYLE_CLASS);
+      boolean addOrigin = attribute != null && String.valueOf(attribute).contains("origin");
+      toNode.setAttribute(Attributes.STYLE_CLASS, addOrigin ? "originhighlighted" : "highlighted");
+    }
   }
 
 }

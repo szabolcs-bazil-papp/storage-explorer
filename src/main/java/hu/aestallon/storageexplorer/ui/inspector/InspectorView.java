@@ -13,20 +13,17 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.util;
+package hu.aestallon.storageexplorer.ui.inspector;
 
-public final class Attributes {
+import javax.swing.*;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-  private Attributes() {}
+public interface InspectorView<T extends StorageEntry> {
 
-  public static final String LABEL = "ui.label";
+  T storageEntry();
 
-  public static final String STYLE_CLASS = "ui.class";
-
-  public static final String SELECTED = "ui.selected";
-
-  public static final String TYPE_NAME = "sb4.type";
-
-  public static final String STORAGE_ENTRY = "storage.entry";
+  default JComponent asComponent() {
+    return (JComponent) this;
+  }
 
 }

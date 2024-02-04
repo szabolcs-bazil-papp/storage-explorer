@@ -55,6 +55,14 @@ public class NodeAdditionService {
     return containsNode(graph, storageEntry.uri());
   }
 
+  static Node getNode(Graph graph, StorageEntry storageEntry) {
+    if (storageEntry == null) {
+      return null;
+    }
+
+    return graph.getNode(stringKey(storageEntry.uri()));
+  }
+
   private static boolean containsNode(Graph graph, URI uri) {
     return graph.getNode(stringKey(uri)) != null;
   }

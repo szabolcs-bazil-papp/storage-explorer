@@ -13,65 +13,50 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.ui.dialog.entryinspector;
+package hu.aestallon.storageexplorer.ui.inspector;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.io.IOException;
-import java.net.URI;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
-import org.smartbit4all.domain.data.storage.ObjectStorageImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.util.Uris;
 
-public class ObjectEntryInspectorDialog extends JFrame {
+public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
 
-  private static final Logger log = LoggerFactory.getLogger(ObjectEntryInspectorDialog.class);
+  private static final Logger log = LoggerFactory.getLogger(ObjectEntryInspectorView.class);
 
   private final ObjectEntry objectEntry;
   private final ObjectMapper objectMapper;
-  private final StorageEntryInspectorDialogFactory factory;
+  private final StorageEntryInspectorViewFactory factory;
   private ObjectNode objectNode;
 
-  public ObjectEntryInspectorDialog(ObjectEntry objectEntry, ObjectMapper objectMapper,
-                                    StorageEntryInspectorDialogFactory factory) {
-    super(objectEntry.toString());
+  public ObjectEntryInspectorView(ObjectEntry objectEntry, ObjectMapper objectMapper,
+                                  StorageEntryInspectorViewFactory factory) {
+    super(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
 
     this.objectEntry = objectEntry;
-    this.objectNode = objectEntry.load();
+    objectNode = objectEntry.load();
     this.objectMapper = objectMapper;
     this.factory = factory;
 
-    add(nodePane());
-    pack();
-  }
-
-  private JTabbedPane nodePane() {
-    final var pane = new JTabbedPane(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
     final long versionNr = versionNr();
     if (versionNr == 0L) {
-      pane.addTab(
+      addTab(
           Uris.isSingleVersion(objectEntry.uri()) ? "SINGLE" : "00",
           versionPane(objectNode));
     } else {
       for (int i = 0; i <= versionNr; i++) {
         final var versionedNode = objectEntry.load(i);
-        pane.addTab(String.format("%02d", i), versionPane(versionedNode));
+        addTab(String.format("%02d", i), versionPane(versionedNode));
       }
     }
-    pane.setSelectedIndex((int) versionNr);
-    return pane;
+    setSelectedIndex((int) versionNr);
+
   }
 
   private long versionNr() {
@@ -79,52 +64,29 @@ public class ObjectEntryInspectorDialog extends JFrame {
     return (boxed == null) ? 0 : boxed;
   }
 
-  private JScrollPane objectMapPane(final ObjectNode objectNode) {
-    final var textarea = objectAsMapTextarea(objectNode);
-    return new JScrollPane(
-        textarea,
-        ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-    );
-  }
-
   private JTextArea objectAsMapTextarea(final ObjectNode objectNode) {
     final var textarea = new JTextArea(getObjectAsMap(objectNode), 0, 80);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
     textarea.setEditable(false);
-    // textarea.setFocusable(false);
     textarea.setOpaque(false);
-    textarea.setFont(getMonoType().deriveFont(12f));
-    addJumpAction(textarea);
+    textarea.setFont(factory.monospaceFontProvider().getFont());
+
+    factory.addJumpAction(textarea);
+    factory.monospaceFontProvider().applyFontSizeChangeAction(textarea);
+
+    factory.submitTextArea(objectEntry, textarea);
 
     return textarea;
-  }
-
-  private void addJumpAction(final JTextArea component) {
-    final var ctrlShiftI = KeyStroke.getKeyStroke(
-        KeyEvent.VK_I,
-        KeyEvent.CTRL_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK);
-    component.getInputMap().put(ctrlShiftI, "jumpToRef");
-    component.getActionMap().put("jumpToRef", new AbstractAction() {
-
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        final JTextArea textArea = (JTextArea) e.getSource();
-        final String selectedText = textArea.getSelectedText();
-        if (Strings.isNullOrEmpty(selectedText)) {
-          return;
-        }
-        Uris.parse(selectedText).ifPresent(factory::showDialogOnUri);
-      }
-
-    });
   }
 
   private Component versionPane(final ObjectNode objectNode) {
     final var container = new JPanel();
     container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
     container.setBorder(new EmptyBorder(5, 5, 5, 5));
+
+    final var toolbar = new JToolBar(JToolBar.TOP);
+    factory.addRenderAction(objectEntry, toolbar);
 
     final var label = new JLabel(objectEntry.toString());
     label.setFont(UIManager.getFont("h3.font"));
@@ -135,6 +97,8 @@ public class ObjectEntryInspectorDialog extends JFrame {
 
     final var objectAsMapTextarea = objectAsMapTextarea(objectNode);
     final var pane = objectAsMapScrollPane(objectAsMapTextarea);
+
+    container.add(toolbar);
     container.add(label);
     //container.add(separator);
     container.add(pane);
@@ -146,8 +110,7 @@ public class ObjectEntryInspectorDialog extends JFrame {
     final var pane = new JScrollPane(
         objectAsMapTextarea,
         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-    );
+        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
     pane.setAlignmentX(Component.LEFT_ALIGNMENT);
     return pane;
   }
@@ -163,21 +126,9 @@ public class ObjectEntryInspectorDialog extends JFrame {
     }
   }
 
-  private static Font monotype = null;
-
-  private static Font getMonoType() {
-    if (monotype != null) {
-      return monotype;
-    }
-
-    try (final var in = ObjectEntryInspectorDialog.class.getResourceAsStream(
-        "/fonts/JetBrainsMono-Regular.ttf")) {
-      monotype = Font.createFont(Font.TRUETYPE_FONT, in);
-    } catch (IOException | FontFormatException e) {
-      log.error(e.getMessage(), e);
-    }
-
-    return monotype;
+  @Override
+  public ObjectEntry storageEntry() {
+    return objectEntry;
   }
 
 }

@@ -22,6 +22,7 @@ import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.Optional;
 import javax.swing.*;
 import org.graphstream.graph.Graph;
@@ -39,11 +40,12 @@ import org.graphstream.ui.view.View;
 import org.graphstream.ui.view.Viewer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.graph.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
-import hu.aestallon.storageexplorer.ui.dialog.entryinspector.StorageEntryInspectorDialogFactory;
+import hu.aestallon.storageexplorer.ui.controller.ViewController;
 
 @Component
 public class GraphView extends JPanel {
@@ -56,18 +58,20 @@ public class GraphView extends JPanel {
   private ViewPanel panel;
   private SpriteManager sprites;
   private KeyListener screenshotListener;
+  private StorageEntry currentHighlight;
 
+  private final ApplicationEventPublisher eventPublisher;
   private final GraphRenderingService graphRenderingService;
-  private final StorageEntryInspectorDialogFactory storageEntryInspectorDialogFactory;
 
-  public GraphView(GraphRenderingService graphRenderingService,
-                   StorageEntryInspectorDialogFactory storageEntryInspectorDialogFactory) {
+  public GraphView(ApplicationEventPublisher eventPublisher,
+                   GraphRenderingService graphRenderingService) {
     super(new GridLayout(1, 1));
+    setMinimumSize(new Dimension(500, 500));
+    this.eventPublisher = eventPublisher;
     this.graphRenderingService = graphRenderingService;
-    this.storageEntryInspectorDialogFactory = storageEntryInspectorDialogFactory;
   }
 
-  void init(StorageEntry storageEntry) {
+  public void init(StorageEntry storageEntry) {
     if (screenshotListener != null) {
       panel.removeKeyListener(screenshotListener);
     }
@@ -99,6 +103,15 @@ public class GraphView extends JPanel {
     revalidate();
   }
 
+  public void select(final StorageEntry storageEntry) {
+    if (graph == null || panel == null || Objects.equals(currentHighlight, storageEntry)) {
+      return;
+    }
+
+    graphRenderingService.changeHighlight(graph, currentHighlight, storageEntry);
+    currentHighlight = storageEntry;
+  }
+
   private void showNodePopup(final StorageEntry entry, final int x, final int y) {
     final var popup = new NodePopupMenu(entry, graph, graphRenderingService);
     popup.show(GraphView.this, x, y);
@@ -122,13 +135,10 @@ public class GraphView extends JPanel {
     public void mouseClicked(MouseEvent e) {
       super.mouseClicked(e);
 
-      final var entry = getStorageEntry(e);
-      if (entry.isEmpty()) {
-        return;
-      }
-
       if (e.getButton() == MouseEvent.BUTTON1) {
-        storageEntryInspectorDialogFactory.showDialog(entry.get(), GraphView.this);
+        getStorageEntry(e)
+            .map(ViewController.EntryInspectionEvent::new)
+            .ifPresent(eventPublisher::publishEvent);
       }
     }
 
@@ -142,7 +152,7 @@ public class GraphView extends JPanel {
       }
 
       if (e.getButton() == MouseEvent.BUTTON3) {
-          showNodePopup(entry.get(), e.getX(), e.getY());
+        showNodePopup(entry.get(), e.getX(), e.getY());
       }
     }
 

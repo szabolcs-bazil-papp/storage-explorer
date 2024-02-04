@@ -85,6 +85,14 @@ public final class UriProperty {
     this.position = position;
   }
 
+  public String propertyName() {
+    return propertyName;
+  }
+
+  public URI uri() {
+    return uri;
+  }
+
   public boolean isStandalone() {
     return position < 0;
   }

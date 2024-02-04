@@ -13,20 +13,22 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.util;
+package hu.aestallon.storageexplorer.ui.inspector;
 
-public final class Attributes {
+import javax.swing.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-  private Attributes() {}
+public class InspectorDialog extends JFrame {
 
-  public static final String LABEL = "ui.label";
+  private static final Logger log = LoggerFactory.getLogger(InspectorDialog.class);
 
-  public static final String STYLE_CLASS = "ui.class";
+  public InspectorDialog(InspectorView<? extends StorageEntry> inspectorView) {
+    super(inspectorView.storageEntry().toString());
 
-  public static final String SELECTED = "ui.selected";
-
-  public static final String TYPE_NAME = "sb4.type";
-
-  public static final String STORAGE_ENTRY = "storage.entry";
+    add(inspectorView.asComponent());
+    pack();
+  }
 
 }

@@ -16,21 +16,31 @@
 package hu.aestallon.storageexplorer.ui;
 
 import java.awt.*;
-import java.io.IOException;
-import java.io.InputStream;
+import java.util.Enumeration;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeSelectionModel;
+import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StreamUtils;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.model.tree.Clickable;
 import hu.aestallon.storageexplorer.model.tree.StorageInstance;
 import hu.aestallon.storageexplorer.model.tree.StorageList;
 import hu.aestallon.storageexplorer.model.tree.StorageMap;
 import hu.aestallon.storageexplorer.model.tree.StorageObject;
+import hu.aestallon.storageexplorer.ui.misc.IconProvider;
+import hu.aestallon.storageexplorer.util.Pair;
 
 @Component
 public class MainTreeView extends JPanel {
@@ -38,57 +48,87 @@ public class MainTreeView extends JPanel {
   private static final Logger log = LoggerFactory.getLogger(MainTreeView.class);
   private JTree tree;
   private JScrollPane treePanel;
+
+  private Map<StorageEntry, TreePath> treePathByEntry;
+
+  private final AtomicBoolean propagate = new AtomicBoolean(true);
+  private final ApplicationEventPublisher eventPublisher;
   private final StorageIndex storageIndex;
 
-  public MainTreeView(StorageIndex storageIndex, GraphView graphView) {
+  public MainTreeView(StorageIndex storageIndex, GraphView graphView,
+                      ApplicationEventPublisher eventPublisher) {
     super(new GridLayout(1, 1));
+
     this.storageIndex = storageIndex;
+    this.eventPublisher = eventPublisher;
 
     setPreferredSize(new Dimension(300, 500));
 
-    tree = initTree();
-    tree.setCellRenderer(new TreeNodeRenderer());
-    tree.addTreeSelectionListener(e -> {
-      final var treeNode = (DefaultMutableTreeNode) e.getPath().getLastPathComponent();
-      log.info("TREE SELECTION [ {} ]", treeNode);
-      if (treeNode == null) {
-
-        return;
-      }
-
-      if (treeNode instanceof Clickable) {
-        graphView.init(((Clickable) treeNode).storageEntry());
-      }
-    });
+    initTree();
     treePanel = new JScrollPane(tree);
     add(treePanel);
   }
 
-  private JTree initTree() {
+  private void initTree() {
     final var root = new DefaultMutableTreeNode("Storage Explorer");
     root.add(new StorageInstance(storageIndex.fsBaseDirectory(), storageIndex));
-    return new JTree(root, true);
+    tree = new JTree(root, true);
+
+    final var selectionModel = new DefaultTreeSelectionModel();
+    selectionModel.setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+    tree.setSelectionModel(selectionModel);
+
+    tree.setCellRenderer(new TreeNodeRenderer());
+    tree.addTreeSelectionListener(e -> {
+      final var treeNode = (DefaultMutableTreeNode) e.getPath().getLastPathComponent();
+      log.info("TREE SELECTION [ {} ]", treeNode);
+      if (treeNode instanceof Clickable && propagate.get()) {
+        final Clickable clickable = (Clickable) treeNode;
+        eventPublisher.publishEvent(clickable);
+      }
+    });
+
+    treePathByEntry = Stream.of(root)
+        .flatMap(MainTreeView::flatten)
+        .filter(Clickable.class::isInstance)
+
+        .map(it -> Pair.of(
+            ((Clickable) it).storageEntry(),
+            new TreePath(it.getPath())))
+        .collect(Pair.toMap());
+  }
+
+  private static <E> Stream<E> enumerationToStream(Enumeration<E> e) {
+    final Iterable<E> iterable = e::asIterator;
+    return StreamSupport.stream(iterable.spliterator(), false);
+  }
+
+  private static Stream<DefaultMutableTreeNode> flatten(DefaultMutableTreeNode node) {
+    return Stream.concat(
+        Stream.of(node),
+        enumerationToStream(node.children())
+            .filter(DefaultMutableTreeNode.class::isInstance)
+            .map(DefaultMutableTreeNode.class::cast)
+            .flatMap(MainTreeView::flatten));
+  }
+
+
+  public void selectEntry(StorageEntry storageEntry) {
+    Optional
+        .ofNullable(treePathByEntry.get(storageEntry))
+        .ifPresent(path -> {
+          tree.setSelectionPath(path);
+          tree.scrollPathToVisible(path);
+        });
+  }
+
+  public void softSelectEntry(final StorageEntry storageEntry) {
+    propagate.set(false);  // FIXME: This is a freaking hack!
+    selectEntry(storageEntry);
+    propagate.set(true);
   }
 
   private static final class TreeNodeRenderer extends DefaultTreeCellRenderer {
-
-
-    private static byte[] foo(String loc) {
-      InputStream resourceAsStream = TreeNodeRenderer.class.getResourceAsStream(loc);
-
-      try {
-        return StreamUtils.copyToByteArray(resourceAsStream);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    private static final ImageIcon LIST =
-        new ImageIcon(foo("/icons/list.png"));
-    private static final ImageIcon MAP =
-        new ImageIcon(foo("/icons/map.png"));
-    private static final ImageIcon OBJ =
-        new ImageIcon(foo("/icons/object.png"));
 
     @Override
     public java.awt.Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel,
@@ -96,13 +136,14 @@ public class MainTreeView extends JPanel {
                                                            boolean hasFocus) {
       super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
       if (value instanceof StorageList) {
-        setIcon(LIST);
+        setIcon(IconProvider.LIST);
       } else if (value instanceof StorageMap) {
-        setIcon(MAP);
+        setIcon(IconProvider.MAP);
       } else if (value instanceof StorageObject) {
-        setIcon(OBJ);
+        setIcon(IconProvider.OBJ);
       }
       return this;
     }
   }
+
 }
