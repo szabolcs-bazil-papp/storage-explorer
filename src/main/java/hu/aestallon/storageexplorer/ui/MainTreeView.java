@@ -16,8 +16,6 @@
 package hu.aestallon.storageexplorer.ui;
 
 import java.awt.*;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.Optional;
@@ -34,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StreamUtils;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.model.tree.Clickable;
@@ -42,6 +39,7 @@ import hu.aestallon.storageexplorer.model.tree.StorageInstance;
 import hu.aestallon.storageexplorer.model.tree.StorageList;
 import hu.aestallon.storageexplorer.model.tree.StorageMap;
 import hu.aestallon.storageexplorer.model.tree.StorageObject;
+import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.util.Pair;
 
 @Component
@@ -132,34 +130,17 @@ public class MainTreeView extends JPanel {
 
   private static final class TreeNodeRenderer extends DefaultTreeCellRenderer {
 
-    private static byte[] foo(String loc) {
-      InputStream resourceAsStream = TreeNodeRenderer.class.getResourceAsStream(loc);
-
-      try {
-        return StreamUtils.copyToByteArray(resourceAsStream);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    private static final ImageIcon LIST =
-        new ImageIcon(foo("/icons/list.png"));
-    private static final ImageIcon MAP =
-        new ImageIcon(foo("/icons/map.png"));
-    private static final ImageIcon OBJ =
-        new ImageIcon(foo("/icons/object.png"));
-
     @Override
     public java.awt.Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel,
                                                            boolean expanded, boolean leaf, int row,
                                                            boolean hasFocus) {
       super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
       if (value instanceof StorageList) {
-        setIcon(LIST);
+        setIcon(IconProvider.LIST);
       } else if (value instanceof StorageMap) {
-        setIcon(MAP);
+        setIcon(IconProvider.MAP);
       } else if (value instanceof StorageObject) {
-        setIcon(OBJ);
+        setIcon(IconProvider.OBJ);
       }
       return this;
     }

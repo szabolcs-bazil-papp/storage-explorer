@@ -29,6 +29,7 @@ import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.util.IO;
 import hu.aestallon.storageexplorer.util.Pair;
@@ -79,6 +80,14 @@ public class StorageIndex {
 
   public Optional<StorageEntry> get(final URI uri) {
     return Optional.ofNullable(cache.get(uri));
+  }
+
+  public Stream<StorageEntry> searchForUri(final String queryString) {
+    if (Strings.isNullOrEmpty(queryString)) {
+      return Stream.empty();
+    }
+
+    return cache.values().stream().filter(it -> it.uri().toString().contains(queryString));
   }
 
 }
