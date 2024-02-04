@@ -17,7 +17,6 @@ package hu.aestallon.storageexplorer.domain.graph.service;
 
 import java.net.URI;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -138,7 +137,7 @@ public class GraphRenderingService {
     Node fromNode = NodeAdditionService.getNode(graph, from);
     if (fromNode != null) {
       Object attribute = fromNode.getAttribute(Attributes.STYLE_CLASS);
-      boolean addOrigin = Objects.equals("origin", attribute);
+      boolean addOrigin = attribute != null && String.valueOf(attribute).contains("origin");
       fromNode.removeAttribute(Attributes.STYLE_CLASS);
       if (addOrigin) fromNode.setAttribute(Attributes.STYLE_CLASS, "origin");
     }
@@ -146,8 +145,8 @@ public class GraphRenderingService {
     final Node toNode = NodeAdditionService.getNode(graph, to);
     if (toNode != null) {
       Object attribute = toNode.getAttribute(Attributes.STYLE_CLASS);
-      boolean addOrigin = Objects.equals("origin", attribute);
-      toNode.setAttribute(Attributes.STYLE_CLASS, addOrigin ? "origin highlighted" : "highlighted");
+      boolean addOrigin = attribute != null && String.valueOf(attribute).contains("origin");
+      toNode.setAttribute(Attributes.STYLE_CLASS, addOrigin ? "originhighlighted" : "highlighted");
     }
   }
 

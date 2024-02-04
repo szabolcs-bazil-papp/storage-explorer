@@ -40,6 +40,6 @@ public final class IconProvider {
 
   public static final ImageIcon LIST = new ImageIcon(loadIcon("list"));
   public static final ImageIcon MAP = new ImageIcon(loadIcon("map"));
-  public static final ImageIcon OBJ = new ImageIcon(loadIcon("obj"));
+  public static final ImageIcon OBJ = new ImageIcon(loadIcon("object"));
   public static final ImageIcon GRAPH = new ImageIcon(loadIcon("graph"));
 }

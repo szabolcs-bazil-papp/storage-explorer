@@ -18,7 +18,7 @@ edge {
 node.highlighted {
     shadow-mode: gradient-radial;
     shadow-width: 15px;
-    shadow-color: #fff, #96eedc;
+    shadow-color: #ee0505, #96eedc;
     shadow-offset: 0px;
     z-index: 0;
 }
@@ -30,4 +30,14 @@ edge.listref {
 node.origin {
     size: 30px;
     fill-color: #ee0505;
+}
+
+node.originhighlighted {
+    size: 30px;
+    fill-color: #ee0505;
+    shadow-mode: gradient-radial;
+    shadow-width: 15px;
+    shadow-color: #ee0505, #96eedc;
+    shadow-offset: 0px;
+    z-index: 0;
 }
