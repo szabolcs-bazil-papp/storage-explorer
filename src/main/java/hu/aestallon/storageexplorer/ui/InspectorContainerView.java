@@ -17,36 +17,28 @@ package hu.aestallon.storageexplorer.ui;
 
 import javax.swing.*;
 import org.springframework.stereotype.Component;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.ui.inspector.ObjectEntryInspectorView;
+import hu.aestallon.storageexplorer.ui.inspector.StorageEntryInspectorViewFactory;
 
 @Component
-public class AppFrame extends JFrame {
+public class InspectorContainerView extends JTabbedPane {
 
+  private final StorageEntryInspectorViewFactory factory;
 
-  private final MainView mainView;
+  public InspectorContainerView(StorageEntryInspectorViewFactory factory) {
+    super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
 
-  public AppFrame(MainView mainView) {
-    this.mainView = mainView;
-    setTitle("Storage Explorer");
-    setSize(900, 600);
-    setDefaultCloseOperation(EXIT_ON_CLOSE);
-    initMenu();
-    add(mainView);
+    this.factory = factory;
   }
 
-  private void initMenu() {
-    final var menubar = new JMenuBar();
-    final var popup = new JMenu("Commands");
-    final var selectNode = new JMenuItem("Select node...");
-
-    popup.add(selectNode);
-
-    menubar.add(popup);
-
-    setJMenuBar(menubar);
-  }
-
-  public void launch() {
-    setVisible(true);
+  public void showInspectorView(StorageEntry storageEntry) {
+    ObjectEntryInspectorView inspector = factory.createInspector(storageEntry);
+    if (inspector == null) {
+      return;
+    }
+    addTab(storageEntry.toString(), inspector);
+    setSelectedComponent(inspector);
   }
 
 }

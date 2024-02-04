@@ -21,24 +21,20 @@ import org.springframework.stereotype.Component;
 @Component
 public class MainView extends JSplitPane {
 
-  private final GraphView graphView;
   private final MainTreeView mainTreeView;
-
-  public MainView(GraphView graphView, MainTreeView mainTreeView) {
-    super(JSplitPane.HORIZONTAL_SPLIT);
-
-    this.graphView = graphView;
+  private final ExplorerView explorerView;
+  public MainView(MainTreeView mainTreeView, ExplorerView explorerView) {
+    super(JSplitPane.HORIZONTAL_SPLIT, mainTreeView, explorerView);
     this.mainTreeView = mainTreeView;
-    add(mainTreeView);
-    add(graphView);
-    resetToPreferredSizes();
-  }
-
-  public GraphView storageGraph() {
-    return graphView;
+    this.explorerView = explorerView;
   }
 
   public MainTreeView mainTreeView() {
     return mainTreeView;
   }
+
+  public ExplorerView explorerView() {
+    return explorerView;
+  }
+
 }

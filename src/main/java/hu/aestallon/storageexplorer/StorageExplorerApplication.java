@@ -38,9 +38,7 @@ public class StorageExplorerApplication {
 
   @Bean
   CommandLineRunner frameLauncher(AppFrame appFrame) {
-    return args -> {
-      appFrame.launch();
-    };
+    return args -> appFrame.launch();
   }
 
 }
