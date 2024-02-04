@@ -22,7 +22,6 @@ import java.awt.event.MouseListener;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import com.formdev.flatlaf.ui.FlatButtonUI;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.inspector.InspectorView;
