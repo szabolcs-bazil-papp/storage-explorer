@@ -19,9 +19,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,8 +89,43 @@ public class StorageIndex {
     if (Strings.isNullOrEmpty(queryString)) {
       return Stream.empty();
     }
+    final var p = constructPattern(queryString);
+    return cache.values().stream().filter(it -> p.matcher(it.uri().toString()).find());
+  }
 
-    return cache.values().stream().filter(it -> it.uri().toString().contains(queryString));
+  private static Pattern constructPattern(final String queryString) {
+    final String q = queryString.replaceAll("\\.\\+\\*\\-\\(\\)\\[\\]", "");
+    return Arrays.stream(splitAtForwardSlash(q))
+        .map(StorageIndex::examineSubsection)
+        .collect(Collectors.collectingAndThen(Collectors.joining(), Pattern::compile));
+  }
+
+  private static String[] splitAtForwardSlash(final String q) {
+    final String[] arr =q.split("/");
+    final String[] temp = new String[arr.length];
+    int ptr = 0;
+    for (final String s : arr) {
+      if (Strings.isNullOrEmpty(s)) {
+        continue;
+      }
+      temp[ptr] = ptr == 0 ? s : "\\/" + s;
+      ptr++;
+    }
+    final String[] ret = new String[ptr];
+    System.arraycopy(temp, 0, ret, 0, ret.length);
+    return ret;
+  }
+
+  private static String examineSubsection(final String s) {
+    final StringBuilder sb = new StringBuilder();
+    for (char c : s.toCharArray()) {
+      if (sb.length() != 0 && Character.isUpperCase(c)) {
+        sb.append(".*");
+      }
+      sb.append(c);
+    }
+    sb.append(".*");
+    return sb.toString();
   }
 
 }
