@@ -13,22 +13,17 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.ui.dialog.entryinspector;
+package hu.aestallon.storageexplorer.ui.inspector;
 
 import javax.swing.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import hu.aestallon.storageexplorer.ui.inspector.ObjectEntryInspectorView;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-public class ObjectEntryInspectorDialog extends JFrame {
+public interface InspectorView<T extends StorageEntry> {
 
-  private static final Logger log = LoggerFactory.getLogger(ObjectEntryInspectorDialog.class);
+  T storageEntry();
 
-  public ObjectEntryInspectorDialog(ObjectEntryInspectorView inspectorView) {
-    super(inspectorView.storageEntry().toString());
-
-    add(inspectorView);
-    pack();
+  default JComponent asComponent() {
+    return (JComponent) this;
   }
 
 }

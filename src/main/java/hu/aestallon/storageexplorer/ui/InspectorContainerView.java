@@ -16,29 +16,46 @@
 package hu.aestallon.storageexplorer.ui;
 
 import javax.swing.*;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
-import hu.aestallon.storageexplorer.ui.inspector.ObjectEntryInspectorView;
+import hu.aestallon.storageexplorer.ui.controller.ViewController;
+import hu.aestallon.storageexplorer.ui.inspector.InspectorView;
 import hu.aestallon.storageexplorer.ui.inspector.StorageEntryInspectorViewFactory;
 
 @Component
 public class InspectorContainerView extends JTabbedPane {
 
+  private final ApplicationEventPublisher eventPublisher;
   private final StorageEntryInspectorViewFactory factory;
 
-  public InspectorContainerView(StorageEntryInspectorViewFactory factory) {
+  public InspectorContainerView(ApplicationEventPublisher eventPublisher,
+                                StorageEntryInspectorViewFactory factory) {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
+    this.eventPublisher = eventPublisher;
 
     this.factory = factory;
+
+    addChangeListener(e -> {
+      final var storageEntry = ((InspectorView<? extends StorageEntry>) getSelectedComponent())
+          .storageEntry();
+      eventPublisher.publishEvent(new ViewController.TreeTouchRequest(storageEntry));
+    });
   }
 
-  public void showInspectorView(StorageEntry storageEntry) {
-    ObjectEntryInspectorView inspector = factory.createInspector(storageEntry);
-    if (inspector == null) {
-      return;
+  public void showInspectorView(final StorageEntry storageEntry) {
+    switch (factory.inspectorRendering(storageEntry)) {
+      case DIALOG:
+        factory.focusDialog(storageEntry);
+        break;
+      case TAB:
+        factory.getTab(storageEntry).ifPresent(tab -> setSelectedComponent(tab.asComponent()));
+        break;
+      case NONE:
+        final var inspector = factory.createInspector(storageEntry);
+        addTab(storageEntry.toString(), inspector.asComponent());
+        setSelectedComponent(inspector.asComponent());
     }
-    addTab(storageEntry.toString(), inspector);
-    setSelectedComponent(inspector);
   }
 
 }

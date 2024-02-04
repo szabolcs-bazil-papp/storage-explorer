@@ -18,11 +18,14 @@ package hu.aestallon.storageexplorer.ui.inspector;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.net.URI;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
@@ -30,11 +33,12 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
-import hu.aestallon.storageexplorer.ui.dialog.entryinspector.ObjectEntryInspectorDialog;
 import hu.aestallon.storageexplorer.ui.misc.MonospaceFontProvider;
 import hu.aestallon.storageexplorer.util.Uris;
 
@@ -45,7 +49,8 @@ public class StorageEntryInspectorViewFactory {
   private final ObjectMapper objectMapper;
   private final StorageIndex storageIndex;
   private final MonospaceFontProvider monospaceFontProvider;
-  private final Set<StorageEntry> openedDialogs;
+  private final Map<StorageEntry, InspectorView<? extends StorageEntry>> openedInspectors;
+  private final Map<StorageEntry, InspectorDialog> openedDialogs;
   private final Map<StorageEntry, List<JTextArea>> textAreas;
 
   public StorageEntryInspectorViewFactory(ApplicationEventPublisher eventPublisher,
@@ -55,7 +60,9 @@ public class StorageEntryInspectorViewFactory {
     this.objectMapper = objectMapper;
     this.storageIndex = storageIndex;
     this.monospaceFontProvider = monospaceFontProvider;
-    this.openedDialogs = new HashSet<>();
+
+    openedInspectors = new HashMap<>();
+    openedDialogs = new HashMap<>();
     textAreas = new ConcurrentHashMap<>();
   }
 
@@ -67,27 +74,79 @@ public class StorageEntryInspectorViewFactory {
     textAreas.computeIfAbsent(storageEntry, k -> new ArrayList<>()).add(textArea);
   }
 
-  public ObjectEntryInspectorView createInspector(StorageEntry storageEntry) {
-    if (openedDialogs.contains(storageEntry)) {
+  public enum InspectorRendering { TAB, DIALOG, NONE }
+
+  public InspectorRendering inspectorRendering(StorageEntry storageEntry) {
+    if (openedDialogs.containsKey(storageEntry)) {
+      return InspectorRendering.DIALOG;
+    }
+
+    if (openedInspectors.containsKey(storageEntry)) {
+      return InspectorRendering.TAB;
+    }
+
+    return InspectorRendering.NONE;
+  }
+
+  public InspectorView<? extends StorageEntry> createInspector(StorageEntry storageEntry) {
+    if (openedInspectors.containsKey(storageEntry)) {
       return null;
     }
+
+    final InspectorView<? extends StorageEntry> inspector;
     if (storageEntry instanceof ObjectEntry) {
-      openedDialogs.add(storageEntry);
-      return new ObjectEntryInspectorView((ObjectEntry) storageEntry, objectMapper, this);
+      inspector = new ObjectEntryInspectorView((ObjectEntry) storageEntry, objectMapper, this);
+    } else if (storageEntry instanceof ListEntry || storageEntry instanceof MapEntry) {
+      inspector = new CollectionEntryInspectorView(storageEntry, this);
     } else {
-      return null;
+      throw new AssertionError(storageEntry + " is not interpreted - TYPE ERROR!");
     }
+
+    openedInspectors.put(storageEntry, inspector);
+    return inspector;
   }
 
   public void showDialog(StorageEntry storageEntry, Component parent) {
-    ObjectEntryInspectorView inspector = createInspector(storageEntry);
+    InspectorView<? extends StorageEntry> inspector = createInspector(storageEntry);
     if (inspector == null) {
       return;
     }
 
-    final var dialog = new ObjectEntryInspectorDialog(inspector);
+    final var dialog = new InspectorDialog(inspector);
+    openedDialogs.put(storageEntry, dialog);
+
+    dialog.addWindowListener(new WindowAdapter() {
+
+      @Override
+      public void windowClosing(WindowEvent e) {
+        super.windowClosing(e);
+        openedDialogs.remove(storageEntry);
+        openedInspectors.remove(storageEntry);
+      }
+
+    });
     dialog.setLocationRelativeTo(parent);
     dialog.setVisible(true);
+  }
+
+  public void focusDialog(final StorageEntry storageEntry) {
+    Optional.ofNullable(openedDialogs.get(storageEntry))
+        .ifPresent(dialog -> SwingUtilities.invokeLater(() -> {
+          if (dialog.getState() != Frame.NORMAL) {
+            dialog.setState(Frame.NORMAL);
+          }
+
+          dialog.toFront();
+          dialog.repaint();
+        }));
+  }
+
+  public Optional<InspectorView<? extends  StorageEntry>> getTab(final StorageEntry storageEntry) {
+    if (openedDialogs.containsKey(storageEntry)) {
+      return Optional.empty();
+    }
+
+    return Optional.ofNullable(openedInspectors.get(storageEntry));
   }
 
   @EventListener
@@ -113,20 +172,24 @@ public class StorageEntryInspectorViewFactory {
         if (Strings.isNullOrEmpty(selectedText)) {
           return;
         }
-        Uris
-            .parse(selectedText)
-            .map(storageIndex::get) // we are not flatMapping, that's different behaviour.
-            .ifPresent(
-                u -> u.ifPresentOrElse(
-                    it -> eventPublisher.publishEvent(new ViewController.EntryInspectionEvent(it)),
-                    () -> JOptionPane.showMessageDialog(
-                        null,
-                        "Cannot show URI: " + selectedText,
-                        "Unreachable URI",
-                        JOptionPane.ERROR_MESSAGE)));
+        jumpToUriBasedOnText(selectedText);
       }
 
     });
+  }
+
+  private void jumpToUriBasedOnText(String selectedText) {
+    Uris.parse(selectedText).ifPresent(this::jumpToUri);
+  }
+
+  void jumpToUri(final URI uri) {
+    storageIndex.get(uri).ifPresentOrElse(
+        it -> eventPublisher.publishEvent(new ViewController.EntryInspectionEvent(it)),
+        () -> JOptionPane.showMessageDialog(
+            null,
+            "Cannot show URI: " + uri,
+            "Unreachable URI",
+            JOptionPane.ERROR_MESSAGE));
   }
 
   void addRenderAction(final StorageEntry storageEntry, final JToolBar toolbar) {

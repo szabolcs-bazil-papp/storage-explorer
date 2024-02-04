@@ -24,10 +24,9 @@ import org.smartbit4all.core.object.ObjectNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.util.Uris;
 
-public class ObjectEntryInspectorView extends JTabbedPane {
+public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntryInspectorView.class);
 
@@ -127,7 +126,8 @@ public class ObjectEntryInspectorView extends JTabbedPane {
     }
   }
 
-  public StorageEntry storageEntry() {
+  @Override
+  public ObjectEntry storageEntry() {
     return objectEntry;
   }
 

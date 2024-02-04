@@ -22,6 +22,7 @@ import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.Optional;
 import javax.swing.*;
 import org.graphstream.graph.Graph;
@@ -57,6 +58,7 @@ public class GraphView extends JPanel {
   private ViewPanel panel;
   private SpriteManager sprites;
   private KeyListener screenshotListener;
+  private StorageEntry currentHighlight;
 
   private final ApplicationEventPublisher eventPublisher;
   private final GraphRenderingService graphRenderingService;
@@ -64,6 +66,7 @@ public class GraphView extends JPanel {
   public GraphView(ApplicationEventPublisher eventPublisher,
                    GraphRenderingService graphRenderingService) {
     super(new GridLayout(1, 1));
+    setPreferredSize(new Dimension(500, 500));
     this.eventPublisher = eventPublisher;
     this.graphRenderingService = graphRenderingService;
   }
@@ -98,6 +101,15 @@ public class GraphView extends JPanel {
     panel.addKeyListener(screenshotListener);
     add(panel);
     revalidate();
+  }
+
+  public void select(final StorageEntry storageEntry) {
+    if (graph == null || panel == null || Objects.equals(currentHighlight, storageEntry)) {
+      return;
+    }
+
+    graphRenderingService.changeHighlight(graph, currentHighlight, storageEntry);
+    currentHighlight = storageEntry;
   }
 
   private void showNodePopup(final StorageEntry entry, final int x, final int y) {

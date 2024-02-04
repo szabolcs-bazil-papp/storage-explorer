@@ -15,6 +15,14 @@ edge {
     text-padding: 25px, 25px;
 }
 
+node.highlighted {
+    shadow-mode: gradient-radial;
+    shadow-width: 15px;
+    shadow-color: #fff, #96eedc;
+    shadow-offset: 0px;
+    z-index: 0;
+}
+
 edge.listref {
     fill-color: #006e00;
 }

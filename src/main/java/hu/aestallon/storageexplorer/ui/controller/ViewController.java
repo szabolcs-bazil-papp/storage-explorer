@@ -36,6 +36,7 @@ public class ViewController {
 
   }
 
+
   public static final class GraphRenderingRequest {
     private final StorageEntry storageEntry;
 
@@ -44,6 +45,24 @@ public class ViewController {
     }
 
   }
+
+
+  public static final class TreeTouchRequest {
+    private final StorageEntry storageEntry;
+
+    public TreeTouchRequest(StorageEntry storageEntry) {this.storageEntry = storageEntry;}
+  }
+
+
+  public static final class GraphSelectionRequest {
+    private final StorageEntry storageEntry;
+
+    public GraphSelectionRequest(StorageEntry storageEntry) {
+      this.storageEntry = storageEntry;
+    }
+
+  }
+
 
   private final ExplorerView explorerView;
   private final MainTreeView mainTreeView;
@@ -58,9 +77,11 @@ public class ViewController {
   }
 
   @EventListener
-  public void onMainTreeNodeSelected(Clickable clickable) {
+  public GraphSelectionRequest onMainTreeNodeSelected(Clickable clickable) {
     explorerView.openInspectorContainer();
     explorerView.inspectorContainerView().showInspectorView(clickable.storageEntry());
+
+    return new GraphSelectionRequest(clickable.storageEntry());
   }
 
   @EventListener
@@ -72,6 +93,18 @@ public class ViewController {
   public void onGraphRenderingRequest(GraphRenderingRequest e) {
     explorerView.openGraphView();
     graphView.init(e.storageEntry);
+  }
+
+  @EventListener
+  public GraphSelectionRequest onTreeTouchRequest(TreeTouchRequest e) {
+    mainTreeView.softSelectEntry(e.storageEntry);
+
+    return new GraphSelectionRequest(e.storageEntry);
+  }
+
+  @EventListener
+  public void onGraphSelectionRequest(GraphSelectionRequest e) {
+    graphView.select(e.storageEntry);
   }
 
 }

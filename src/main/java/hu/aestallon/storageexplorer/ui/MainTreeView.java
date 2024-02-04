@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import javax.swing.*;
@@ -52,6 +53,7 @@ public class MainTreeView extends JPanel {
 
   private Map<StorageEntry, TreePath> treePathByEntry;
 
+  private final AtomicBoolean propagate = new AtomicBoolean(true);
   private final ApplicationEventPublisher eventPublisher;
   private final StorageIndex storageIndex;
 
@@ -82,7 +84,7 @@ public class MainTreeView extends JPanel {
     tree.addTreeSelectionListener(e -> {
       final var treeNode = (DefaultMutableTreeNode) e.getPath().getLastPathComponent();
       log.info("TREE SELECTION [ {} ]", treeNode);
-      if (treeNode instanceof Clickable) {
+      if (treeNode instanceof Clickable && propagate.get()) {
         final Clickable clickable = (Clickable) treeNode;
         eventPublisher.publishEvent(clickable);
       }
@@ -112,6 +114,7 @@ public class MainTreeView extends JPanel {
             .flatMap(MainTreeView::flatten));
   }
 
+
   public void selectEntry(StorageEntry storageEntry) {
     Optional
         .ofNullable(treePathByEntry.get(storageEntry))
@@ -119,6 +122,12 @@ public class MainTreeView extends JPanel {
           tree.setSelectionPath(path);
           tree.scrollPathToVisible(path);
         });
+  }
+
+  public void softSelectEntry(final StorageEntry storageEntry) {
+    propagate.set(false);  // FIXME: This is a freaking hack!
+    selectEntry(storageEntry);
+    propagate.set(true);
   }
 
   private static final class TreeNodeRenderer extends DefaultTreeCellRenderer {

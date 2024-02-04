@@ -84,6 +84,7 @@ public class ExplorerView extends JPanel {
       displayMode = DisplayMode.GRAPH_ONLY;
     }
     revalidate();
+    contentPane.setDividerLocation(0);
   }
 
   private void initContentPane() {
