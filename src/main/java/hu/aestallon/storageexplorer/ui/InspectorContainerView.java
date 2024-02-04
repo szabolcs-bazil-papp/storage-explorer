@@ -16,9 +16,13 @@
 package hu.aestallon.storageexplorer.ui;
 
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import com.formdev.flatlaf.ui.FlatButtonUI;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.inspector.InspectorView;
@@ -31,7 +35,7 @@ public class InspectorContainerView extends JTabbedPane {
   private final StorageEntryInspectorViewFactory factory;
 
   public InspectorContainerView(ApplicationEventPublisher eventPublisher,
-                                StorageEntryInspectorViewFactory factory) {
+      StorageEntryInspectorViewFactory factory) {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
     this.eventPublisher = eventPublisher;
 
@@ -54,10 +58,100 @@ public class InspectorContainerView extends JTabbedPane {
         factory.getTab(storageEntry).ifPresent(tab -> setSelectedComponent(tab.asComponent()));
         break;
       case NONE:
-        final var inspector = factory.createInspector(storageEntry);
-        addTab(storageEntry.toString(), inspector.asComponent());
-        setSelectedComponent(inspector.asComponent());
+        final var inspector = factory.createInspector(storageEntry).asComponent();
+        addTab(storageEntry.toString(), inspector);
+        installTabComponent(inspector);
+        setSelectedComponent(inspector);
     }
   }
+
+  private void installTabComponent(JComponent inspectorComponent) {
+    int index = indexOfComponent(inspectorComponent);
+
+    final var tab = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    tab.setOpaque(false);
+    final var label = new JLabel() {
+      @Override
+      public String getText() {
+        int idx = InspectorContainerView.this.indexOfTabComponent(tab);
+        if (idx < 0) {
+          return "";
+        }
+        return InspectorContainerView.this.getTitleAt(idx);
+      }
+    };
+    tab.add(label);
+    tab.add(new CloseTabButton(tab));
+    setTabComponentAt(index, tab);
+  }
+
+  private final class CloseTabButton extends JButton {
+    public CloseTabButton(final JPanel tab) {
+      int size = 17;
+      setPreferredSize(new Dimension(size, size));
+
+      setToolTipText("Close");
+      setContentAreaFilled(false);
+      setBorderPainted(false);
+
+      addMouseListener(buttonMouseListener);
+      setRolloverEnabled(true);
+
+      addActionListener(e -> {
+        int idx = InspectorContainerView.this.indexOfTabComponent(tab);
+        if (idx < 0) {
+          return;
+        }
+
+        final var inspector =
+            (InspectorView<? extends StorageEntry>) InspectorContainerView.this.getComponentAt(idx);
+        if (inspector == null) {
+          return;
+        }
+
+        factory.dropInspector(inspector);
+        InspectorContainerView.this.remove(idx);
+      });
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+      super.paintComponent(g);
+      super.paintComponent(g);
+      Graphics2D g2 = (Graphics2D) g.create();
+      //shift the image for pressed buttons
+      if (getModel().isPressed()) {
+        g2.translate(1, 1);
+      }
+      g2.setStroke(new BasicStroke(2));
+      g2.setColor(Color.BLACK);
+      if (getModel().isRollover()) {
+        g2.setColor(Color.MAGENTA);
+      }
+      int delta = 6;
+      g2.drawLine(delta, delta, getWidth() - delta - 1, getHeight() - delta - 1);
+      g2.drawLine(getWidth() - delta - 1, delta, delta, getHeight() - delta - 1);
+      g2.dispose();
+    }
+  }
+
+
+  private final static MouseListener buttonMouseListener = new MouseAdapter() {
+    public void mouseEntered(MouseEvent e) {
+      final var component = e.getComponent();
+      if (component instanceof AbstractButton) {
+        AbstractButton button = (AbstractButton) component;
+        button.setBorderPainted(true);
+      }
+    }
+
+    public void mouseExited(MouseEvent e) {
+      final var component = e.getComponent();
+      if (component instanceof AbstractButton) {
+        AbstractButton button = (AbstractButton) component;
+        button.setBorderPainted(false);
+      }
+    }
+  };
 
 }

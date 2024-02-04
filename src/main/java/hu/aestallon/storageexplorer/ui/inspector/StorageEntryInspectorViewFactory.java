@@ -74,6 +74,17 @@ public class StorageEntryInspectorViewFactory {
     textAreas.computeIfAbsent(storageEntry, k -> new ArrayList<>()).add(textArea);
   }
 
+  public void dropInspector(final InspectorView<? extends StorageEntry> inspector) {
+    final var storageEntry = inspector.storageEntry();
+    dropInspector(storageEntry);
+  }
+
+  private void dropInspector(final StorageEntry storageEntry) {
+    openedDialogs.remove(storageEntry);
+    openedInspectors.remove(storageEntry);
+    textAreas.remove(storageEntry);
+  }
+
   public enum InspectorRendering { TAB, DIALOG, NONE }
 
   public InspectorRendering inspectorRendering(StorageEntry storageEntry) {
@@ -120,8 +131,7 @@ public class StorageEntryInspectorViewFactory {
       @Override
       public void windowClosing(WindowEvent e) {
         super.windowClosing(e);
-        openedDialogs.remove(storageEntry);
-        openedInspectors.remove(storageEntry);
+        dropInspector(storageEntry);
       }
 
     });
