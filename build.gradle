@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'hu.aestallon.storageexplorer'
-version = '1.0-SNAPSHOT'
+version = '0.1.0'
 
 java {
   toolchain {
@@ -35,4 +35,12 @@ dependencies {
 
 test {
   useJUnitPlatform()
+}
+
+tasks.named('bootJar') {
+  manifest {
+    attributes(
+      'Implementation-Title': project.name,
+      'Implementation-Version': project.version)
+  }
 }
