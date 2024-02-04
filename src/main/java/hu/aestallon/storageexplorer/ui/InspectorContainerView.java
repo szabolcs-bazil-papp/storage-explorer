@@ -15,6 +15,7 @@
 
 package hu.aestallon.storageexplorer.ui;
 
+import java.awt.*;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -34,6 +35,7 @@ public class InspectorContainerView extends JTabbedPane {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
     this.eventPublisher = eventPublisher;
 
+    setPreferredSize(new Dimension(100, 0));
     this.factory = factory;
 
     addChangeListener(e -> {

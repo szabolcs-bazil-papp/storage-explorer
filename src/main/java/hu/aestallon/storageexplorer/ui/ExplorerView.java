@@ -84,11 +84,11 @@ public class ExplorerView extends JPanel {
       displayMode = DisplayMode.GRAPH_ONLY;
     }
     revalidate();
-    contentPane.setDividerLocation(0);
   }
 
   private void initContentPane() {
     contentPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, graphView, inspectorContainerView);
+    contentPane.getLeftComponent().setPreferredSize(new Dimension(1_000, 500));
   }
 
   public DisplayMode displayMode() {

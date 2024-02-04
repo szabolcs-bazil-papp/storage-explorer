@@ -66,7 +66,7 @@ public class GraphView extends JPanel {
   public GraphView(ApplicationEventPublisher eventPublisher,
                    GraphRenderingService graphRenderingService) {
     super(new GridLayout(1, 1));
-    setPreferredSize(new Dimension(500, 500));
+    setMinimumSize(new Dimension(500, 500));
     this.eventPublisher = eventPublisher;
     this.graphRenderingService = graphRenderingService;
   }
