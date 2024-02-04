@@ -152,7 +152,7 @@ public class StorageEntryInspectorViewFactory {
         }));
   }
 
-  public Optional<InspectorView<? extends  StorageEntry>> getTab(final StorageEntry storageEntry) {
+  public Optional<InspectorView<? extends StorageEntry>> getTab(final StorageEntry storageEntry) {
     if (openedDialogs.containsKey(storageEntry)) {
       return Optional.empty();
     }
