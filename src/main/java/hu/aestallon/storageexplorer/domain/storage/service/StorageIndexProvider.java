@@ -52,8 +52,7 @@ public class StorageIndexProvider {
   }
 
   public Stream<StorageEntry> searchForUri(final String queryString) {
-    // TODO: Move here and implement!
-    return Stream.empty();
+    return indicesByName.values().stream().flatMap(it -> it.searchForUri(queryString));
   }
 
   public StorageIndex indexOf(final URI uri) {
