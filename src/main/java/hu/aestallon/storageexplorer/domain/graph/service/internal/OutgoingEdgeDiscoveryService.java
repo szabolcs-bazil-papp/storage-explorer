@@ -13,12 +13,11 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.domain.graph.service;
+package hu.aestallon.storageexplorer.domain.graph.service.internal;
 
 import java.util.Set;
 import java.util.stream.Stream;
 import org.graphstream.graph.Graph;
-import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.UriProperty;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
@@ -28,7 +27,6 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toSet;
 
-@Service
 public class OutgoingEdgeDiscoveryService {
 
   private static final GraphContainmentPredicate ANY_CONNECTION = (g, se) -> true;

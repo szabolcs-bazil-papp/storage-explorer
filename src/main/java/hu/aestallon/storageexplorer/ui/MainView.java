@@ -17,6 +17,7 @@ package hu.aestallon.storageexplorer.ui;
 
 import javax.swing.*;
 import org.springframework.stereotype.Component;
+import hu.aestallon.storageexplorer.ui.tree.MainTreeView;
 
 @Component
 public class MainView extends JSplitPane {

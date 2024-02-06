@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -30,26 +31,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.util.IO;
 import hu.aestallon.storageexplorer.util.Pair;
 
-@Service
 public class StorageIndex {
 
   private static final Logger log = LoggerFactory.getLogger(StorageIndex.class);
 
-  private final String fsBaseDirectory;
+  private final String name;
+  private final Path pathToStorage;
   private final ObjectApi objectApi;
   private final CollectionApi collectionApi;
   private final Map<URI, StorageEntry> cache;
 
-  public StorageIndex(@Value("${fs.base.directory:./fs}") String fsBaseDirectory,
-                      ObjectApi objectApi, CollectionApi collectionApi) {
-    this.fsBaseDirectory = fsBaseDirectory;
+  public StorageIndex(String name, Path pathToStorage, ObjectApi objectApi,
+                      CollectionApi collectionApi) {
+    this.name = name;
+    this.pathToStorage = pathToStorage;
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
     this.cache = new HashMap<>();
@@ -58,7 +58,7 @@ public class StorageIndex {
   }
 
   private void init() {
-    try (final var files = Files.walk(Path.of(fsBaseDirectory))) {
+    try (final var files = Files.walk(pathToStorage)) {
       files
           .filter(p -> p.toFile().isFile())
           .filter(p -> p.getFileName().toString().endsWith(".o"))
@@ -77,8 +77,12 @@ public class StorageIndex {
     return cache.values().stream();
   }
 
-  public Path fsBaseDirectory() {
-    return Path.of(fsBaseDirectory);
+  public String name() {
+    return name;
+  }
+
+  public Path pathToStorage() {
+    return pathToStorage;
   }
 
   public Optional<StorageEntry> get(final URI uri) {
@@ -101,7 +105,7 @@ public class StorageIndex {
   }
 
   private static String[] splitAtForwardSlash(final String q) {
-    final String[] arr =q.split("/");
+    final String[] arr = q.split("/");
     final String[] temp = new String[arr.length];
     int ptr = 0;
     for (final String s : arr) {
@@ -126,6 +130,21 @@ public class StorageIndex {
     }
     sb.append(".*");
     return sb.toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (o == null || getClass() != o.getClass())
+      return false;
+    StorageIndex that = (StorageIndex) o;
+    return Objects.equals(name, that.name);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(name);
   }
 
 }

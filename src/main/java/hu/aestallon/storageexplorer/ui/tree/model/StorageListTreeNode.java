@@ -13,16 +13,16 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.model.tree;
+package hu.aestallon.storageexplorer.ui.tree.model;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-public class StorageList extends DefaultMutableTreeNode implements Clickable {
+public class StorageListTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 
 
-  public StorageList(ListEntry listEntry) {
+  public StorageListTreeNode(ListEntry listEntry) {
     super(listEntry, false);
   }
 

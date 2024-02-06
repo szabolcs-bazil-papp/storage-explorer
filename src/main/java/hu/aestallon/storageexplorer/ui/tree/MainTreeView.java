@@ -13,10 +13,11 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.ui;
+package hu.aestallon.storageexplorer.ui.tree;
 
 import java.awt.*;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,6 +26,7 @@ import java.util.stream.StreamSupport;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultTreeSelectionModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
@@ -34,12 +36,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
-import hu.aestallon.storageexplorer.model.tree.Clickable;
-import hu.aestallon.storageexplorer.model.tree.StorageInstance;
-import hu.aestallon.storageexplorer.model.tree.StorageList;
-import hu.aestallon.storageexplorer.model.tree.StorageMap;
-import hu.aestallon.storageexplorer.model.tree.StorageObject;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
+import hu.aestallon.storageexplorer.ui.GraphView;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
+import hu.aestallon.storageexplorer.ui.tree.model.ClickableTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.StorageInstanceTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.StorageListTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.StorageMapTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.StorageObjectTreeNode;
 import hu.aestallon.storageexplorer.util.Pair;
 
 @Component
@@ -53,13 +57,13 @@ public class MainTreeView extends JPanel {
 
   private final AtomicBoolean propagate = new AtomicBoolean(true);
   private final ApplicationEventPublisher eventPublisher;
-  private final StorageIndex storageIndex;
+  private final StorageIndexProvider storageIndexProvider;
 
-  public MainTreeView(StorageIndex storageIndex, GraphView graphView,
+  public MainTreeView(StorageIndexProvider storageIndexProvider, GraphView graphView,
                       ApplicationEventPublisher eventPublisher) {
     super(new GridLayout(1, 1));
 
-    this.storageIndex = storageIndex;
+    this.storageIndexProvider = storageIndexProvider;
     this.eventPublisher = eventPublisher;
 
     setPreferredSize(new Dimension(300, 500));
@@ -71,7 +75,6 @@ public class MainTreeView extends JPanel {
 
   private void initTree() {
     final var root = new DefaultMutableTreeNode("Storage Explorer");
-    root.add(new StorageInstance(storageIndex.fsBaseDirectory(), storageIndex));
     tree = new JTree(root, true);
 
     final var selectionModel = new DefaultTreeSelectionModel();
@@ -82,20 +85,30 @@ public class MainTreeView extends JPanel {
     tree.addTreeSelectionListener(e -> {
       final var treeNode = (DefaultMutableTreeNode) e.getPath().getLastPathComponent();
       log.info("TREE SELECTION [ {} ]", treeNode);
-      if (treeNode instanceof Clickable && propagate.get()) {
-        final Clickable clickable = (Clickable) treeNode;
-        eventPublisher.publishEvent(clickable);
+      if (treeNode instanceof ClickableTreeNode && propagate.get()) {
+        final ClickableTreeNode clickableTreeNode = (ClickableTreeNode) treeNode;
+        eventPublisher.publishEvent(clickableTreeNode);
       }
     });
 
-    treePathByEntry = Stream.of(root)
+    treePathByEntry = new HashMap<>();
+  }
+
+  public void importStorage(final StorageIndex storageIndex) {
+    DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+    final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
+    final StorageInstanceTreeNode storageInstanceTreeNode = new StorageInstanceTreeNode(storageIndex);
+    model.insertNodeInto(storageInstanceTreeNode, root, root.getChildCount());
+
+    final var newTreePaths = Stream.of(storageInstanceTreeNode)
         .flatMap(MainTreeView::flatten)
-        .filter(Clickable.class::isInstance)
+        .filter(ClickableTreeNode.class::isInstance)
 
         .map(it -> Pair.of(
-            ((Clickable) it).storageEntry(),
+            ((ClickableTreeNode) it).storageEntry(),
             new TreePath(it.getPath())))
         .collect(Pair.toMap());
+    treePathByEntry.putAll(newTreePaths);
   }
 
   private static <E> Stream<E> enumerationToStream(Enumeration<E> e) {
@@ -135,11 +148,11 @@ public class MainTreeView extends JPanel {
                                                            boolean expanded, boolean leaf, int row,
                                                            boolean hasFocus) {
       super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
-      if (value instanceof StorageList) {
+      if (value instanceof StorageListTreeNode) {
         setIcon(IconProvider.LIST);
-      } else if (value instanceof StorageMap) {
+      } else if (value instanceof StorageMapTreeNode) {
         setIcon(IconProvider.MAP);
-      } else if (value instanceof StorageObject) {
+      } else if (value instanceof StorageObjectTreeNode) {
         setIcon(IconProvider.OBJ);
       }
       return this;

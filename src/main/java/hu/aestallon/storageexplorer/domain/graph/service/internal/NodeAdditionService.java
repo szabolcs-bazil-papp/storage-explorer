@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.domain.graph.service;
+package hu.aestallon.storageexplorer.domain.graph.service.internal;
 
 import java.net.URI;
 import java.util.Map;
@@ -23,14 +23,12 @@ import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.UriProperty;
 import hu.aestallon.storageexplorer.util.Attributes;
 import hu.aestallon.storageexplorer.util.Uris;
 import static java.util.stream.Collectors.joining;
 
-@Service
 public class NodeAdditionService {
 
   private static final Logger log = LoggerFactory.getLogger(NodeAdditionService.class);
@@ -43,7 +41,7 @@ public class NodeAdditionService {
     return stringKey(from) + "-ref-" + stringKey(to);
   }
 
-  static boolean edgeMissing(Graph graph, StorageEntry from, StorageEntry to) {
+  public static boolean edgeMissing(Graph graph, StorageEntry from, StorageEntry to) {
     return edgeMissing(graph, from.uri(), to.uri());
   }
 
@@ -51,11 +49,11 @@ public class NodeAdditionService {
     return graph.getEdge(edgeKey(from, to)) == null;
   }
 
-  static boolean containsNode(Graph graph, StorageEntry storageEntry) {
+  public static boolean containsNode(Graph graph, StorageEntry storageEntry) {
     return containsNode(graph, storageEntry.uri());
   }
 
-  static Node getNode(Graph graph, StorageEntry storageEntry) {
+  public static Node getNode(Graph graph, StorageEntry storageEntry) {
     if (storageEntry == null) {
       return null;
     }
@@ -70,7 +68,7 @@ public class NodeAdditionService {
 
   public NodeAdditionService() {}
 
-  void add(Graph graph, StorageEntry from, StorageEntry to, Set<UriProperty> on) {
+  public void add(Graph graph, StorageEntry from, StorageEntry to, Set<UriProperty> on) {
     if (!edgeMissing(graph, from, to)) {
       return;
     }

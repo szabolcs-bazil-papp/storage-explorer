@@ -32,8 +32,6 @@ public class ExplorerView extends JPanel {
   private final GraphView graphView;
   private final InspectorContainerView inspectorContainerView;
 
-
-
   public ExplorerView(GraphView graphView, InspectorContainerView inspectorContainerView) {
     super(new BorderLayout());
     this.graphView = graphView;

@@ -26,16 +26,17 @@ import javax.swing.event.DocumentListener;
 import org.springframework.context.ApplicationEventPublisher;
 import com.formdev.flatlaf.ui.FlatUIUtils;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 
 public class SearchForEntryDialog extends JFrame {
 
-  private final StorageIndex storageIndex;
+  private final StorageIndexProvider storageIndexProvider;
   private final ApplicationEventPublisher eventPublisher;
 
-  public SearchForEntryDialog(StorageIndex storageIndex, ApplicationEventPublisher eventPublisher) {
-    this.storageIndex = storageIndex;
+  public SearchForEntryDialog(StorageIndexProvider storageIndexProvider,
+                              ApplicationEventPublisher eventPublisher) {
+    this.storageIndexProvider = storageIndexProvider;
     this.eventPublisher = eventPublisher;
 
     setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -83,7 +84,7 @@ public class SearchForEntryDialog extends JFrame {
       textField = new JTextField("", 50);
       textField.getDocument().addDocumentListener((SimpleDocumentListener) e -> {
         String text = textField.getText();
-        results.setListData(storageIndex.searchForUri(text)
+        results.setListData(storageIndexProvider.searchForUri(text)
             .sorted(Comparator.comparing(it -> it.uri().toString()))
             .toArray(StorageEntry[]::new));
       });

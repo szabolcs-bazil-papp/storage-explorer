@@ -15,14 +15,15 @@
 
 package hu.aestallon.storageexplorer.ui.controller;
 
+import javax.swing.*;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
-import hu.aestallon.storageexplorer.model.tree.Clickable;
 import hu.aestallon.storageexplorer.ui.ExplorerView;
 import hu.aestallon.storageexplorer.ui.GraphView;
-import hu.aestallon.storageexplorer.ui.MainTreeView;
+import hu.aestallon.storageexplorer.ui.tree.MainTreeView;
+import hu.aestallon.storageexplorer.ui.tree.model.ClickableTreeNode;
 
 @Service
 public class ViewController {
@@ -68,11 +69,21 @@ public class ViewController {
   }
 
 
+  public static final class StorageImportEvent {
+    private final StorageIndex storageIndex;
+
+    public StorageImportEvent(StorageIndex storageIndex) {
+      this.storageIndex = storageIndex;
+    }
+
+  }
+
+
   private final ExplorerView explorerView;
   private final MainTreeView mainTreeView;
   private final GraphView graphView;
 
-  public ViewController(StorageIndex storageIndex, ExplorerView explorerView,
+  public ViewController(ExplorerView explorerView,
                         MainTreeView mainTreeView,
                         GraphView graphView) {
     this.explorerView = explorerView;
@@ -81,11 +92,11 @@ public class ViewController {
   }
 
   @EventListener
-  public GraphSelectionRequest onMainTreeNodeSelected(Clickable clickable) {
+  public GraphSelectionRequest onMainTreeNodeSelected(ClickableTreeNode clickableTreeNode) {
     explorerView.openInspectorContainer();
-    explorerView.inspectorContainerView().showInspectorView(clickable.storageEntry());
+    explorerView.inspectorContainerView().showInspectorView(clickableTreeNode.storageEntry());
 
-    return new GraphSelectionRequest(clickable.storageEntry());
+    return new GraphSelectionRequest(clickableTreeNode.storageEntry());
   }
 
   @EventListener
@@ -114,6 +125,11 @@ public class ViewController {
   @EventListener
   public void onGraphViewCloseRequest(GraphViewCloseRequest e) {
     explorerView.closeGraphView();
+  }
+
+  @EventListener
+  public void onStorageImported(StorageImportEvent e) {
+    SwingUtilities.invokeLater(() -> mainTreeView.importStorage(e.storageIndex));
   }
 
 }

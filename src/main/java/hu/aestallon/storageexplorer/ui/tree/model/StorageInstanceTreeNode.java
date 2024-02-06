@@ -13,9 +13,8 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.model.tree;
+package hu.aestallon.storageexplorer.ui.tree.model;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -26,29 +25,29 @@ import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import static java.util.stream.Collectors.groupingBy;
 
-public class StorageInstance extends DefaultMutableTreeNode {
+public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
 
-  public StorageInstance(Path path, StorageIndex index) {
-    super(path.getFileName().toString(), true);
+  public StorageInstanceTreeNode(StorageIndex index) {
+    super(index.pathToStorage().getFileName().toString(), true);
     final var collections = index.entities()
         .filter(it -> it instanceof ListEntry || it instanceof MapEntry)
         .map(it -> it instanceof ListEntry
-            ? new StorageList((ListEntry) it)
-            : new StorageMap((MapEntry) it))
-        .sorted((a, b) -> (a instanceof StorageList)
+            ? new StorageListTreeNode((ListEntry) it)
+            : new StorageMapTreeNode((MapEntry) it))
+        .sorted((a, b) -> (a instanceof StorageListTreeNode)
             ? -1
-            : (b instanceof StorageList)
+            : (b instanceof StorageListTreeNode)
                 ? 1
                 : 0)
         .collect(groupingBy(Object::getClass));
-    sortAndAdd(collections.getOrDefault(StorageList.class, new ArrayList<>()));
-    sortAndAdd(collections.getOrDefault(StorageMap.class, new ArrayList<>()));
+    sortAndAdd(collections.getOrDefault(StorageListTreeNode.class, new ArrayList<>()));
+    sortAndAdd(collections.getOrDefault(StorageMapTreeNode.class, new ArrayList<>()));
 
     index.entities()
         .filter(ObjectEntry.class::isInstance)
         .map(ObjectEntry.class::cast)
         .collect(groupingBy(it -> it.uri().getScheme()))
-        .forEach((schema, entries) -> add(new StorageSchema(schema, entries)));
+        .forEach((schema, entries) -> add(new StorageSchemaTreeNode(schema, entries)));
   }
 
   private void sortAndAdd(List<? extends DefaultMutableTreeNode> collections) {

@@ -13,15 +13,13 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.domain.graph.service;
+package hu.aestallon.storageexplorer.domain.graph.service.internal;
 
 import java.util.stream.Stream;
 import org.graphstream.graph.Graph;
-import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 
-@Service
 public class IncomingEdgeDiscoveryService {
 
   private final StorageIndex storageIndex;

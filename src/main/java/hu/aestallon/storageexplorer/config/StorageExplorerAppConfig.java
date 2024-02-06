@@ -18,22 +18,15 @@ package hu.aestallon.storageexplorer.config;
 import java.io.File;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.api.config.PlatformApiConfig;
 import org.smartbit4all.core.object.ObjectDefinitionApi;
 import org.smartbit4all.domain.data.storage.ObjectStorage;
 import org.smartbit4all.storage.fs.StorageFS;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 
-@Configuration
-@Import({PlatformApiConfig.class})
 public class StorageExplorerAppConfig {
 
   private static final Logger log = LoggerFactory.getLogger(StorageExplorerAppConfig.class);
 
-  @Bean
   ObjectStorage objectStorage(@Value("${fs.base.directory:./fs}") String fsBaseDirectory,
       ObjectDefinitionApi objectDefinitionApi) {
     return new StorageFS(new File(fsBaseDirectory), objectDefinitionApi);

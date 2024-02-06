@@ -13,20 +13,12 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.model.tree;
+package hu.aestallon.storageexplorer.ui.tree.model;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-public final class StorageSchema extends DefaultMutableTreeNode {
+public interface ClickableTreeNode {
 
-  StorageSchema(String name, List<ObjectEntry> objectEntries) {
-    super(name, true);
-    objectEntries.stream()
-        .collect(Collectors.groupingBy(ObjectEntry::typeName))
-        .forEach((type, entries) -> add(new StorageType(type, entries)));
-  }
+  StorageEntry storageEntry();
 
 }
