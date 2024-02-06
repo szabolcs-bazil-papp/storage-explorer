@@ -17,6 +17,7 @@ package hu.aestallon.storageexplorer.ui;
 
 import java.awt.*;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -25,6 +26,7 @@ import java.util.stream.StreamSupport;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultTreeSelectionModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
@@ -33,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.model.tree.Clickable;
 import hu.aestallon.storageexplorer.model.tree.StorageInstance;
@@ -71,7 +74,6 @@ public class MainTreeView extends JPanel {
 
   private void initTree() {
     final var root = new DefaultMutableTreeNode("Storage Explorer");
-    storageIndexProvider.provide().forEach(it -> root.add(new StorageInstance(it)));
     tree = new JTree(root, true);
 
     final var selectionModel = new DefaultTreeSelectionModel();
@@ -88,7 +90,16 @@ public class MainTreeView extends JPanel {
       }
     });
 
-    treePathByEntry = Stream.of(root)
+    treePathByEntry = new HashMap<>();
+  }
+
+  public void importStorage(final StorageIndex storageIndex) {
+    DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+    final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
+    final StorageInstance storageInstanceTreeNode = new StorageInstance(storageIndex);
+    model.insertNodeInto(storageInstanceTreeNode, root, root.getChildCount());
+
+    final var newTreePaths = Stream.of(storageInstanceTreeNode)
         .flatMap(MainTreeView::flatten)
         .filter(Clickable.class::isInstance)
 
@@ -96,6 +107,7 @@ public class MainTreeView extends JPanel {
             ((Clickable) it).storageEntry(),
             new TreePath(it.getPath())))
         .collect(Pair.toMap());
+    treePathByEntry.putAll(newTreePaths);
   }
 
   private static <E> Stream<E> enumerationToStream(Enumeration<E> e) {

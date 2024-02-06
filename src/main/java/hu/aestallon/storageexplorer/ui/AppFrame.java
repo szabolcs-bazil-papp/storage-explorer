@@ -17,7 +17,10 @@ package hu.aestallon.storageexplorer.ui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.io.File;
+import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
+import javax.swing.filechooser.FileSystemView;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
@@ -60,10 +63,15 @@ public class AppFrame extends JFrame {
   private void initMenu() {
     final var menubar = new JMenuBar();
     final var popup = new JMenu("Commands");
+
     final var selectNode = new JMenuItem("Select node...");
     selectNode.addActionListener(new SearchAction());
-
     popup.add(selectNode);
+
+    final var importStorage = new JMenuItem("Import storage...");
+    importStorage.addActionListener(new ImportStorageAction());
+    popup.add(importStorage);
+
     menubar.add(popup);
 
     setJMenuBar(menubar);
@@ -90,4 +98,32 @@ public class AppFrame extends JFrame {
     }
 
   }
+
+  private final class ImportStorageAction extends AbstractAction {
+
+    private ImportStorageAction() {
+      super("Import Storage...");
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
+      fileChooser.setDialogType(JFileChooser.OPEN_DIALOG);
+      fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+      fileChooser.setDialogTitle("Import Storage...");
+      fileChooser.setCurrentDirectory(new File("."));
+
+      final int result = fileChooser.showDialog(AppFrame.this, "Import");
+      if (JFileChooser.APPROVE_OPTION == result) {
+        final File selectedFile = fileChooser.getSelectedFile();
+        if (!selectedFile.isDirectory()) {
+          System.err.println("REEEE");
+          return;
+        }
+
+        CompletableFuture.runAsync(() -> storageIndexProvider.init(selectedFile.toPath()));
+      }
+    }
+  }
+
 }

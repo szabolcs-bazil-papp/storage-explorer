@@ -15,9 +15,11 @@
 
 package hu.aestallon.storageexplorer.ui.controller;
 
+import javax.swing.*;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.model.tree.Clickable;
 import hu.aestallon.storageexplorer.ui.ExplorerView;
 import hu.aestallon.storageexplorer.ui.GraphView;
@@ -67,6 +69,16 @@ public class ViewController {
   }
 
 
+  public static final class StorageImportEvent {
+    private final StorageIndex storageIndex;
+
+    public StorageImportEvent(StorageIndex storageIndex) {
+      this.storageIndex = storageIndex;
+    }
+
+  }
+
+
   private final ExplorerView explorerView;
   private final MainTreeView mainTreeView;
   private final GraphView graphView;
@@ -113,6 +125,11 @@ public class ViewController {
   @EventListener
   public void onGraphViewCloseRequest(GraphViewCloseRequest e) {
     explorerView.closeGraphView();
+  }
+
+  @EventListener
+  public void onStorageImported(StorageImportEvent e) {
+    SwingUtilities.invokeLater(() -> mainTreeView.importStorage(e.storageIndex));
   }
 
 }
