@@ -13,17 +13,38 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.model.tree;
+package hu.aestallon.storageexplorer.ui.tree.model;
 
-import java.util.List;
 import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-public class StorageType extends DefaultMutableTreeNode {
+public class StorageList extends DefaultMutableTreeNode implements Clickable {
 
-  public StorageType(String name, List<ObjectEntry> objectEntries) {
-    super(name, true);
-    objectEntries.forEach(it -> add(new StorageObject(it)));
+
+  public StorageList(ListEntry listEntry) {
+    super(listEntry, false);
+  }
+
+  @Override
+  public StorageEntry storageEntry() {
+    return (StorageEntry) userObject;
+  }
+
+  @Override
+  public boolean getAllowsChildren() {
+    return false;
+  }
+
+  @Override
+  public boolean isLeaf() {
+    return true;
+  }
+
+  @Override
+  public String toString() {
+    final var listEntry = (ListEntry) userObject;
+    return listEntry.schema() + " / " + listEntry.name();
   }
 
 }

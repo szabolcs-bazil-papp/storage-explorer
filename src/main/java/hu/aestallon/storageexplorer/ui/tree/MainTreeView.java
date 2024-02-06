@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.ui;
+package hu.aestallon.storageexplorer.ui.tree;
 
 import java.awt.*;
 import java.util.Enumeration;
@@ -37,12 +37,13 @@ import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
-import hu.aestallon.storageexplorer.model.tree.Clickable;
-import hu.aestallon.storageexplorer.model.tree.StorageInstance;
-import hu.aestallon.storageexplorer.model.tree.StorageList;
-import hu.aestallon.storageexplorer.model.tree.StorageMap;
-import hu.aestallon.storageexplorer.model.tree.StorageObject;
+import hu.aestallon.storageexplorer.ui.GraphView;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
+import hu.aestallon.storageexplorer.ui.tree.model.Clickable;
+import hu.aestallon.storageexplorer.ui.tree.model.StorageInstance;
+import hu.aestallon.storageexplorer.ui.tree.model.StorageList;
+import hu.aestallon.storageexplorer.ui.tree.model.StorageMap;
+import hu.aestallon.storageexplorer.ui.tree.model.StorageObject;
 import hu.aestallon.storageexplorer.util.Pair;
 
 @Component

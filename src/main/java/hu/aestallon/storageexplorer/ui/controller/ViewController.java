@@ -20,10 +20,10 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
-import hu.aestallon.storageexplorer.model.tree.Clickable;
 import hu.aestallon.storageexplorer.ui.ExplorerView;
 import hu.aestallon.storageexplorer.ui.GraphView;
-import hu.aestallon.storageexplorer.ui.MainTreeView;
+import hu.aestallon.storageexplorer.ui.tree.MainTreeView;
+import hu.aestallon.storageexplorer.ui.tree.model.Clickable;
 
 @Service
 public class ViewController {
