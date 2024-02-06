@@ -27,8 +27,10 @@ import hu.aestallon.storageexplorer.ui.AppFrame;
 public class StorageExplorerApplication {
 
   public static void main(String[] args) {
+    System.setProperty("sun.java2d.uiScale", "100%");
     System.setProperty("org.graphstream.ui", "swing");
     FlatIntelliJLaf.setup();
+
     new SpringApplicationBuilder(StorageExplorerApplication.class)
         .web(WebApplicationType.NONE)
         .headless(false)
