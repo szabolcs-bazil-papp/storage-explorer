@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.model.tree.Clickable;
 import hu.aestallon.storageexplorer.model.tree.StorageInstance;
 import hu.aestallon.storageexplorer.model.tree.StorageList;
@@ -53,13 +53,13 @@ public class MainTreeView extends JPanel {
 
   private final AtomicBoolean propagate = new AtomicBoolean(true);
   private final ApplicationEventPublisher eventPublisher;
-  private final StorageIndex storageIndex;
+  private final StorageIndexProvider storageIndexProvider;
 
-  public MainTreeView(StorageIndex storageIndex, GraphView graphView,
+  public MainTreeView(StorageIndexProvider storageIndexProvider, GraphView graphView,
                       ApplicationEventPublisher eventPublisher) {
     super(new GridLayout(1, 1));
 
-    this.storageIndex = storageIndex;
+    this.storageIndexProvider = storageIndexProvider;
     this.eventPublisher = eventPublisher;
 
     setPreferredSize(new Dimension(300, 500));
@@ -71,7 +71,7 @@ public class MainTreeView extends JPanel {
 
   private void initTree() {
     final var root = new DefaultMutableTreeNode("Storage Explorer");
-    root.add(new StorageInstance(storageIndex.fsBaseDirectory(), storageIndex));
+    storageIndexProvider.provide().forEach(it -> root.add(new StorageInstance(it)));
     tree = new JTree(root, true);
 
     final var selectionModel = new DefaultTreeSelectionModel();

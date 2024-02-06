@@ -20,7 +20,7 @@ import java.awt.event.KeyEvent;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.ui.dialog.SearchForEntryDialog;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 
@@ -28,13 +28,14 @@ import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 public class AppFrame extends JFrame {
 
   private final ApplicationEventPublisher eventPublisher;
-  private final StorageIndex storageIndex;
+  private final StorageIndexProvider storageIndexProvider;
   private final MainView mainView;
 
-  public AppFrame(ApplicationEventPublisher eventPublisher, StorageIndex storageIndex,
+  public AppFrame(ApplicationEventPublisher eventPublisher,
+                  StorageIndexProvider storageIndexProvider,
                   MainView mainView) {
     this.eventPublisher = eventPublisher;
-    this.storageIndex = storageIndex;
+    this.storageIndexProvider = storageIndexProvider;
     this.mainView = mainView;
 
     setTitle("Storage Explorer");
@@ -83,7 +84,7 @@ public class AppFrame extends JFrame {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      final var dialog = new SearchForEntryDialog(storageIndex, eventPublisher);
+      final var dialog = new SearchForEntryDialog(storageIndexProvider, eventPublisher);
       dialog.setLocationRelativeTo(AppFrame.this);
       dialog.setVisible(true);
     }

@@ -25,7 +25,9 @@ import org.graphstream.graph.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import hu.aestallon.storageexplorer.domain.graph.service.internal.IncomingEdgeDiscoveryService;
+import hu.aestallon.storageexplorer.domain.graph.service.internal.NodeAdditionService;
+import hu.aestallon.storageexplorer.domain.graph.service.internal.OutgoingEdgeDiscoveryService;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.UriProperty;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
@@ -35,30 +37,28 @@ import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
-@Service
-public class GraphRenderingService {
+public final class GraphRenderingService {
 
   private static final Logger log = LoggerFactory.getLogger(GraphRenderingService.class);
 
-  private final NodeAdditionService nodeAdditionService;
-  private final IncomingEdgeDiscoveryService incomingEdgeDiscoveryService;
-  private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
   private final StorageIndex storageIndex;
   private final int inboundLimit;
   private final int outboundLimit;
 
-  public GraphRenderingService(NodeAdditionService nodeAdditionService,
-                               IncomingEdgeDiscoveryService incomingEdgeDiscoveryService,
-                               OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService,
-                               StorageIndex storageIndex,
+  private final IncomingEdgeDiscoveryService incomingEdgeDiscoveryService;
+  private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
+  private final NodeAdditionService nodeAdditionService;
+
+  public GraphRenderingService(StorageIndex storageIndex,
                                @Value("${graph.traversal.inbound:0}") int inboundLimit,
                                @Value("${graph.traversal.outbound:-1}") int outboundLimit) {
-    this.nodeAdditionService = nodeAdditionService;
-    this.incomingEdgeDiscoveryService = incomingEdgeDiscoveryService;
-    this.outgoingEdgeDiscoveryService = outgoingEdgeDiscoveryService;
     this.storageIndex = storageIndex;
     this.inboundLimit = inboundLimit;
     this.outboundLimit = outboundLimit;
+
+    incomingEdgeDiscoveryService = new IncomingEdgeDiscoveryService(storageIndex);
+    outgoingEdgeDiscoveryService = new OutgoingEdgeDiscoveryService(storageIndex);
+    nodeAdditionService = new NodeAdditionService();
   }
 
   public void render(Graph graph, StorageEntry storageEntry) {
@@ -72,6 +72,10 @@ public class GraphRenderingService {
     if (inboundLimit != 0) {
       renderIncomingReferences(graph, storageEntry);
     }
+  }
+
+  public StorageIndex storageIndex() {
+    return storageIndex;
   }
 
   private void renderOutgoingReferences(Graph graph, StorageEntry storageEntry) {
@@ -139,7 +143,8 @@ public class GraphRenderingService {
       Object attribute = fromNode.getAttribute(Attributes.STYLE_CLASS);
       boolean addOrigin = attribute != null && String.valueOf(attribute).contains("origin");
       fromNode.removeAttribute(Attributes.STYLE_CLASS);
-      if (addOrigin) fromNode.setAttribute(Attributes.STYLE_CLASS, "origin");
+      if (addOrigin)
+        fromNode.setAttribute(Attributes.STYLE_CLASS, "origin");
     }
 
     final Node toNode = NodeAdditionService.getNode(graph, to);

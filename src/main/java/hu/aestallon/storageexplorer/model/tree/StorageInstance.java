@@ -15,7 +15,6 @@
 
 package hu.aestallon.storageexplorer.model.tree;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -28,8 +27,8 @@ import static java.util.stream.Collectors.groupingBy;
 
 public class StorageInstance extends DefaultMutableTreeNode {
 
-  public StorageInstance(Path path, StorageIndex index) {
-    super(path.getFileName().toString(), true);
+  public StorageInstance(StorageIndex index) {
+    super(index.pathToStorage().getFileName().toString(), true);
     final var collections = index.entities()
         .filter(it -> it instanceof ListEntry || it instanceof MapEntry)
         .map(it -> it instanceof ListEntry

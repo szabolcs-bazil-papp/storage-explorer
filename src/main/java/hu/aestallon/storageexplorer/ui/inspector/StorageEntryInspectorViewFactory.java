@@ -37,7 +37,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.misc.MonospaceFontProvider;
@@ -48,18 +48,19 @@ public class StorageEntryInspectorViewFactory {
 
   private final ApplicationEventPublisher eventPublisher;
   private final ObjectMapper objectMapper;
-  private final StorageIndex storageIndex;
+  private final StorageIndexProvider storageIndexProvider;
   private final MonospaceFontProvider monospaceFontProvider;
   private final Map<StorageEntry, InspectorView<? extends StorageEntry>> openedInspectors;
   private final Map<StorageEntry, InspectorDialog> openedDialogs;
   private final Map<StorageEntry, List<JTextArea>> textAreas;
 
   public StorageEntryInspectorViewFactory(ApplicationEventPublisher eventPublisher,
-                                          ObjectMapper objectMapper, StorageIndex storageIndex,
+                                          ObjectMapper objectMapper,
+                                          StorageIndexProvider storageIndexProvider,
                                           MonospaceFontProvider monospaceFontProvider) {
     this.eventPublisher = eventPublisher;
     this.objectMapper = objectMapper;
-    this.storageIndex = storageIndex;
+    this.storageIndexProvider = storageIndexProvider;
     this.monospaceFontProvider = monospaceFontProvider;
 
     openedInspectors = new HashMap<>();
@@ -194,7 +195,8 @@ public class StorageEntryInspectorViewFactory {
   }
 
   void jumpToUri(final URI uri) {
-    storageIndex.get(uri).ifPresentOrElse(
+    // TODO: Absolutely DO NOT DO THIS!
+    storageIndexProvider.indexOf(uri).get(uri).ifPresentOrElse(
         it -> eventPublisher.publishEvent(new ViewController.EntryInspectionEvent(it)),
         () -> JOptionPane.showMessageDialog(
             null,

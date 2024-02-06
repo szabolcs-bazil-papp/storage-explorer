@@ -18,7 +18,6 @@ package hu.aestallon.storageexplorer.ui.controller;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.model.tree.Clickable;
 import hu.aestallon.storageexplorer.ui.ExplorerView;
 import hu.aestallon.storageexplorer.ui.GraphView;
@@ -72,7 +71,7 @@ public class ViewController {
   private final MainTreeView mainTreeView;
   private final GraphView graphView;
 
-  public ViewController(StorageIndex storageIndex, ExplorerView explorerView,
+  public ViewController(ExplorerView explorerView,
                         MainTreeView mainTreeView,
                         GraphView graphView) {
     this.explorerView = explorerView;
