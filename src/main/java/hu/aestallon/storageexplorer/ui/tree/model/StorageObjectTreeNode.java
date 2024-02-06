@@ -15,10 +15,35 @@
 
 package hu.aestallon.storageexplorer.ui.tree.model;
 
+import javax.swing.tree.DefaultMutableTreeNode;
+import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-public interface Clickable {
+public class StorageObjectTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 
-  StorageEntry storageEntry();
+  public StorageObjectTreeNode(ObjectEntry objectEntry) {
+    super(objectEntry, false);
+  }
+
+  @Override
+  public StorageEntry storageEntry() {
+    return (StorageEntry) userObject;
+  }
+
+  @Override
+  public boolean getAllowsChildren() {
+    return false;
+  }
+
+  @Override
+  public boolean isLeaf() {
+    return true;
+  }
+
+
+  @Override
+  public String toString() {
+    return ((ObjectEntry) userObject).uuid();
+  }
 
 }

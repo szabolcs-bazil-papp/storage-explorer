@@ -16,14 +16,13 @@
 package hu.aestallon.storageexplorer.ui.tree.model;
 
 import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-public class StorageList extends DefaultMutableTreeNode implements Clickable {
+public class StorageMapTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 
-
-  public StorageList(ListEntry listEntry) {
-    super(listEntry, false);
+  public StorageMapTreeNode(MapEntry mapEntry) {
+    super(mapEntry, false);
   }
 
   @Override
@@ -43,8 +42,8 @@ public class StorageList extends DefaultMutableTreeNode implements Clickable {
 
   @Override
   public String toString() {
-    final var listEntry = (ListEntry) userObject;
-    return listEntry.schema() + " / " + listEntry.name();
+    final var mapEntry = (MapEntry) userObject;
+    return mapEntry.schema() + " / " + mapEntry.name();
   }
 
 }

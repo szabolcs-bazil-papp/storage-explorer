@@ -16,17 +16,14 @@
 package hu.aestallon.storageexplorer.ui.tree.model;
 
 import java.util.List;
-import java.util.stream.Collectors;
 import javax.swing.tree.DefaultMutableTreeNode;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 
-public final class StorageSchema extends DefaultMutableTreeNode {
+public class StorageTypeTreeNode extends DefaultMutableTreeNode {
 
-  StorageSchema(String name, List<ObjectEntry> objectEntries) {
+  public StorageTypeTreeNode(String name, List<ObjectEntry> objectEntries) {
     super(name, true);
-    objectEntries.stream()
-        .collect(Collectors.groupingBy(ObjectEntry::typeName))
-        .forEach((type, entries) -> add(new StorageType(type, entries)));
+    objectEntries.forEach(it -> add(new StorageObjectTreeNode(it)));
   }
 
 }

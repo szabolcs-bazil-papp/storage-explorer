@@ -23,7 +23,7 @@ import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.ui.ExplorerView;
 import hu.aestallon.storageexplorer.ui.GraphView;
 import hu.aestallon.storageexplorer.ui.tree.MainTreeView;
-import hu.aestallon.storageexplorer.ui.tree.model.Clickable;
+import hu.aestallon.storageexplorer.ui.tree.model.ClickableTreeNode;
 
 @Service
 public class ViewController {
@@ -92,11 +92,11 @@ public class ViewController {
   }
 
   @EventListener
-  public GraphSelectionRequest onMainTreeNodeSelected(Clickable clickable) {
+  public GraphSelectionRequest onMainTreeNodeSelected(ClickableTreeNode clickableTreeNode) {
     explorerView.openInspectorContainer();
-    explorerView.inspectorContainerView().showInspectorView(clickable.storageEntry());
+    explorerView.inspectorContainerView().showInspectorView(clickableTreeNode.storageEntry());
 
-    return new GraphSelectionRequest(clickable.storageEntry());
+    return new GraphSelectionRequest(clickableTreeNode.storageEntry());
   }
 
   @EventListener
