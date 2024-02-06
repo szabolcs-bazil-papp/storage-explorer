@@ -20,15 +20,26 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
+import org.smartbit4all.api.collection.CollectionApi;
+import org.smartbit4all.api.config.PlatformApiConfig;
+import org.smartbit4all.core.object.ObjectApi;
+import org.smartbit4all.core.object.ObjectDefinitionApi;
+import org.smartbit4all.domain.data.storage.ObjectStorage;
+import org.smartbit4all.storage.fs.StorageFS;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.ui.controller.ViewController;
 
 @Service
 public class StorageIndexProvider {
 
+  private final ApplicationEventPublisher eventPublisher;
   private final Map<String, StorageIndex> indicesByName;
 
-  public StorageIndexProvider() {
+  public StorageIndexProvider(ApplicationEventPublisher eventPublisher) {
+    this.eventPublisher = eventPublisher;
     indicesByName = new HashMap<>();
   }
 
@@ -59,8 +70,24 @@ public class StorageIndexProvider {
   }
 
   public StorageIndex init(Path path) {
-    // TODO: Implement!
-    return null;
+    final String fsDirName = path.getFileName().toString();
+    final String fsDirParentName = path.getParent().getFileName().toString();
+    final String name = String.format("%s (%s)", fsDirName, fsDirParentName);
+
+    final var ctx = new AnnotationConfigApplicationContext();
+    ctx.register(PlatformApiConfig.class);
+    ctx.registerBean(name, ObjectStorage.class, () -> new StorageFS(
+        path.toFile(),
+        ctx.getBean(ObjectDefinitionApi.class)));
+    ctx.refresh();
+
+    ObjectApi objectApi = ctx.getBean(ObjectApi.class);
+    CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
+
+    final StorageIndex storageIndex = new StorageIndex(name, path, objectApi, collectionApi);
+    indicesByName.put(name, storageIndex);
+    eventPublisher.publishEvent(new ViewController.StorageImportEvent(storageIndex));
+    return storageIndex;
   }
 
 
