@@ -16,6 +16,7 @@
 package hu.aestallon.storageexplorer.ui;
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -34,7 +35,7 @@ public class InspectorContainerView extends JTabbedPane {
   private final StorageEntryInspectorViewFactory factory;
 
   public InspectorContainerView(ApplicationEventPublisher eventPublisher,
-      StorageEntryInspectorViewFactory factory) {
+                                StorageEntryInspectorViewFactory factory) {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
     this.eventPublisher = eventPublisher;
 
@@ -89,11 +90,11 @@ public class InspectorContainerView extends JTabbedPane {
       int size = 17;
       setPreferredSize(new Dimension(size, size));
 
-      setToolTipText("Close");
+      setToolTipText("Close this tab. Alt + Click to close all tabs but this.");
       setContentAreaFilled(false);
       setBorderPainted(false);
 
-      addMouseListener(buttonMouseListener);
+      addMouseListener(CLOSE_BUTTON_ROLLOVER_LISTENER);
       setRolloverEnabled(true);
 
       addActionListener(e -> {
@@ -102,14 +103,28 @@ public class InspectorContainerView extends JTabbedPane {
           return;
         }
 
-        final var inspector =
-            (InspectorView<? extends StorageEntry>) InspectorContainerView.this.getComponentAt(idx);
+        final var inspector = inspectorViewAt(idx);
         if (inspector == null) {
           return;
         }
 
-        factory.dropInspector(inspector);
-        InspectorContainerView.this.remove(idx);
+        final int alt = ActionEvent.ALT_MASK;
+        if ((e.getModifiers() & alt) == alt) {
+          final int tabCount = getTabCount();
+          if (idx < tabCount - 1) {
+            for (int i = 0; i < tabCount - 1 - idx; i++) {
+              final var inspectorToClose = inspectorViewAt(idx + 1);
+              discardInspector(inspectorToClose);
+            }
+          }
+          for (int i = 0; i < idx; i++) {
+            final var inspectorToClose = inspectorViewAt(0);
+            discardInspector(inspectorToClose);
+
+          }
+        } else {
+          discardInspector(inspector);
+        }
       });
     }
 
@@ -134,8 +149,17 @@ public class InspectorContainerView extends JTabbedPane {
     }
   }
 
+  private void discardInspector(final InspectorView<? extends StorageEntry> inspectorToClose) {
+    factory.dropInspector(inspectorToClose);
+    remove(inspectorToClose.asComponent());
+  }
 
-  private final static MouseListener buttonMouseListener = new MouseAdapter() {
+  private InspectorView<?> inspectorViewAt(final int idx) {
+    return (InspectorView<? extends StorageEntry>) getComponentAt(idx);
+  }
+
+
+  private static final MouseListener CLOSE_BUTTON_ROLLOVER_LISTENER = new MouseAdapter() {
     public void mouseEntered(MouseEvent e) {
       final var component = e.getComponent();
       if (component instanceof AbstractButton) {
