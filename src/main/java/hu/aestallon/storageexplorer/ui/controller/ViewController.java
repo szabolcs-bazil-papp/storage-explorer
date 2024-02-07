@@ -132,4 +132,41 @@ public class ViewController {
     SwingUtilities.invokeLater(() -> mainTreeView.importStorage(e.storageIndex));
   }
 
+  public static final class BackgroundWorkStartedEvent {
+    private final String displayName;
+
+    public BackgroundWorkStartedEvent(String displayName) {
+      this.displayName = displayName;
+    }
+  }
+
+
+  public static final class BackgroundWorkCompletedEvent {
+    private enum BackgroundWorkResult { OK, ERR }
+
+    public static BackgroundWorkCompletedEvent ok() {
+      return new BackgroundWorkCompletedEvent(BackgroundWorkResult.OK);
+    }
+
+    public static BackgroundWorkCompletedEvent err() {
+      return new BackgroundWorkCompletedEvent(BackgroundWorkResult.ERR);
+    }
+
+    private final BackgroundWorkResult result;
+
+    private BackgroundWorkCompletedEvent(BackgroundWorkResult result) {
+      this.result = result;
+    }
+  }
+
+  @EventListener
+  public void onBackgroundWorkStarted(BackgroundWorkStartedEvent e) {
+    SwingUtilities.invokeLater(() -> mainTreeView.showProgressBar(e.displayName));
+  }
+
+  @EventListener
+  public void onBackgroundWorkTerminated(BackgroundWorkCompletedEvent e) {
+    SwingUtilities.invokeLater(mainTreeView::removeProgressBar);
+  }
+
 }

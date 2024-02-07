@@ -72,6 +72,8 @@ public class StorageIndexProvider {
     final String fsDirName = path.getFileName().toString();
     final String fsDirParentName = path.getParent().getFileName().toString();
     final String name = String.format("%s (%s)", fsDirName, fsDirParentName);
+    eventPublisher.publishEvent(
+        new ViewController.BackgroundWorkStartedEvent("Importing storage: " + name + "..."));
 
     final var ctx = new AnnotationConfigApplicationContext();
     ctx.register(PlatformApiConfig.class);
@@ -86,9 +88,8 @@ public class StorageIndexProvider {
     final StorageIndex storageIndex = new StorageIndex(name, path, objectApi, collectionApi);
     indicesByName.put(name, storageIndex);
     eventPublisher.publishEvent(new ViewController.StorageImportEvent(storageIndex));
+    eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
     return storageIndex;
   }
-
-
 
 }

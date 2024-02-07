@@ -36,8 +36,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
-import hu.aestallon.storageexplorer.ui.GraphView;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.tree.model.ClickableTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageInstanceTreeNode;
@@ -52,20 +50,17 @@ public class MainTreeView extends JPanel {
   private static final Logger log = LoggerFactory.getLogger(MainTreeView.class);
   private JTree tree;
   private JScrollPane treePanel;
+  private JProgressBar progressBar;
 
   private Map<StorageEntry, TreePath> treePathByEntry;
 
   private final AtomicBoolean propagate = new AtomicBoolean(true);
   private final ApplicationEventPublisher eventPublisher;
-  private final StorageIndexProvider storageIndexProvider;
 
-  public MainTreeView(StorageIndexProvider storageIndexProvider, GraphView graphView,
-                      ApplicationEventPublisher eventPublisher) {
-    super(new GridLayout(1, 1));
-
-    this.storageIndexProvider = storageIndexProvider;
+  public MainTreeView(ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
 
+    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     setPreferredSize(new Dimension(300, 500));
 
     initTree();
@@ -97,7 +92,8 @@ public class MainTreeView extends JPanel {
   public void importStorage(final StorageIndex storageIndex) {
     DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
     final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
-    final StorageInstanceTreeNode storageInstanceTreeNode = new StorageInstanceTreeNode(storageIndex);
+    final StorageInstanceTreeNode storageInstanceTreeNode =
+        new StorageInstanceTreeNode(storageIndex);
     model.insertNodeInto(storageInstanceTreeNode, root, root.getChildCount());
 
     final var newTreePaths = Stream.of(storageInstanceTreeNode)
@@ -157,6 +153,26 @@ public class MainTreeView extends JPanel {
       }
       return this;
     }
+  }
+
+  public void showProgressBar(final String displayName) {
+    if (progressBar == null) {
+      progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
+      progressBar.setPreferredSize(new Dimension(300, 20));
+    }
+    progressBar.setString(displayName);
+    progressBar.setStringPainted(true);
+    progressBar.setIndeterminate(true);
+    add(progressBar);
+    revalidate();
+  }
+
+  public void removeProgressBar() {
+    if (progressBar == null) {
+      return;
+    }
+    remove(progressBar);
+    revalidate();
   }
 
 }
