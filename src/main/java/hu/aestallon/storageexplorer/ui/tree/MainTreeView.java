@@ -106,7 +106,7 @@ public class MainTreeView extends JPanel {
           if (!(lastPathComponent instanceof StorageInstanceTreeNode)) {
             return;
           }
-
+          tree.setSelectionPath(treePath);
           final var storageInstanceTreeNode = (StorageInstanceTreeNode) lastPathComponent;
           final var popup = new StorageIndexNodePopupMenu(storageInstanceTreeNode);
           popup.show(e.getComponent(), e.getX(), e.getY());
@@ -146,7 +146,6 @@ public class MainTreeView extends JPanel {
     if (idx < 0) {
       return;
     }
-
     // Drop Storage:
     model.removeNodeFromParent((MutableTreeNode) root.getChildAt(idx));
 
