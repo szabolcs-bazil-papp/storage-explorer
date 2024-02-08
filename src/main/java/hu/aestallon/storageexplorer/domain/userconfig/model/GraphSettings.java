@@ -15,9 +15,6 @@
 
 package hu.aestallon.storageexplorer.domain.userconfig.model;
 
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import javax.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,10 +24,9 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 @JsonPropertyOrder({
     "graphTraversalInboundLimit",
     "graphTraversalOutboundLimit",
-    "importedStorageLocations"
 })
-@JsonTypeName("UserConfig")
-public final class UserConfig {
+@JsonTypeName("GraphSettings")
+public final class GraphSettings {
 
   @JsonProperty("graphTraversalInboundLimit")
   private Integer graphTraversalInboundLimit = 0;
@@ -38,12 +34,9 @@ public final class UserConfig {
   @JsonProperty("graphTraversalOutboundLimit")
   private Integer graphTraversalOutboundLimit = 2;
 
-  @JsonProperty("importedStorageLocations")
-  private List<Path> importedStorageLocations = new ArrayList<>();
+  public GraphSettings() {}
 
-  public UserConfig() {}
-
-  public UserConfig graphTraversalInboundLimit(Integer graphTraversalInboundLimit) {
+  public GraphSettings graphTraversalInboundLimit(Integer graphTraversalInboundLimit) {
     this.graphTraversalInboundLimit = graphTraversalInboundLimit;
     return this;
   }
@@ -58,7 +51,7 @@ public final class UserConfig {
     this.graphTraversalInboundLimit = graphTraversalInboundLimit;
   }
 
-  public UserConfig graphTraversalOutboundLimit(Integer graphTraversalOutboundLimit) {
+  public GraphSettings graphTraversalOutboundLimit(Integer graphTraversalOutboundLimit) {
     this.graphTraversalOutboundLimit = graphTraversalOutboundLimit;
     return this;
   }
@@ -73,27 +66,6 @@ public final class UserConfig {
     this.graphTraversalOutboundLimit = graphTraversalOutboundLimit;
   }
 
-  public UserConfig importedStorageLocations(List<Path> importedStorageLocations) {
-    this.importedStorageLocations = importedStorageLocations;
-    return this;
-  }
-
-  public UserConfig addImportedStorageLocationsItem(Path importedStorageLocationsItem) {
-    this.importedStorageLocations.add(importedStorageLocationsItem);
-    return this;
-  }
-
-  @NotNull
-  @JsonProperty("importedStorageLocations")
-  public List<Path> getImportedStorageLocations() {
-    return importedStorageLocations;
-  }
-
-  @JsonProperty("importedStorageLocations")
-  public void setImportedStorageLocations(List<Path> importedStorageLocations) {
-    this.importedStorageLocations = importedStorageLocations;
-  }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -102,40 +74,34 @@ public final class UserConfig {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    UserConfig userConfig = (UserConfig) o;
-    return Objects.equals(this.graphTraversalInboundLimit, userConfig.graphTraversalInboundLimit) &&
-        Objects.equals(this.graphTraversalOutboundLimit, userConfig.graphTraversalOutboundLimit) &&
-        Objects.equals(this.importedStorageLocations, userConfig.importedStorageLocations);
+    GraphSettings graphSettings = (GraphSettings) o;
+    return Objects.equals(this.graphTraversalInboundLimit, graphSettings.graphTraversalInboundLimit)
+        &&
+        Objects.equals(this.graphTraversalOutboundLimit, graphSettings.graphTraversalOutboundLimit);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(
         graphTraversalInboundLimit,
-        graphTraversalOutboundLimit,
-        importedStorageLocations);
+        graphTraversalOutboundLimit);
   }
 
   @Override
   public String toString() {
-    return "class UserConfig {\n"
+    return "GraphSettings {\n"
         + "    graphTraversalInboundLimit: "
         + toIndentedString(graphTraversalInboundLimit) + "\n"
         + "    graphTraversalOutboundLimit: "
         + toIndentedString(graphTraversalOutboundLimit) + "\n"
-        + "    importedStorageLocations: " + toIndentedString(importedStorageLocations)
-        + "\n"
         + "}";
   }
 
-  /**
-   * Convert the given object to string with each line indented by 4 spaces (except the first
-   * line).
-   */
   private String toIndentedString(Object o) {
     if (o == null) {
       return "null";
     }
     return o.toString().replace("\n", "\n    ");
   }
+
 }
