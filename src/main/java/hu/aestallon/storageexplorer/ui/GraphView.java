@@ -41,14 +41,16 @@ import org.graphstream.ui.view.View;
 import org.graphstream.ui.view.Viewer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.graph.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
+import hu.aestallon.storageexplorer.domain.userconfig.event.GraphConfigChanged;
+import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.misc.GraphStylingProvider;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
@@ -64,22 +66,19 @@ public class GraphView extends JPanel {
   private ViewPanel panel;
   private SpriteManager sprites;
   private KeyListener screenshotListener;
+  private StorageEntry origin;
   private StorageEntry currentHighlight;
   private GraphRenderingService graphRenderingService;
 
   private final StorageIndexProvider storageIndexProvider;
   private final ApplicationEventPublisher eventPublisher;
-  private final int inboundLimit;
-  private final int outboundLimit;
+  private final UserConfigService userConfigService;
 
   public GraphView(StorageIndexProvider storageIndexProvider,
-                   ApplicationEventPublisher eventPublisher,
-                   @Value("${graph.traversal.inbound:0}") int inboundLimit,
-                   @Value("${graph.traversal.outbound:-1}") int outboundLimit) {
+                   ApplicationEventPublisher eventPublisher, UserConfigService userConfigService) {
     this.storageIndexProvider = storageIndexProvider;
     this.eventPublisher = eventPublisher;
-    this.inboundLimit = inboundLimit;
-    this.outboundLimit = outboundLimit;
+    this.userConfigService = userConfigService;
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     setMinimumSize(new Dimension(500, 500));
@@ -114,8 +113,13 @@ public class GraphView extends JPanel {
     final StorageIndex storageIndex = storageIndexProvider.indexOf(storageEntry);
     if (graphRenderingService == null || !storageIndex.equals(
         graphRenderingService.storageIndex())) {
-      graphRenderingService = new GraphRenderingService(storageIndex, inboundLimit, outboundLimit);
+      final var userConfig = userConfigService.get();
+      graphRenderingService = new GraphRenderingService(
+          storageIndex,
+          userConfig.getGraphTraversalInboundLimit(),
+          userConfig.getGraphTraversalOutboundLimit());
     }
+    origin = storageEntry;
 
     graph = new MultiGraph("fs");
     sprites = new SpriteManager(graph);
@@ -152,6 +156,8 @@ public class GraphView extends JPanel {
       graph.clear();
       graph = null;
     }
+    currentHighlight = null;
+    origin = null;
     screenshotListener = null;
     // TODO: Maybe not needed?
     graphRenderingService = null;
@@ -264,4 +270,20 @@ public class GraphView extends JPanel {
 
   }
 
+
+  @EventListener
+  public void onGraphConfigurationChanged(GraphConfigChanged e) {
+    SwingUtilities.invokeLater(() -> {
+      if (graphRenderingService == null) {
+        return;
+      }
+
+      graphRenderingService.setLimits(e.newInboundLimit(), e.newOutboundLimit());
+      if (origin == null) {
+        return;
+      }
+
+      init(origin);
+    });
+  }
 }

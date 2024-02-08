@@ -24,7 +24,9 @@ import javax.swing.filechooser.FileSystemView;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
+import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.ui.dialog.SearchForEntryDialog;
+import hu.aestallon.storageexplorer.ui.dialog.UserConfigurationDialog;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 
 @Component
@@ -32,13 +34,15 @@ public class AppFrame extends JFrame {
 
   private final ApplicationEventPublisher eventPublisher;
   private final StorageIndexProvider storageIndexProvider;
+  private final UserConfigService userConfigService;
   private final MainView mainView;
 
   public AppFrame(ApplicationEventPublisher eventPublisher,
-                  StorageIndexProvider storageIndexProvider,
+                  StorageIndexProvider storageIndexProvider, UserConfigService userConfigService,
                   MainView mainView) {
     this.eventPublisher = eventPublisher;
     this.storageIndexProvider = storageIndexProvider;
+    this.userConfigService = userConfigService;
     this.mainView = mainView;
 
     setTitle("Storage Explorer");
@@ -74,6 +78,16 @@ public class AppFrame extends JFrame {
 
     menubar.add(popup);
 
+    final var settings = new JButton("Settings");
+    settings.setOpaque(true);
+    settings.setBorderPainted(false);
+    settings.addActionListener(e -> {
+      final var dialog = new UserConfigurationDialog(userConfigService);
+      dialog.setLocationRelativeTo(this);
+      dialog.setVisible(true);
+    });
+    menubar.add(settings);
+
     setJMenuBar(menubar);
   }
 
@@ -98,6 +112,7 @@ public class AppFrame extends JFrame {
     }
 
   }
+
 
   private final class ImportStorageAction extends AbstractAction {
 
