@@ -20,6 +20,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -30,6 +32,7 @@ import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.MultiGraph;
 import org.graphstream.stream.file.FileSinkImages;
 import org.graphstream.stream.file.images.Resolutions;
+import org.graphstream.ui.geom.Point3;
 import org.graphstream.ui.graphicGraph.GraphicElement;
 import org.graphstream.ui.graphicGraph.GraphicGraph;
 import org.graphstream.ui.spriteManager.SpriteManager;
@@ -39,6 +42,7 @@ import org.graphstream.ui.swing_viewer.ViewPanel;
 import org.graphstream.ui.swing_viewer.util.MouseOverMouseManager;
 import org.graphstream.ui.view.View;
 import org.graphstream.ui.view.Viewer;
+import org.graphstream.ui.view.camera.Camera;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -135,7 +139,9 @@ public class GraphView extends JPanel {
 
     panel = (ViewPanel) viewer.addDefaultView(false);
     panel.enableMouseOptions();
-    panel.setMouseManager(new GraphViewMouseManager());
+    GraphViewMouseManager mouseManager = new GraphViewMouseManager();
+    panel.setMouseManager(mouseManager);
+    panel.addMouseWheelListener(mouseManager);
 
     screenshotListener = new ScreenshotListener();
     panel.addKeyListener(screenshotListener);
@@ -177,7 +183,9 @@ public class GraphView extends JPanel {
     popup.show(GraphView.this, x, y);
   }
 
-  private final class GraphViewMouseManager extends MouseOverMouseManager {
+  private final class GraphViewMouseManager
+      extends MouseOverMouseManager
+      implements MouseWheelListener {
 
     @Override
     public void init(GraphicGraph graphicGraph, View view) {
@@ -189,6 +197,34 @@ public class GraphView extends JPanel {
     public void release() {
       super.release();
       view.removeListener("Mouse", this);
+    }
+
+    private int x = -1;
+    private int y = -1;
+    @Override
+    public void mouseDragged(MouseEvent event) {
+      if (SwingUtilities.isLeftMouseButton(event)) {
+        if (x != -1 && y != -1) {
+          final var camera = view.getCamera();
+          Point3 b = camera.transformPxToGu(event.getX(), event.getY());
+          Point3 a = camera.transformPxToGu(x, y);
+          Point3 diff = new Point3(b.x - a.x, b.y - a.y, 0);
+          final var vc = camera.getViewCenter();
+          camera.setViewCenter(vc.x - diff.x, vc.y - diff.y, vc.z);
+        }
+        x = event.getX();
+        y = event.getY();
+
+      } else {
+        super.mouseDragged(event);
+      }
+    }
+
+    @Override
+    public void mouseMoved(MouseEvent event) {
+      x = -1;
+      y = -1;
+      super.mouseMoved(event);
     }
 
     @Override
@@ -244,6 +280,14 @@ public class GraphView extends JPanel {
       return entry;
     }
 
+    @Override
+    public void mouseWheelMoved(MouseWheelEvent e) {
+      Camera camera = view.getCamera();
+      final double viewPercent = camera.getViewPercent();
+      final double delta = (double) e.getWheelRotation() / 100;
+      final double newZoom = viewPercent + delta;
+      camera.setViewPercent(Math.min(Math.max(0.01d, newZoom), 1));
+    }
   }
 
 
