@@ -21,6 +21,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import com.formdev.flatlaf.FlatIntelliJLaf;
+import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.ui.AppFrame;
 
 @SpringBootApplication
@@ -39,8 +40,11 @@ public class StorageExplorerApplication {
   }
 
   @Bean
-  CommandLineRunner frameLauncher(AppFrame appFrame) {
-    return args -> appFrame.launch();
+  CommandLineRunner frameLauncher(AppFrame appFrame, StorageIndexProvider storageIndexProvider) {
+    return args -> {
+      appFrame.launch();
+      storageIndexProvider.fetchAllKnown();
+    };
   }
 
 }

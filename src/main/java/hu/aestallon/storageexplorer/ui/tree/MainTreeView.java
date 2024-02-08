@@ -16,10 +16,14 @@
 package hu.aestallon.storageexplorer.ui.tree;
 
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -28,6 +32,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultTreeSelectionModel;
+import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 import org.slf4j.Logger;
@@ -37,7 +42,6 @@ import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
-import hu.aestallon.storageexplorer.ui.GraphView;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.tree.model.ClickableTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageInstanceTreeNode;
@@ -52,6 +56,7 @@ public class MainTreeView extends JPanel {
   private static final Logger log = LoggerFactory.getLogger(MainTreeView.class);
   private JTree tree;
   private JScrollPane treePanel;
+  private JProgressBar progressBar;
 
   private Map<StorageEntry, TreePath> treePathByEntry;
 
@@ -59,13 +64,12 @@ public class MainTreeView extends JPanel {
   private final ApplicationEventPublisher eventPublisher;
   private final StorageIndexProvider storageIndexProvider;
 
-  public MainTreeView(StorageIndexProvider storageIndexProvider, GraphView graphView,
-                      ApplicationEventPublisher eventPublisher) {
-    super(new GridLayout(1, 1));
-
-    this.storageIndexProvider = storageIndexProvider;
+  public MainTreeView(ApplicationEventPublisher eventPublisher,
+                      StorageIndexProvider storageIndexProvider) {
     this.eventPublisher = eventPublisher;
+    this.storageIndexProvider = storageIndexProvider;
 
+    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     setPreferredSize(new Dimension(300, 500));
 
     initTree();
@@ -86,8 +90,27 @@ public class MainTreeView extends JPanel {
       final var treeNode = (DefaultMutableTreeNode) e.getPath().getLastPathComponent();
       log.info("TREE SELECTION [ {} ]", treeNode);
       if (treeNode instanceof ClickableTreeNode && propagate.get()) {
-        final ClickableTreeNode clickableTreeNode = (ClickableTreeNode) treeNode;
-        eventPublisher.publishEvent(clickableTreeNode);
+        eventPublisher.publishEvent(treeNode);
+      }
+    });
+    tree.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        super.mouseClicked(e);
+        if (SwingUtilities.isRightMouseButton(e)) {
+          final var treePath = tree.getClosestPathForLocation(e.getX(), e.getY());
+          if (treePath == null) {
+            return;
+          }
+          final Object lastPathComponent = treePath.getLastPathComponent();
+          if (!(lastPathComponent instanceof StorageInstanceTreeNode)) {
+            return;
+          }
+
+          final var storageInstanceTreeNode = (StorageInstanceTreeNode) lastPathComponent;
+          final var popup = new StorageIndexNodePopupMenu(storageInstanceTreeNode);
+          popup.show(e.getComponent(), e.getX(), e.getY());
+        }
       }
     });
 
@@ -97,9 +120,14 @@ public class MainTreeView extends JPanel {
   public void importStorage(final StorageIndex storageIndex) {
     DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
     final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
-    final StorageInstanceTreeNode storageInstanceTreeNode = new StorageInstanceTreeNode(storageIndex);
+    final StorageInstanceTreeNode storageInstanceTreeNode =
+        new StorageInstanceTreeNode(storageIndex);
     model.insertNodeInto(storageInstanceTreeNode, root, root.getChildCount());
 
+    memoizeTreePathsOf(storageInstanceTreeNode);
+  }
+
+  private void memoizeTreePathsOf(StorageInstanceTreeNode storageInstanceTreeNode) {
     final var newTreePaths = Stream.of(storageInstanceTreeNode)
         .flatMap(MainTreeView::flatten)
         .filter(ClickableTreeNode.class::isInstance)
@@ -109,6 +137,33 @@ public class MainTreeView extends JPanel {
             new TreePath(it.getPath())))
         .collect(Pair.toMap());
     treePathByEntry.putAll(newTreePaths);
+  }
+
+  public void reindexStorage(final StorageIndex storageIndex) {
+    DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+    final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
+    final int idx = indexOfStorageIndex(storageIndex, root);
+    if (idx < 0) {
+      return;
+    }
+
+    // Drop Storage:
+    model.removeNodeFromParent((MutableTreeNode) root.getChildAt(idx));
+
+    // Re-add Storage:
+    final var storageInstanceTreeNode = new StorageInstanceTreeNode(storageIndex);
+    model.insertNodeInto(storageInstanceTreeNode, root, idx);
+    memoizeTreePathsOf(storageInstanceTreeNode);
+  }
+
+  private static int indexOfStorageIndex(StorageIndex storageIndex, DefaultMutableTreeNode root) {
+    for (int i = 0; i < root.getChildCount(); i++) {
+      final var storageInstanceTreeNode = (StorageInstanceTreeNode) root.getChildAt(i);
+      if (Objects.equals(storageInstanceTreeNode.storagePath(), storageIndex.pathToStorage())) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   private static <E> Stream<E> enumerationToStream(Enumeration<E> e) {
@@ -154,8 +209,42 @@ public class MainTreeView extends JPanel {
         setIcon(IconProvider.MAP);
       } else if (value instanceof StorageObjectTreeNode) {
         setIcon(IconProvider.OBJ);
+      } else if (value instanceof StorageInstanceTreeNode) {
+        setIcon(IconProvider.DB);
       }
       return this;
+    }
+  }
+
+  public void showProgressBar(final String displayName) {
+    if (progressBar == null) {
+      progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
+      progressBar.setPreferredSize(new Dimension(300, 20));
+    }
+    progressBar.setString(displayName);
+    progressBar.setStringPainted(true);
+    progressBar.setIndeterminate(true);
+    add(progressBar);
+    revalidate();
+  }
+
+  public void removeProgressBar() {
+    if (progressBar == null) {
+      return;
+    }
+    remove(progressBar);
+    revalidate();
+  }
+
+  private final class StorageIndexNodePopupMenu extends JPopupMenu {
+    private StorageIndexNodePopupMenu(StorageInstanceTreeNode sitn) {
+      super(String.valueOf(sitn.getUserObject()));
+
+      final var reindex = new JMenuItem("Reload", IconProvider.REFRESH);
+      reindex.addActionListener(e -> {
+        CompletableFuture.runAsync(() -> storageIndexProvider.reindex(sitn.storagePath()));
+      });
+      add(reindex);
     }
   }
 

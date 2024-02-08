@@ -24,7 +24,6 @@ import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import hu.aestallon.storageexplorer.domain.graph.service.internal.IncomingEdgeDiscoveryService;
 import hu.aestallon.storageexplorer.domain.graph.service.internal.NodeAdditionService;
 import hu.aestallon.storageexplorer.domain.graph.service.internal.OutgoingEdgeDiscoveryService;
@@ -42,16 +41,14 @@ public final class GraphRenderingService {
   private static final Logger log = LoggerFactory.getLogger(GraphRenderingService.class);
 
   private final StorageIndex storageIndex;
-  private final int inboundLimit;
-  private final int outboundLimit;
+  private int inboundLimit;
+  private int outboundLimit;
 
   private final IncomingEdgeDiscoveryService incomingEdgeDiscoveryService;
   private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
   private final NodeAdditionService nodeAdditionService;
 
-  public GraphRenderingService(StorageIndex storageIndex,
-                               @Value("${graph.traversal.inbound:0}") int inboundLimit,
-                               @Value("${graph.traversal.outbound:-1}") int outboundLimit) {
+  public GraphRenderingService(StorageIndex storageIndex, int inboundLimit, int outboundLimit) {
     this.storageIndex = storageIndex;
     this.inboundLimit = inboundLimit;
     this.outboundLimit = outboundLimit;
@@ -59,6 +56,11 @@ public final class GraphRenderingService {
     incomingEdgeDiscoveryService = new IncomingEdgeDiscoveryService(storageIndex);
     outgoingEdgeDiscoveryService = new OutgoingEdgeDiscoveryService(storageIndex);
     nodeAdditionService = new NodeAdditionService();
+  }
+
+  public void setLimits(final int inboundLimit, final int outboundLimit) {
+    this.inboundLimit = inboundLimit;
+    this.outboundLimit = outboundLimit;
   }
 
   public void render(Graph graph, StorageEntry storageEntry) {
