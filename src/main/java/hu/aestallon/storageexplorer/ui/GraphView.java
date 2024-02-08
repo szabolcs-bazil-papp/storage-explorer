@@ -113,7 +113,7 @@ public class GraphView extends JPanel {
     final StorageIndex storageIndex = storageIndexProvider.indexOf(storageEntry);
     if (graphRenderingService == null || !storageIndex.equals(
         graphRenderingService.storageIndex())) {
-      final var userConfig = userConfigService.get();
+      final var userConfig = userConfigService.graphSettings();
       graphRenderingService = new GraphRenderingService(
           storageIndex,
           userConfig.getGraphTraversalInboundLimit(),

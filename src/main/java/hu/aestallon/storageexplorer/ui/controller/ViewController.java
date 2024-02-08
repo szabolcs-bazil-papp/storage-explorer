@@ -169,4 +169,18 @@ public class ViewController {
     SwingUtilities.invokeLater(mainTreeView::removeProgressBar);
   }
 
+  public static final class StorageReindexed {
+    private final StorageIndex storageIndex;
+
+    public StorageReindexed(StorageIndex storageIndex) {
+      this.storageIndex = storageIndex;
+    }
+
+  }
+
+  @EventListener
+  public void onStorageReindexed(StorageReindexed e) {
+    SwingUtilities.invokeLater(() -> mainTreeView.reindexStorage(e.storageIndex));
+  }
+
 }

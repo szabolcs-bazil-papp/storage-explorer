@@ -25,8 +25,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
+import hu.aestallon.storageexplorer.ui.dialog.GraphSettingsDialog;
 import hu.aestallon.storageexplorer.ui.dialog.SearchForEntryDialog;
-import hu.aestallon.storageexplorer.ui.dialog.UserConfigurationDialog;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 
 @Component
@@ -66,26 +66,27 @@ public class AppFrame extends JFrame {
 
   private void initMenu() {
     final var menubar = new JMenuBar();
-    final var popup = new JMenu("Commands");
+    final var commands = new JMenu("Commands");
 
     final var selectNode = new JMenuItem("Select node...");
     selectNode.addActionListener(new SearchAction());
-    popup.add(selectNode);
+    commands.add(selectNode);
 
     final var importStorage = new JMenuItem("Import storage...");
     importStorage.addActionListener(new ImportStorageAction());
-    popup.add(importStorage);
+    commands.add(importStorage);
 
-    menubar.add(popup);
+    menubar.add(commands);
 
-    final var settings = new JButton("Settings");
-    settings.setOpaque(true);
-    settings.setBorderPainted(false);
-    settings.addActionListener(e -> {
-      final var dialog = new UserConfigurationDialog(userConfigService);
+    final var settings = new JMenu("Settings");
+
+    final var graphSettings = new JMenuItem("Graph Settings...");
+    graphSettings.addActionListener(e -> {
+      final var dialog = new GraphSettingsDialog(userConfigService);
       dialog.setLocationRelativeTo(this);
       dialog.setVisible(true);
     });
+    settings.add(graphSettings);
     menubar.add(settings);
 
     setJMenuBar(menubar);
@@ -136,7 +137,8 @@ public class AppFrame extends JFrame {
           return;
         }
 
-        CompletableFuture.runAsync(() -> storageIndexProvider.init(selectedFile.toPath()));
+        CompletableFuture.runAsync(
+            () -> storageIndexProvider.importAndIndex(selectedFile.toPath()));
       }
     }
   }

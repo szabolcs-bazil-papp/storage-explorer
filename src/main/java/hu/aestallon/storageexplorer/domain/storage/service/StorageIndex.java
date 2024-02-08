@@ -53,11 +53,10 @@ public class StorageIndex {
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
     this.cache = new HashMap<>();
-
-    init();
   }
 
-  private void init() {
+  void refresh() {
+    clear();
     try (final var files = Files.walk(pathToStorage)) {
       files
           .filter(p -> p.toFile().isFile())
@@ -71,6 +70,10 @@ public class StorageIndex {
     } catch (IOException e) {
       log.error(e.getMessage(), e);
     }
+  }
+
+  void clear() {
+    cache.clear();
   }
 
   public Stream<StorageEntry> entities() {
