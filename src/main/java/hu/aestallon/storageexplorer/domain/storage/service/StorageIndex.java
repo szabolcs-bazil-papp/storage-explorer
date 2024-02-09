@@ -72,13 +72,12 @@ public class StorageIndex {
       map.values().stream()
           .filter(ScopedEntry.class::isInstance)
           .map(ScopedEntry.class::cast)
-          .forEach(it -> Optional.ofNullable(map.get(it.scope())).ifPresent(e -> {
-            if (e instanceof ObjectEntry) {
-              ((ObjectEntry) e).addScopedEntry(it);
-            } else {
-              log.warn("Scoped entry [ {} ] belongs to non-object [ {} ] ???", it, e);
-            }
-          }));
+          .forEach(it -> map.values().stream()
+              .filter(ObjectEntry.class::isInstance)
+              .map(ObjectEntry.class::cast)
+              .filter(e -> Objects.equals(e.uri().getPath(), it.scope().getPath()))
+              .findFirst()
+              .ifPresent(e -> e.addScopedEntry(it)));
       cache.putAll(map);
     } catch (IOException e) {
       log.error(e.getMessage(), e);
