@@ -23,6 +23,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import static java.util.stream.Collectors.groupingBy;
 
@@ -34,6 +35,7 @@ public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
     storagePath = index.pathToStorage();
 
     final var collections = index.entities()
+        .filter(it -> !(it instanceof ScopedEntry))
         .filter(it -> it instanceof ListEntry || it instanceof MapEntry)
         .map(it -> it instanceof ListEntry
             ? new StorageListTreeNode((ListEntry) it)
@@ -49,6 +51,7 @@ public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
 
     index.entities()
         .filter(ObjectEntry.class::isInstance)
+        .filter(it -> !(it instanceof ScopedEntry))
         .map(ObjectEntry.class::cast)
         .collect(groupingBy(it -> it.uri().getScheme()))
         .forEach((schema, entries) -> add(new StorageSchemaTreeNode(schema, entries)));

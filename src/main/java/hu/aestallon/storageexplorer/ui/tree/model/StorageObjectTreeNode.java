@@ -17,12 +17,25 @@ package hu.aestallon.storageexplorer.ui.tree.model;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.ScopedListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.ScopedMapEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.ScopedObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
 public class StorageObjectTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 
   public StorageObjectTreeNode(ObjectEntry objectEntry) {
-    super(objectEntry, false);
+    super(objectEntry, true);
+
+    objectEntry.scopedEntries().forEach(it -> {
+      if (it instanceof ScopedMapEntry) {
+        add(new StorageMapTreeNode((ScopedMapEntry) it));
+      } else if (it instanceof ScopedListEntry) {
+        add(new StorageListTreeNode((ScopedListEntry) it));
+      } else if (it instanceof ScopedObjectEntry) {
+        add(new StorageObjectTreeNode((ScopedObjectEntry) it));
+      }
+    });
   }
 
   @Override
@@ -30,15 +43,6 @@ public class StorageObjectTreeNode extends DefaultMutableTreeNode implements Cli
     return (StorageEntry) userObject;
   }
 
-  @Override
-  public boolean getAllowsChildren() {
-    return false;
-  }
-
-  @Override
-  public boolean isLeaf() {
-    return true;
-  }
 
 
   @Override
