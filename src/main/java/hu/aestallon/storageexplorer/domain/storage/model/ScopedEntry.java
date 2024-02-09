@@ -19,6 +19,8 @@ import java.net.URI;
 
 public interface ScopedEntry {
 
+  URI uri();
+
   URI scope();
 
 }
