@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.TreeMap;
 import javax.swing.tree.DefaultMutableTreeNode;
 import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
@@ -26,10 +27,12 @@ import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 
 public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
 
   private final Path storagePath;
+
   public StorageInstanceTreeNode(StorageIndex index) {
     super(index.name(), true);
     storagePath = index.pathToStorage();
@@ -53,7 +56,7 @@ public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
         .filter(ObjectEntry.class::isInstance)
         .filter(it -> !(it instanceof ScopedEntry))
         .map(ObjectEntry.class::cast)
-        .collect(groupingBy(it -> it.uri().getScheme()))
+        .collect(groupingBy(it -> it.uri().getScheme(), TreeMap::new, toList()))
         .forEach((schema, entries) -> add(new StorageSchemaTreeNode(schema, entries)));
   }
 
