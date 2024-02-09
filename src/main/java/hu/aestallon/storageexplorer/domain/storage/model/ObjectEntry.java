@@ -16,6 +16,7 @@
 package hu.aestallon.storageexplorer.domain.storage.model;
 
 import java.net.URI;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -40,6 +41,8 @@ public class ObjectEntry implements StorageEntry {
   private Set<UriProperty> uriProperties;
   private String displayName;
 
+  private Set<ScopedEntry> scopedEntries = new HashSet<>();
+
   ObjectEntry(URI uri, ObjectApi objectApi) {
     this.uri = uri;
     this.objectApi = objectApi;
@@ -47,6 +50,18 @@ public class ObjectEntry implements StorageEntry {
     this.uuid = Uris.getUuid(uri);
 
     refresh();
+  }
+
+  public Set<ScopedEntry> scopedEntries() {
+    return scopedEntries;
+  }
+
+  public void scopedEntries(final Set<ScopedEntry> scopedEntries) {
+    this.scopedEntries = (scopedEntries == null) ? new HashSet<>() : new HashSet<>(scopedEntries);
+  }
+
+  public void addScopedEntry(final ScopedEntry scopedEntry) {
+    scopedEntries.add(scopedEntry);
   }
 
   @Override
@@ -57,6 +72,12 @@ public class ObjectEntry implements StorageEntry {
   @Override
   public Set<UriProperty> uriProperties() {
     return uriProperties;
+  }
+
+  @Override
+  public boolean references(StorageEntry that) {
+    return StorageEntry.super.references(that)
+        || ((that instanceof ScopedEntry) && scopedEntries.contains(that));
   }
 
   @Override

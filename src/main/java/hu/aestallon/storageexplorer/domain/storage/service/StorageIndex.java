@@ -32,6 +32,8 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import com.google.common.base.Strings;
+import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.util.IO;
 import hu.aestallon.storageexplorer.util.Pair;
@@ -58,7 +60,7 @@ public class StorageIndex {
   void refresh() {
     clear();
     try (final var files = Files.walk(pathToStorage)) {
-      files
+      final var map = files
           .filter(p -> p.toFile().isFile())
           .filter(p -> p.getFileName().toString().endsWith(".o"))
           .map(IO::read)
@@ -66,7 +68,18 @@ public class StorageIndex {
           .map(uri -> StorageEntry.create(uri, objectApi, collectionApi))
           .flatMap(Optional::stream)
           .map(it -> Pair.of(it.uri(), it))
-          .forEach(Pair.putIntoMap(cache));
+          .collect(Pair.toMap());
+      map.values().stream()
+          .filter(ScopedEntry.class::isInstance)
+          .map(ScopedEntry.class::cast)
+          .forEach(it -> Optional.ofNullable(map.get(it.scope())).ifPresent(e -> {
+            if (e instanceof ObjectEntry) {
+              ((ObjectEntry) e).addScopedEntry(it);
+            } else {
+              log.warn("Scoped entry [ {} ] belongs to non-object [ {} ] ???", it, e);
+            }
+          }));
+      cache.putAll(map);
     } catch (IOException e) {
       log.error(e.getMessage(), e);
     }
