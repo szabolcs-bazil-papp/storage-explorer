@@ -16,6 +16,7 @@
 package hu.aestallon.storageexplorer.domain.storage.model;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -35,28 +36,29 @@ public interface StorageEntry {
   String STORED_REF_MARKER = "/storedRef";
   String STORED_SEQ_MARKER = "/storedSeq";
 
-  static Optional<? extends StorageEntry> create(URI uri, ObjectApi objectApi, CollectionApi collectionApi) {
+  static Optional<? extends StorageEntry> create(Path path, URI uri, ObjectApi objectApi,
+                                                 CollectionApi collectionApi) {
     final URI latestUri = objectApi.getLatestUri(uri);
     final String uriString = latestUri.toString();
     try {
       if (uriString.contains(STORED_LIST_MARKER)) {
         return scopeUri(uriString, STORED_LIST_MARKER)
-            .map(scope -> (ListEntry) new ScopedListEntry(latestUri, collectionApi, scope))
-            .or(() -> Optional.of(new ListEntry(latestUri, collectionApi)));
+            .map(scope -> (ListEntry) new ScopedListEntry(path, latestUri, collectionApi, scope))
+            .or(() -> Optional.of(new ListEntry(path, latestUri, collectionApi)));
 
       } else if (uriString.contains(STORED_MAP_MARKER)) {
         return scopeUri(uriString, STORED_MAP_MARKER)
-            .map(scope -> (MapEntry) new ScopedMapEntry(latestUri, collectionApi, scope))
-            .or(() -> Optional.of(new MapEntry(latestUri, collectionApi)));
+            .map(scope -> (MapEntry) new ScopedMapEntry(path, latestUri, collectionApi, scope))
+            .or(() -> Optional.of(new MapEntry(path, latestUri, collectionApi)));
 
       } else if (uriString.contains(STORED_REF_MARKER)) {
         final var scope = scopeUri(uriString, STORED_REF_MARKER);
         if (scope.isPresent()) {
-          return Optional.of(new ScopedObjectEntry(latestUri, objectApi, scope.get()));
+          return Optional.of(new ScopedObjectEntry(path, latestUri, objectApi, scope.get()));
         }
 
       } else if (!uriString.contains(STORED_SEQ_MARKER)) {
-        return Optional.of(new ObjectEntry(latestUri, objectApi));
+        return Optional.of(new ObjectEntry(path, latestUri, objectApi));
       }
 
     } catch (Exception e) {
@@ -102,6 +104,8 @@ public interface StorageEntry {
 
     return "Unknown type";
   }
+
+  Path path();
 
   URI uri();
 

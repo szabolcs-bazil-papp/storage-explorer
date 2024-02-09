@@ -15,8 +15,12 @@
 
 package hu.aestallon.storageexplorer.domain.storage.model;
 
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -25,6 +29,7 @@ import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
 import org.smartbit4all.core.utility.StringConstant;
 import com.google.common.base.Strings;
+import hu.aestallon.storageexplorer.util.IO;
 import hu.aestallon.storageexplorer.util.ObjectMaps;
 import hu.aestallon.storageexplorer.util.Pair;
 import hu.aestallon.storageexplorer.util.Uris;
@@ -34,6 +39,7 @@ public class ObjectEntry implements StorageEntry {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
 
+  private final Path path;
   private final URI uri;
   private final ObjectApi objectApi;
   private final String typeName;
@@ -43,7 +49,8 @@ public class ObjectEntry implements StorageEntry {
 
   private Set<ScopedEntry> scopedEntries = new HashSet<>();
 
-  ObjectEntry(URI uri, ObjectApi objectApi) {
+  ObjectEntry(final Path path, final URI uri, final ObjectApi objectApi) {
+    this.path = path;
     this.uri = uri;
     this.objectApi = objectApi;
     this.typeName = Uris.getTypeName(uri);
@@ -62,6 +69,11 @@ public class ObjectEntry implements StorageEntry {
 
   public void addScopedEntry(final ScopedEntry scopedEntry) {
     scopedEntries.add(scopedEntry);
+  }
+
+  @Override
+  public Path path() {
+    return path;
   }
 
   @Override
@@ -88,7 +100,7 @@ public class ObjectEntry implements StorageEntry {
 
   @Override
   public void refresh() {
-    final var objectNode = objectApi.load(uri);
+    final var objectNode = load();
     uriProperties = initUriProperties(objectNode);
     displayName = initDisplayName(objectNode);
   }
@@ -127,8 +139,27 @@ public class ObjectEntry implements StorageEntry {
   }
 
   public ObjectNode load() {
-    // TODO: Add VersionInfo to Entry -> what to load, what can be loaded!
+    if (Uris.isSingleVersion(uri)) {
+      // We have to do this...
+      return objectApi.create(null, tryDeserialise());
+    }
     return objectApi.loadLatest(uri);
+  }
+
+  private Map<? , ?> tryDeserialise() {
+    final String rawContent = IO.read(path);
+    if (Strings.isNullOrEmpty(rawContent)) {
+      log.error("Empty content found during deserialisation attempt of [ {} ]", uri);
+      return new LinkedHashMap<>();
+    }
+
+    try {
+      return objectApi.getDefaultSerializer().fromString(rawContent, LinkedHashMap.class);
+    } catch (IOException e) {
+      log.error("Error during deserialisation attempt of [ {} ]", uri);
+      log.error(e.getMessage(), e);
+      return new LinkedHashMap<>();
+    }
   }
 
   public ObjectEntryLoadResult tryLoad() {
@@ -150,6 +181,10 @@ public class ObjectEntry implements StorageEntry {
   }
 
   public ObjectNode load(final long version) {
+    if (Uris.isSingleVersion(uri)) {
+      return load();
+    }
+
     return objectApi.load(Uris.atVersion(uri, version));
   }
 

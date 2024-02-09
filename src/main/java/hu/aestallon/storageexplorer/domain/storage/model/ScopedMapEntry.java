@@ -16,14 +16,15 @@
 package hu.aestallon.storageexplorer.domain.storage.model;
 
 import java.net.URI;
+import java.nio.file.Path;
 import org.smartbit4all.api.collection.CollectionApi;
 import hu.aestallon.storageexplorer.util.Uris;
 
 public class ScopedMapEntry extends MapEntry implements ScopedEntry {
   private final URI scopeUri;
 
-  ScopedMapEntry(URI uri, CollectionApi collectionApi, URI scopeUri) {
-    super(uri, collectionApi);
+  ScopedMapEntry(Path path, URI uri, CollectionApi collectionApi, URI scopeUri) {
+    super(path, uri, collectionApi);
     this.scopeUri = scopeUri;
   }
 

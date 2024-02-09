@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collector;
@@ -41,7 +42,7 @@ public final class Pair<A, B> {
   }
 
   public static <A, B, R> Function<Pair<A, B>, Pair<A, R>> onB(
-      Function<? super B, ? extends R> mapper) {
+      Function<B, R> mapper) {
     return it -> Pair.of(it.a, mapper.apply(it.b));
   }
 
@@ -60,6 +61,19 @@ public final class Pair<A, B> {
   public static <A, B> Consumer<? super Pair<? extends A, ? extends B>> putIntoMap(
       Map<? super A, ? super B> m) {
     return pair -> m.put(pair.a(), pair.b());
+  }
+
+  public static <A, B> Function<B, Pair<A, B>> withA(Function<B, A> mapper) {
+    return b -> Pair.of(mapper.apply(b), b);
+  }
+
+  public static <A, B> Function<A, Pair<A, B>> withB(Function<A, B> mapper) {
+    return a -> Pair.of(a, mapper.apply(a));
+  }
+
+  public static <A, B, R> Function<? super Pair<A, B>, R> map(
+      BiFunction<A, B, R> mapper) {
+    return pair -> mapper.apply(pair.a, pair.b);
   }
 
   private final A a;

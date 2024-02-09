@@ -16,6 +16,7 @@
 package hu.aestallon.storageexplorer.domain.storage.model;
 
 import java.net.URI;
+import java.nio.file.Path;
 import org.smartbit4all.core.object.ObjectApi;
 import hu.aestallon.storageexplorer.util.Uris;
 
@@ -23,8 +24,8 @@ public class ScopedObjectEntry extends ObjectEntry implements ScopedEntry {
 
   private final URI scopeUri;
 
-  ScopedObjectEntry(URI uri, ObjectApi objectApi, URI scopeUri) {
-    super(uri, objectApi);
+  ScopedObjectEntry(Path path, URI uri, ObjectApi objectApi, URI scopeUri) {
+    super(path, uri, objectApi);
     this.scopeUri = scopeUri;
   }
 

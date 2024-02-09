@@ -63,9 +63,11 @@ public class StorageIndex {
       final var map = files
           .filter(p -> p.toFile().isFile())
           .filter(p -> p.getFileName().toString().endsWith(".o"))
-          .map(IO::read)
-          .flatMap(IO.findObjectUri().andThen(Optional::stream))
-          .map(uri -> StorageEntry.create(uri, objectApi, collectionApi))
+          .map(Pair.withB(IO::read))
+          .map(Pair.onB(IO.findObjectUri()))
+          .flatMap(Pair.streamOnB())
+          .map(Pair.map(
+              (Path path, URI uri) -> StorageEntry.create(path, uri, objectApi, collectionApi)))
           .flatMap(Optional::stream)
           .map(it -> Pair.of(it.uri(), it))
           .collect(Pair.toMap());

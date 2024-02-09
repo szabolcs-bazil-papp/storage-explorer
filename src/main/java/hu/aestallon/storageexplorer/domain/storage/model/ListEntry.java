@@ -16,6 +16,7 @@
 package hu.aestallon.storageexplorer.domain.storage.model;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 import org.smartbit4all.api.collection.CollectionApi;
@@ -23,6 +24,7 @@ import hu.aestallon.storageexplorer.util.Uris;
 
 public class ListEntry implements StorageEntry {
 
+  private final Path path;
   private final URI uri;
   private final CollectionApi collectionApi;
   private final String schema;
@@ -30,7 +32,8 @@ public class ListEntry implements StorageEntry {
 
   private Set<UriProperty> uriProperties;
 
-  ListEntry(URI uri, CollectionApi collectionApi) {
+  ListEntry(Path path, URI uri, CollectionApi collectionApi) {
+    this.path = path;
     this.uri = uri;
     this.collectionApi = collectionApi;
 
@@ -42,6 +45,11 @@ public class ListEntry implements StorageEntry {
     this.name = terminalElement.substring(0, terminalElement.lastIndexOf('-'));
 
     refresh();
+  }
+
+  @Override
+  public Path path() {
+    return path;
   }
 
   @Override
