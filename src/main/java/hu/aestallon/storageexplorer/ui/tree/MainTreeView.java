@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
@@ -203,11 +204,26 @@ public class MainTreeView extends JPanel {
                                                            boolean hasFocus) {
       super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
       if (value instanceof StorageListTreeNode) {
-        setIcon(IconProvider.LIST);
+        if (((StorageListTreeNode) value).getUserObject() instanceof ScopedEntry) {
+          setIcon(IconProvider.SCOPED_LIST);
+        } else {
+          setIcon(IconProvider.LIST);
+        }
+
       } else if (value instanceof StorageMapTreeNode) {
-        setIcon(IconProvider.MAP);
+        if (((StorageMapTreeNode) value).getUserObject() instanceof ScopedEntry) {
+          setIcon(IconProvider.SCOPED_MAP);
+        } else {
+          setIcon(IconProvider.MAP);
+        }
+
       } else if (value instanceof StorageObjectTreeNode) {
-        setIcon(IconProvider.OBJ);
+        if (((StorageObjectTreeNode) value).getUserObject() instanceof ScopedEntry) {
+          setIcon(IconProvider.SCOPED_OBJ);
+        } else {
+          setIcon(IconProvider.OBJ);
+        }
+
       } else if (value instanceof StorageInstanceTreeNode) {
         setIcon(IconProvider.DB);
       }

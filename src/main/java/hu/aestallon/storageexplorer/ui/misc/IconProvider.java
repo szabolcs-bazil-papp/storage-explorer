@@ -41,6 +41,9 @@ public final class IconProvider {
   public static final ImageIcon LIST = new ImageIcon(loadIcon("list"));
   public static final ImageIcon MAP = new ImageIcon(loadIcon("map"));
   public static final ImageIcon OBJ = new ImageIcon(loadIcon("object"));
+  public static final ImageIcon SCOPED_LIST = new ImageIcon(loadIcon("scoped_list"));
+  public static final ImageIcon SCOPED_MAP = new ImageIcon(loadIcon("scoped_map"));
+  public static final ImageIcon SCOPED_OBJ = new ImageIcon(loadIcon("scoped_object"));
   public static final ImageIcon GRAPH = new ImageIcon(loadIcon("graph"));
   public static final ImageIcon CLOSE = new ImageIcon(loadIcon("close"));
   public static final ImageIcon REFRESH = new ImageIcon(loadIcon("refresh"));
