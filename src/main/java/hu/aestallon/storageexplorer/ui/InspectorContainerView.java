@@ -46,9 +46,12 @@ public class InspectorContainerView extends JTabbedPane {
     this.factory = factory;
 
     addChangeListener(e -> {
-      final var storageEntry = ((InspectorView<? extends StorageEntry>) getSelectedComponent())
-          .storageEntry();
-      eventPublisher.publishEvent(new ViewController.TreeTouchRequest(storageEntry));
+      InspectorView<? extends StorageEntry> selectedComponent =
+          (InspectorView<? extends StorageEntry>) getSelectedComponent();
+      if (selectedComponent != null) {
+        eventPublisher.publishEvent(new ViewController.TreeTouchRequest(
+            selectedComponent.storageEntry()));
+      }
     });
   }
 
@@ -72,7 +75,7 @@ public class InspectorContainerView extends JTabbedPane {
     final List<InspectorView<? extends StorageEntry>> viewsOnStorage = new ArrayList<>();
     for (int i = 0; i < getTabCount(); i++) {
       final InspectorView<? extends StorageEntry> inspectorView = inspectorViewAt(i);
-      if (inspectorView.storageEntry().path().startsWith(path))  {
+      if (inspectorView.storageEntry().path().startsWith(path)) {
         viewsOnStorage.add(inspectorView);
       }
     }
