@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.MultiGraph;
@@ -131,9 +132,8 @@ public class GraphView extends JPanel {
     graph.setAttribute("ui.stylesheet", GraphStylingProvider.LIGHT);
     graph.setAttribute("ui.antialias");
     graph.setAttribute("ui.quality");
-    graphRenderingService.render(graph, storageEntry);
 
-    viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
+    viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_ANOTHER_THREAD);
 
     viewer.enableAutoLayout();
 
@@ -148,6 +148,7 @@ public class GraphView extends JPanel {
     add(panel);
     setVisible(true);
     revalidate();
+    CompletableFuture.runAsync(() -> graphRenderingService.render(graph, storageEntry));
   }
 
   public void discard() {

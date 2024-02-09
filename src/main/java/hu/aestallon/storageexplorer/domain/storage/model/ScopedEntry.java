@@ -13,22 +13,14 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.ui.tree.model;
+package hu.aestallon.storageexplorer.domain.storage.model;
 
-import java.util.List;
-import java.util.TreeMap;
-import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
+import java.net.URI;
 
-public final class StorageSchemaTreeNode extends DefaultMutableTreeNode {
+public interface ScopedEntry {
 
-  StorageSchemaTreeNode(String name, List<ObjectEntry> objectEntries) {
-    super(name, true);
-    objectEntries.stream()
-        .collect(groupingBy(ObjectEntry::typeName, TreeMap::new, toList()))
-        .forEach((type, entries) -> add(new StorageTypeTreeNode(type, entries)));
-  }
+  URI uri();
+
+  URI scope();
 
 }
