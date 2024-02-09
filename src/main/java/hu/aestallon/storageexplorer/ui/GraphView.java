@@ -23,6 +23,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
@@ -168,6 +169,10 @@ public class GraphView extends JPanel {
     screenshotListener = null;
     // TODO: Maybe not needed?
     graphRenderingService = null;
+  }
+
+  public boolean displayingStorageAt(final Path path) {
+    return origin != null && origin.path().startsWith(path);
   }
 
   public void select(final StorageEntry storageEntry) {

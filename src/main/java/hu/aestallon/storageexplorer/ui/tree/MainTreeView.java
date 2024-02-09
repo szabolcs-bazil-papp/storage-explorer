@@ -18,6 +18,7 @@ package hu.aestallon.storageexplorer.ui.tree;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,6 +44,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
+import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.tree.model.ClickableTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageInstanceTreeNode;
@@ -157,9 +159,13 @@ public class MainTreeView extends JPanel {
   }
 
   private static int indexOfStorageIndex(StorageIndex storageIndex, DefaultMutableTreeNode root) {
+    return indexOfStorageIndex(storageIndex.pathToStorage(), root);
+  }
+
+  private static int indexOfStorageIndex(Path pathToStorage, DefaultMutableTreeNode root) {
     for (int i = 0; i < root.getChildCount(); i++) {
       final var storageInstanceTreeNode = (StorageInstanceTreeNode) root.getChildAt(i);
-      if (Objects.equals(storageInstanceTreeNode.storagePath(), storageIndex.pathToStorage())) {
+      if (Objects.equals(storageInstanceTreeNode.storagePath(), pathToStorage)) {
         return i;
       }
     }
@@ -194,6 +200,17 @@ public class MainTreeView extends JPanel {
     propagate.set(false);  // FIXME: This is a freaking hack!
     selectEntry(storageEntry);
     propagate.set(true);
+  }
+
+  public void removeStorageNodeOf(final Path path) {
+    DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+    final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
+    final int idx = indexOfStorageIndex(path, root);
+    if (idx < 0) {
+      return;
+    }
+
+    model.removeNodeFromParent((MutableTreeNode) root.getChildAt(idx));
   }
 
   private static final class TreeNodeRenderer extends DefaultTreeCellRenderer {
@@ -256,10 +273,18 @@ public class MainTreeView extends JPanel {
       super(String.valueOf(sitn.getUserObject()));
 
       final var reindex = new JMenuItem("Reload", IconProvider.REFRESH);
-      reindex.addActionListener(e -> {
-        CompletableFuture.runAsync(() -> storageIndexProvider.reindex(sitn.storagePath()));
-      });
+      reindex.addActionListener(
+          e -> CompletableFuture.runAsync(() -> storageIndexProvider.reindex(sitn.storagePath())));
+      reindex.setToolTipText(
+          "Reload this storage to let the application reflect its current state.");
       add(reindex);
+
+      final var discard = new JMenuItem("Delete", IconProvider.CLOSE);
+      discard.addActionListener(e -> eventPublisher.publishEvent(
+          new ViewController.StorageIndexDiscardedEvent(sitn.storagePath())));
+      discard.setToolTipText("Close this storage to reclaim system resources.\n"
+          + "This storage won't be preloaded on the next startup.");
+      add(discard);
     }
   }
 

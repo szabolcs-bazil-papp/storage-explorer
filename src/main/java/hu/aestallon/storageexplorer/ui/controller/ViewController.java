@@ -15,6 +15,7 @@
 
 package hu.aestallon.storageexplorer.ui.controller;
 
+import java.nio.file.Path;
 import javax.swing.*;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -181,6 +182,26 @@ public class ViewController {
   @EventListener
   public void onStorageReindexed(StorageReindexed e) {
     SwingUtilities.invokeLater(() -> mainTreeView.reindexStorage(e.storageIndex));
+  }
+
+  public static final class StorageIndexDiscardedEvent {
+    public final Path pathToStorage;
+
+    public StorageIndexDiscardedEvent(Path pathToStorage) {
+      this.pathToStorage = pathToStorage;
+    }
+
+  }
+
+  @EventListener
+  public void onStorageIndexDiscarded(StorageIndexDiscardedEvent e) {
+    SwingUtilities.invokeLater(() -> {
+      if (graphView.displayingStorageAt(e.pathToStorage)) {
+        explorerView.closeGraphView();
+      }
+      explorerView.inspectorContainerView().discardInspectorViewOfStorageAt(e.pathToStorage);
+      mainTreeView.removeStorageNodeOf(e.pathToStorage);
+    });
   }
 
 }

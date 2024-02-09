@@ -22,14 +22,15 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -63,8 +64,8 @@ public class StorageEntryInspectorViewFactory {
     this.storageIndexProvider = storageIndexProvider;
     this.monospaceFontProvider = monospaceFontProvider;
 
-    openedInspectors = new HashMap<>();
-    openedDialogs = new HashMap<>();
+    openedInspectors = new ConcurrentHashMap<>();
+    openedDialogs = new ConcurrentHashMap<>();
     textAreas = new ConcurrentHashMap<>();
   }
 
@@ -212,6 +213,18 @@ public class StorageEntryInspectorViewFactory {
         eventPublisher.publishEvent(new ViewController.GraphRenderingRequest(storageEntry));
       }
     });
+  }
+
+  @EventListener
+  @Order(0)
+  public void discardInspectorDialogsOfStorageAt(ViewController.StorageIndexDiscardedEvent e) {
+    openedDialogs.entrySet().stream()
+        .filter(it -> it.getKey().path().startsWith(e.pathToStorage))
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+        .forEach((entry, dialog) -> {
+          dialog.dispose();
+          dropInspector(entry); // just to make sure if listener is not called.
+        });
   }
 
 }

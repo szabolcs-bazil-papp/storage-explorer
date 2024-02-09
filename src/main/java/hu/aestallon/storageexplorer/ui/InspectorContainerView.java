@@ -20,6 +20,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
@@ -63,6 +66,21 @@ public class InspectorContainerView extends JTabbedPane {
         installTabComponent(inspector);
         setSelectedComponent(inspector);
     }
+  }
+
+  public void discardInspectorViewOfStorageAt(final Path path) {
+    final List<InspectorView<? extends StorageEntry>> viewsOnStorage = new ArrayList<>();
+    for (int i = 0; i < getTabCount(); i++) {
+      final InspectorView<? extends StorageEntry> inspectorView = inspectorViewAt(i);
+      if (inspectorView.storageEntry().path().startsWith(path))  {
+        viewsOnStorage.add(inspectorView);
+      }
+    }
+
+    viewsOnStorage.forEach(it -> {
+      remove(it.asComponent());
+      factory.dropInspector(it);
+    });
   }
 
   private void installTabComponent(JComponent inspectorComponent) {

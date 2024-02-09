@@ -19,6 +19,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,9 @@ import org.smartbit4all.core.object.ObjectDefinitionApi;
 import org.smartbit4all.domain.data.storage.ObjectStorage;
 import org.smartbit4all.storage.fs.StorageFS;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
@@ -42,26 +45,28 @@ public class StorageIndexProvider {
 
   private final ApplicationEventPublisher eventPublisher;
   private final UserConfigService userConfigService;
-  private final Map<Path, StorageIndex> indicesByName;
+  private final Map<Path, StorageIndex> indicesByPath;
+  private final Map<Path, ConfigurableApplicationContext> contextsByPath;
 
   public StorageIndexProvider(ApplicationEventPublisher eventPublisher,
                               UserConfigService userConfigService) {
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
-    indicesByName = new HashMap<>();
+    indicesByPath = new HashMap<>();
+    contextsByPath = new HashMap<>();
   }
 
   public Stream<StorageIndex> provide() {
-    return indicesByName.values().stream();
+    return indicesByPath.values().stream();
   }
 
   public Stream<StorageEntry> searchForUri(final String queryString) {
-    return indicesByName.values().stream().flatMap(it -> it.searchForUri(queryString));
+    return indicesByPath.values().stream().flatMap(it -> it.searchForUri(queryString));
   }
 
   public StorageIndex indexOf(final URI uri) {
     // TODO: don't do this, store backreference!
-    return indicesByName.values().stream()
+    return indicesByPath.values().stream()
         .filter(it -> it.get(uri).isPresent())
         .findFirst()
         .orElseThrow();
@@ -74,7 +79,7 @@ public class StorageIndexProvider {
 
   public void importAndIndex(final Path path) {
     final Path absolute = path.toAbsolutePath();
-    if (indicesByName.containsKey(absolute)) {
+    if (indicesByPath.containsKey(absolute)) {
       return;
     }
 
@@ -126,13 +131,14 @@ public class StorageIndexProvider {
     final CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
 
     final StorageIndex storageIndex = new StorageIndex(name, path, objectApi, collectionApi);
-    indicesByName.put(path, storageIndex);
+    indicesByPath.put(path, storageIndex);
+    contextsByPath.put(path, ctx);
     return storageIndex;
   }
 
   public void reindex(final Path path) {
     final Path absolute = path.toAbsolutePath();
-    final StorageIndex storageIndex = indicesByName.get(absolute);
+    final StorageIndex storageIndex = indicesByPath.get(absolute);
     if (storageIndex == null) {
       log.warn("Cannot reindex storage at [ {} ] as it is unknown!", absolute);
       return;
@@ -144,6 +150,28 @@ public class StorageIndexProvider {
     storageIndex.refresh();
     eventPublisher.publishEvent(new ViewController.StorageReindexed(storageIndex));
     eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
+  }
+
+  @EventListener
+  public void onStorageIndexDiscarded(ViewController.StorageIndexDiscardedEvent e) {
+    CompletableFuture.runAsync(() -> discardIndex(e.pathToStorage));
+  }
+
+  public void discardIndex(final Path path) {
+    indicesByPath.remove(path);
+    final ConfigurableApplicationContext ctx = contextsByPath.remove(path);
+    if (ctx == null) {
+      return;
+    }
+
+    try {
+      ctx.close();
+    } catch (Throwable t) {
+      log.error("Cannot close application context [ {} ] belonging to storage at [ {} ]!!!",
+          ctx, path);
+      log.error(t.getMessage(), t);
+    }
+    userConfigService.removeStorageLocation(path);
   }
 
 }
