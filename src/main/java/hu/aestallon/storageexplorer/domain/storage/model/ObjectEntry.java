@@ -71,10 +71,11 @@ public class ObjectEntry implements StorageEntry {
 
   @Override
   public Set<UriProperty> uriProperties() {
-    final var uriProperties = new HashSet<UriProperty>();
-    uriProperties.addAll(this.uriProperties);
+    final var uriProperties = new HashSet<>(this.uriProperties);
     scopedEntries.stream()
-        .map(e -> UriProperty.standalone(e.toString(), e.uri()))
+        .map(e -> UriProperty.standalone(
+            (e instanceof ObjectEntry) ? ((ObjectEntry) e).uuid : e.uri().toString(),
+            e.uri()))
         .forEach(uriProperties::add);
     return uriProperties;
   }

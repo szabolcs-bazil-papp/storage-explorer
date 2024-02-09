@@ -50,4 +50,8 @@ public class ScopedObjectEntry extends ObjectEntry implements ScopedEntry {
     return uri().hashCode();
   }
 
+  @Override
+  public String toString() {
+    return uuid();
+  }
 }
