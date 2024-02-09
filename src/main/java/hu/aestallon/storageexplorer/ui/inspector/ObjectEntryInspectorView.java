@@ -16,6 +16,8 @@
 package hu.aestallon.storageexplorer.ui.inspector;
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.io.IOException;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import org.slf4j.Logger;
@@ -24,11 +26,37 @@ import org.smartbit4all.core.object.ObjectNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.util.Uris;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntryInspectorView.class);
+
+  private final Action openInSystemExplorerAction = new AbstractAction(null, IconProvider.SE) {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      if (objectEntry == null) {
+        return;
+      }
+
+      if (!Desktop.isDesktopSupported()) {
+        return;
+      }
+
+      try {
+        Desktop.getDesktop().open(objectEntry.path().getParent().toFile());
+      } catch (IOException ex) {
+        log.warn("Could not open [ {} ] in system explorer!", objectEntry.path().getParent());
+        log.debug(ex.getMessage(), ex);
+        JOptionPane.showMessageDialog(
+            ObjectEntryInspectorView.this,
+            "Could not show entry location isn System Explorer!",
+            "Error",
+            JOptionPane.ERROR_MESSAGE);
+      }
+    }
+  };
 
   private final ObjectEntry objectEntry;
   private final ObjectMapper objectMapper;
@@ -95,23 +123,28 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     container.setBorder(new EmptyBorder(5, 5, 5, 5));
 
     final var toolbar = new JToolBar(JToolBar.TOP);
+    toolbar.setOrientation(SwingConstants.HORIZONTAL);
+    toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
     factory.addRenderAction(objectEntry, toolbar);
+    toolbar.add(openInSystemExplorerAction);
+    toolbar.add(Box.createHorizontalGlue());
 
+    Box box = new Box(0);
     final var label = new JLabel(objectEntry.toString());
     label.setFont(UIManager.getFont("h3.font"));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
+    box.add(label);
+    box.add(Box.createHorizontalGlue());
 
-    final var separator = new JSeparator();
-    separator.setAlignmentX(Component.LEFT_ALIGNMENT);
-
+    Box box2 = new Box(0);
     final var objectAsMapTextarea = objectAsMapTextarea(objectNode);
     final var pane = textAreaContainerPane(objectAsMapTextarea);
+    box2.add(pane);
+    box2.add(Box.createHorizontalGlue());
 
     container.add(toolbar);
-    container.add(label);
-    //container.add(separator);
-    container.add(pane);
-    //container.add(Box.createVerticalGlue());
+    container.add(box);
+    container.add(box2);
     return container;
   }
 
@@ -149,7 +182,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         objectAsMapTextarea,
         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
         ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-    pane.setAlignmentX(Component.LEFT_ALIGNMENT);
+    pane.setPreferredSize(new Dimension(2000, 2000));
     return pane;
   }
 
