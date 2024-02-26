@@ -51,6 +51,7 @@ public class StorageEntryInspectorViewFactory {
   private final ObjectMapper objectMapper;
   private final StorageIndexProvider storageIndexProvider;
   private final MonospaceFontProvider monospaceFontProvider;
+  private final InspectorTextareaFactory textareaFactory;
   private final Map<StorageEntry, InspectorView<? extends StorageEntry>> openedInspectors;
   private final Map<StorageEntry, InspectorDialog> openedDialogs;
   private final Map<StorageEntry, List<JTextArea>> textAreas;
@@ -63,6 +64,7 @@ public class StorageEntryInspectorViewFactory {
     this.objectMapper = objectMapper;
     this.storageIndexProvider = storageIndexProvider;
     this.monospaceFontProvider = monospaceFontProvider;
+    this.textareaFactory = new InspectorTextareaFactory(this);
 
     openedInspectors = new ConcurrentHashMap<>();
     openedDialogs = new ConcurrentHashMap<>();
@@ -75,6 +77,14 @@ public class StorageEntryInspectorViewFactory {
 
   void submitTextArea(StorageEntry storageEntry, JTextArea textArea) {
     textAreas.computeIfAbsent(storageEntry, k -> new ArrayList<>()).add(textArea);
+  }
+
+  InspectorTextareaFactory textareaFactory() {
+    return textareaFactory;
+  }
+
+  ObjectMapper objectMapper() {
+    return objectMapper;
   }
 
   public void dropInspector(final InspectorView<? extends StorageEntry> inspector) {
@@ -109,7 +119,7 @@ public class StorageEntryInspectorViewFactory {
 
     final InspectorView<? extends StorageEntry> inspector;
     if (storageEntry instanceof ObjectEntry) {
-      inspector = new ObjectEntryInspectorView((ObjectEntry) storageEntry, objectMapper, this);
+      inspector = new ObjectEntryInspectorView((ObjectEntry) storageEntry, this);
     } else if (storageEntry instanceof ListEntry || storageEntry instanceof MapEntry) {
       inspector = new CollectionEntryInspectorView(storageEntry, this);
     } else {

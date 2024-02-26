@@ -49,4 +49,5 @@ public final class IconProvider {
   public static final ImageIcon REFRESH = new ImageIcon(loadIcon("refresh"));
   public static final ImageIcon DB = new ImageIcon(loadIcon("db"));
   public static final ImageIcon SE = new ImageIcon(loadIcon("se"));
+  public static final ImageIcon MAGNIFY = new ImageIcon(loadIcon("magnify"));
 }
