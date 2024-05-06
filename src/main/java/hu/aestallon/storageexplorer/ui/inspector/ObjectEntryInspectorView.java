@@ -20,11 +20,16 @@ import java.awt.event.ActionEvent;
 import java.io.IOException;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import org.fife.rsta.ui.search.FindDialog;
+import org.fife.rsta.ui.search.SearchEvent;
+import org.fife.rsta.ui.search.SearchListener;
+import org.fife.ui.rtextarea.RTextArea;
+import org.fife.ui.rtextarea.SearchContext;
+import org.fife.ui.rtextarea.SearchEngine;
+import org.fife.ui.rtextarea.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.util.Uris;
@@ -59,16 +64,14 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   };
 
   private final ObjectEntry objectEntry;
-  private final ObjectMapper objectMapper;
   private final StorageEntryInspectorViewFactory factory;
   private final ObjectNode objectNode;
 
-  public ObjectEntryInspectorView(ObjectEntry objectEntry, ObjectMapper objectMapper,
+  public ObjectEntryInspectorView(ObjectEntry objectEntry,
                                   StorageEntryInspectorViewFactory factory) {
     super(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
 
     this.objectEntry = objectEntry;
-    this.objectMapper = objectMapper;
     this.factory = factory;
 
     final var result = objectEntry.tryLoad();
@@ -101,22 +104,6 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     return (boxed == null) ? 0 : boxed;
   }
 
-  private JTextArea objectAsMapTextarea(final ObjectNode objectNode) {
-    final var textarea = new JTextArea(getObjectAsMap(objectNode), 0, 80);
-    textarea.setWrapStyleWord(true);
-    textarea.setLineWrap(true);
-    textarea.setEditable(false);
-    textarea.setOpaque(false);
-    textarea.setFont(factory.monospaceFontProvider().getFont());
-
-    factory.addJumpAction(textarea);
-    factory.monospaceFontProvider().applyFontSizeChangeAction(textarea);
-
-    factory.submitTextArea(objectEntry, textarea);
-
-    return textarea;
-  }
-
   private Component versionPane(final ObjectNode objectNode) {
     final var container = new JPanel();
     container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
@@ -137,9 +124,16 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     box.add(Box.createHorizontalGlue());
 
     Box box2 = new Box(0);
-    final var objectAsMapTextarea = objectAsMapTextarea(objectNode);
-    final var pane = textAreaContainerPane(objectAsMapTextarea);
-    box2.add(pane);
+    final var pane = factory.textareaFactory().create(objectEntry, objectNode);
+    toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        final var sd = new FindDialog((Frame) null, searchListener((RTextArea) pane.textArea));
+        sd.setVisible(true);
+      }
+    });
+
+    box2.add(pane.scrollPane);
     box2.add(Box.createHorizontalGlue());
 
     container.add(toolbar);
@@ -174,32 +168,52 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     textarea.setEditable(false);
     textarea.setOpaque(false);
     textarea.setFont(factory.monospaceFontProvider().getFont());
-    return textAreaContainerPane(textarea);
-  }
-
-  private static JScrollPane textAreaContainerPane(JTextArea objectAsMapTextarea) {
-    final var pane = new JScrollPane(
-        objectAsMapTextarea,
-        ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-    pane.setPreferredSize(new Dimension(2000, 2000));
-    return pane;
-  }
-
-  private String getObjectAsMap(final ObjectNode objectNode) {
-    try {
-      return objectMapper
-          .writerWithDefaultPrettyPrinter()
-          .writeValueAsString(objectNode.getObjectAsMap());
-    } catch (JsonProcessingException e) {
-      log.error(e.getMessage(), e);
-      return "Cannot render object-as-map: " + e.getMessage();
-    }
+    return InspectorTextareaFactory.textAreaContainerPane(textarea);
   }
 
   @Override
   public ObjectEntry storageEntry() {
     return objectEntry;
+  }
+
+  private SearchListener searchListener(RTextArea textArea) {
+    return new SearchListener() {
+      @Override
+      public void searchEvent(SearchEvent e) {
+        SearchEvent.Type type = e.getType();
+        SearchContext context = e.getSearchContext();
+        SearchResult result;
+
+        switch (type) {
+          default: // Prevent FindBugs warning later
+          case MARK_ALL:
+            result = SearchEngine.markAll(textArea, context);
+            break;
+          case FIND:
+            result = SearchEngine.find(textArea, context);
+            if (!result.wasFound() || result.isWrapped()) {
+              UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+            }
+            break;
+          case REPLACE:
+            result = SearchEngine.replace(textArea, context);
+            if (!result.wasFound() || result.isWrapped()) {
+              UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+            }
+            break;
+          case REPLACE_ALL:
+            result = SearchEngine.replaceAll(textArea, context);
+            JOptionPane.showMessageDialog(null, result.getCount() +
+                " occurrences replaced.");
+            break;
+        }
+      }
+
+      @Override
+      public String getSelectedText() {
+        return null;
+      }
+    };
   }
 
 }
