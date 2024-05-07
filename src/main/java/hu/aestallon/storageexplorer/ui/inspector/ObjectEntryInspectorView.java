@@ -113,6 +113,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     toolbar.setOrientation(SwingConstants.HORIZONTAL);
     toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
     factory.addRenderAction(objectEntry, toolbar);
+    factory.addEditAction(objectEntry, toolbar);
     toolbar.add(openInSystemExplorerAction);
     toolbar.add(Box.createHorizontalGlue());
 

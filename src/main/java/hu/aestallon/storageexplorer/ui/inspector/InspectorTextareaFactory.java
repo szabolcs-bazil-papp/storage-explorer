@@ -24,7 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.ui.misc.MonospaceFontProvider;
 
 
 public final class InspectorTextareaFactory {
@@ -32,9 +34,9 @@ public final class InspectorTextareaFactory {
   private static final Logger log = LoggerFactory.getLogger(InspectorTextareaFactory.class);
 
 
-  static final class PaneAndTextarea {
-    final JScrollPane scrollPane;
-    final JTextArea textArea;
+  public static final class PaneAndTextarea {
+    public final JScrollPane scrollPane;
+    public final JTextArea textArea;
 
     PaneAndTextarea(JScrollPane scrollPane, JTextArea textArea) {
       this.scrollPane = scrollPane;
@@ -56,9 +58,17 @@ public final class InspectorTextareaFactory {
   }
 
   private final StorageEntryInspectorViewFactory inspectorViewFactory;
+  private final MonospaceFontProvider monospaceFontProvider;
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   public InspectorTextareaFactory(StorageEntryInspectorViewFactory inspectorViewFactory) {
     this.inspectorViewFactory = inspectorViewFactory;
+    this.monospaceFontProvider = inspectorViewFactory.monospaceFontProvider();
+  }
+
+  public InspectorTextareaFactory(MonospaceFontProvider monospaceFontProvider) {
+    this.monospaceFontProvider = monospaceFontProvider;
+    this.inspectorViewFactory = null;
   }
 
   PaneAndTextarea create(final ObjectEntry objectEntry, final ObjectNode objectNode) {
@@ -75,6 +85,10 @@ public final class InspectorTextareaFactory {
       default:
         throw new AssertionError(type);
     }
+  }
+
+  public PaneAndTextarea createEditor(final ObjectEntry objectEntry, final ObjectNode objectNode) {
+    return createEditorInternal(objectNode);
   }
 
   private PaneAndTextarea createSimple(final ObjectEntry objectEntry, final ObjectNode objectNode) {
@@ -102,6 +116,20 @@ public final class InspectorTextareaFactory {
     return new PaneAndTextarea(scrollPane, textarea);
   }
 
+  private PaneAndTextarea createEditorInternal(final ObjectNode objectNode) {
+    final var textarea = new RSyntaxTextArea(getObjectAsMap(objectNode));
+    textarea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
+    textarea.setCodeFoldingEnabled(true);
+    textarea.setWrapStyleWord(true);
+    textarea.setLineWrap(true);
+    textarea.setEditable(true);
+    textarea.setFont(monospaceFontProvider.getFont());
+    monospaceFontProvider.applyFontSizeChangeAction(textarea);
+
+    final var scrollPane = new RTextScrollPane(textarea);
+    return new PaneAndTextarea(scrollPane, textarea);
+  }
+
   private JTextArea objectAsMapTextarea(final ObjectEntry objectEntry,
                                         final ObjectNode objectNode) {
     final var textarea = new JTextArea(getObjectAsMap(objectNode), 0, 80);
@@ -121,8 +149,7 @@ public final class InspectorTextareaFactory {
 
   private String getObjectAsMap(final ObjectNode objectNode) {
     try {
-      return inspectorViewFactory
-          .objectMapper()
+      return objectMapper
           .writerWithDefaultPrettyPrinter()
           .writeValueAsString(objectNode.getObjectAsMap());
     } catch (JsonProcessingException e) {
