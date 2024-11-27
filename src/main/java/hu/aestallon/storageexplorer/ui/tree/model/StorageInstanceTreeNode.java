@@ -25,6 +25,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.SequenceEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
@@ -39,10 +40,14 @@ public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
 
     final var collections = index.entities()
         .filter(it -> !(it instanceof ScopedEntry))
-        .filter(it -> it instanceof ListEntry || it instanceof MapEntry)
+        .filter(it -> it instanceof ListEntry 
+            || it instanceof MapEntry 
+            || it instanceof SequenceEntry)
         .map(it -> it instanceof ListEntry
             ? new StorageListTreeNode((ListEntry) it)
-            : new StorageMapTreeNode((MapEntry) it))
+            : it instanceof MapEntry 
+                ? new StorageMapTreeNode((MapEntry) it)
+                : new StorageSequenceTreeNode((SequenceEntry) it))
         .sorted((a, b) -> (a instanceof StorageListTreeNode)
             ? -1
             : (b instanceof StorageListTreeNode)
@@ -51,6 +56,7 @@ public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
         .collect(groupingBy(Object::getClass));
     sortAndAdd(collections.getOrDefault(StorageListTreeNode.class, new ArrayList<>()));
     sortAndAdd(collections.getOrDefault(StorageMapTreeNode.class, new ArrayList<>()));
+    sortAndAdd(collections.getOrDefault(StorageSequenceTreeNode.class, new ArrayList<>()));
 
     index.entities()
         .filter(ObjectEntry.class::isInstance)

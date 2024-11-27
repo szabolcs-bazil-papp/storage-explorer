@@ -37,6 +37,7 @@ import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.SequenceEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
@@ -122,6 +123,8 @@ public class StorageEntryInspectorViewFactory {
       inspector = new ObjectEntryInspectorView((ObjectEntry) storageEntry, this);
     } else if (storageEntry instanceof ListEntry || storageEntry instanceof MapEntry) {
       inspector = new CollectionEntryInspectorView(storageEntry, this);
+    } else if (storageEntry instanceof SequenceEntry) {
+      inspector = new SequenceEntryInspectorView((SequenceEntry) storageEntry);
     } else {
       throw new AssertionError(storageEntry + " is not interpreted - TYPE ERROR!");
     }
