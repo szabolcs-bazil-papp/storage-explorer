@@ -56,7 +56,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         log.debug(ex.getMessage(), ex);
         JOptionPane.showMessageDialog(
             ObjectEntryInspectorView.this,
-            "Could not show entry location isn System Explorer!",
+            "Could not show entry location in System Explorer!",
             "Error",
             JOptionPane.ERROR_MESSAGE);
       }
@@ -152,7 +152,8 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
     container.setBorder(new EmptyBorder(5, 5, 5, 5));
 
-    final var label = new JLabel(objectEntry.toString() + " LOADING ERROR");
+    final var label = new JLabel(
+        (objectEntry == null ? "" : objectEntry.toString() + " ") + "LOADING ERROR");
     label.setFont(UIManager.getFont("h3.font"));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
 
