@@ -69,7 +69,7 @@ public class MonospaceFontProvider {
         return;
       }
 
-      if ((e.getModifiersEx() & KeyEvent.CTRL_DOWN_MASK) != KeyEvent.CTRL_DOWN_MASK) {
+      if ((e.getModifiersEx() & ctrlMask) != ctrlMask) {
         MouseWheelListener[] mouseWheelListeners = textArea
             .getParent()
             .getParent()
