@@ -28,7 +28,6 @@ import org.smartbit4all.api.binarydata.BinaryData;
 import org.smartbit4all.core.io.utility.FileIO;
 import org.smartbit4all.core.utility.StringConstant;
 import org.springframework.util.StreamUtils;
-import com.google.common.base.Function;
 import com.google.common.base.Strings;
 
 public final class IO {
@@ -37,6 +36,17 @@ public final class IO {
 
   private static final String URI_REGEX = "(?:\"uri\":\")([^\"]+)(?:\")";
   private static final Pattern URI_PTRN = Pattern.compile(URI_REGEX);
+
+  public static URI pathToUri(final Path path) {
+    try {
+      final var sb = new StringBuilder(path.toString().replace('\\', '/'));
+      final var s = sb.insert(sb.indexOf("/"), ':').delete(sb.length() - 2, sb.length()).toString();
+      return URI.create(s);
+    } catch (Exception e) {
+      log.error(e.getMessage(), e);
+      return null;
+    }
+  }
 
   public static Optional<URI> findObjectUri(String s) {
     if (Strings.isNullOrEmpty(s)) {
@@ -49,13 +59,9 @@ public final class IO {
         : Optional.empty();
   }
 
-  public static Function<String, Optional<URI>> findObjectUri() {
-    return IO::findObjectUri;
-  }
-
   public static String read(Path p) {
     List<BinaryData> binaryData = FileIO.readMultipart(p.toFile());
-    if (binaryData.isEmpty()) {
+    if (binaryData == null || binaryData.isEmpty()) {
       return StringConstant.EMPTY;
     }
     if (binaryData.size() == 1) {

@@ -52,13 +52,15 @@ public interface StorageEntry {
             .or(() -> Optional.of(new MapEntry(path, latestUri, collectionApi)));
 
       } else if (uriString.contains(STORED_REF_MARKER)) {
-        final var scope = scopeUri(uriString, STORED_REF_MARKER);
-        if (scope.isPresent()) {
-          return Optional.of(new ScopedObjectEntry(path, latestUri, objectApi, scope.get()));
-        }
+        return scopeUri(uriString, STORED_REF_MARKER)
+            .map(scope -> new ScopedObjectEntry(path, latestUri, objectApi, scope));
 
-      } else if (!uriString.contains(STORED_SEQ_MARKER)) {
+      } else if(uriString.contains(STORED_SEQ_MARKER)) {
+        return Optional.of(new SequenceEntry(path, latestUri, collectionApi));
+        
+      } else {
         return Optional.of(new ObjectEntry(path, latestUri, objectApi));
+        
       }
 
     } catch (Exception e) {

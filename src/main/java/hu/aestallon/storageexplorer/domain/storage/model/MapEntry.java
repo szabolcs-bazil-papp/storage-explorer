@@ -30,6 +30,7 @@ public class MapEntry implements StorageEntry {
   private final String schema;
   private final String name;
 
+  private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
   MapEntry(Path path, URI uri, CollectionApi collectionApi) {
@@ -43,8 +44,6 @@ public class MapEntry implements StorageEntry {
     final String pathElements[] = uri.getPath().split("/");
     final String terminalElement = pathElements[pathElements.length - 1];
     this.name = terminalElement.substring(0, terminalElement.lastIndexOf('-'));
-
-    refresh();
   }
 
   @Override
@@ -67,6 +66,11 @@ public class MapEntry implements StorageEntry {
 
   @Override
   public Set<UriProperty> uriProperties() {
+    if (!valid) {
+      refresh();
+      valid = true;
+    }
+    
     return uriProperties;
   }
 

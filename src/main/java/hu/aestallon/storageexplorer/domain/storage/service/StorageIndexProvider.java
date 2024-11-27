@@ -20,6 +20,10 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,17 +47,47 @@ public class StorageIndexProvider {
 
   private static final Logger log = LoggerFactory.getLogger(StorageIndexProvider.class);
 
+  private static final class HighPriorityThreadFactory implements ThreadFactory {
+    private static final AtomicInteger poolNumber = new AtomicInteger(1);
+    private final ThreadGroup group;
+    private final AtomicInteger threadNumber = new AtomicInteger(1);
+    private final String namePrefix;
+
+    private HighPriorityThreadFactory() {
+      SecurityManager s = System.getSecurityManager();
+      group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+      namePrefix = "pool-" +
+          poolNumber.getAndIncrement() +
+          "-thread-";
+    }
+
+    @Override
+    public Thread newThread(Runnable r) {
+      Thread t = new Thread(group, r, namePrefix + threadNumber.getAndIncrement(), 0);
+      if (t.isDaemon()) {
+        t.setDaemon(false);
+      }
+
+      if (t.getPriority() != Thread.MAX_PRIORITY) {
+        t.setPriority(Thread.MAX_PRIORITY);
+      }
+      return t;
+    }
+  }
+
   private final ApplicationEventPublisher eventPublisher;
   private final UserConfigService userConfigService;
   private final Map<Path, StorageIndex> indicesByPath;
   private final Map<Path, ConfigurableApplicationContext> contextsByPath;
+  private final ExecutorService executorService;
 
   public StorageIndexProvider(ApplicationEventPublisher eventPublisher,
-                              UserConfigService userConfigService) {
+      UserConfigService userConfigService) {
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
     indicesByPath = new HashMap<>();
     contextsByPath = new HashMap<>();
+    executorService = Executors.newSingleThreadExecutor(new HighPriorityThreadFactory());
   }
 
   public Stream<StorageIndex> provide() {
@@ -137,19 +171,21 @@ public class StorageIndexProvider {
   }
 
   public void reindex(final Path path) {
-    final Path absolute = path.toAbsolutePath();
-    final StorageIndex storageIndex = indicesByPath.get(absolute);
-    if (storageIndex == null) {
-      log.warn("Cannot reindex storage at [ {} ] as it is unknown!", absolute);
-      return;
-    }
+    executorService.submit(() -> {
+      final Path absolute = path.toAbsolutePath();
+      final StorageIndex storageIndex = indicesByPath.get(absolute);
+      if (storageIndex == null) {
+        log.warn("Cannot reindex storage at [ {} ] as it is unknown!", absolute);
+        return;
+      }
 
-    eventPublisher.publishEvent(
-        new ViewController.BackgroundWorkStartedEvent(
-            "Reindexing storage" + storageIndex.name() + "..."));
-    storageIndex.refresh();
-    eventPublisher.publishEvent(new ViewController.StorageReindexed(storageIndex));
-    eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
+      eventPublisher.publishEvent(
+          new ViewController.BackgroundWorkStartedEvent(
+              "Reindexing storage" + storageIndex.name() + "..."));
+      storageIndex.refresh();
+      eventPublisher.publishEvent(new ViewController.StorageReindexed(storageIndex));
+      eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
+    });
   }
 
   @EventListener
@@ -158,7 +194,11 @@ public class StorageIndexProvider {
   }
 
   public void discardIndex(final Path path) {
-    indicesByPath.remove(path);
+    final StorageIndex idx = indicesByPath.remove(path);
+    if (idx != null) {
+      idx.stopFileSystemWatcher();
+    }
+
     final ConfigurableApplicationContext ctx = contextsByPath.remove(path);
     if (ctx == null) {
       return;
