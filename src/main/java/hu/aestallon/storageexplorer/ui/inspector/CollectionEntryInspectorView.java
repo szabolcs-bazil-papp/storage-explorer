@@ -132,11 +132,6 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     }
 
     @Override
-    public boolean isCellEditable(int rowIndex, int columnIndex) {
-      return false;
-    }
-
-    @Override
     public Class<?> getColumnClass(int columnIndex) {
       return columnIndex == 0
           ? (storageEntry instanceof ListEntry) ? Integer.class : String.class
