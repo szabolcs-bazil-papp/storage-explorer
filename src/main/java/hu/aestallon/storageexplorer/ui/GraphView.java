@@ -305,7 +305,7 @@ public class GraphView extends JPanel {
     @Override
     public void keyPressed(KeyEvent e) {
       if (e != null && e.getKeyCode() == KeyEvent.VK_F12) {
-        final var img = new SwingFileSinkImages(FileSinkImages.OutputType.PNG, Resolutions.WUXGA);
+        final var img = new SwingFileSinkImages(FileSinkImages.OutputType.PNG, Resolutions.UHD_4K);
         img.setLayoutPolicy(FileSinkImages.LayoutPolicy.COMPUTED_FULLY_AT_NEW_IMAGE);
         try {
           img.writeAll(graph, "./screens/" + DTF.format(LocalDateTime.now()) + ".png");

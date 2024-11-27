@@ -15,15 +15,23 @@
 
 package hu.aestallon.storageexplorer.domain.storage.service;
 
+import static java.util.stream.Collectors.groupingBy;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,7 +44,6 @@ import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 import hu.aestallon.storageexplorer.util.IO;
-import hu.aestallon.storageexplorer.util.Pair;
 
 public class StorageIndex {
 
@@ -48,8 +55,10 @@ public class StorageIndex {
   private final CollectionApi collectionApi;
   private final Map<URI, StorageEntry> cache;
 
+  private StorageWatchService watchService;
+
   public StorageIndex(String name, Path pathToStorage, ObjectApi objectApi,
-                      CollectionApi collectionApi) {
+      CollectionApi collectionApi) {
     this.name = name;
     this.pathToStorage = pathToStorage;
     this.objectApi = objectApi;
@@ -59,28 +68,71 @@ public class StorageIndex {
 
   void refresh() {
     clear();
-    try (final var files = Files.walk(pathToStorage)) {
-      final var map = files
-          .filter(p -> p.toFile().isFile())
-          .filter(p -> p.getFileName().toString().endsWith(".o"))
-          .map(Pair.withB(IO::read))
-          .map(Pair.onB(IO.findObjectUri()))
-          .flatMap(Pair.streamOnB())
-          .map(Pair.map(
-              (Path path, URI uri) -> StorageEntry.create(path, uri, objectApi, collectionApi)))
-          .flatMap(Optional::stream)
-          .map(it -> Pair.of(it.uri(), it))
-          .collect(Pair.toMap());
-      map.values().stream()
+    try {
+      log.info("Starting to index {}", pathToStorage);
+      final Map<URI, StorageEntry> map = new ConcurrentHashMap<>();
+      Files.walkFileTree(pathToStorage, EnumSet.noneOf(FileVisitOption.class), 8,
+          new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+                throws IOException {
+              if (dir.toString().toLowerCase().contains("applicationruntimedata")) {
+                return FileVisitResult.SKIP_SIBLINGS;
+              }
+
+              return super.preVisitDirectory(dir, attrs);
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                throws IOException {
+              if (file.toString().toLowerCase().contains("applicationruntimedata")) {
+                return FileVisitResult.SKIP_SIBLINGS;
+              }
+
+              if (Files.isDirectory(file)) {
+                return FileVisitResult.CONTINUE;
+              }
+
+              if (!file.getFileName().toString().endsWith(".o")) {
+                return FileVisitResult.CONTINUE;
+              }
+
+              final Path relativePath = pathToStorage.relativize(file);
+              final URI uri = IO.pathToUri(relativePath);
+              if (uri != null) {
+                StorageEntry
+                    .create(file, uri, objectApi, collectionApi)
+                    .ifPresent(it -> map.put(uri, it));
+              }
+              return FileVisitResult.SKIP_SUBTREE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+              return FileVisitResult.SKIP_SUBTREE;
+            }
+          });
+      log.info("Finished reading files of {}", pathToStorage);
+
+      Map<String, List<ScopedEntry>> scopedEntries = map.values().stream()
           .filter(ScopedEntry.class::isInstance)
           .map(ScopedEntry.class::cast)
-          .forEach(it -> map.values().stream()
-              .filter(ObjectEntry.class::isInstance)
-              .map(ObjectEntry.class::cast)
-              .filter(e -> Objects.equals(e.uri().getPath(), it.scope().getPath()))
-              .findFirst()
-              .ifPresent(e -> e.addScopedEntry(it)));
+          .collect(groupingBy(it -> it.scope().getPath()));
+
+      map.values().stream()
+          .filter(ObjectEntry.class::isInstance)
+          .map(ObjectEntry.class::cast)
+          .forEach(it -> {
+            final var scopedChildren = scopedEntries.get(it.uri().getPath());
+            if (scopedChildren == null) {
+              return;
+            }
+
+            scopedChildren.forEach(it::addScopedEntry);
+          });
       cache.putAll(map);
+      // startFileSystemWatcher();
     } catch (IOException e) {
       log.error(e.getMessage(), e);
     }
@@ -88,6 +140,41 @@ public class StorageIndex {
 
   void clear() {
     cache.clear();
+  }
+
+  void startFileSystemWatcher() {
+    if (watchService != null) {
+      return;
+    }
+
+    StorageWatchService.builder(pathToStorage)
+        .onModified(it -> {
+          final URI uri = IO.pathToUri(pathToStorage.relativize(it));
+          final StorageEntry storageEntry = cache.get(uri);
+          if (storageEntry != null) {
+            storageEntry.refresh();
+          }
+        })
+        .onCreated(it -> {
+          final URI uri = IO.pathToUri(pathToStorage.relativize(it));
+          StorageEntry
+              .create(it, uri, objectApi, collectionApi)
+              .ifPresent(e -> cache.put(uri, e));
+        })
+        .build()
+        .ifPresent(it -> {
+          watchService = it;
+          watchService.start();
+        });
+  }
+
+  void stopFileSystemWatcher() {
+    if (watchService == null) {
+      return;
+    }
+
+    watchService.stop();
+    watchService = null;
   }
 
   public Stream<StorageEntry> entities() {

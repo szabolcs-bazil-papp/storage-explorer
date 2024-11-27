@@ -51,6 +51,7 @@ import hu.aestallon.storageexplorer.ui.tree.model.StorageInstanceTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageListTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageMapTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageObjectTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.StorageSequenceTreeNode;
 import hu.aestallon.storageexplorer.util.Pair;
 
 @Component
@@ -243,7 +244,12 @@ public class MainTreeView extends JPanel {
 
       } else if (value instanceof StorageInstanceTreeNode) {
         setIcon(IconProvider.DB);
+        
+      } else if (value instanceof StorageSequenceTreeNode) {
+        setIcon(IconProvider.SEQUENCE);
+        
       }
+      
       return this;
     }
   }
@@ -273,8 +279,7 @@ public class MainTreeView extends JPanel {
       super(String.valueOf(sitn.getUserObject()));
 
       final var reindex = new JMenuItem("Reload", IconProvider.REFRESH);
-      reindex.addActionListener(
-          e -> CompletableFuture.runAsync(() -> storageIndexProvider.reindex(sitn.storagePath())));
+      reindex.addActionListener(e -> storageIndexProvider.reindex(sitn.storagePath()));
       reindex.setToolTipText(
           "Reload this storage to let the application reflect its current state.");
       add(reindex);

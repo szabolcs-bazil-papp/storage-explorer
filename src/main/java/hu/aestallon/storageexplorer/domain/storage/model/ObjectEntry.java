@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,8 @@ public class ObjectEntry implements StorageEntry {
   private final ObjectApi objectApi;
   private final String typeName;
   private final String uuid;
+  
+  private boolean valid = false;
   private Set<UriProperty> uriProperties;
   private String displayName;
 
@@ -55,8 +58,6 @@ public class ObjectEntry implements StorageEntry {
     this.objectApi = objectApi;
     this.typeName = Uris.getTypeName(uri);
     this.uuid = Uris.getUuid(uri);
-
-    refresh();
   }
 
   public Set<ScopedEntry> scopedEntries() {
@@ -83,6 +84,10 @@ public class ObjectEntry implements StorageEntry {
 
   @Override
   public Set<UriProperty> uriProperties() {
+    if (!valid) {
+      refresh();
+    }
+    
     final var uriProperties = new HashSet<>(this.uriProperties);
     scopedEntries.stream()
         .map(e -> UriProperty.standalone(
@@ -101,8 +106,15 @@ public class ObjectEntry implements StorageEntry {
   @Override
   public void refresh() {
     final var objectNode = load();
+    if (objectNode == null) {
+      uriProperties = new HashSet<>();
+      displayName = "ERROR LOADING";
+      return;
+    }
+    
     uriProperties = initUriProperties(objectNode);
     displayName = initDisplayName(objectNode);
+    valid  = true;
   }
 
   private Set<UriProperty> initUriProperties(final ObjectNode objectNode) {
@@ -141,24 +153,27 @@ public class ObjectEntry implements StorageEntry {
   public ObjectNode load() {
     if (Uris.isSingleVersion(uri)) {
       // We have to do this...
-      return objectApi.create(null, tryDeserialise());
+      return tryDeserialise().map(it -> objectApi.create(null, it)).orElse(null);
     }
     return objectApi.loadLatest(uri);
   }
 
-  private Map<? , ?> tryDeserialise() {
+  private Optional<Map<? , ?>> tryDeserialise() {
     final String rawContent = IO.read(path);
     if (Strings.isNullOrEmpty(rawContent)) {
       log.error("Empty content found during deserialisation attempt of [ {} ]", uri);
-      return new LinkedHashMap<>();
+      return Optional.empty();
     }
 
     try {
-      return objectApi.getDefaultSerializer().fromString(rawContent, LinkedHashMap.class);
+      final Map<?, ?> res = objectApi
+          .getDefaultSerializer()
+          .fromString(rawContent, LinkedHashMap.class);
+      return Optional.of(res);
     } catch (IOException e) {
       log.error("Error during deserialisation attempt of [ {} ]", uri);
       log.error(e.getMessage(), e);
-      return new LinkedHashMap<>();
+      return Optional.empty();
     }
   }
 
@@ -205,6 +220,10 @@ public class ObjectEntry implements StorageEntry {
 
   @Override
   public String toString() {
+    if (!valid) {
+        refresh();
+    }
+    
     return (displayName.isEmpty())
         ? typeName
         : typeName + " (" + displayName + ")";

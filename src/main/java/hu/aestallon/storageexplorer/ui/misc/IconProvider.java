@@ -50,4 +50,5 @@ public final class IconProvider {
   public static final ImageIcon DB = new ImageIcon(loadIcon("db"));
   public static final ImageIcon SE = new ImageIcon(loadIcon("se"));
   public static final ImageIcon MAGNIFY = new ImageIcon(loadIcon("magnify"));
+  public static final ImageIcon SEQUENCE = new ImageIcon(loadIcon("sequence"));
 }
