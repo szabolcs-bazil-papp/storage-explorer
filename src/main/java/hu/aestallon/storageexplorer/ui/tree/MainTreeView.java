@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -46,19 +45,20 @@ import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
-import hu.aestallon.storageexplorer.ui.tree.model.ClickableTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.StorageInstanceTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.StorageListTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.StorageMapTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.StorageObjectTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.StorageSequenceTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.StorageTree;
+import hu.aestallon.storageexplorer.ui.tree.model.node.ClickableTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.node.StorageInstanceTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.node.StorageListTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.node.StorageMapTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.node.StorageObjectTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.node.StorageSequenceTreeNode;
 import hu.aestallon.storageexplorer.util.Pair;
 
 @Component
 public class MainTreeView extends JPanel {
 
   private static final Logger log = LoggerFactory.getLogger(MainTreeView.class);
-  private JTree tree;
+  private StorageTree tree;
   private JScrollPane treePanel;
   private JProgressBar progressBar;
 
@@ -82,17 +82,9 @@ public class MainTreeView extends JPanel {
   }
 
   private void initTree() {
-    final var root = new DefaultMutableTreeNode("Storage Explorer");
-    tree = new JTree(root, true);
-
-    final var selectionModel = new DefaultTreeSelectionModel();
-    selectionModel.setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
-    tree.setSelectionModel(selectionModel);
-
-    tree.setCellRenderer(new TreeNodeRenderer());
+    tree = StorageTree.create();
     tree.addTreeSelectionListener(e -> {
       final var treeNode = (DefaultMutableTreeNode) e.getPath().getLastPathComponent();
-      log.info("TREE SELECTION [ {} ]", treeNode);
       if (treeNode instanceof ClickableTreeNode && propagate.get()) {
         eventPublisher.publishEvent(treeNode);
       }
@@ -122,12 +114,7 @@ public class MainTreeView extends JPanel {
   }
 
   public void importStorage(final StorageIndex storageIndex) {
-    DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
-    final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
-    final StorageInstanceTreeNode storageInstanceTreeNode =
-        new StorageInstanceTreeNode(storageIndex);
-    model.insertNodeInto(storageInstanceTreeNode, root, root.getChildCount());
-
+    final var storageInstanceTreeNode = tree.importStorage(storageIndex);
     memoizeTreePathsOf(storageInstanceTreeNode);
   }
 
@@ -144,33 +131,8 @@ public class MainTreeView extends JPanel {
   }
 
   public void reindexStorage(final StorageIndex storageIndex) {
-    DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
-    final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
-    final int idx = indexOfStorageIndex(storageIndex, root);
-    if (idx < 0) {
-      return;
-    }
-    // Drop Storage:
-    model.removeNodeFromParent((MutableTreeNode) root.getChildAt(idx));
-
-    // Re-add Storage:
-    final var storageInstanceTreeNode = new StorageInstanceTreeNode(storageIndex);
-    model.insertNodeInto(storageInstanceTreeNode, root, idx);
+    final var storageInstanceTreeNode = tree.reindexStorage(storageIndex);
     memoizeTreePathsOf(storageInstanceTreeNode);
-  }
-
-  private static int indexOfStorageIndex(StorageIndex storageIndex, DefaultMutableTreeNode root) {
-    return indexOfStorageIndex(storageIndex.pathToStorage(), root);
-  }
-
-  private static int indexOfStorageIndex(Path pathToStorage, DefaultMutableTreeNode root) {
-    for (int i = 0; i < root.getChildCount(); i++) {
-      final var storageInstanceTreeNode = (StorageInstanceTreeNode) root.getChildAt(i);
-      if (Objects.equals(storageInstanceTreeNode.storagePath(), pathToStorage)) {
-        return i;
-      }
-    }
-    return -1;
   }
 
   private static <E> Stream<E> enumerationToStream(Enumeration<E> e) {
@@ -186,8 +148,7 @@ public class MainTreeView extends JPanel {
             .map(DefaultMutableTreeNode.class::cast)
             .flatMap(MainTreeView::flatten));
   }
-
-
+  
   public void selectEntry(StorageEntry storageEntry) {
     Optional
         .ofNullable(treePathByEntry.get(storageEntry))
@@ -204,54 +165,7 @@ public class MainTreeView extends JPanel {
   }
 
   public void removeStorageNodeOf(final Path path) {
-    DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
-    final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
-    final int idx = indexOfStorageIndex(path, root);
-    if (idx < 0) {
-      return;
-    }
-
-    model.removeNodeFromParent((MutableTreeNode) root.getChildAt(idx));
-  }
-
-  private static final class TreeNodeRenderer extends DefaultTreeCellRenderer {
-
-    @Override
-    public java.awt.Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel,
-                                                           boolean expanded, boolean leaf, int row,
-                                                           boolean hasFocus) {
-      super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
-      if (value instanceof StorageListTreeNode) {
-        if (((StorageListTreeNode) value).getUserObject() instanceof ScopedEntry) {
-          setIcon(IconProvider.SCOPED_LIST);
-        } else {
-          setIcon(IconProvider.LIST);
-        }
-
-      } else if (value instanceof StorageMapTreeNode) {
-        if (((StorageMapTreeNode) value).getUserObject() instanceof ScopedEntry) {
-          setIcon(IconProvider.SCOPED_MAP);
-        } else {
-          setIcon(IconProvider.MAP);
-        }
-
-      } else if (value instanceof StorageObjectTreeNode) {
-        if (((StorageObjectTreeNode) value).getUserObject() instanceof ScopedEntry) {
-          setIcon(IconProvider.SCOPED_OBJ);
-        } else {
-          setIcon(IconProvider.OBJ);
-        }
-
-      } else if (value instanceof StorageInstanceTreeNode) {
-        setIcon(IconProvider.DB);
-        
-      } else if (value instanceof StorageSequenceTreeNode) {
-        setIcon(IconProvider.SEQUENCE);
-        
-      }
-      
-      return this;
-    }
+    tree.removeStorage(path);
   }
 
   public void showProgressBar(final String displayName) {

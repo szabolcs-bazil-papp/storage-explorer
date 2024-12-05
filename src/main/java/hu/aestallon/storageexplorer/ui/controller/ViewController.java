@@ -24,7 +24,7 @@ import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.ui.ExplorerView;
 import hu.aestallon.storageexplorer.ui.GraphView;
 import hu.aestallon.storageexplorer.ui.tree.MainTreeView;
-import hu.aestallon.storageexplorer.ui.tree.model.ClickableTreeNode;
+import hu.aestallon.storageexplorer.ui.tree.model.node.ClickableTreeNode;
 
 @Service
 public class ViewController {

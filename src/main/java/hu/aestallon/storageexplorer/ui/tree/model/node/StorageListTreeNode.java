@@ -13,16 +13,17 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.ui.tree.model;
+package hu.aestallon.storageexplorer.ui.tree.model.node;
 
 import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-public class StorageMapTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
+public class StorageListTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 
-  public StorageMapTreeNode(MapEntry mapEntry) {
-    super(mapEntry, false);
+
+  public StorageListTreeNode(ListEntry listEntry) {
+    super(listEntry, false);
   }
 
   @Override
@@ -42,8 +43,8 @@ public class StorageMapTreeNode extends DefaultMutableTreeNode implements Clicka
 
   @Override
   public String toString() {
-    final var mapEntry = (MapEntry) userObject;
-    return mapEntry.schema() + " / " + mapEntry.name();
+    final var listEntry = (ListEntry) userObject;
+    return listEntry.schema() + " / " + listEntry.name();
   }
 
 }

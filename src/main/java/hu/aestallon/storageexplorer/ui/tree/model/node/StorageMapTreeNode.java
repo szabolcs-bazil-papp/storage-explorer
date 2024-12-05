@@ -13,22 +13,37 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.ui.tree.model;
+package hu.aestallon.storageexplorer.ui.tree.model.node;
 
-import java.util.List;
-import java.util.TreeMap;
 import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
+import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
 
-public final class StorageSchemaTreeNode extends DefaultMutableTreeNode {
+public class StorageMapTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 
-  StorageSchemaTreeNode(String name, List<ObjectEntry> objectEntries) {
-    super(name, true);
-    objectEntries.stream()
-        .collect(groupingBy(ObjectEntry::typeName, TreeMap::new, toList()))
-        .forEach((type, entries) -> add(new StorageTypeTreeNode(type, entries)));
+  public StorageMapTreeNode(MapEntry mapEntry) {
+    super(mapEntry, false);
+  }
+
+  @Override
+  public StorageEntry storageEntry() {
+    return (StorageEntry) userObject;
+  }
+
+  @Override
+  public boolean getAllowsChildren() {
+    return false;
+  }
+
+  @Override
+  public boolean isLeaf() {
+    return true;
+  }
+
+  @Override
+  public String toString() {
+    final var mapEntry = (MapEntry) userObject;
+    return mapEntry.schema() + " / " + mapEntry.name();
   }
 
 }

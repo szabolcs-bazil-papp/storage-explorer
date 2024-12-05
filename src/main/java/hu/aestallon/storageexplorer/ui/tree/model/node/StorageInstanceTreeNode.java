@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.ui.tree.model;
+package hu.aestallon.storageexplorer.ui.tree.model.node;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
