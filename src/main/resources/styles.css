@@ -1,18 +1,31 @@
 graph {
-    fill-color: #96eedc;
+    fill-color: #fff, #96eedc;
+    fill-mode: gradient-diagonal1;
+    padding: 50px;
 }
 
 node {
     size: 15px;
     text-alignment: under;
-    text-padding: 10px;
+    text-padding: 5px, 4px;
+    text-background-mode: rounded-box;
+    text-background-color: #e0f9f488;
+    text-size: 14;
+    size-mode: fit;
 }
 
 edge {
     shape: line;
     arrow-size: 12px, 6px;
-    text-alignment: above;
-    text-padding: 25px, 25px;
+    text-alignment: along;
+    text-padding: 5px, 4px;
+    text-style: bold;
+    text-background-mode: rounded-box;
+    text-background-color: #3c5e5888;
+    text-color: white;
+    text-size: 12;
+    text-visibility: 0.7;
+    text-visibility-mode: under-zoom;
 }
 
 node.highlighted {
