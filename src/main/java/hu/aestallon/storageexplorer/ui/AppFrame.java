@@ -23,6 +23,11 @@ import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.Availability;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceDto;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceType;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.ui.dialog.GraphSettingsDialog;
@@ -138,7 +143,13 @@ public class AppFrame extends JFrame {
         }
 
         CompletableFuture.runAsync(
-            () -> storageIndexProvider.importAndIndex(selectedFile.toPath()));
+            () -> storageIndexProvider.importAndIndex(
+                StorageInstance.fromDto(new StorageInstanceDto()
+                    .name("foo")
+                    .availability(Availability.AVAILABLE)
+                    .type(StorageInstanceType.FS)
+                    .fs(new FsStorageLocation()
+                        .path(selectedFile.toPath())))));
       }
     }
   }

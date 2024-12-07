@@ -22,25 +22,19 @@ import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeCellRenderer;
-import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.DefaultTreeSelectionModel;
-import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreePath;
-import javax.swing.tree.TreeSelectionModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
@@ -48,10 +42,6 @@ import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageTree;
 import hu.aestallon.storageexplorer.ui.tree.model.node.ClickableTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.node.StorageInstanceTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.node.StorageListTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.node.StorageMapTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.node.StorageObjectTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.node.StorageSequenceTreeNode;
 import hu.aestallon.storageexplorer.util.Pair;
 
 @Component
@@ -113,8 +103,8 @@ public class MainTreeView extends JPanel {
     treePathByEntry = new HashMap<>();
   }
 
-  public void importStorage(final StorageIndex storageIndex) {
-    final var storageInstanceTreeNode = tree.importStorage(storageIndex);
+  public void importStorage(final StorageInstance storageInstance) {
+    final var storageInstanceTreeNode = tree.importStorage(storageInstance);
     memoizeTreePathsOf(storageInstanceTreeNode);
   }
 
@@ -130,8 +120,8 @@ public class MainTreeView extends JPanel {
     treePathByEntry.putAll(newTreePaths);
   }
 
-  public void reindexStorage(final StorageIndex storageIndex) {
-    final var storageInstanceTreeNode = tree.reindexStorage(storageIndex);
+  public void reindexStorage(final StorageInstance storageInstance) {
+    final var storageInstanceTreeNode = tree.reindexStorage(storageInstance);
     memoizeTreePathsOf(storageInstanceTreeNode);
   }
 
@@ -148,7 +138,7 @@ public class MainTreeView extends JPanel {
             .map(DefaultMutableTreeNode.class::cast)
             .flatMap(MainTreeView::flatten));
   }
-  
+
   public void selectEntry(StorageEntry storageEntry) {
     Optional
         .ofNullable(treePathByEntry.get(storageEntry))
@@ -164,8 +154,8 @@ public class MainTreeView extends JPanel {
     propagate.set(true);
   }
 
-  public void removeStorageNodeOf(final Path path) {
-    tree.removeStorage(path);
+  public void removeStorageNodeOf(final StorageInstance storageInstance) {
+    tree.removeStorage(storageInstance);
   }
 
   public void showProgressBar(final String displayName) {
@@ -193,14 +183,14 @@ public class MainTreeView extends JPanel {
       super(String.valueOf(sitn.getUserObject()));
 
       final var reindex = new JMenuItem("Reload", IconProvider.REFRESH);
-      reindex.addActionListener(e -> storageIndexProvider.reindex(sitn.storagePath()));
+      reindex.addActionListener(e -> storageIndexProvider.reindex(sitn.storageInstance()));
       reindex.setToolTipText(
           "Reload this storage to let the application reflect its current state.");
       add(reindex);
 
       final var discard = new JMenuItem("Delete", IconProvider.CLOSE);
       discard.addActionListener(e -> eventPublisher.publishEvent(
-          new ViewController.StorageIndexDiscardedEvent(sitn.storagePath())));
+          new ViewController.StorageIndexDiscardedEvent(sitn.storageInstance())));
       discard.setToolTipText("Close this storage to reclaim system resources.\n"
           + "This storage won't be preloaded on the next startup.");
       add(discard);

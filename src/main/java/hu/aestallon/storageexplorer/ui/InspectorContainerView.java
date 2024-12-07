@@ -26,7 +26,8 @@ import java.util.List;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.inspector.InspectorView;
 import hu.aestallon.storageexplorer.ui.inspector.StorageEntryInspectorViewFactory;
@@ -71,11 +72,11 @@ public class InspectorContainerView extends JTabbedPane {
     }
   }
 
-  public void discardInspectorViewOfStorageAt(final Path path) {
+  public void discardInspectorViewOfStorageAt(final StorageInstance storageInstance) {
     final List<InspectorView<? extends StorageEntry>> viewsOnStorage = new ArrayList<>();
     for (int i = 0; i < getTabCount(); i++) {
       final InspectorView<? extends StorageEntry> inspectorView = inspectorViewAt(i);
-      if (inspectorView.storageEntry().path().startsWith(path)) {
+      if (inspectorView.storageEntry().storageId().equals(storageInstance.id())) {
         viewsOnStorage.add(inspectorView);
       }
     }

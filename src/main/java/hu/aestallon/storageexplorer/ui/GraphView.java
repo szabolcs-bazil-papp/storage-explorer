@@ -52,7 +52,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.graph.service.GraphRenderingService;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.event.GraphConfigChanged;
@@ -171,8 +172,8 @@ public class GraphView extends JPanel {
     graphRenderingService = null;
   }
 
-  public boolean displayingStorageAt(final Path path) {
-    return origin != null && origin.path().startsWith(path);
+  public boolean displayingStorageAt(final StorageInstance storageInstance) {
+    return origin != null && origin.storageId().equals(storageInstance.id());
   }
 
   public void select(final StorageEntry storageEntry) {

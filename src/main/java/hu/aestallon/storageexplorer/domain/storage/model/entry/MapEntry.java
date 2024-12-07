@@ -13,17 +13,19 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.domain.storage.model;
+package hu.aestallon.storageexplorer.domain.storage.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.HashSet;
 import java.util.Set;
 import org.smartbit4all.api.collection.CollectionApi;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.Uris;
+import static java.util.stream.Collectors.toSet;
 
-public class ListEntry implements StorageEntry {
+public class MapEntry implements StorageEntry {
 
+  private final StorageId id;
   private final Path path;
   private final URI uri;
   private final CollectionApi collectionApi;
@@ -33,7 +35,8 @@ public class ListEntry implements StorageEntry {
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
-  ListEntry(Path path, URI uri, CollectionApi collectionApi) {
+  MapEntry(StorageId id, Path path, URI uri, CollectionApi collectionApi) {
+    this.id = id;
     this.path = path;
     this.uri = uri;
     this.collectionApi = collectionApi;
@@ -47,8 +50,8 @@ public class ListEntry implements StorageEntry {
   }
 
   @Override
-  public Path path() {
-    return path;
+  public StorageId storageId() {
+    return id;
   }
 
   @Override
@@ -76,13 +79,9 @@ public class ListEntry implements StorageEntry {
 
   @Override
   public void refresh() {
-    final var list = collectionApi.list(schema, name).uris();
-    final var uriProperties = new HashSet<UriProperty>();
-    for (int i = 0; i < list.size(); i++) {
-      uriProperties.add(UriProperty.listElement(String.valueOf(i), list.get(i), i));
-    }
-
-    this.uriProperties = uriProperties;
+    this.uriProperties = collectionApi.map(schema, name).uris().entrySet().stream()
+        .map(e -> UriProperty.standalone(e.getKey(), e.getValue()))
+        .collect(toSet());
   }
 
   @Override
@@ -91,8 +90,8 @@ public class ListEntry implements StorageEntry {
       return true;
     if (o == null || getClass() != o.getClass())
       return false;
-    ListEntry listEntry = (ListEntry) o;
-    return Uris.equalIgnoringVersion(uri, listEntry.uri);
+    MapEntry mapEntry = (MapEntry) o;
+    return Uris.equalIgnoringVersion(uri, mapEntry.uri);
   }
 
   @Override
@@ -102,7 +101,6 @@ public class ListEntry implements StorageEntry {
 
   @Override
   public String toString() {
-    return "LIST (" + schema + "/" + name + ")";
+    return "MAP (" + schema + "/" + name + ")";
   }
-
 }

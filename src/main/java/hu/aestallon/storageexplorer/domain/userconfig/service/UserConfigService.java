@@ -18,6 +18,7 @@ package hu.aestallon.storageexplorer.domain.userconfig.service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -26,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceDto;
 import hu.aestallon.storageexplorer.domain.userconfig.event.GraphConfigChanged;
 import hu.aestallon.storageexplorer.domain.userconfig.model.GraphSettings;
 import hu.aestallon.storageexplorer.domain.userconfig.model.StorageLocationSettings;
@@ -72,7 +74,7 @@ public class UserConfigService {
   private <T> T readSettingsAt(String settingsFilename, Class<T> type, Supplier<T> fallback) {
     final Path settingsFolder = Path.of(this.settingsFolder);
     if (!Files.exists(settingsFolder)) {
-      log.debug("Creating settings folder at [ {} ]...", settingsFolder);
+      log.debug("Reading: Creating settings folder at [ {} ]...", settingsFolder);
       createSettingsDirectory(settingsFolder);
     }
 
@@ -91,7 +93,7 @@ public class UserConfigService {
   private <T> void writeSettingsTo(String settingsFilename, T settings) {
     final Path settingsFolder = Path.of(this.settingsFolder);
     if (!Files.exists(settingsFolder)) {
-      log.debug("Creating settings folder at [ {} ]...", settingsFolder);
+      log.debug("Writing: Creating settings folder at [ {} ]...", settingsFolder);
       if (!createSettingsDirectory(settingsFolder)) {
         return;
       }
@@ -114,14 +116,16 @@ public class UserConfigService {
     return storageLocationSettings.get();
   }
 
-  public void addStorageLocation(final Path path) {
-    final var settings = storageLocationSettings.updateAndGet(it -> it.addImportedStorageLocationsItem(path));
+  public void addStorageLocation(final StorageInstanceDto storageInstanceDto) {
+    final var settings = storageLocationSettings
+        .updateAndGet(it -> it.addImportedStorageLocationsItem(storageInstanceDto));
     writeSettingsTo(STORAGE_SETTINGS, settings);
   }
 
-  public void removeStorageLocation(final Path path) {
+  public void removeStorageLocation(final StorageInstanceDto storageInstanceDto) {
     final var settings = storageLocationSettings.updateAndGet(it -> {
-      it.getImportedStorageLocations().removeIf(path::equals);
+      it.getImportedStorageLocations()
+          .removeIf(e -> Objects.equals(e.getId(), storageInstanceDto.getId()));
       return it;
     });
     writeSettingsTo(STORAGE_SETTINGS, settings);

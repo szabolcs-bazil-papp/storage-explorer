@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.domain.storage.model;
+package hu.aestallon.storageexplorer.domain.storage.model.entry;
 
 import java.io.IOException;
 import java.net.URI;
@@ -30,6 +30,7 @@ import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
 import org.smartbit4all.core.utility.StringConstant;
 import com.google.common.base.Strings;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.IO;
 import hu.aestallon.storageexplorer.util.ObjectMaps;
 import hu.aestallon.storageexplorer.util.Pair;
@@ -40,6 +41,7 @@ public class ObjectEntry implements StorageEntry {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
 
+  private final StorageId id;
   private final Path path;
   private final URI uri;
   private final ObjectApi objectApi;
@@ -52,7 +54,8 @@ public class ObjectEntry implements StorageEntry {
 
   private Set<ScopedEntry> scopedEntries = new HashSet<>();
 
-  ObjectEntry(final Path path, final URI uri, final ObjectApi objectApi) {
+  ObjectEntry(StorageId id, final Path path, final URI uri, final ObjectApi objectApi) {
+    this.id = id;
     this.path = path;
     this.uri = uri;
     this.objectApi = objectApi;
@@ -73,8 +76,8 @@ public class ObjectEntry implements StorageEntry {
   }
 
   @Override
-  public Path path() {
-    return path;
+  public StorageId storageId() {
+    return id;
   }
 
   @Override

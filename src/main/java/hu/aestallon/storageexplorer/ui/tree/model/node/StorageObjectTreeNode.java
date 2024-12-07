@@ -16,11 +16,11 @@
 package hu.aestallon.storageexplorer.ui.tree.model.node;
 
 import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.ScopedListEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.ScopedMapEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.ScopedObjectEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedMapEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 
 public class StorageObjectTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 

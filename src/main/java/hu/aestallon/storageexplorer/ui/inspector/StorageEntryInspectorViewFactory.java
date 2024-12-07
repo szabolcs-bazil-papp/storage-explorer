@@ -34,11 +34,11 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.SequenceEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.MapEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.SequenceEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
@@ -232,7 +232,7 @@ public class StorageEntryInspectorViewFactory {
   @Order(0)
   public void discardInspectorDialogsOfStorageAt(ViewController.StorageIndexDiscardedEvent e) {
     openedDialogs.entrySet().stream()
-        .filter(it -> it.getKey().path().startsWith(e.pathToStorage))
+        .filter(it -> it.getKey().storageId().equals(e.storageInstance.id()))
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
         .forEach((entry, dialog) -> {
           dialog.dispose();

@@ -15,7 +15,6 @@
 
 package hu.aestallon.storageexplorer.domain.userconfig.model;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -23,6 +22,7 @@ import javax.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceDto;
 
 @JsonPropertyOrder({
     "importedStorageLocations"
@@ -31,28 +31,28 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 public class StorageLocationSettings {
 
   @JsonProperty("importedStorageLocations")
-  private List<Path> importedStorageLocations = new ArrayList<>();
+  private List<StorageInstanceDto> importedStorageLocations = new ArrayList<>();
 
   public StorageLocationSettings() {}
 
-  public StorageLocationSettings importedStorageLocations(List<Path> importedStorageLocations) {
+  public StorageLocationSettings importedStorageLocations(List<StorageInstanceDto> importedStorageLocations) {
     this.importedStorageLocations = importedStorageLocations;
     return this;
   }
 
-  public StorageLocationSettings addImportedStorageLocationsItem(Path importedStorageLocationsItem) {
+  public StorageLocationSettings addImportedStorageLocationsItem(StorageInstanceDto importedStorageLocationsItem) {
     this.importedStorageLocations.add(importedStorageLocationsItem);
     return this;
   }
 
   @NotNull
   @JsonProperty("importedStorageLocations")
-  public List<Path> getImportedStorageLocations() {
+  public List<StorageInstanceDto> getImportedStorageLocations() {
     return importedStorageLocations;
   }
 
   @JsonProperty("importedStorageLocations")
-  public void setImportedStorageLocations(List<Path> importedStorageLocations) {
+  public void setImportedStorageLocations(List<StorageInstanceDto> importedStorageLocations) {
     this.importedStorageLocations = importedStorageLocations;
   }
 

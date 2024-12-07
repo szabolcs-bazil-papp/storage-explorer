@@ -15,6 +15,7 @@
 
 package hu.aestallon.storageexplorer.domain.storage.service;
 
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import static java.util.stream.Collectors.groupingBy;
 import java.io.IOException;
 import java.net.URI;
@@ -40,16 +41,16 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import com.google.common.base.Strings;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.util.IO;
 
 public class StorageIndex {
 
   private static final Logger log = LoggerFactory.getLogger(StorageIndex.class);
 
-  private final String name;
+  private final StorageId storageId;
   private final Path pathToStorage;
   private final ObjectApi objectApi;
   private final CollectionApi collectionApi;
@@ -57,9 +58,11 @@ public class StorageIndex {
 
   private StorageWatchService watchService;
 
-  public StorageIndex(String name, Path pathToStorage, ObjectApi objectApi,
-      CollectionApi collectionApi) {
-    this.name = name;
+  StorageIndex(StorageId storageId, 
+               Path pathToStorage, 
+               ObjectApi objectApi,
+               CollectionApi collectionApi) {
+    this.storageId = storageId;
     this.pathToStorage = pathToStorage;
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
@@ -102,7 +105,7 @@ public class StorageIndex {
               final URI uri = IO.pathToUri(relativePath);
               if (uri != null) {
                 StorageEntry
-                    .create(file, uri, objectApi, collectionApi)
+                    .create(storageId, file, uri, objectApi, collectionApi)
                     .ifPresent(it -> map.put(uri, it));
               }
               return FileVisitResult.SKIP_SUBTREE;
@@ -158,7 +161,7 @@ public class StorageIndex {
         .onCreated(it -> {
           final URI uri = IO.pathToUri(pathToStorage.relativize(it));
           StorageEntry
-              .create(it, uri, objectApi, collectionApi)
+              .create(storageId, it, uri, objectApi, collectionApi)
               .ifPresent(e -> cache.put(uri, e));
         })
         .build()
@@ -179,10 +182,6 @@ public class StorageIndex {
 
   public Stream<StorageEntry> entities() {
     return cache.values().stream();
-  }
-
-  public String name() {
-    return name;
   }
 
   public Path pathToStorage() {
@@ -234,21 +233,6 @@ public class StorageIndex {
     }
     sb.append(".*");
     return sb.toString();
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o)
-      return true;
-    if (o == null || getClass() != o.getClass())
-      return false;
-    StorageIndex that = (StorageIndex) o;
-    return Objects.equals(name, that.name);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(name);
   }
 
 }

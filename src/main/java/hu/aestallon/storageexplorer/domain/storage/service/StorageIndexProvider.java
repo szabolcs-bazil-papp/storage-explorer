@@ -18,7 +18,10 @@ package hu.aestallon.storageexplorer.domain.storage.service;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,14 +41,19 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
+import hu.aestallon.storageexplorer.util.NotImplementedException;
 
 @Service
 public class StorageIndexProvider {
 
   private static final Logger log = LoggerFactory.getLogger(StorageIndexProvider.class);
+
 
   private static final class HighPriorityThreadFactory implements ThreadFactory {
     private static final AtomicInteger poolNumber = new AtomicInteger(1);
@@ -75,32 +83,36 @@ public class StorageIndexProvider {
     }
   }
 
+
   private final ApplicationEventPublisher eventPublisher;
   private final UserConfigService userConfigService;
-  private final Map<Path, StorageIndex> indicesByPath;
-  private final Map<Path, ConfigurableApplicationContext> contextsByPath;
+  private final Map<StorageId, StorageInstance> storageInstancesById;
+  private final Map<StorageInstance, ConfigurableApplicationContext> contextsByInstance;
   private final ExecutorService executorService;
 
   public StorageIndexProvider(ApplicationEventPublisher eventPublisher,
-      UserConfigService userConfigService) {
+                              UserConfigService userConfigService) {
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
-    indicesByPath = new HashMap<>();
-    contextsByPath = new HashMap<>();
+    storageInstancesById = new HashMap<>();
+    contextsByInstance = new HashMap<>();
     executorService = Executors.newSingleThreadExecutor(new HighPriorityThreadFactory());
   }
 
   public Stream<StorageIndex> provide() {
-    return indicesByPath.values().stream();
+    return storageInstancesById.values().stream().map(StorageInstance::index);
   }
 
   public Stream<StorageEntry> searchForUri(final String queryString) {
-    return indicesByPath.values().stream().flatMap(it -> it.searchForUri(queryString));
+    return storageInstancesById.values().stream()
+        .map(StorageInstance::index)
+        .flatMap(it -> it.searchForUri(queryString));
   }
 
   public StorageIndex indexOf(final URI uri) {
     // TODO: don't do this, store backreference!
-    return indicesByPath.values().stream()
+    return storageInstancesById.values().stream()
+        .map(StorageInstance::index)
         .filter(it -> it.get(uri).isPresent())
         .findFirst()
         .orElseThrow();
@@ -111,27 +123,20 @@ public class StorageIndexProvider {
     return indexOf(entry.uri());
   }
 
-  public void importAndIndex(final Path path) {
-    final Path absolute = path.toAbsolutePath();
-    if (indicesByPath.containsKey(absolute)) {
+  public void importAndIndex(final StorageInstance storageInstance) {
+    if (storageInstancesById.containsValue(storageInstance)) {
       return;
     }
 
-    final String name = storageIndexName(absolute);
+    final String name = storageInstance.name();
     eventPublisher.publishEvent(
         new ViewController.BackgroundWorkStartedEvent("Importing storage: " + name + "..."));
-    final StorageIndex storageIndex = initialise(name, absolute);
+    final StorageIndex storageIndex = initialise(storageInstance);
     storageIndex.refresh();
 
-    userConfigService.addStorageLocation(absolute);
-    eventPublisher.publishEvent(new ViewController.StorageImportEvent(storageIndex));
+    userConfigService.addStorageLocation(storageInstance.toDto());
+    eventPublisher.publishEvent(new ViewController.StorageImportEvent(storageInstance));
     eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
-  }
-
-  private String storageIndexName(final Path path) {
-    final String fsDirName = path.getFileName().toString();
-    final String fsDirParentName = path.getParent().getFileName().toString();
-    return String.format("%s (%s)", fsDirName, fsDirParentName);
   }
 
   public void fetchAllKnown() {
@@ -144,19 +149,31 @@ public class StorageIndexProvider {
 
     eventPublisher.publishEvent(
         new ViewController.BackgroundWorkStartedEvent("Importing storages"));
-    for (final var path : storageLocations) {
-      final Path absolute = path.toAbsolutePath();
-      final String name = storageIndexName(absolute);
-      final StorageIndex storageIndex = initialise(name, absolute);
-      eventPublisher.publishEvent(new ViewController.StorageImportEvent(storageIndex));
+    for (final var dto : storageLocations) {
+      final StorageInstance storageInstance = StorageInstance.fromDto(dto);
+      initialise(storageInstance);
+      eventPublisher.publishEvent(new ViewController.StorageImportEvent(storageInstance));
     }
     eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
   }
 
-  private StorageIndex initialise(final String name, final Path path) {
+  private StorageIndex initialise(final StorageInstance storageInstance) {
+    switch (storageInstance.type()) {
+      case FS:
+        return initFileSystemStorageIndex(storageInstance);
+      case DB:
+        throw new NotImplementedException("Relational DB Storage Indexing is not yet supported!");
+      default:
+        throw new IllegalArgumentException("Unsupported storage type: " + storageInstance.type());
+    }
+  }
+
+  private StorageIndex initFileSystemStorageIndex(final StorageInstance storageInstance) {
+    final FsStorageLocation location = (FsStorageLocation) storageInstance.location();
+    final Path path = location.getPath().toAbsolutePath();
     final var ctx = new AnnotationConfigApplicationContext();
     ctx.register(PlatformApiConfig.class);
-    ctx.registerBean(name, ObjectStorage.class, () -> new StorageFS(
+    ctx.registerBean(storageInstance.id().toString(), ObjectStorage.class, () -> new StorageFS(
         path.toFile(),
         ctx.getBean(ObjectDefinitionApi.class)));
     ctx.refresh();
@@ -164,42 +181,45 @@ public class StorageIndexProvider {
     final ObjectApi objectApi = ctx.getBean(ObjectApi.class);
     final CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
 
-    final StorageIndex storageIndex = new StorageIndex(name, path, objectApi, collectionApi);
-    indicesByPath.put(path, storageIndex);
-    contextsByPath.put(path, ctx);
-    return storageIndex;
+    final var index = new StorageIndex(storageInstance.id(), path, objectApi, collectionApi);
+
+    storageInstance.setIndex(index);
+    storageInstancesById.put(storageInstance.id(), storageInstance);
+    contextsByInstance.put(storageInstance, ctx);
+
+    return index;
   }
 
-  public void reindex(final Path path) {
+  public void reindex(final StorageInstance storageInstance) {
     executorService.submit(() -> {
-      final Path absolute = path.toAbsolutePath();
-      final StorageIndex storageIndex = indicesByPath.get(absolute);
+      final StorageIndex storageIndex = storageInstance.index();
       if (storageIndex == null) {
-        log.warn("Cannot reindex storage at [ {} ] as it is unknown!", absolute);
+        log.warn("Cannot reindex storage at [ {} ] as it is unknown!", storageInstance);
         return;
       }
 
       eventPublisher.publishEvent(
           new ViewController.BackgroundWorkStartedEvent(
-              "Reindexing storage" + storageIndex.name() + "..."));
+              "Reindexing storage" + storageInstance.name() + "..."));
       storageIndex.refresh();
-      eventPublisher.publishEvent(new ViewController.StorageReindexed(storageIndex));
+      eventPublisher.publishEvent(new ViewController.StorageReindexed(storageInstance));
       eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
     });
   }
 
   @EventListener
   public void onStorageIndexDiscarded(ViewController.StorageIndexDiscardedEvent e) {
-    CompletableFuture.runAsync(() -> discardIndex(e.pathToStorage));
+    CompletableFuture.runAsync(() -> discardIndex(e.storageInstance));
   }
 
-  public void discardIndex(final Path path) {
-    final StorageIndex idx = indicesByPath.remove(path);
+  public void discardIndex(final StorageInstance storageInstance) {
+    storageInstancesById.remove(storageInstance.id());
+    final var idx = storageInstance.index();
     if (idx != null) {
       idx.stopFileSystemWatcher();
     }
 
-    final ConfigurableApplicationContext ctx = contextsByPath.remove(path);
+    final ConfigurableApplicationContext ctx = contextsByInstance.remove(storageInstance);
     if (ctx == null) {
       return;
     }
@@ -208,10 +228,10 @@ public class StorageIndexProvider {
       ctx.close();
     } catch (Throwable t) {
       log.error("Cannot close application context [ {} ] belonging to storage at [ {} ]!!!",
-          ctx, path);
+          ctx, storageInstance);
       log.error(t.getMessage(), t);
     }
-    userConfigService.removeStorageLocation(path);
+    userConfigService.removeStorageLocation(storageInstance.toDto());
   }
 
 }

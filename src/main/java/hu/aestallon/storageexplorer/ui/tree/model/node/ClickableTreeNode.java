@@ -15,7 +15,7 @@
 
 package hu.aestallon.storageexplorer.ui.tree.model.node;
 
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 
 public interface ClickableTreeNode {
 

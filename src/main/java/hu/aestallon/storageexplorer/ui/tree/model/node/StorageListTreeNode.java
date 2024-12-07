@@ -16,8 +16,8 @@
 package hu.aestallon.storageexplorer.ui.tree.model.node;
 
 import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 
 public class StorageListTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 

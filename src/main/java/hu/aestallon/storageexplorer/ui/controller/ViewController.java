@@ -19,7 +19,8 @@ import java.nio.file.Path;
 import javax.swing.*;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.ui.ExplorerView;
 import hu.aestallon.storageexplorer.ui.GraphView;
@@ -71,10 +72,10 @@ public class ViewController {
 
 
   public static final class StorageImportEvent {
-    private final StorageIndex storageIndex;
+    private final StorageInstance storageInstance;
 
-    public StorageImportEvent(StorageIndex storageIndex) {
-      this.storageIndex = storageIndex;
+    public StorageImportEvent(final StorageInstance storageInstance) {
+      this.storageInstance = storageInstance;
     }
 
   }
@@ -130,7 +131,7 @@ public class ViewController {
 
   @EventListener
   public void onStorageImported(StorageImportEvent e) {
-    SwingUtilities.invokeLater(() -> mainTreeView.importStorage(e.storageIndex));
+    SwingUtilities.invokeLater(() -> mainTreeView.importStorage(e.storageInstance));
   }
 
   public static final class BackgroundWorkStartedEvent {
@@ -171,17 +172,17 @@ public class ViewController {
   }
 
   public static final class StorageReindexed {
-    private final StorageIndex storageIndex;
+    private final StorageInstance storageInstance;
 
-    public StorageReindexed(StorageIndex storageIndex) {
-      this.storageIndex = storageIndex;
+    public StorageReindexed(StorageInstance storageInstance) {
+      this.storageInstance = storageInstance;
     }
 
   }
 
   @EventListener
   public void onStorageReindexed(StorageReindexed e) {
-    SwingUtilities.invokeLater(() -> mainTreeView.reindexStorage(e.storageIndex));
+    SwingUtilities.invokeLater(() -> mainTreeView.reindexStorage(e.storageInstance));
   }
 
   /**
@@ -201,10 +202,10 @@ public class ViewController {
    * in its efforts to determine whether an object is actually reachable or not.
    */
   public static final class StorageIndexDiscardedEvent {
-    public final Path pathToStorage;
+    public final StorageInstance storageInstance;
 
-    public StorageIndexDiscardedEvent(Path pathToStorage) {
-      this.pathToStorage = pathToStorage;
+    public StorageIndexDiscardedEvent(StorageInstance storageInstance) {
+      this.storageInstance = storageInstance;
     }
 
   }
@@ -212,11 +213,11 @@ public class ViewController {
   @EventListener
   public void onStorageIndexDiscarded(StorageIndexDiscardedEvent e) {
     SwingUtilities.invokeLater(() -> {
-      if (graphView.displayingStorageAt(e.pathToStorage)) {
+      if (graphView.displayingStorageAt(e.storageInstance)) {
         explorerView.closeGraphView();
       }
-      explorerView.inspectorContainerView().discardInspectorViewOfStorageAt(e.pathToStorage);
-      mainTreeView.removeStorageNodeOf(e.pathToStorage);
+      explorerView.inspectorContainerView().discardInspectorViewOfStorageAt(e.storageInstance);
+      mainTreeView.removeStorageNodeOf(e.storageInstance);
     });
   }
 
