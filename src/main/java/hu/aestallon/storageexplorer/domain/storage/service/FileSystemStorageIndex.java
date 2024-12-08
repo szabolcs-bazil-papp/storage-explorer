@@ -75,7 +75,7 @@ public final class FileSystemStorageIndex extends StorageIndex {
               final URI uri = IO.pathToUri(relativePath);
               if (uri != null) {
                 StorageEntry
-                    .create(storageId, file, uri, objectApi, collectionApi)
+                    .create(storageId, uri, objectApi, collectionApi)
                     .ifPresent(it -> map.put(uri, it));
               }
               return FileVisitResult.SKIP_SUBTREE;
@@ -134,7 +134,7 @@ public final class FileSystemStorageIndex extends StorageIndex {
         .onCreated(it -> {
           final URI uri = IO.pathToUri(pathToStorage.relativize(it));
           StorageEntry
-              .create(storageId, it, uri, objectApi, collectionApi)
+              .create(storageId, uri, objectApi, collectionApi)
               .ifPresent(e -> cache.put(uri, e));
         })
         .build()

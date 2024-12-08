@@ -17,6 +17,7 @@ package hu.aestallon.storageexplorer.domain.storage.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -37,10 +38,11 @@ public interface StorageEntry {
   String STORED_REF_MARKER = "/storedRef";
   String STORED_SEQ_MARKER = "/storedSeq";
 
-  static Optional<? extends StorageEntry> create(StorageId id, Path path, URI uri, 
+  static Optional<? extends StorageEntry> create(StorageId id, URI uri, 
                                                  ObjectApi objectApi,
                                                  CollectionApi collectionApi) {
     final URI latestUri = objectApi.getLatestUri(uri);
+    final Path path = Paths.get(latestUri.getScheme(), latestUri.getPath());
     final String uriString = latestUri.toString();
     try {
       if (uriString.contains(STORED_LIST_MARKER)) {
