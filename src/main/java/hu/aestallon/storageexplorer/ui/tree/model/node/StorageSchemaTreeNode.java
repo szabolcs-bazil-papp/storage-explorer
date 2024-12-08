@@ -18,7 +18,7 @@ package hu.aestallon.storageexplorer.ui.tree.model.node;
 import java.util.List;
 import java.util.TreeMap;
 import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 

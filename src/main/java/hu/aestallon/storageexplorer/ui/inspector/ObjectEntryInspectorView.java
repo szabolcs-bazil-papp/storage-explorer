@@ -30,8 +30,9 @@ import org.fife.ui.rtextarea.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
+import hu.aestallon.storageexplorer.util.NotImplementedException;
 import hu.aestallon.storageexplorer.util.Uris;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
@@ -50,9 +51,10 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       }
 
       try {
-        Desktop.getDesktop().open(objectEntry.path().getParent().toFile());
-      } catch (IOException ex) {
-        log.warn("Could not open [ {} ] in system explorer!", objectEntry.path().getParent());
+       //  Desktop.getDesktop().open(objectEntry.path().getParent().toFile());
+        throw new NotImplementedException("Cannot open storage entry location!");
+      } catch (NotImplementedException ex) {
+        log.warn("Could not open [ {} ] in system explorer!", objectEntry.uri());
         log.debug(ex.getMessage(), ex);
         JOptionPane.showMessageDialog(
             ObjectEntryInspectorView.this,

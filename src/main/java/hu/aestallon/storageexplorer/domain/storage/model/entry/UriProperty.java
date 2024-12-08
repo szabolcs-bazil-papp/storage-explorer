@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.domain.storage.model;
+package hu.aestallon.storageexplorer.domain.storage.model.entry;
 
 import java.net.URI;
 import java.util.Objects;

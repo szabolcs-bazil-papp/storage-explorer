@@ -76,7 +76,6 @@ public class MonospaceFontProvider {
             .getMouseWheelListeners();
         for (MouseWheelListener mouseWheelListener : mouseWheelListeners) {
           mouseWheelListener.mouseWheelMoved(e);
-
         }
         return;
       }

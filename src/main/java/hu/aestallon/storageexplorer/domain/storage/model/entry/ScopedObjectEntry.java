@@ -13,19 +13,20 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.domain.storage.model;
+package hu.aestallon.storageexplorer.domain.storage.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
 import org.smartbit4all.core.object.ObjectApi;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.Uris;
 
 public class ScopedObjectEntry extends ObjectEntry implements ScopedEntry {
 
   private final URI scopeUri;
 
-  ScopedObjectEntry(Path path, URI uri, ObjectApi objectApi, URI scopeUri) {
-    super(path, uri, objectApi);
+  ScopedObjectEntry(StorageId id, Path path, URI uri, ObjectApi objectApi, URI scopeUri) {
+    super(id, path, uri, objectApi);
     this.scopeUri = scopeUri;
   }
 

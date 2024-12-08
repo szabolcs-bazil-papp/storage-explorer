@@ -29,29 +29,24 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.DefaultTreeSelectionModel;
-import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreePath;
-import javax.swing.tree.TreeSelectionModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
+import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
+import hu.aestallon.storageexplorer.ui.AppFrame;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
+import hu.aestallon.storageexplorer.ui.dialog.ImportStorageDialog;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageTree;
 import hu.aestallon.storageexplorer.ui.tree.model.node.ClickableTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.node.StorageInstanceTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.node.StorageListTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.node.StorageMapTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.node.StorageObjectTreeNode;
-import hu.aestallon.storageexplorer.ui.tree.model.node.StorageSequenceTreeNode;
 import hu.aestallon.storageexplorer.util.Pair;
 
 @Component
@@ -67,9 +62,11 @@ public class MainTreeView extends JPanel {
   private final AtomicBoolean propagate = new AtomicBoolean(true);
   private final ApplicationEventPublisher eventPublisher;
   private final StorageIndexProvider storageIndexProvider;
+  private final UserConfigService userConfigService;
 
   public MainTreeView(ApplicationEventPublisher eventPublisher,
-                      StorageIndexProvider storageIndexProvider) {
+                      StorageIndexProvider storageIndexProvider,
+                      UserConfigService userConfigService) {
     this.eventPublisher = eventPublisher;
     this.storageIndexProvider = storageIndexProvider;
 
@@ -79,6 +76,7 @@ public class MainTreeView extends JPanel {
     initTree();
     treePanel = new JScrollPane(tree);
     add(treePanel);
+    this.userConfigService = userConfigService;
   }
 
   private void initTree() {
@@ -113,8 +111,8 @@ public class MainTreeView extends JPanel {
     treePathByEntry = new HashMap<>();
   }
 
-  public void importStorage(final StorageIndex storageIndex) {
-    final var storageInstanceTreeNode = tree.importStorage(storageIndex);
+  public void importStorage(final StorageInstance storageInstance) {
+    final var storageInstanceTreeNode = tree.importStorage(storageInstance);
     memoizeTreePathsOf(storageInstanceTreeNode);
   }
 
@@ -130,8 +128,8 @@ public class MainTreeView extends JPanel {
     treePathByEntry.putAll(newTreePaths);
   }
 
-  public void reindexStorage(final StorageIndex storageIndex) {
-    final var storageInstanceTreeNode = tree.reindexStorage(storageIndex);
+  public void reindexStorage(final StorageInstance storageInstance) {
+    final var storageInstanceTreeNode = tree.reindexStorage(storageInstance);
     memoizeTreePathsOf(storageInstanceTreeNode);
   }
 
@@ -148,7 +146,7 @@ public class MainTreeView extends JPanel {
             .map(DefaultMutableTreeNode.class::cast)
             .flatMap(MainTreeView::flatten));
   }
-  
+
   public void selectEntry(StorageEntry storageEntry) {
     Optional
         .ofNullable(treePathByEntry.get(storageEntry))
@@ -164,8 +162,8 @@ public class MainTreeView extends JPanel {
     propagate.set(true);
   }
 
-  public void removeStorageNodeOf(final Path path) {
-    tree.removeStorage(path);
+  public void removeStorageNodeOf(final StorageInstance storageInstance) {
+    tree.removeStorage(storageInstance);
   }
 
   public void showProgressBar(final String displayName) {
@@ -192,18 +190,42 @@ public class MainTreeView extends JPanel {
     private StorageIndexNodePopupMenu(StorageInstanceTreeNode sitn) {
       super(String.valueOf(sitn.getUserObject()));
 
+      final var edit = createEditMenuItem(sitn);
+      add(edit);
+      
       final var reindex = new JMenuItem("Reload", IconProvider.REFRESH);
-      reindex.addActionListener(e -> storageIndexProvider.reindex(sitn.storagePath()));
+      reindex.addActionListener(e -> storageIndexProvider.reindex(sitn.storageInstance()));
       reindex.setToolTipText(
           "Reload this storage to let the application reflect its current state.");
       add(reindex);
 
       final var discard = new JMenuItem("Delete", IconProvider.CLOSE);
       discard.addActionListener(e -> eventPublisher.publishEvent(
-          new ViewController.StorageIndexDiscardedEvent(sitn.storagePath())));
+          new ViewController.StorageIndexDiscardedEvent(sitn.storageInstance())));
       discard.setToolTipText("Close this storage to reclaim system resources.\n"
           + "This storage won't be preloaded on the next startup.");
       add(discard);
+    }
+
+    private JMenuItem createEditMenuItem(StorageInstanceTreeNode sitn) {
+      final var edit = new JMenuItem("Edit connection...", IconProvider.EDIT);
+      edit.addActionListener(e -> {
+        final ImportStorageDialog dialog = new ImportStorageDialog(
+            sitn.storageInstance().toDto(),
+            (before, after) -> {
+              if(!Objects.equals(before.getName(), after.getName())) {
+                userConfigService.updateStorageLocation(after);
+                sitn.storageInstance().setName(after.getName());
+                sitn.setUserObject(after.getName());
+                ((DefaultTreeModel) tree.getModel()).nodeChanged(sitn);
+              }
+            });
+        dialog.pack();
+        dialog.setLocationRelativeTo(MainTreeView.this);
+        dialog.setVisible(true);
+      });
+      edit.setToolTipText("Edit the Storage Instance's name and connection settings.");
+      return edit;
     }
   }
 

@@ -51,4 +51,9 @@ public final class IconProvider {
   public static final ImageIcon SE = new ImageIcon(loadIcon("se"));
   public static final ImageIcon MAGNIFY = new ImageIcon(loadIcon("magnify"));
   public static final ImageIcon SEQUENCE = new ImageIcon(loadIcon("sequence"));
+  public static final ImageIcon EDIT = new ImageIcon(loadIcon("edit"));
+  public static final ImageIcon DB_FS = new ImageIcon(loadIcon("db_fs"));
+  public static final ImageIcon DB_PG = new ImageIcon(loadIcon("db_pg"));
+  public static final ImageIcon DB_ORA = new ImageIcon(loadIcon("db_ora"));
+  public static final ImageIcon DB_H2 = new ImageIcon(loadIcon("db_h2"));
 }

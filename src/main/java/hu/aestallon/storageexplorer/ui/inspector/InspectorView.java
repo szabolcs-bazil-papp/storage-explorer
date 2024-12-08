@@ -16,7 +16,7 @@
 package hu.aestallon.storageexplorer.ui.inspector;
 
 import javax.swing.*;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 
 public interface InspectorView<T extends StorageEntry> {
 

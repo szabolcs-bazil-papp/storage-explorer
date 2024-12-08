@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
 
 
 public final class InspectorTextareaFactory {

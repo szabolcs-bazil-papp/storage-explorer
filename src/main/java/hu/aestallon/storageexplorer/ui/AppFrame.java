@@ -23,9 +23,15 @@ import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.Availability;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceDto;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceType;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.ui.dialog.GraphSettingsDialog;
+import hu.aestallon.storageexplorer.ui.dialog.ImportStorageDialog;
 import hu.aestallon.storageexplorer.ui.dialog.SearchForEntryDialog;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 
@@ -123,23 +129,12 @@ public class AppFrame extends JFrame {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
-      fileChooser.setDialogType(JFileChooser.OPEN_DIALOG);
-      fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-      fileChooser.setDialogTitle("Import Storage...");
-      fileChooser.setCurrentDirectory(new File("."));
-
-      final int result = fileChooser.showDialog(AppFrame.this, "Import");
-      if (JFileChooser.APPROVE_OPTION == result) {
-        final File selectedFile = fileChooser.getSelectedFile();
-        if (!selectedFile.isDirectory()) {
-          System.err.println("REEEE");
-          return;
-        }
-
-        CompletableFuture.runAsync(
-            () -> storageIndexProvider.importAndIndex(selectedFile.toPath()));
-      }
+      final ImportStorageDialog dialog = new ImportStorageDialog(new StorageInstanceDto(),
+          (before, after) -> CompletableFuture.runAsync(
+              () -> storageIndexProvider.importAndIndex(StorageInstance.fromDto(after))));
+      dialog.pack();
+      dialog.setLocationRelativeTo(AppFrame.this);
+      dialog.setVisible(true);
     }
   }
 

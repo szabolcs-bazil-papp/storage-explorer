@@ -26,9 +26,9 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.AbstractTableModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.UriProperty;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.UriProperty;
 import static java.util.stream.Collectors.toList;
 
 public class CollectionEntryInspectorView extends JPanel implements InspectorView<StorageEntry> {

@@ -1,4 +1,4 @@
-package hu.aestallon.storageexplorer.domain.storage.model;
+package hu.aestallon.storageexplorer.domain.storage.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -9,11 +9,13 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.collection.StoredSequence;
 import org.smartbit4all.core.utility.StringConstant;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 
 public class SequenceEntry implements StorageEntry {
 
   private static final Logger log = LoggerFactory.getLogger(SequenceEntry.class);
-  
+
+  private final StorageId id;
   private final Path path;
   private final URI uri;
   private final CollectionApi collectionApi;
@@ -23,7 +25,8 @@ public class SequenceEntry implements StorageEntry {
   private boolean valid = false;
   private long current = -1L;
 
-  SequenceEntry(Path path, URI uri, CollectionApi collectionApi) {
+  SequenceEntry(StorageId id, Path path, URI uri, CollectionApi collectionApi) {
+    this.id = id;
     this.path = path;
     this.uri = uri;
     this.collectionApi = collectionApi;
@@ -42,8 +45,8 @@ public class SequenceEntry implements StorageEntry {
   }
 
   @Override
-  public Path path() {
-    return path;
+  public StorageId storageId() {
+    return id;
   }
 
   @Override

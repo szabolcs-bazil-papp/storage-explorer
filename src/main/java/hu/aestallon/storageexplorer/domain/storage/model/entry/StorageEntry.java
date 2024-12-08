@@ -13,10 +13,11 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hu.aestallon.storageexplorer.domain.storage.model;
+package hu.aestallon.storageexplorer.domain.storage.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -26,6 +27,7 @@ import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.utility.StringConstant;
 import com.google.common.base.Strings;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.Uris;
 
 public interface StorageEntry {
@@ -36,30 +38,32 @@ public interface StorageEntry {
   String STORED_REF_MARKER = "/storedRef";
   String STORED_SEQ_MARKER = "/storedSeq";
 
-  static Optional<? extends StorageEntry> create(Path path, URI uri, ObjectApi objectApi,
+  static Optional<? extends StorageEntry> create(StorageId id, URI uri, 
+                                                 ObjectApi objectApi,
                                                  CollectionApi collectionApi) {
     final URI latestUri = objectApi.getLatestUri(uri);
+    final Path path = Paths.get(latestUri.getScheme(), latestUri.getPath());
     final String uriString = latestUri.toString();
     try {
       if (uriString.contains(STORED_LIST_MARKER)) {
         return scopeUri(uriString, STORED_LIST_MARKER)
-            .map(scope -> (ListEntry) new ScopedListEntry(path, latestUri, collectionApi, scope))
-            .or(() -> Optional.of(new ListEntry(path, latestUri, collectionApi)));
+            .map(scope -> (ListEntry) new ScopedListEntry(id, path, latestUri, collectionApi, scope))
+            .or(() -> Optional.of(new ListEntry(id, path, latestUri, collectionApi)));
 
       } else if (uriString.contains(STORED_MAP_MARKER)) {
         return scopeUri(uriString, STORED_MAP_MARKER)
-            .map(scope -> (MapEntry) new ScopedMapEntry(path, latestUri, collectionApi, scope))
-            .or(() -> Optional.of(new MapEntry(path, latestUri, collectionApi)));
+            .map(scope -> (MapEntry) new ScopedMapEntry(id, path, latestUri, collectionApi, scope))
+            .or(() -> Optional.of(new MapEntry(id, path, latestUri, collectionApi)));
 
       } else if (uriString.contains(STORED_REF_MARKER)) {
         return scopeUri(uriString, STORED_REF_MARKER)
-            .map(scope -> new ScopedObjectEntry(path, latestUri, objectApi, scope));
+            .map(scope -> new ScopedObjectEntry(id, path, latestUri, objectApi, scope));
 
       } else if(uriString.contains(STORED_SEQ_MARKER)) {
-        return Optional.of(new SequenceEntry(path, latestUri, collectionApi));
+        return Optional.of(new SequenceEntry(id, path, latestUri, collectionApi));
         
       } else {
-        return Optional.of(new ObjectEntry(path, latestUri, objectApi));
+        return Optional.of(new ObjectEntry(id, path, latestUri, objectApi));
         
       }
 
@@ -107,7 +111,7 @@ public interface StorageEntry {
     return "Unknown type";
   }
 
-  Path path();
+  StorageId storageId();
 
   URI uri();
 

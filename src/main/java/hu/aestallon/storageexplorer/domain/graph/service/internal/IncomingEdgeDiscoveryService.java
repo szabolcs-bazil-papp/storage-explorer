@@ -17,7 +17,7 @@ package hu.aestallon.storageexplorer.domain.graph.service.internal;
 
 import java.util.stream.Stream;
 import org.graphstream.graph.Graph;
-import hu.aestallon.storageexplorer.domain.storage.model.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 
 public class IncomingEdgeDiscoveryService {

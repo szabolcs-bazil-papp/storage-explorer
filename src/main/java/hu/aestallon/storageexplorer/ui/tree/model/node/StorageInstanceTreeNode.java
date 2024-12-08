@@ -15,37 +15,36 @@
 
 package hu.aestallon.storageexplorer.ui.tree.model.node;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TreeMap;
 import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.domain.storage.model.ListEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.MapEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.ObjectEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.ScopedEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.SequenceEntry;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.MapEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.SequenceEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
 public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
 
-  private final Path storagePath;
+  private final StorageInstance storageInstance;
 
-  public StorageInstanceTreeNode(StorageIndex index) {
-    super(index.name(), true);
-    storagePath = index.pathToStorage();
+  public StorageInstanceTreeNode(StorageInstance storageInstance) {
+    super(storageInstance.name(), true);
+    this.storageInstance = storageInstance;
 
-    final var collections = index.entities()
+    final var collections = storageInstance.entities()
         .filter(it -> !(it instanceof ScopedEntry))
-        .filter(it -> it instanceof ListEntry 
-            || it instanceof MapEntry 
+        .filter(it -> it instanceof ListEntry
+            || it instanceof MapEntry
             || it instanceof SequenceEntry)
         .map(it -> it instanceof ListEntry
             ? new StorageListTreeNode((ListEntry) it)
-            : it instanceof MapEntry 
+            : it instanceof MapEntry
                 ? new StorageMapTreeNode((MapEntry) it)
                 : new StorageSequenceTreeNode((SequenceEntry) it))
         .sorted((a, b) -> (a instanceof StorageListTreeNode)
@@ -58,7 +57,7 @@ public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
     sortAndAdd(collections.getOrDefault(StorageMapTreeNode.class, new ArrayList<>()));
     sortAndAdd(collections.getOrDefault(StorageSequenceTreeNode.class, new ArrayList<>()));
 
-    index.entities()
+    storageInstance.entities()
         .filter(ObjectEntry.class::isInstance)
         .filter(it -> !(it instanceof ScopedEntry))
         .map(ObjectEntry.class::cast)
@@ -71,8 +70,8 @@ public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
     collections.forEach(this::add);
   }
 
-  public Path storagePath() {
-    return storagePath;
+  public StorageInstance storageInstance() {
+    return storageInstance;
   }
 
 }

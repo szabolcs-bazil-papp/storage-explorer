@@ -2,7 +2,7 @@ package hu.aestallon.storageexplorer.ui.inspector;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import hu.aestallon.storageexplorer.domain.storage.model.SequenceEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.SequenceEntry;
 
 public class SequenceEntryInspectorView extends JPanel implements InspectorView<SequenceEntry> {
 
