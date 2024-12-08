@@ -130,8 +130,8 @@ public class AppFrame extends JFrame {
     @Override
     public void actionPerformed(ActionEvent e) {
       final ImportStorageDialog dialog = new ImportStorageDialog(new StorageInstanceDto(),
-          it -> CompletableFuture.runAsync(
-              () -> storageIndexProvider.importAndIndex(StorageInstance.fromDto(it))));
+          (before, after) -> CompletableFuture.runAsync(
+              () -> storageIndexProvider.importAndIndex(StorageInstance.fromDto(after))));
       dialog.pack();
       dialog.setLocationRelativeTo(AppFrame.this);
       dialog.setVisible(true);

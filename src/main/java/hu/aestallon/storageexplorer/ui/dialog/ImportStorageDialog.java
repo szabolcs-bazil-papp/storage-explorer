@@ -6,10 +6,12 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.nio.file.Path;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileSystemView;
+import org.springframework.aop.BeforeAdvice;
 import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
@@ -63,10 +65,10 @@ public class ImportStorageDialog extends JDialog {
   private JTextPane allEntriesAndTheirTextPane;
 
   private final StorageInstanceDto storageInstanceDto;
-  private final Consumer<StorageInstanceDto> resultConsumer;
+  private final BiConsumer<StorageInstanceDto, StorageInstanceDto> resultConsumer;
 
   public ImportStorageDialog(final StorageInstanceDto storageInstanceDto,
-                             final Consumer<StorageInstanceDto> resultConsumer) {
+                             final BiConsumer<StorageInstanceDto, StorageInstanceDto> resultConsumer) {
     this.storageInstanceDto = storageInstanceDto;
     this.resultConsumer = resultConsumer;
 
@@ -81,9 +83,23 @@ public class ImportStorageDialog extends JDialog {
     if (!editing) {
       indexEntries.setSelected(true);
     } else {
+      indexEntries.setSelected(true); // TODO: for now
       if (storageInstanceDto.getType() == StorageInstanceType.DB) {
         storageTypePane.setSelectedIndex(1);
+        final DatabaseConnectionData connectionData = storageInstanceDto
+            .getDb()
+            .getDbConnectionData(); 
+        textFieldDbUrl.setText(connectionData.getUrl());
+        textFieldDbUsername.setText(connectionData.getUsername());
+        textFieldDbPassword.setText(connectionData.getPassword());
+      } else {
+        storageTypePane.setSelectedIndex(0);
+        textFieldFsRootDir.setText(storageInstanceDto.getFs().getPath().toString());
       }
+      storageTypePane.setEnabledAt(0, false);
+      storageTypePane.setEnabledAt(1, false);
+      
+      textFieldStorageName.setText(storageInstanceDto.getName());
     }
 
     buttonOK.addActionListener(e -> onOK());
@@ -110,17 +126,19 @@ public class ImportStorageDialog extends JDialog {
     final StorageInstanceType storageInstanceType = getStorageInstanceType();
     final StorageLocation location = getAndValidateStorageLocation(storageInstanceType);
     final String name = textFieldStorageName.getText();
-    storageInstanceDto.setName(name);
-    storageInstanceDto.setType(storageInstanceType);
+    final var result = new StorageInstanceDto()
+        .id(storageInstanceDto.getId())
+        .name(name)
+        .type(storageInstanceType);
     if (location instanceof FsStorageLocation) {
-      storageInstanceDto.setFs((FsStorageLocation) location);
+      result.setFs((FsStorageLocation) location);
     } else if (location instanceof SqlStorageLocation) {
-      storageInstanceDto.setDb((SqlStorageLocation) location);
+      result.setDb((SqlStorageLocation) location);
     } else {
       throw new IllegalArgumentException("Unsupported location type: " + location);
     }
 
-    resultConsumer.accept(storageInstanceDto);
+    resultConsumer.accept(storageInstanceDto, result);
     dispose();
   }
 
@@ -191,7 +209,10 @@ public class ImportStorageDialog extends JDialog {
 
     ImportStorageDialog dialog = new ImportStorageDialog(
         new StorageInstanceDto(),
-        System.out::println);
+        (before, after) -> {
+          System.out.println(before);
+          System.out.println(after);
+        });
     dialog.pack();
     dialog.setVisible(true);
     System.exit(0);

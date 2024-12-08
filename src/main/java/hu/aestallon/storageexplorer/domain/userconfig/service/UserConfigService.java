@@ -18,6 +18,7 @@ package hu.aestallon.storageexplorer.domain.userconfig.service;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -126,6 +127,25 @@ public class UserConfigService {
     final var settings = storageLocationSettings.updateAndGet(it -> {
       it.getImportedStorageLocations()
           .removeIf(e -> Objects.equals(e.getId(), storageInstanceDto.getId()));
+      return it;
+    });
+    writeSettingsTo(STORAGE_SETTINGS, settings);
+  }
+
+  public void updateStorageLocation(final StorageInstanceDto storageInstanceDto) {
+    final var settings = storageLocationSettings.updateAndGet(it -> {
+      int idx = -1;
+      List<StorageInstanceDto> importedStorageLocations = it.getImportedStorageLocations();
+      for (int i = 0; i < importedStorageLocations.size(); i++) {
+        final var dto = importedStorageLocations.get(i);
+        if (Objects.equals(dto.getId(), storageInstanceDto.getId())) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx <= 0) {
+        importedStorageLocations.set(idx, storageInstanceDto);
+      }
       return it;
     });
     writeSettingsTo(STORAGE_SETTINGS, settings);
