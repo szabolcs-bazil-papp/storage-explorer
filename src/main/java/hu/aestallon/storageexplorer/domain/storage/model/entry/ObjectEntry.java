@@ -137,7 +137,13 @@ public class ObjectEntry implements StorageEntry {
       return String.valueOf(name);
     }
 
-    final Object dataName = objectNode.getValue("data", "name");
+    Object dataName = null;
+    try {
+       dataName = objectNode.getValue("data", "name");
+    } catch (final Exception e) {
+      log.debug(e.getMessage(), e);
+    }
+    
     if (dataName != null) {
       return String.valueOf(dataName);
     }
