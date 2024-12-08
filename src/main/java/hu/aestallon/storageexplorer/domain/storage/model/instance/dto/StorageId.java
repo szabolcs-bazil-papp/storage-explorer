@@ -25,11 +25,11 @@ public final class StorageId {
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(uuid);
+    return uuid.hashCode();
   }
 
   @Override
   public String toString() {
-    return "StorageId { " + uuid + " }";
+    return uuid.toString();
   }
 }

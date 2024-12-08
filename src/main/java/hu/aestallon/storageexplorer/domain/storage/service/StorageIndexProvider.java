@@ -18,10 +18,7 @@ package hu.aestallon.storageexplorer.domain.storage.service;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -158,36 +155,23 @@ public class StorageIndexProvider {
   }
 
   private StorageIndex initialise(final StorageInstance storageInstance) {
-    switch (storageInstance.type()) {
-      case FS:
-        return initFileSystemStorageIndex(storageInstance);
-      case DB:
-        throw new NotImplementedException("Relational DB Storage Indexing is not yet supported!");
-      default:
-        throw new IllegalArgumentException("Unsupported storage type: " + storageInstance.type());
+    final var factory = StorageIndexFactory.of(storageInstance.id());
+    final var result = factory.create(storageInstance.location());
+    if (result instanceof StorageIndexFactory.StorageIndexCreationResult.Ok) {
+      final var ok = (StorageIndexFactory.StorageIndexCreationResult.Ok) result;
+      final var index = ok.storageIndex();
+      final var ctx = ok.springContext();
+
+      storageInstance.setIndex(index);
+      storageInstancesById.put(storageInstance.id(), storageInstance);
+      contextsByInstance.put(storageInstance, ctx);
+      
+      return index;
+
+    } else {
+      final var err = (StorageIndexFactory.StorageIndexCreationResult.Err) result;
+      throw new IllegalStateException(err.errorMessage());
     }
-  }
-
-  private StorageIndex initFileSystemStorageIndex(final StorageInstance storageInstance) {
-    final FsStorageLocation location = (FsStorageLocation) storageInstance.location();
-    final Path path = location.getPath().toAbsolutePath();
-    final var ctx = new AnnotationConfigApplicationContext();
-    ctx.register(PlatformApiConfig.class);
-    ctx.registerBean(storageInstance.id().toString(), ObjectStorage.class, () -> new StorageFS(
-        path.toFile(),
-        ctx.getBean(ObjectDefinitionApi.class)));
-    ctx.refresh();
-
-    final ObjectApi objectApi = ctx.getBean(ObjectApi.class);
-    final CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
-
-    final var index = new StorageIndex(storageInstance.id(), path, objectApi, collectionApi);
-
-    storageInstance.setIndex(index);
-    storageInstancesById.put(storageInstance.id(), storageInstance);
-    contextsByInstance.put(storageInstance, ctx);
-
-    return index;
   }
 
   public void reindex(final StorageInstance storageInstance) {
@@ -216,7 +200,7 @@ public class StorageIndexProvider {
     storageInstancesById.remove(storageInstance.id());
     final var idx = storageInstance.index();
     if (idx != null) {
-      idx.stopFileSystemWatcher();
+      idx.clear();
     }
 
     final ConfigurableApplicationContext ctx = contextsByInstance.remove(storageInstance);

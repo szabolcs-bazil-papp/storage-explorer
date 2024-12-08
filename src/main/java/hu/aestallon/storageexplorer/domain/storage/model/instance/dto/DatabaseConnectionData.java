@@ -1,16 +1,19 @@
 package hu.aestallon.storageexplorer.domain.storage.model.instance.dto;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import javax.validation.constraints.*;
+import org.springframework.core.env.MapPropertySource;
 
 @JsonPropertyOrder({
-  DatabaseConnectionData.URL,
-  DatabaseConnectionData.USERNAME,
-  DatabaseConnectionData.PASSWORD
+    DatabaseConnectionData.URL,
+    DatabaseConnectionData.USERNAME,
+    DatabaseConnectionData.PASSWORD
 })
 @JsonTypeName("DatabaseConnectionData")
 @javax.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
@@ -24,11 +27,11 @@ public class DatabaseConnectionData {
   public static final String PASSWORD = "password";
   private String password;
 
-  public DatabaseConnectionData() { 
+  public DatabaseConnectionData() {
   }
 
   public DatabaseConnectionData url(String url) {
-    
+
     this.url = url;
     return this;
   }
@@ -71,7 +74,7 @@ public class DatabaseConnectionData {
 
 
   public DatabaseConnectionData password(String password) {
-    
+
     this.password = password;
     return this;
   }
@@ -127,6 +130,14 @@ public class DatabaseConnectionData {
       return "null";
     }
     return o.toString().replace("\n", "\n    ");
+  }
+
+
+  public Map<String, Object> asProperties() {
+    return Map.of(
+        "spring.datasource.url", url,
+        "spring.datasource.username", username,
+        "spring.datasource.password", password);
   }
 
 }

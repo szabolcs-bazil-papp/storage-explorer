@@ -25,12 +25,12 @@ public final class StorageInstance {
   private String name;
   private Availability availability;
   private StorageLocation location;
-  
+
   private StorageIndex index;
 
   private StorageInstance(final StorageId id) {
     this.id = Objects.requireNonNull(id, "Storage Instance ID cannot be null!");
-    availability= Availability.UNAVAILABLE;
+    availability = Availability.UNAVAILABLE;
   }
 
   public StorageId id() {
@@ -63,27 +63,27 @@ public final class StorageInstance {
     Assert.notNull(location, "StorageLocation must not be null!");
     this.location = location;
   }
-  
+
   public StorageInstanceType type() {
     return location instanceof FsStorageLocation ? StorageInstanceType.FS : StorageInstanceType.DB;
   }
-  
-  
+
+
   public StorageIndex index() {
     return index;
   }
-  
+
   public void setIndex(final StorageIndex index) {
     this.index = index;
   }
-  
+
   public Stream<StorageEntry> entities() {
     return index == null ? Stream.empty() : index.entities();
   }
-  
+
   public StorageInstance applyDto(final StorageInstanceDto dto) {
     Assert.notNull(dto, "StorageInstanceDto must not be null!");
-    
+
     setName(dto.getName());
     setAvailability(dto.getAvailability());
     switch (dto.getType()) {
@@ -96,7 +96,7 @@ public final class StorageInstance {
       default:
         throw new IllegalArgumentException("Unsupported storage type: " + dto.getType());
     }
-    
+
     return this;
   }
 

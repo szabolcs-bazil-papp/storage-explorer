@@ -1,17 +1,26 @@
 package hu.aestallon.storageexplorer.ui.dialog;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
+import java.nio.file.Path;
+import java.util.function.Consumer;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.filechooser.FileSystemView;
 import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageLocation;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.DatabaseConnectionData;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.DatabaseVendor;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.SqlStorageLocation;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceDto;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceType;
 
 public class ImportStorageDialog extends JDialog {
   private JPanel contentPane;
@@ -45,15 +54,42 @@ public class ImportStorageDialog extends JDialog {
   private JLabel labelFsRootDir;
   private JLabel labelFsHelp;
   private JPanel fsPane;
+  private JPanel indexingBehaviourPane;
+  private JRadioButton noIndex;
+  private JRadioButton indexEntries;
+  private JRadioButton fullIndex;
+  private JTextPane entriesShallBeIndexedTextPane;
+  private JTextPane noIndexingShallBeTextPane;
+  private JTextPane allEntriesAndTheirTextPane;
 
-  public ImportStorageDialog() {
+  private final StorageInstanceDto storageInstanceDto;
+  private final Consumer<StorageInstanceDto> resultConsumer;
+
+  public ImportStorageDialog(final StorageInstanceDto storageInstanceDto,
+                             final Consumer<StorageInstanceDto> resultConsumer) {
+    this.storageInstanceDto = storageInstanceDto;
+    this.resultConsumer = resultConsumer;
+
     setContentPane(contentPane);
     setModal(true);
     getRootPane().setDefaultButton(buttonOK);
 
+    final boolean editing = storageInstanceDto.getId() != null;
+    setTitle(editing
+        ? "Edit Storage (" + storageInstanceDto.getName() + ")"
+        : "Import Storage");
+    if (!editing) {
+      indexEntries.setSelected(true);
+    } else {
+      if (storageInstanceDto.getType() == StorageInstanceType.DB) {
+        storageTypePane.setSelectedIndex(1);
+      }
+    }
+
     buttonOK.addActionListener(e -> onOK());
 
     buttonCancel.addActionListener(e -> onCancel());
+    buttonFsRootDirLookup.addActionListener(e -> onFsRootDirLookup());
 
     // call onCancel() when cross is clicked
     setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -71,8 +107,57 @@ public class ImportStorageDialog extends JDialog {
   }
 
   private void onOK() {
-    // add your code here
+    final StorageInstanceType storageInstanceType = getStorageInstanceType();
+    final StorageLocation location = getAndValidateStorageLocation(storageInstanceType);
+    final String name = textFieldStorageName.getText();
+    storageInstanceDto.setName(name);
+    storageInstanceDto.setType(storageInstanceType);
+    if (location instanceof FsStorageLocation) {
+      storageInstanceDto.setFs((FsStorageLocation) location);
+    } else if (location instanceof SqlStorageLocation) {
+      storageInstanceDto.setDb((SqlStorageLocation) location);
+    } else {
+      throw new IllegalArgumentException("Unsupported location type: " + location);
+    }
+    
+    resultConsumer.accept(storageInstanceDto);
     dispose();
+  }
+
+  private StorageInstanceType getStorageInstanceType() {
+    final int typeIdx = storageTypePane.getSelectedIndex();
+    final StorageInstanceType storageInstanceType;
+    switch (typeIdx) {
+      case 0:
+        storageInstanceType = StorageInstanceType.FS;
+        break;
+      case 1:
+        storageInstanceType = StorageInstanceType.DB;
+        break;
+      default:
+        throw new IllegalStateException("Unexpected value: " + typeIdx);
+    }
+    return storageInstanceType;
+  }
+
+  private StorageLocation getAndValidateStorageLocation(StorageInstanceType storageInstanceType) {
+    if (StorageInstanceType.FS == storageInstanceType) {
+      return new FsStorageLocation().path(Path.of(textFieldFsRootDir.getText()));
+    
+    } else if (StorageInstanceType.DB == storageInstanceType) {
+      return new SqlStorageLocation()
+          .vendor(textFieldDbUrl.getText().contains("postgres")
+              ? DatabaseVendor.PG
+              : DatabaseVendor.ORACLE)
+          .dbConnectionData(new DatabaseConnectionData()
+              .url(textFieldDbUrl.getText())
+              .username(textFieldDbUsername.getText())
+              .password(textFieldDbPassword.getText()));
+    
+    } else {
+      throw new IllegalArgumentException("Unsupported storage type: " + storageInstanceType);
+    
+    }
   }
 
   private void onCancel() {
@@ -80,12 +165,33 @@ public class ImportStorageDialog extends JDialog {
     dispose();
   }
 
+  private void onFsRootDirLookup() {
+    final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
+    fileChooser.setDialogType(JFileChooser.OPEN_DIALOG);
+    fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+    fileChooser.setDialogTitle("Import Storage...");
+    fileChooser.setCurrentDirectory(new File("."));
+
+    final int result = fileChooser.showDialog(this, "Import");
+    if (JFileChooser.APPROVE_OPTION == result) {
+      final File selectedFile = fileChooser.getSelectedFile();
+      if (!selectedFile.isDirectory()) {
+        System.err.println("REEEE");
+        return;
+      }
+
+      textFieldFsRootDir.setText(selectedFile.getAbsolutePath());
+    }
+  }
+
   public static void main(String[] args) {
     System.setProperty("sun.java2d.uiScale", "100%");
     System.setProperty("org.graphstream.ui", "swing");
     FlatIntelliJLaf.setup();
 
-    ImportStorageDialog dialog = new ImportStorageDialog();
+    ImportStorageDialog dialog = new ImportStorageDialog(
+        new StorageInstanceDto(),
+        System.out::println);
     dialog.pack();
     dialog.setVisible(true);
     System.exit(0);
@@ -107,6 +213,8 @@ public class ImportStorageDialog extends JDialog {
   private void $$$setupUI$$$() {
     contentPane = new JPanel();
     contentPane.setLayout(new GridBagLayout());
+    contentPane.setMinimumSize(new Dimension(700, 674));
+    contentPane.setPreferredSize(new Dimension(700, 674));
     final JPanel panel1 = new JPanel();
     panel1.setLayout(new GridBagLayout());
     GridBagConstraints gbc;
@@ -189,7 +297,7 @@ public class ImportStorageDialog extends JDialog {
         GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW,
         GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
     buttonFsRootDirLookup = new JButton();
-    buttonFsRootDirLookup.setText("Button");
+    buttonFsRootDirLookup.setText("Find...");
     panel5.add(buttonFsRootDirLookup, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER,
         GridConstraints.FILL_HORIZONTAL,
         GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
@@ -341,6 +449,69 @@ public class ImportStorageDialog extends JDialog {
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.insets = new Insets(0, 5, 0, 0);
     corePropertiesPane.add(textFieldStorageName, gbc);
+    indexingBehaviourPane = new JPanel();
+    indexingBehaviourPane.setLayout(new GridLayoutManager(3, 6, new Insets(0, 0, 0, 0), -1, -1));
+    indexingBehaviourPane.setMinimumSize(new Dimension(700, 209));
+    indexingBehaviourPane.setPreferredSize(new Dimension(700, 209));
+    gbc = new GridBagConstraints();
+    gbc.gridx = 0;
+    gbc.gridy = 1;
+    gbc.gridwidth = 2;
+    gbc.fill = GridBagConstraints.BOTH;
+    corePropertiesPane.add(indexingBehaviourPane, gbc);
+    indexingBehaviourPane.setBorder(BorderFactory.createTitledBorder(null, "Indexing behaviour",
+        TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
+    noIndex = new JRadioButton();
+    noIndex.setText("No Index");
+    indexingBehaviourPane.add(noIndex,
+        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
+            GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    indexEntries = new JRadioButton();
+    indexEntries.setSelected(false);
+    indexEntries.setText("Index Entries");
+    indexingBehaviourPane.add(indexEntries,
+        new GridConstraints(1, 0, 1, 5, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
+            GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    fullIndex = new JRadioButton();
+    fullIndex.setText("Full Index");
+    indexingBehaviourPane.add(fullIndex,
+        new GridConstraints(2, 0, 1, 4, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
+            GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    entriesShallBeIndexedTextPane = new JTextPane();
+    entriesShallBeIndexedTextPane.setEditable(false);
+    entriesShallBeIndexedTextPane.setEnabled(false);
+    entriesShallBeIndexedTextPane.setText(
+        "Entries shall be indexed upon storage import. This is a fairly quick operation on even large storages, and instantenous on smaller ones. Connections between entries will be dynamically discovered when an entry is inspected. Use this indexing strategy when dealing with larger storage instances.");
+    indexingBehaviourPane.add(entriesShallBeIndexedTextPane,
+        new GridConstraints(1, 5, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
+            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            new Dimension(150, 50), null, 0, false));
+    noIndexingShallBeTextPane = new JTextPane();
+    noIndexingShallBeTextPane.setEditable(false);
+    noIndexingShallBeTextPane.setEnabled(false);
+    noIndexingShallBeTextPane.setText(
+        "No indexing shall be performed upon storage import, resulting in rapid setup, but no information about entries will be readily available. Use this indexing strategy when you have a specific URI to search for, and want to dynamically discover connections originating from your known entry.");
+    indexingBehaviourPane.add(noIndexingShallBeTextPane,
+        new GridConstraints(0, 5, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
+            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            new Dimension(150, 50), null, 0, false));
+    allEntriesAndTheirTextPane = new JTextPane();
+    allEntriesAndTheirTextPane.setEditable(false);
+    allEntriesAndTheirTextPane.setEnabled(false);
+    allEntriesAndTheirTextPane.setText(
+        "All entries and their connecting edges shall be indexed upon storage import. This provides the best opportunity for inbound edge inspection, but may take a long time to perform for larger storages. Use it with smaller storages and when insight is imperative.");
+    indexingBehaviourPane.add(allEntriesAndTheirTextPane,
+        new GridConstraints(2, 5, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
+            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            new Dimension(150, 50), null, 0, false));
+    ButtonGroup buttonGroup;
+    buttonGroup = new ButtonGroup();
+    buttonGroup.add(fullIndex);
+    buttonGroup.add(indexEntries);
+    buttonGroup.add(noIndex);
   }
 
   /** @noinspection ALL */

@@ -4,13 +4,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum DatabaseVendor {
-  
+
   H2("H2"),
-  
+
   PG("PG"),
-  
+
   ORACLE("ORACLE"),
-  
+
   SQLITE("SQLITE");
 
   private final String value;
@@ -37,6 +37,21 @@ public enum DatabaseVendor {
       }
     }
     throw new IllegalArgumentException("Unexpected value '" + value + "'");
+  }
+
+  public String driverClassName() {
+    switch (this) {
+      case H2:
+        return "org.h2.Driver";
+      case PG:
+        return "org.postgresql.Driver";
+      case ORACLE:
+        return "oracle.jdbc.driver.OracleDriver";
+      case SQLITE:
+        return "org.sqlite.JDBC";
+      default:
+        throw new IllegalArgumentException("Unexpected value '" + this + "'");
+    }
   }
 }
 
