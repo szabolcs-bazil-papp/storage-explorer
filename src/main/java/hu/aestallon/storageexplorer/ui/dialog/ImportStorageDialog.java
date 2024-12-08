@@ -119,7 +119,7 @@ public class ImportStorageDialog extends JDialog {
     } else {
       throw new IllegalArgumentException("Unsupported location type: " + location);
     }
-    
+
     resultConsumer.accept(storageInstanceDto);
     dispose();
   }
@@ -143,7 +143,7 @@ public class ImportStorageDialog extends JDialog {
   private StorageLocation getAndValidateStorageLocation(StorageInstanceType storageInstanceType) {
     if (StorageInstanceType.FS == storageInstanceType) {
       return new FsStorageLocation().path(Path.of(textFieldFsRootDir.getText()));
-    
+
     } else if (StorageInstanceType.DB == storageInstanceType) {
       return new SqlStorageLocation()
           .vendor(textFieldDbUrl.getText().contains("postgres")
@@ -153,10 +153,10 @@ public class ImportStorageDialog extends JDialog {
               .url(textFieldDbUrl.getText())
               .username(textFieldDbUsername.getText())
               .password(textFieldDbPassword.getText()));
-    
+
     } else {
       throw new IllegalArgumentException("Unsupported storage type: " + storageInstanceType);
-    
+
     }
   }
 
@@ -224,6 +224,7 @@ public class ImportStorageDialog extends JDialog {
     gbc.weightx = 1.0;
     gbc.anchor = GridBagConstraints.EAST;
     gbc.fill = GridBagConstraints.VERTICAL;
+    gbc.insets = new Insets(15, 0, 15, 5);
     contentPane.add(panel1, gbc);
     final JPanel panel2 = new JPanel();
     panel2.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1, true, false));
@@ -376,6 +377,8 @@ public class ImportStorageDialog extends JDialog {
             GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
             false));
     textFieldSshAddress = new JTextField();
+    textFieldSshAddress.setEditable(false);
+    textFieldSshAddress.setEnabled(false);
     sshForm.add(textFieldSshAddress, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST,
         GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW,
         GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(240, 34), null, 0, false));
@@ -386,6 +389,8 @@ public class ImportStorageDialog extends JDialog {
             GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null,
             new Dimension(36, 17), null, 0, false));
     textFieldSshPort = new JTextField();
+    textFieldSshPort.setEditable(false);
+    textFieldSshPort.setEnabled(false);
     sshForm.add(textFieldSshPort, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_WEST,
         GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW,
         GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(100, -1), null, 0, false));
@@ -396,6 +401,8 @@ public class ImportStorageDialog extends JDialog {
             GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
             false));
     textFieldSshUsername = new JTextField();
+    textFieldSshUsername.setEditable(false);
+    textFieldSshUsername.setEnabled(false);
     sshForm.add(textFieldSshUsername, new GridConstraints(1, 1, 1, 3, GridConstraints.ANCHOR_WEST,
         GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW,
         GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
@@ -406,10 +413,13 @@ public class ImportStorageDialog extends JDialog {
             GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
             false));
     textFieldSshPassword = new JTextField();
+    textFieldSshPassword.setEditable(false);
+    textFieldSshPassword.setEnabled(false);
     sshForm.add(textFieldSshPassword, new GridConstraints(2, 1, 1, 2, GridConstraints.ANCHOR_WEST,
         GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW,
         GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
     checkboxRememberSshPassword = new JCheckBox();
+    checkboxRememberSshPassword.setEnabled(false);
     checkboxRememberSshPassword.setText("remember");
     sshForm.add(checkboxRememberSshPassword,
         new GridConstraints(2, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
@@ -462,12 +472,14 @@ public class ImportStorageDialog extends JDialog {
     indexingBehaviourPane.setBorder(BorderFactory.createTitledBorder(null, "Indexing behaviour",
         TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
     noIndex = new JRadioButton();
+    noIndex.setEnabled(false);
     noIndex.setText("No Index");
     indexingBehaviourPane.add(noIndex,
         new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
             GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     indexEntries = new JRadioButton();
+    indexEntries.setEnabled(false);
     indexEntries.setSelected(false);
     indexEntries.setText("Index Entries");
     indexingBehaviourPane.add(indexEntries,
@@ -475,6 +487,7 @@ public class ImportStorageDialog extends JDialog {
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
             GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     fullIndex = new JRadioButton();
+    fullIndex.setEnabled(false);
     fullIndex.setText("Full Index");
     indexingBehaviourPane.add(fullIndex,
         new GridConstraints(2, 0, 1, 4, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
