@@ -71,7 +71,6 @@ public class ListEntry implements StorageEntry {
   public Set<UriProperty> uriProperties() {
     if (!valid) {
       refresh();
-      valid = true;
     }
     
     return uriProperties;
@@ -86,6 +85,7 @@ public class ListEntry implements StorageEntry {
     }
 
     this.uriProperties = uriProperties;
+    valid = true;
   }
 
   @Override

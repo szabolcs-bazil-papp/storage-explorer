@@ -71,7 +71,6 @@ public class MapEntry implements StorageEntry {
   public Set<UriProperty> uriProperties() {
     if (!valid) {
       refresh();
-      valid = true;
     }
     
     return uriProperties;
@@ -82,6 +81,7 @@ public class MapEntry implements StorageEntry {
     this.uriProperties = collectionApi.map(schema, name).uris().entrySet().stream()
         .map(e -> UriProperty.standalone(e.getKey(), e.getValue()))
         .collect(toSet());
+    valid = true;
   }
 
   @Override
