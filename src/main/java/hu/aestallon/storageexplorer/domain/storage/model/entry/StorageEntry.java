@@ -118,6 +118,8 @@ public interface StorageEntry {
   Set<UriProperty> uriProperties();
 
   void refresh();
+  
+  boolean valid();
 
   default boolean references(StorageEntry that) {
     return uriProperties().stream()

@@ -85,6 +85,11 @@ public class MapEntry implements StorageEntry {
   }
 
   @Override
+  public boolean valid() {
+    return valid;
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (this == o)
       return true;

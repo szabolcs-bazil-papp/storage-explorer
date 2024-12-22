@@ -90,10 +90,13 @@ public final class GraphRenderingService {
       log.info("OUTGOING REFERENCES: [ {} ]", refs);
       refs.forEach(
           (from, tos) -> tos.forEach(it -> nodeAdditionService.add(graph, from, it.a(), it.b())));
-      refs = refs.values().stream()
+      
+      final Set<StorageEntry> candidates = refs.values().stream()
           .flatMap(Set::stream)
           .map(Pair::a)
-          .distinct()
+          .collect(toSet());
+      storageInstance.validate(candidates);
+      refs = candidates.stream()
           .collect(toMap(
               Function.identity(),
               it -> outgoingEdgeDiscoveryService

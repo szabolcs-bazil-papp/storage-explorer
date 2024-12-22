@@ -17,6 +17,7 @@ package hu.aestallon.storageexplorer.domain.storage.service;
 
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.Pair;
+import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 import java.io.IOException;
 import java.net.URI;
@@ -27,25 +28,30 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
+import org.smartbit4all.core.object.ObjectNode;
 import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.util.IO;
+import static java.util.stream.Collectors.toList;
 
 public abstract class StorageIndex {
 
@@ -65,7 +71,7 @@ public abstract class StorageIndex {
     this.cache = new HashMap<>();
   }
 
- public void refresh(IndexingStrategy strategy) {
+  public void refresh(IndexingStrategy strategy) {
     clear();
     if (!strategy.fetchEntries()) {
       return;
@@ -77,6 +83,28 @@ public abstract class StorageIndex {
 
   void clear() {
     cache.clear();
+  }
+
+  public void revalidate(final Collection<? extends StorageEntry> entries) {
+    final List<ObjectEntry> needRevalidation = entries.stream()
+        .filter(ObjectEntry.class::isInstance)
+        .map(ObjectEntry.class::cast)
+        .filter(it -> !it.valid())
+        .distinct()
+        .collect(toList());
+    final List<ObjectNode> nodes = needRevalidation.stream()
+        .map(StorageEntry::uri)
+        .map(objectApi::getLatestUri)
+        .collect(collectingAndThen(toList(), objectApi::loadBatch));
+    if (entries.size() != nodes.size()) {
+      log.debug("Batch loading resulted in {} entries and {} nodes", entries.size(), nodes.size());
+      if (log.isTraceEnabled()) {
+        log.trace("Batch loading:\nEntries were: {}\nNodes became: {}", entries, nodes);
+      }
+      return;
+    }
+
+    IntStream.range(0, entries.size()).forEach(i -> needRevalidation.get(i).refresh(nodes.get(i)));
   }
 
   protected abstract Stream<URI> fetchEntries();

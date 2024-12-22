@@ -109,12 +109,16 @@ public class ObjectEntry implements StorageEntry {
   @Override
   public void refresh() {
     final var objectNode = load();
+    refresh(objectNode);
+  }
+  
+  public void refresh(final ObjectNode objectNode) {
     if (objectNode == null) {
       uriProperties = new HashSet<>();
       displayName = "ERROR LOADING";
       return;
     }
-    
+
     uriProperties = initUriProperties(objectNode);
     displayName = initDisplayName(objectNode);
     valid  = true;
@@ -211,6 +215,12 @@ public class ObjectEntry implements StorageEntry {
 
     return objectApi.load(Uris.atVersion(uri, version));
   }
+
+  @Override
+  public boolean valid() {
+    return valid;
+  }
+
 
   @Override
   public boolean equals(Object o) {

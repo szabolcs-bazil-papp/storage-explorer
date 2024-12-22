@@ -1,5 +1,6 @@
 package hu.aestallon.storageexplorer.domain.storage.model.instance;
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -93,6 +94,10 @@ public final class StorageInstance {
     }
 
     index.refresh(indexingStrategy);
+  }
+  
+  public void validate(final Collection<? extends StorageEntry> entries) {
+    index.revalidate(entries);
   }
 
   public Stream<StorageEntry> entities() {
