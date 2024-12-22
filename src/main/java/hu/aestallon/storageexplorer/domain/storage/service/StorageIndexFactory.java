@@ -12,9 +12,6 @@ import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectDefinitionApi;
 import org.smartbit4all.domain.data.storage.ObjectStorage;
 import org.smartbit4all.domain.meta.EntityConfiguration;
-import org.smartbit4all.domain.service.CrudApi;
-import org.smartbit4all.domain.service.CrudApiImpl;
-import org.smartbit4all.domain.service.CrudApis;
 import org.smartbit4all.domain.service.identifier.IdentifierService;
 import org.smartbit4all.sql.config.SQLConfig;
 import org.smartbit4all.sql.config.SQLDBParameter;
@@ -30,12 +27,7 @@ import org.smartbit4all.sql.service.identifier.SQLNextIdentifierOracle;
 import org.smartbit4all.sql.service.identifier.SQLNextIdentifierPg;
 import org.smartbit4all.sql.storage.StorageSQL;
 import org.smartbit4all.storage.fs.StorageFS;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.batch.BatchProperties;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
@@ -110,12 +102,18 @@ final class StorageIndexFactory {
   }
 
   StorageIndexCreationResult create(final StorageLocation storageLocation) {
-    if (storageLocation instanceof FsStorageLocation) {
-      final FsStorageLocation fsStorageLocation = (FsStorageLocation) storageLocation;
-      return createFs(fsStorageLocation);
-    } else if (storageLocation instanceof SqlStorageLocation) {
-      final SqlStorageLocation sqlStorageLocation = (SqlStorageLocation) storageLocation;
-      return createDb(sqlStorageLocation);
+    try {
+
+      if (storageLocation instanceof FsStorageLocation) {
+        final FsStorageLocation fsStorageLocation = (FsStorageLocation) storageLocation;
+        return createFs(fsStorageLocation);
+      } else if (storageLocation instanceof SqlStorageLocation) {
+        final SqlStorageLocation sqlStorageLocation = (SqlStorageLocation) storageLocation;
+        return createDb(sqlStorageLocation);
+      }
+
+    } catch (final Exception e) {
+      return new StorageIndexCreationResult.Err(Availability.UNAVAILABLE, e.getMessage());
     }
 
     throw new NotImplementedException("Unsupported storage location: " + storageLocation);
@@ -163,7 +161,7 @@ final class StorageIndexFactory {
     ctx.register(SQLObjectStorageEntityConfiguration.class);
 
     ctx.registerBean("dataSource", DataSource.class, getDataSourceFactory(vendor, connectionData));
-    ctx.registerBean("jdbcTemplate", JdbcTemplate.class, getJdbcTemplateFactory(ctx), 
+    ctx.registerBean("jdbcTemplate", JdbcTemplate.class, getJdbcTemplateFactory(ctx),
         it -> it.setDependsOn("dataSource"));
     ctx.registerBean(
         "sqlDbParameter",
@@ -254,23 +252,6 @@ final class StorageIndexFactory {
 
   private Supplier<JdbcTemplate> getJdbcTemplateFactory(final ApplicationContext ctx) {
     return () -> new JdbcTemplate(ctx.getBean(DataSource.class));
-  }
-
-  static final class EntityDefinitionInitializer implements ApplicationContextAware {
-
-    static final String NAME = "entityDefinitionInitializer";
-    private ApplicationContext applicationContext;
-
-    @Override
-    @Autowired
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-      this.applicationContext = applicationContext;
-    }
-
-    public void initialize() {
-      new EntityConfiguration().setupEntityDefinitions(applicationContext);
-    }
-
   }
 
 }

@@ -16,7 +16,6 @@
 package hu.aestallon.storageexplorer.domain.storage.service;
 
 import java.net.URI;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -27,24 +26,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.api.collection.CollectionApi;
-import org.smartbit4all.api.config.PlatformApiConfig;
-import org.smartbit4all.core.object.ObjectApi;
-import org.smartbit4all.core.object.ObjectDefinitionApi;
-import org.smartbit4all.domain.data.storage.ObjectStorage;
-import org.smartbit4all.storage.fs.StorageFS;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
-import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
-import hu.aestallon.storageexplorer.util.NotImplementedException;
 
 @Service
 public class StorageIndexProvider {
@@ -116,8 +106,8 @@ public class StorageIndexProvider {
   }
 
   public StorageIndex indexOf(final StorageEntry entry) {
-    // TODO: Return Optional!
-    return indexOf(entry.uri());
+    final StorageInstance storageInstance = storageInstancesById.get(entry.storageId());
+    return storageInstance.index();
   }
 
   public void importAndIndex(final StorageInstance storageInstance) {
@@ -129,7 +119,10 @@ public class StorageIndexProvider {
     eventPublisher.publishEvent(
         new ViewController.BackgroundWorkStartedEvent("Importing storage: " + name + "..."));
     final StorageIndex storageIndex = initialise(storageInstance);
-    storageIndex.refresh();
+    if (storageIndex != null) {
+      // TODO: DO NOT RETURN NULL -> Instead handle response correctly!
+      storageIndex.refresh();
+    }
 
     userConfigService.addStorageLocation(storageInstance.toDto());
     eventPublisher.publishEvent(new ViewController.StorageImportEvent(storageInstance));
@@ -165,12 +158,15 @@ public class StorageIndexProvider {
       storageInstance.setIndex(index);
       storageInstancesById.put(storageInstance.id(), storageInstance);
       contextsByInstance.put(storageInstance, ctx);
-      
+
       return index;
 
     } else {
       final var err = (StorageIndexFactory.StorageIndexCreationResult.Err) result;
-      throw new IllegalStateException(err.errorMessage());
+      log.error("Failed to initialise Storage instance [ {} ]: {}",
+          storageInstance.name(),
+          err.errorMessage());
+      return null;
     }
   }
 
