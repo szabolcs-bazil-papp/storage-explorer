@@ -143,7 +143,7 @@ public class UserConfigService {
           break;
         }
       }
-      if (idx <= 0) {
+      if (idx >= 0) {
         importedStorageLocations.set(idx, storageInstanceDto);
       }
       return it;
