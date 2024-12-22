@@ -96,6 +96,7 @@ public class StorageIndexProvider {
         .flatMap(it -> it.searchForUri(queryString));
   }
 
+  @Deprecated
   public StorageIndex indexOf(final URI uri) {
     // TODO: don't do this, store backreference!
     return storageInstancesById.values().stream()
@@ -105,9 +106,12 @@ public class StorageIndexProvider {
         .orElseThrow();
   }
 
+  public StorageInstance storageInstanceOf(final StorageEntry storageEntry) {
+    return storageInstancesById.get(storageEntry.storageId());
+  }
+  
   public StorageIndex indexOf(final StorageEntry entry) {
-    final StorageInstance storageInstance = storageInstancesById.get(entry.storageId());
-    return storageInstance.index();
+    return storageInstanceOf(entry).index();
   }
 
   public void importAndIndex(final StorageInstance storageInstance) {

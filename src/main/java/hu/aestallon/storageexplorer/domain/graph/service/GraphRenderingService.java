@@ -29,6 +29,7 @@ import hu.aestallon.storageexplorer.domain.graph.service.internal.NodeAdditionSe
 import hu.aestallon.storageexplorer.domain.graph.service.internal.OutgoingEdgeDiscoveryService;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.UriProperty;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.util.Attributes;
 import hu.aestallon.storageexplorer.util.Pair;
@@ -40,7 +41,7 @@ public final class GraphRenderingService {
 
   private static final Logger log = LoggerFactory.getLogger(GraphRenderingService.class);
 
-  private final StorageIndex storageIndex;
+  private final StorageInstance storageInstance;
   private int inboundLimit;
   private int outboundLimit;
 
@@ -48,13 +49,13 @@ public final class GraphRenderingService {
   private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
   private final NodeAdditionService nodeAdditionService;
 
-  public GraphRenderingService(StorageIndex storageIndex, int inboundLimit, int outboundLimit) {
-    this.storageIndex = storageIndex;
+  public GraphRenderingService(StorageInstance storageInstance, int inboundLimit, int outboundLimit) {
+    this.storageInstance = storageInstance;
     this.inboundLimit = inboundLimit;
     this.outboundLimit = outboundLimit;
 
-    incomingEdgeDiscoveryService = new IncomingEdgeDiscoveryService(storageIndex);
-    outgoingEdgeDiscoveryService = new OutgoingEdgeDiscoveryService(storageIndex);
+    incomingEdgeDiscoveryService = new IncomingEdgeDiscoveryService(storageInstance);
+    outgoingEdgeDiscoveryService = new OutgoingEdgeDiscoveryService(storageInstance);
     nodeAdditionService = new NodeAdditionService();
   }
 
@@ -76,8 +77,8 @@ public final class GraphRenderingService {
     }
   }
 
-  public StorageIndex storageIndex() {
-    return storageIndex;
+  public StorageInstance storageInstance() {
+    return storageInstance;
   }
 
   private void renderOutgoingReferences(Graph graph, StorageEntry storageEntry) {
@@ -136,7 +137,7 @@ public final class GraphRenderingService {
   }
 
   public Optional<StorageEntry> getStorageEntry(URI uri) {
-    return storageIndex.get(uri);
+    return storageInstance.index().get(uri);
   }
 
   public void changeHighlight(final Graph graph, final StorageEntry from, final StorageEntry to) {

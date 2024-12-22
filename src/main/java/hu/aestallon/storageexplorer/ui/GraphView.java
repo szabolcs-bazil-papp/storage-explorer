@@ -23,7 +23,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
@@ -54,7 +53,6 @@ import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.graph.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.event.GraphConfigChanged;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
@@ -117,12 +115,12 @@ public class GraphView extends JPanel {
       graph.clear();
     }
 
-    final StorageIndex storageIndex = storageIndexProvider.indexOf(storageEntry);
-    if (graphRenderingService == null || !storageIndex.equals(
-        graphRenderingService.storageIndex())) {
+    final StorageInstance storageInstance = storageIndexProvider.storageInstanceOf(storageEntry);
+    if (graphRenderingService == null || !storageInstance.equals(
+        graphRenderingService.storageInstance())) {
       final var userConfig = userConfigService.graphSettings();
       graphRenderingService = new GraphRenderingService(
-          storageIndex,
+          storageInstance,
           userConfig.getGraphTraversalInboundLimit(),
           userConfig.getGraphTraversalOutboundLimit());
     }
