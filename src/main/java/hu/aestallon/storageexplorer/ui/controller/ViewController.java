@@ -220,5 +220,24 @@ public class ViewController {
       mainTreeView.removeStorageNodeOf(e.storageInstance);
     });
   }
+  
+  public static final class StorageReimportedEvent {
+    public final StorageInstance storageInstance;
+    
+    public StorageReimportedEvent(StorageInstance storageInstance) {
+      this.storageInstance = storageInstance;
+    }
+
+  }
+  
+  @EventListener
+  public void onStorageReimported(StorageReimportedEvent e) {
+    SwingUtilities.invokeLater(() -> {
+      if (graphView.displayingStorageAt(e.storageInstance)) {
+        explorerView.closeGraphView();
+      }
+      explorerView.inspectorContainerView().discardInspectorViewOfStorageAt(e.storageInstance);
+    });
+  }
 
 }

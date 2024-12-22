@@ -221,6 +221,7 @@ public class StorageIndexProvider {
       initialise(storageInstance);
       storageInstance.refreshIndex();
       eventPublisher.publishEvent(new ViewController.StorageReindexed(storageInstance));
+      eventPublisher.publishEvent(new ViewController.StorageReimportedEvent(storageInstance));
       eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
     });
   }
