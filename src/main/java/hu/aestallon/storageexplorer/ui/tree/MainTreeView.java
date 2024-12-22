@@ -21,14 +21,12 @@ import java.awt.event.MouseEvent;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +49,7 @@ import hu.aestallon.storageexplorer.util.Pair;
 public class MainTreeView extends JPanel {
 
   private static final Logger log = LoggerFactory.getLogger(MainTreeView.class);
-  private final ViewController viewController;
+  
   private StorageTree tree;
   private JScrollPane treePanel;
   private JProgressBar progressBar;
@@ -65,7 +63,7 @@ public class MainTreeView extends JPanel {
 
   public MainTreeView(ApplicationEventPublisher eventPublisher,
                       StorageIndexProvider storageIndexProvider,
-                      UserConfigService userConfigService, ViewController viewController) {
+                      UserConfigService userConfigService) {
     this.eventPublisher = eventPublisher;
     this.storageIndexProvider = storageIndexProvider;
 
@@ -76,7 +74,6 @@ public class MainTreeView extends JPanel {
     treePanel = new JScrollPane(tree);
     add(treePanel);
     this.userConfigService = userConfigService;
-    this.viewController = viewController;
   }
 
   private void initTree() {
