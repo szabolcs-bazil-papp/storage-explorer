@@ -18,6 +18,8 @@ package hu.aestallon.storageexplorer.ui.inspector;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import org.fife.rsta.ui.search.FindDialog;
@@ -39,6 +41,9 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntryInspectorView.class);
 
+  private static final DateTimeFormatter FORMATTER_CREATION_DATE =
+      DateTimeFormatter.ISO_ZONED_DATE_TIME;
+
   private final Action openInSystemExplorerAction = new AbstractAction(null, IconProvider.SE) {
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -51,7 +56,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       }
 
       try {
-       //  Desktop.getDesktop().open(objectEntry.path().getParent().toFile());
+        //  Desktop.getDesktop().open(objectEntry.path().getParent().toFile());
         throw new NotImplementedException("Cannot open storage entry location!");
       } catch (NotImplementedException ex) {
         log.warn("Could not open [ {} ] in system explorer!", objectEntry.uri());
@@ -118,14 +123,27 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     toolbar.add(openInSystemExplorerAction);
     toolbar.add(Box.createHorizontalGlue());
 
-    Box box = new Box(0);
+    Box box = new Box(BoxLayout.X_AXIS);
     final var label = new JLabel(objectEntry.toString());
     label.setFont(UIManager.getFont("h3.font"));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
     box.add(label);
     box.add(Box.createHorizontalGlue());
 
-    Box box2 = new Box(0);
+    Box box1 = new Box(BoxLayout.X_AXIS);
+    final var creationLabel = new JLabel("Created at:");
+    creationLabel.setFont(UIManager.getFont("h4.font"));
+    creationLabel.setBorder(new EmptyBorder(0, 0, 0, 5));
+    label.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+    final var creationValue = new JLabel(getNodeCreationValue(objectNode));
+    creationValue.setFont(UIManager.getFont("h4.font"));
+    creationValue.setAlignmentX(Component.LEFT_ALIGNMENT);
+    box1.add(creationLabel);
+    box1.add(creationValue);
+    box1.add(Box.createHorizontalGlue());
+
+    Box box2 = new Box(BoxLayout.X_AXIS);
     final var pane = factory.textareaFactory().create(objectEntry, objectNode);
     toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
       @Override
@@ -140,8 +158,18 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
     container.add(toolbar);
     container.add(box);
+    container.add(box1);
     container.add(box2);
     return container;
+  }
+
+  private String getNodeCreationValue(final ObjectNode objectNode) {
+    final OffsetDateTime createdAt = objectNode.getData().getCreatedAt();
+    if (createdAt == null) {
+      return "UNKNOWN";
+    }
+
+    return FORMATTER_CREATION_DATE.format(createdAt);
   }
 
   private void setUpLoadingErrorDisplay(final ObjectEntry.ObjectEntryLoadResult loadResult) {
