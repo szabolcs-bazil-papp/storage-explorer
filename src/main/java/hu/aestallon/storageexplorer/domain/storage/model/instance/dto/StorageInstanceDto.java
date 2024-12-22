@@ -13,12 +13,13 @@ import javax.validation.constraints.NotNull;
  * StorageInstanceDto
  */
 @JsonPropertyOrder({
-  StorageInstanceDto.ID,
-  StorageInstanceDto.NAME,
-  StorageInstanceDto.TYPE,
-  StorageInstanceDto.AVAILABILITY,
-  StorageInstanceDto.FS,
-  StorageInstanceDto.DB
+    StorageInstanceDto.ID,
+    StorageInstanceDto.NAME,
+    StorageInstanceDto.TYPE,
+    StorageInstanceDto.INDEXING_STRATEGY,
+    StorageInstanceDto.AVAILABILITY,
+    StorageInstanceDto.FS,
+    StorageInstanceDto.DB
 })
 @JsonTypeName("StorageInstanceDto")
 @javax.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
@@ -32,6 +33,9 @@ public class StorageInstanceDto {
   public static final String TYPE = "type";
   private StorageInstanceType type;
 
+  public static final String INDEXING_STRATEGY = "indexingStrategy";
+  private IndexingStrategyType indexingStrategy;
+
   public static final String AVAILABILITY = "availability";
   private Availability availability;
 
@@ -41,11 +45,11 @@ public class StorageInstanceDto {
   public static final String DB = "db";
   private SqlStorageLocation db;
 
-  public StorageInstanceDto() { 
+  public StorageInstanceDto() {
   }
 
   public StorageInstanceDto id(UUID id) {
-    
+
     this.id = id;
     return this;
   }
@@ -67,7 +71,7 @@ public class StorageInstanceDto {
 
 
   public StorageInstanceDto name(String name) {
-    
+
     this.name = name;
     return this;
   }
@@ -101,6 +105,27 @@ public class StorageInstanceDto {
     return type;
   }
 
+  @JsonProperty(INDEXING_STRATEGY)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setIndexingStrategy(IndexingStrategyType indexingStrategy) {
+    this.indexingStrategy = indexingStrategy;
+  }
+
+  public StorageInstanceDto indexingStrategy(IndexingStrategyType indexingStrategy) {
+    this.indexingStrategy = indexingStrategy;
+    return this;
+  }
+
+  @javax.annotation.Nonnull
+  @NotNull
+  @Valid
+  @JsonProperty(INDEXING_STRATEGY)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+
+  public IndexingStrategyType getIndexingStrategy() {
+    return indexingStrategy;
+  }
+
   @JsonProperty(TYPE)
   @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
   public void setType(StorageInstanceType type) {
@@ -109,7 +134,7 @@ public class StorageInstanceDto {
 
 
   public StorageInstanceDto availability(Availability availability) {
-    
+
     this.availability = availability;
     return this;
   }
@@ -185,6 +210,7 @@ public class StorageInstanceDto {
     return Objects.equals(this.id, storageInstanceDto.id) &&
         Objects.equals(this.name, storageInstanceDto.name) &&
         Objects.equals(this.type, storageInstanceDto.type) &&
+        Objects.equals(this.indexingStrategy, storageInstanceDto.indexingStrategy) &&
         Objects.equals(this.availability, storageInstanceDto.availability) &&
         Objects.equals(this.fs, storageInstanceDto.fs) &&
         Objects.equals(this.db, storageInstanceDto.db);
@@ -192,7 +218,7 @@ public class StorageInstanceDto {
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, name, type, availability, fs, db);
+    return Objects.hash(id, name, type, indexingStrategy, availability, fs, db);
   }
 
   @Override
@@ -202,6 +228,7 @@ public class StorageInstanceDto {
     sb.append("    id: ").append(toIndentedString(id)).append("\n");
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
     sb.append("    type: ").append(toIndentedString(type)).append("\n");
+    sb.append("    indexingStrategy: ").append(toIndentedString(indexingStrategy)).append("\n");
     sb.append("    availability: ").append(toIndentedString(availability)).append("\n");
     sb.append("    fs: ").append(toIndentedString(fs)).append("\n");
     sb.append("    db: ").append(toIndentedString(db)).append("\n");

@@ -1,20 +1,25 @@
 package hu.aestallon.storageexplorer.domain.storage.model.instance;
 
 import java.util.Objects;
-import java.util.UUID;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.utility.StringConstant;
 import org.springframework.util.Assert;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.Availability;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.IndexingStrategyType;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.SqlStorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceDto;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceType;
+import hu.aestallon.storageexplorer.domain.storage.service.IndexingStrategy;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 
 public final class StorageInstance {
+
+  private static final Logger log = LoggerFactory.getLogger(StorageInstance.class);
 
   public static StorageInstance fromDto(final StorageInstanceDto dto) {
     Assert.notNull(dto, "StorageInstanceDto must not be null!");
@@ -25,6 +30,7 @@ public final class StorageInstance {
   private String name;
   private Availability availability;
   private StorageLocation location;
+  private IndexingStrategy indexingStrategy;
 
   private StorageIndex index;
 
@@ -67,7 +73,10 @@ public final class StorageInstance {
   public StorageInstanceType type() {
     return location instanceof FsStorageLocation ? StorageInstanceType.FS : StorageInstanceType.DB;
   }
-
+  
+  public void setIndexingStrategy(IndexingStrategyType type) {
+    this.indexingStrategy = IndexingStrategy.of(type);
+  }
 
   public StorageIndex index() {
     return index;
@@ -75,6 +84,15 @@ public final class StorageInstance {
 
   public void setIndex(final StorageIndex index) {
     this.index = index;
+  }
+
+  public void refreshIndex() {
+    if (index == null || indexingStrategy == null) {
+      log.warn("Index or Strategy is not available for instance: {}", this);
+      return;
+    }
+
+    index.refresh(indexingStrategy);
   }
 
   public Stream<StorageEntry> entities() {
@@ -96,6 +114,7 @@ public final class StorageInstance {
       default:
         throw new IllegalArgumentException("Unsupported storage type: " + dto.getType());
     }
+    setIndexingStrategy(dto.getIndexingStrategy());
 
     return this;
   }
@@ -105,6 +124,7 @@ public final class StorageInstance {
         .id(id.uuid())
         .name(name)
         .availability(availability)
+        .indexingStrategy(indexingStrategy.type())
         .type(location instanceof FsStorageLocation
             ? StorageInstanceType.FS
             : StorageInstanceType.DB)
@@ -122,7 +142,7 @@ public final class StorageInstance {
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(id);
+    return id.hashCode();
   }
 
   @Override
