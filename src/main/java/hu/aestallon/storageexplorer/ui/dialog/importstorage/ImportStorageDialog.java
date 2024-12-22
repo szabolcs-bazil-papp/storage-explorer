@@ -1,4 +1,4 @@
-package hu.aestallon.storageexplorer.ui.dialog;
+package hu.aestallon.storageexplorer.ui.dialog.importstorage;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -7,11 +7,9 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileSystemView;
-import org.springframework.aop.BeforeAdvice;
 import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
@@ -64,18 +62,15 @@ public class ImportStorageDialog extends JDialog {
   private JTextPane noIndexingShallBeTextPane;
   private JTextPane allEntriesAndTheirTextPane;
 
-  private final StorageInstanceDto storageInstanceDto;
-  private final BiConsumer<StorageInstanceDto, StorageInstanceDto> resultConsumer;
-
-  public ImportStorageDialog(final StorageInstanceDto storageInstanceDto,
-                             final BiConsumer<StorageInstanceDto, StorageInstanceDto> resultConsumer) {
-    this.storageInstanceDto = storageInstanceDto;
-    this.resultConsumer = resultConsumer;
+  private final ImportStorageController controller;
+  public ImportStorageDialog(final ImportStorageController controller) {
+    this.controller = controller;
 
     setContentPane(contentPane);
     setModal(true);
     getRootPane().setDefaultButton(buttonOK);
 
+    StorageInstanceDto storageInstanceDto = controller.initialModel();
     final boolean editing = storageInstanceDto.getId() != null;
     setTitle(editing
         ? "Edit Storage (" + storageInstanceDto.getName() + ")"
@@ -127,7 +122,7 @@ public class ImportStorageDialog extends JDialog {
     final StorageLocation location = getAndValidateStorageLocation(storageInstanceType);
     final String name = textFieldStorageName.getText();
     final var result = new StorageInstanceDto()
-        .id(storageInstanceDto.getId())
+        .id(controller.initialModel().getId())
         .name(name)
         .type(storageInstanceType);
     if (location instanceof FsStorageLocation) {
@@ -138,7 +133,7 @@ public class ImportStorageDialog extends JDialog {
       throw new IllegalArgumentException("Unsupported location type: " + location);
     }
 
-    resultConsumer.accept(storageInstanceDto, result);
+    controller.finish(result);
     dispose();
   }
 
@@ -207,12 +202,13 @@ public class ImportStorageDialog extends JDialog {
     System.setProperty("org.graphstream.ui", "swing");
     FlatIntelliJLaf.setup();
 
-    ImportStorageDialog dialog = new ImportStorageDialog(
+    final var controller = new ImportStorageController(
         new StorageInstanceDto(),
         (before, after) -> {
           System.out.println(before);
           System.out.println(after);
         });
+    ImportStorageDialog dialog = new ImportStorageDialog(controller);
     dialog.pack();
     dialog.setVisible(true);
     System.exit(0);

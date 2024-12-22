@@ -1,6 +1,5 @@
 package hu.aestallon.storageexplorer.ui.tree.model;
 
-import java.nio.file.Path;
 import java.util.Objects;
 import javax.accessibility.Accessible;
 import javax.swing.*;
@@ -12,14 +11,11 @@ import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreeSelectionModel;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.DatabaseVendor;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.SqlStorageLocation;
-import hu.aestallon.storageexplorer.domain.storage.service.FileSystemStorageIndex;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.tree.model.node.StorageInstanceTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.node.StorageListTreeNode;
@@ -55,8 +51,12 @@ public class StorageTree extends JTree implements Scrollable, Accessible {
     super(root, true);
   }
   
+  public DefaultTreeModel model() {
+    return (DefaultTreeModel) getModel();
+  }
+  
   public StorageInstanceTreeNode importStorage(final StorageInstance storageInstance) {
-    final DefaultTreeModel model = (DefaultTreeModel) getModel();
+    final DefaultTreeModel model = model();
     final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
     final StorageInstanceTreeNode storageInstanceTreeNode =
         new StorageInstanceTreeNode(storageInstance);
@@ -65,7 +65,7 @@ public class StorageTree extends JTree implements Scrollable, Accessible {
   }
   
   public StorageInstanceTreeNode reindexStorage(final StorageInstance storageInstance) {
-    DefaultTreeModel model = (DefaultTreeModel) getModel();
+    DefaultTreeModel model = model();
     final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
     final int idx = indexOfStorageIndex(storageInstance, root);
     final int pos;
@@ -83,7 +83,7 @@ public class StorageTree extends JTree implements Scrollable, Accessible {
   }
   
   public void removeStorage(final StorageInstance storageInstance) {
-    DefaultTreeModel model = (DefaultTreeModel) getModel();
+    DefaultTreeModel model = model();
     final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
     final int idx = indexOfStorageIndex(storageInstance, root);
     if (idx < 0) {

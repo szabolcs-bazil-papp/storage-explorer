@@ -17,21 +17,17 @@ package hu.aestallon.storageexplorer.ui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import java.io.File;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
-import javax.swing.filechooser.FileSystemView;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
-import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.Availability;
-import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceDto;
-import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceType;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.ui.dialog.GraphSettingsDialog;
-import hu.aestallon.storageexplorer.ui.dialog.ImportStorageDialog;
+import hu.aestallon.storageexplorer.ui.dialog.importstorage.ImportStorageController;
+import hu.aestallon.storageexplorer.ui.dialog.importstorage.ImportStorageDialog;
 import hu.aestallon.storageexplorer.ui.dialog.SearchForEntryDialog;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 
@@ -129,9 +125,8 @@ public class AppFrame extends JFrame {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      final ImportStorageDialog dialog = new ImportStorageDialog(new StorageInstanceDto(),
-          (before, after) -> CompletableFuture.runAsync(
-              () -> storageIndexProvider.importAndIndex(StorageInstance.fromDto(after))));
+      final ImportStorageDialog dialog = new ImportStorageDialog(
+          ImportStorageController.forCreatingNew(storageIndexProvider));
       dialog.pack();
       dialog.setLocationRelativeTo(AppFrame.this);
       dialog.setVisible(true);

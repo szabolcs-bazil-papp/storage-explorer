@@ -18,7 +18,6 @@ package hu.aestallon.storageexplorer.ui.tree;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,12 +36,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
-import hu.aestallon.storageexplorer.ui.AppFrame;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
-import hu.aestallon.storageexplorer.ui.dialog.ImportStorageDialog;
+import hu.aestallon.storageexplorer.ui.dialog.importstorage.ImportStorageController;
+import hu.aestallon.storageexplorer.ui.dialog.importstorage.ImportStorageDialog;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageTree;
 import hu.aestallon.storageexplorer.ui.tree.model.node.ClickableTreeNode;
@@ -53,6 +51,7 @@ import hu.aestallon.storageexplorer.util.Pair;
 public class MainTreeView extends JPanel {
 
   private static final Logger log = LoggerFactory.getLogger(MainTreeView.class);
+  private final ViewController viewController;
   private StorageTree tree;
   private JScrollPane treePanel;
   private JProgressBar progressBar;
@@ -66,7 +65,7 @@ public class MainTreeView extends JPanel {
 
   public MainTreeView(ApplicationEventPublisher eventPublisher,
                       StorageIndexProvider storageIndexProvider,
-                      UserConfigService userConfigService) {
+                      UserConfigService userConfigService, ViewController viewController) {
     this.eventPublisher = eventPublisher;
     this.storageIndexProvider = storageIndexProvider;
 
@@ -77,6 +76,7 @@ public class MainTreeView extends JPanel {
     treePanel = new JScrollPane(tree);
     add(treePanel);
     this.userConfigService = userConfigService;
+    this.viewController = viewController;
   }
 
   private void initTree() {
@@ -210,16 +210,14 @@ public class MainTreeView extends JPanel {
     private JMenuItem createEditMenuItem(StorageInstanceTreeNode sitn) {
       final var edit = new JMenuItem("Edit connection...", IconProvider.EDIT);
       edit.addActionListener(e -> {
-        final ImportStorageDialog dialog = new ImportStorageDialog(
-            sitn.storageInstance().toDto(),
-            (before, after) -> {
-              if(!Objects.equals(before.getName(), after.getName())) {
-                userConfigService.updateStorageLocation(after);
-                sitn.storageInstance().setName(after.getName());
-                sitn.setUserObject(after.getName());
-                ((DefaultTreeModel) tree.getModel()).nodeChanged(sitn);
-              }
+        final var controller = ImportStorageController.forUpdating(
+            sitn.storageInstance(),
+            userConfigService,
+            after -> {
+              sitn.setUserObject(after.getName());
+              tree.model().nodeChanged(sitn);
             });
+        final ImportStorageDialog dialog = new ImportStorageDialog(controller);
         dialog.pack();
         dialog.setLocationRelativeTo(MainTreeView.this);
         dialog.setVisible(true);
