@@ -210,6 +210,7 @@ public class MainTreeView extends JPanel {
         final var controller = ImportStorageController.forUpdating(
             sitn.storageInstance(),
             userConfigService,
+            storageIndexProvider,
             after -> {
               sitn.setUserObject(after.getName());
               tree.model().nodeChanged(sitn);
