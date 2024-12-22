@@ -16,6 +16,7 @@
 package hu.aestallon.storageexplorer.domain.storage.service;
 
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
+import hu.aestallon.storageexplorer.util.Pair;
 import static java.util.stream.Collectors.groupingBy;
 import java.io.IOException;
 import java.net.URI;
@@ -64,13 +65,21 @@ public abstract class StorageIndex {
     this.cache = new HashMap<>();
   }
 
-  abstract void refresh();
-  
+ public void refresh(IndexingStrategy strategy) {
+    clear();
+    if (!strategy.fetchEntries()) {
+      return;
+    }
+    cache.putAll(strategy.processEntries(
+        fetchEntries(),
+        uri -> StorageEntry.create(storageId, uri, objectApi, collectionApi)));
+  }
+
   void clear() {
     cache.clear();
   }
 
-
+  protected abstract Stream<URI> fetchEntries();
 
   public Stream<StorageEntry> entities() {
     return cache.values().stream();
