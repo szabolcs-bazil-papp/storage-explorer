@@ -34,11 +34,15 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.IndexingStrategyType;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
+import hu.aestallon.storageexplorer.ui.AppFrame;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.dialog.importstorage.ImportStorageController;
 import hu.aestallon.storageexplorer.ui.dialog.importstorage.ImportStorageDialog;
+import hu.aestallon.storageexplorer.ui.dialog.loadentry.LoadEntryController;
+import hu.aestallon.storageexplorer.ui.dialog.loadentry.LoadEntryDialog;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageTree;
 import hu.aestallon.storageexplorer.ui.tree.model.node.ClickableTreeNode;
@@ -189,6 +193,19 @@ public class MainTreeView extends JPanel {
 
       final var edit = createEditMenuItem(sitn);
       add(edit);
+      
+      if (IndexingStrategyType.ON_DEMAND == sitn.storageInstance().indexingStrategy()) {
+        final var loadEntry = new JMenuItem("Load entry...", IconProvider.DATA_TRANSFER);
+        loadEntry.addActionListener(e -> {
+          final var dialog = LoadEntryController.newDialog(sitn.storageInstance());
+          dialog.setLocationRelativeTo(MainTreeView.this);
+          dialog.pack();
+          dialog.setVisible(true);
+        });
+        loadEntry.setToolTipText("Provide an exact URI and manually load a sub-graph around it.");
+        add(loadEntry);
+      }
+      
       
       final var reindex = new JMenuItem("Reload", IconProvider.REFRESH);
       reindex.addActionListener(e -> storageIndexProvider.reindex(sitn.storageInstance()));
