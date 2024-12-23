@@ -5,7 +5,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceDto;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.ui.controller.AbstractDialogController;
