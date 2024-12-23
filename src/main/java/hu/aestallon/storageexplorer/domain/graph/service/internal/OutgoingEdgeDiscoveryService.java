@@ -52,7 +52,7 @@ public class OutgoingEdgeDiscoveryService {
                                                                                  GraphContainmentPredicate condition) {
     return storageEntry.uriProperties().stream()
         // TODO: here we should "batch create" the missing URIs
-        .map(it -> Pair.of(storageInstance.index().get(it.uri), it))
+        .map(it -> Pair.of(storageInstance.discover(it.uri), it))
         .flatMap(Pair.streamOnA())
         .filter(it -> condition.test(graph, it.a()))
         .filter(it -> NodeAdditionService.edgeMissing(graph, storageEntry, it.a()))

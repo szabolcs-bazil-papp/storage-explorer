@@ -113,6 +113,10 @@ public abstract class StorageIndex {
 
     return EntryAcquisitionResult.ofPresent(storageEntry);
   }
+  
+  public void accept(final URI uri, StorageEntry entry) {
+    cache.put(uri, entry);
+  }
 
   public Stream<StorageEntry> searchForUri(final String queryString) {
     if (Strings.isNullOrEmpty(queryString)) {

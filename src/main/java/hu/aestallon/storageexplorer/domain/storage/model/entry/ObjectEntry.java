@@ -108,6 +108,7 @@ public class ObjectEntry implements StorageEntry {
 
   @Override
   public void refresh() {
+    log.info("Individual refresh on node: {}", uri);
     final var objectNode = load();
     refresh(objectNode);
   }

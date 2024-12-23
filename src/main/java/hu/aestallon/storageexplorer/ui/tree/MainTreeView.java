@@ -27,11 +27,13 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.IndexingStrategyType;
@@ -53,7 +55,7 @@ import hu.aestallon.storageexplorer.util.Pair;
 public class MainTreeView extends JPanel {
 
   private static final Logger log = LoggerFactory.getLogger(MainTreeView.class);
-  
+
   private StorageTree tree;
   private JScrollPane treePanel;
   private JProgressBar progressBar;
@@ -110,6 +112,20 @@ public class MainTreeView extends JPanel {
     });
 
     treePathByEntry = new HashMap<>();
+  }
+
+  public void incorporateEntryIntoTree(final StorageInstance storageInstance,
+                                       final StorageEntry storageEntry) {
+    if (!(storageEntry instanceof ObjectEntry)) {
+      log.warn("Cannot yet incorporate new entry of type: {} (Storage Entry was: {})",
+          storageEntry.getClass(),
+          storageEntry);
+      return;
+    }
+    final ClickableTreeNode node = tree.incorporateObjectEntry(
+        storageInstance,
+        (ObjectEntry) storageEntry);
+    memoizeTreePathsOf(tree.nodeOf(storageInstance));
   }
 
   public void importStorage(final StorageInstance storageInstance) {
@@ -193,7 +209,7 @@ public class MainTreeView extends JPanel {
 
       final var edit = createEditMenuItem(sitn);
       add(edit);
-      
+
       if (IndexingStrategyType.ON_DEMAND == sitn.storageInstance().indexingStrategy()) {
         final var loadEntry = new JMenuItem("Load entry...", IconProvider.DATA_TRANSFER);
         loadEntry.addActionListener(e -> {
@@ -205,8 +221,8 @@ public class MainTreeView extends JPanel {
         loadEntry.setToolTipText("Provide an exact URI and manually load a sub-graph around it.");
         add(loadEntry);
       }
-      
-      
+
+
       final var reindex = new JMenuItem("Reload", IconProvider.REFRESH);
       reindex.addActionListener(e -> storageIndexProvider.reindex(sitn.storageInstance()));
       reindex.setToolTipText(

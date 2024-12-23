@@ -20,6 +20,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageIns
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceType;
 import hu.aestallon.storageexplorer.domain.storage.service.IndexingStrategy;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
+import hu.aestallon.storageexplorer.ui.controller.ViewController;
 
 public final class StorageInstance {
 
@@ -78,11 +79,11 @@ public final class StorageInstance {
   public StorageInstanceType type() {
     return location instanceof FsStorageLocation ? StorageInstanceType.FS : StorageInstanceType.DB;
   }
-  
+
   public IndexingStrategyType indexingStrategy() {
     return indexingStrategy.type();
   }
-  
+
   public void setIndexingStrategy(IndexingStrategyType type) {
     this.indexingStrategy = IndexingStrategy.of(type);
   }
@@ -103,22 +104,68 @@ public final class StorageInstance {
 
     index.refresh(indexingStrategy);
   }
-  
+
   public void validate(final Collection<? extends StorageEntry> entries) {
     index.revalidate(entries);
   }
-  
+
+  /**
+   * User code should call this.
+   *
+   * <p>
+   * For programmatic acquisition, use {@link #discover(URI)}.
+   *
+   * @param uri the {@code URI} of the entry to acquire
+   *
+   * @return an {@link Optional} containing the entry if it was reachable, an empty {@code Optional}
+   *     otherwise
+   */
   public Optional<StorageEntry> acquire(final URI uri) {
     final StorageIndex.EntryAcquisitionResult result = index.getOrCreate(uri);
     switch (result.kind()) {
       case FAIL:
+        eventPublisher.publishEvent(new ViewController.EntryAcquisitionFailed(this, uri));
         return Optional.empty();
       case PRESENT:
         return Optional.of(result.entry());
       case NEW:
+        final var entry = result.entry();
+        try {
+          // we must refresh the requested entry right away:
+          // - the programme requested acquisition for future load anyway
+          // - there is literally no other way to validate if a given URI is present in a Storage
+          //   apart from attempting to load it...
+          entry.refresh();
+        } catch (final Exception e) {
+          log.error(e.getMessage(), e);
+          eventPublisher.publishEvent(new ViewController.EntryAcquisitionFailed(this, uri));
+          return Optional.empty();
+        }
+
+        index.accept(uri, entry);
+        eventPublisher.publishEvent(new ViewController.EntryAcquired(this, entry));
+        return Optional.of(entry);
+      default:
+        throw new AssertionError("Unsupported acquisition kind: " + result.kind());
+    }
+  }
+
+  public Optional<StorageEntry> discover(final URI uri) {
+    final StorageIndex.EntryAcquisitionResult result = index.getOrCreate(uri);
+    switch (result.kind()) {
+      case FAIL:
+        eventPublisher.publishEvent(new ViewController.EntryAcquisitionFailed(this, uri));
+        return Optional.empty();
+      case PRESENT:
         return Optional.of(result.entry());
-        default:
-          throw new AssertionError("Unsupported acquisition kind: " + result.kind());
+      case NEW:
+        final var entry = result.entry();
+        // discovery is expected to be programmatic -> we trust the URI is valid.
+        index.accept(uri, entry);
+        eventPublisher.publishEvent(new ViewController.EntryDiscovered(this, entry));
+        return Optional.of(entry);
+      default:
+        throw new AssertionError("Unsupported acquisition kind: " + result.kind());
     }
   }
 
@@ -158,7 +205,7 @@ public final class StorageInstance {
         .fs(location instanceof FsStorageLocation ? (FsStorageLocation) location : null)
         .db(location instanceof SqlStorageLocation ? (SqlStorageLocation) location : null);
   }
-  
+
   public void setEventPublisher(final ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
   }

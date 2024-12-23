@@ -24,7 +24,7 @@ import static java.util.stream.Collectors.toList;
 
 public final class StorageSchemaTreeNode extends DefaultMutableTreeNode {
 
-  StorageSchemaTreeNode(String name, List<ObjectEntry> objectEntries) {
+  public StorageSchemaTreeNode(String name, List<ObjectEntry> objectEntries) {
     super(name, true);
     objectEntries.stream()
         .collect(groupingBy(ObjectEntry::typeName, TreeMap::new, toList()))

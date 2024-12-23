@@ -15,13 +15,14 @@
 
 package hu.aestallon.storageexplorer.ui.controller;
 
-import java.nio.file.Path;
+import java.net.URI;
 import javax.swing.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.ui.ExplorerView;
 import hu.aestallon.storageexplorer.ui.GraphView;
 import hu.aestallon.storageexplorer.ui.tree.MainTreeView;
@@ -29,6 +30,9 @@ import hu.aestallon.storageexplorer.ui.tree.model.node.ClickableTreeNode;
 
 @Service
 public class ViewController {
+
+  private static final Logger log = LoggerFactory.getLogger(ViewController.class);
+
 
   public static final class EntryInspectionEvent {
     private final StorageEntry storageEntry;
@@ -220,16 +224,16 @@ public class ViewController {
       mainTreeView.removeStorageNodeOf(e.storageInstance);
     });
   }
-  
+
   public static final class StorageReimportedEvent {
     public final StorageInstance storageInstance;
-    
+
     public StorageReimportedEvent(StorageInstance storageInstance) {
       this.storageInstance = storageInstance;
     }
 
   }
-  
+
   @EventListener
   public void onStorageReimported(StorageReimportedEvent e) {
     SwingUtilities.invokeLater(() -> {
@@ -238,6 +242,63 @@ public class ViewController {
       }
       explorerView.inspectorContainerView().discardInspectorViewOfStorageAt(e.storageInstance);
     });
+  }
+
+  public static final class EntryAcquired {
+    final StorageInstance storageInstance;
+    final StorageEntry storageEntry;
+
+    public EntryAcquired(StorageInstance storageInstance, StorageEntry storageEntry) {
+      this.storageInstance = storageInstance;
+      this.storageEntry = storageEntry;
+    }
+  }
+
+  @EventListener
+  public void onEntryAcquired(EntryAcquired e) {
+    SwingUtilities.invokeLater(() -> {
+      log.info("Entry acquired: {}", e.storageEntry);
+      mainTreeView.incorporateEntryIntoTree(
+          e.storageInstance,
+          e.storageEntry);
+      log.info("Selecting entry: {}", e.storageEntry);  
+      mainTreeView.selectEntry(e.storageEntry);
+    });
+  }
+
+  public static final class EntryAcquisitionFailed {
+    final StorageInstance storageInstance;
+    final URI uri;
+
+    public EntryAcquisitionFailed(StorageInstance storageInstance, URI uri) {
+      this.storageInstance = storageInstance;
+      this.uri = uri;
+    }
+
+  }
+
+  @EventListener
+  public void onEntryAcquisitionFailed(EntryAcquisitionFailed e) {
+    SwingUtilities.invokeLater(() -> {
+      System.out.println("Failed: " + e.storageInstance + " >>> " + e.uri);
+    });
+  }
+
+  public static final class EntryDiscovered {
+    final StorageInstance storageInstance;
+    final StorageEntry storageEntry;
+
+    public EntryDiscovered(StorageInstance storageInstance, StorageEntry storageEntry) {
+      this.storageInstance = storageInstance;
+      this.storageEntry = storageEntry;
+    }
+  }
+
+  @EventListener
+  public void onEntryDiscovered(EntryDiscovered e) {
+    SwingUtilities.invokeLater(() -> mainTreeView.incorporateEntryIntoTree(
+        e.storageInstance,
+        e.storageEntry));
   }
 
 }
