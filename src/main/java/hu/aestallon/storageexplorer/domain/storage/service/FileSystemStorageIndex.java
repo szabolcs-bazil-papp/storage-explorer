@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntryFactory;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.IO;
 
@@ -94,12 +95,19 @@ public final class FileSystemStorageIndex extends StorageIndex {
     final BlockingQueue<URI> queue = new LinkedBlockingQueue<>();
     final StorageFileVisitor visitor = new StorageFileVisitor(pathToStorage, queue);
     try {
-      Files.walkFileTree(pathToStorage, EnumSet.noneOf(FileVisitOption.class), 8, visitor);
+      Files.walkFileTree(pathToStorage, EnumSet.noneOf(FileVisitOption.class), 20, visitor);
     } catch (IOException e) {
       log.error(e.getMessage(), e);
     }
 
     return queue.stream();
+  }
+
+  @Override
+  protected StorageEntryFactory storageEntryFactory() {
+    return StorageEntryFactory.builder(storageId, objectApi, collectionApi)
+        .pathToStorage(pathToStorage)
+        .build();
   }
   // -----------------------------------------------------------------------------------------------
   // File system watching stuff. Copied here for later removal. All StorageIndices shall start and
@@ -122,9 +130,7 @@ public final class FileSystemStorageIndex extends StorageIndex {
         })
         .onCreated(it -> {
           final URI uri = IO.pathToUri(pathToStorage.relativize(it));
-          StorageEntry
-              .create(storageId, uri, objectApi, collectionApi)
-              .ifPresent(e -> cache.put(uri, e));
+          storageEntryFactory.create(uri).ifPresent(e -> cache.put(uri, e));
         })
         .build()
         .ifPresent(it -> {

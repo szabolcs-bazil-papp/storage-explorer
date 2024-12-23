@@ -18,6 +18,7 @@ package hu.aestallon.storageexplorer.ui.inspector;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import javax.swing.*;
@@ -56,9 +57,17 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       }
 
       try {
-        //  Desktop.getDesktop().open(objectEntry.path().getParent().toFile());
-        throw new NotImplementedException("Cannot open storage entry location!");
-      } catch (NotImplementedException ex) {
+        final Path path = objectEntry.path();
+        if (path != null) {
+          Desktop.getDesktop().open(path.getParent().toFile());
+        } else {
+          JOptionPane.showMessageDialog(
+              ObjectEntryInspectorView.this,
+              "This entry location is not available on the file system.",
+              "Info",
+              JOptionPane.INFORMATION_MESSAGE);
+        }
+      } catch (final Exception ex) {
         log.warn("Could not open [ {} ] in system explorer!", objectEntry.uri());
         log.debug(ex.getMessage(), ex);
         JOptionPane.showMessageDialog(

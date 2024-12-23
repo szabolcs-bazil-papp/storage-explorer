@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectApi;
@@ -163,13 +164,22 @@ public class ObjectEntry implements StorageEntry {
   public String typeName() {
     return typeName;
   }
+  
+  public @Nullable Path path() {
+    return path;
+  }
 
   public ObjectNode load() {
-    if (Uris.isSingleVersion(uri)) {
+    if (Uris.isSingleVersion(uri) && path != null) {
       // We have to do this...
       return tryDeserialise().map(it -> objectApi.create(null, it)).orElse(null);
     }
-    return objectApi.loadLatest(uri);
+    try {
+      return objectApi.loadLatest(uri);
+    } catch (final Exception e) {
+      log.error(e.getMessage(), e);
+      return null;
+    }
   }
 
   private Optional<Map<? , ?>> tryDeserialise() {

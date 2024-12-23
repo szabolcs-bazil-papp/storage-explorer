@@ -15,6 +15,7 @@
 
 package hu.aestallon.storageexplorer.domain.storage.service;
 
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntryFactory;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
@@ -47,6 +48,7 @@ public abstract class StorageIndex {
   protected final ObjectApi objectApi;
   protected final CollectionApi collectionApi;
   protected final Map<URI, StorageEntry> cache;
+  protected StorageEntryFactory storageEntryFactory;
 
   protected StorageIndex(StorageId storageId,
                          ObjectApi objectApi,
@@ -62,9 +64,8 @@ public abstract class StorageIndex {
     if (!strategy.fetchEntries()) {
       return;
     }
-    cache.putAll(strategy.processEntries(
-        fetchEntries(),
-        uri -> StorageEntry.create(storageId, uri, objectApi, collectionApi)));
+    ensureStorageEntryFactory();
+    cache.putAll(strategy.processEntries(fetchEntries(), storageEntryFactory::create));
   }
 
   void clear() {
@@ -95,6 +96,14 @@ public abstract class StorageIndex {
 
   protected abstract Stream<URI> fetchEntries();
 
+  protected abstract StorageEntryFactory storageEntryFactory();
+  
+  protected final void ensureStorageEntryFactory() {
+    if (storageEntryFactory == null) {
+      this.storageEntryFactory = storageEntryFactory();
+    }
+  }
+
   public Stream<StorageEntry> entities() {
     return cache.values().stream();
   }
@@ -106,14 +115,15 @@ public abstract class StorageIndex {
   public EntryAcquisitionResult getOrCreate(final URI uri) {
     StorageEntry storageEntry = cache.get(uri);
     if (storageEntry == null) {
-      return StorageEntry.create(storageId, uri, objectApi, collectionApi)
+      ensureStorageEntryFactory();
+      return storageEntryFactory.create(uri)
           .map(EntryAcquisitionResult::ofNew)
           .orElseGet(EntryAcquisitionResult::ofFail);
     }
 
     return EntryAcquisitionResult.ofPresent(storageEntry);
   }
-  
+
   public void accept(final URI uri, StorageEntry entry) {
     cache.put(uri, entry);
   }
