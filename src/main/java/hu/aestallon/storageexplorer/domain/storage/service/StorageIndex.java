@@ -16,27 +16,15 @@
 package hu.aestallon.storageexplorer.domain.storage.service;
 
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
-import hu.aestallon.storageexplorer.util.Pair;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
-import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileVisitOption;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -48,9 +36,7 @@ import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
 import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
-import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
-import hu.aestallon.storageexplorer.util.IO;
 import static java.util.stream.Collectors.toList;
 
 public abstract class StorageIndex {
@@ -117,6 +103,17 @@ public abstract class StorageIndex {
     return Optional.ofNullable(cache.get(uri));
   }
 
+  public EntryAcquisitionResult getOrCreate(final URI uri) {
+    StorageEntry storageEntry = cache.get(uri);
+    if (storageEntry == null) {
+      return StorageEntry.create(storageId, uri, objectApi, collectionApi)
+          .map(EntryAcquisitionResult::ofNew)
+          .orElseGet(EntryAcquisitionResult::ofFail);
+    }
+
+    return EntryAcquisitionResult.ofPresent(storageEntry);
+  }
+
   public Stream<StorageEntry> searchForUri(final String queryString) {
     if (Strings.isNullOrEmpty(queryString)) {
       return Stream.empty();
@@ -158,6 +155,41 @@ public abstract class StorageIndex {
     }
     sb.append(".*");
     return sb.toString();
+  }
+
+  public enum AcquisitionKind { NEW, PRESENT, FAIL }
+
+
+  public static final class EntryAcquisitionResult {
+
+    private static EntryAcquisitionResult ofNew(final StorageEntry entry) {
+      return new EntryAcquisitionResult(entry, AcquisitionKind.NEW);
+    }
+
+    private static EntryAcquisitionResult ofPresent(final StorageEntry entry) {
+      return new EntryAcquisitionResult(entry, AcquisitionKind.PRESENT);
+    }
+
+    private static EntryAcquisitionResult ofFail() {
+      return new EntryAcquisitionResult(null, AcquisitionKind.FAIL);
+    }
+
+    private final StorageEntry entry;
+    private final AcquisitionKind kind;
+
+    private EntryAcquisitionResult(final StorageEntry entry, final AcquisitionKind kind) {
+      this.entry = entry;
+      this.kind = kind;
+    }
+
+    public StorageEntry entry() {
+      return entry;
+    }
+
+    public AcquisitionKind kind() {
+      return kind;
+    }
+
   }
 
 }
