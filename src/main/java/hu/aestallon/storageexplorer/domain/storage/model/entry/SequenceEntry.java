@@ -93,6 +93,10 @@ public class SequenceEntry implements StorageEntry {
     return valid;
   }
 
+  public String displayName() {
+    return schema + " / " + name;
+  }
+
   @Override
   public String toString() {
     return "SEQ (" + schema + "/" + name + ")";

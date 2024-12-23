@@ -15,14 +15,17 @@
 
 package hu.aestallon.storageexplorer.domain.storage.service;
 
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntryFactory;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -97,7 +100,7 @@ public abstract class StorageIndex {
   protected abstract Stream<URI> fetchEntries();
 
   protected abstract StorageEntryFactory storageEntryFactory();
-  
+
   protected final void ensureStorageEntryFactory() {
     if (storageEntryFactory == null) {
       this.storageEntryFactory = storageEntryFactory();
@@ -126,6 +129,27 @@ public abstract class StorageIndex {
 
   public void accept(final URI uri, StorageEntry entry) {
     cache.put(uri, entry);
+    if (entry instanceof ObjectEntry && !(entry instanceof ScopedEntry)) {
+      // here becomes obvious that a more sophisticated cache is in dire need -> this is not
+      // only a repetition but woefully slow...
+      final var objectEntry = (ObjectEntry) entry;
+      final Map<String, List<ScopedEntry>> knownScopedEntries = cache.values().stream()
+          .filter(ScopedEntry.class::isInstance)
+          .map(ScopedEntry.class::cast)
+          .collect(groupingBy(e -> e.scope().getPath()));
+      knownScopedEntries
+          .getOrDefault(objectEntry.uri().getPath(), new ArrayList<>())
+          .forEach(objectEntry::addScopedEntry);
+    }
+
+    if (entry instanceof ScopedEntry) {
+      final var scopedEntry = (ScopedEntry) entry;
+      cache.values().stream()
+          .filter(ObjectEntry.class::isInstance)
+          .map(ObjectEntry.class::cast)
+          .filter(it -> it.uri().getPath().equals(scopedEntry.scope().getPath()))
+          .forEach(it -> it.addScopedEntry(scopedEntry));
+    }
   }
 
   public Stream<StorageEntry> searchForUri(final String queryString) {

@@ -28,7 +28,7 @@ public class StorageSequenceTreeNode extends DefaultMutableTreeNode implements C
   @Override
   public String toString() {
     final var sequenceEntry = (SequenceEntry) userObject;
-    return sequenceEntry.schema() + " / " + sequenceEntry.name();
+    return sequenceEntry.displayName();
   }
   
 }

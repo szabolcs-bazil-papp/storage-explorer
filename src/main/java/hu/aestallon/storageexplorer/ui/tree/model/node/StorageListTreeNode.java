@@ -44,7 +44,7 @@ public class StorageListTreeNode extends DefaultMutableTreeNode implements Click
   @Override
   public String toString() {
     final var listEntry = (ListEntry) userObject;
-    return listEntry.schema() + " / " + listEntry.name();
+    return listEntry.displayName();
   }
 
 }

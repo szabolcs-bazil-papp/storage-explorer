@@ -72,7 +72,7 @@ public class MapEntry implements StorageEntry {
     if (!valid) {
       refresh();
     }
-    
+
     return uriProperties;
   }
 
@@ -87,6 +87,10 @@ public class MapEntry implements StorageEntry {
   @Override
   public boolean valid() {
     return valid;
+  }
+
+  public String displayName() {
+    return schema + " / " + name;
   }
 
   @Override

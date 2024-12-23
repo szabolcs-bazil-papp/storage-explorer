@@ -43,7 +43,7 @@ public class StorageMapTreeNode extends DefaultMutableTreeNode implements Clicka
   @Override
   public String toString() {
     final var mapEntry = (MapEntry) userObject;
-    return mapEntry.schema() + " / " + mapEntry.name();
+    return mapEntry.displayName();
   }
 
 }

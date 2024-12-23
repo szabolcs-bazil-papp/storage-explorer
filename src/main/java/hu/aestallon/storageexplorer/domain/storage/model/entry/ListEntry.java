@@ -102,6 +102,10 @@ public class ListEntry implements StorageEntry {
     ListEntry listEntry = (ListEntry) o;
     return Uris.equalIgnoringVersion(uri, listEntry.uri);
   }
+  
+  public String displayName() {
+    return schema + " / " + name;
+  }
 
   @Override
   public int hashCode() {

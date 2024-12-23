@@ -11,10 +11,15 @@ import javax.swing.tree.DefaultTreeSelectionModel;
 import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreeSelectionModel;
+import org.apache.tomcat.util.modeler.modules.ModelerSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.datasource.ConnectionHolder;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ListEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.MapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.SequenceEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.DatabaseVendor;
@@ -29,6 +34,7 @@ import hu.aestallon.storageexplorer.ui.tree.model.node.StorageObjectTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.node.StorageSchemaTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.node.StorageSequenceTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.node.StorageTypeTreeNode;
+import static hu.aestallon.storageexplorer.util.Streams.enumerationToStream;
 
 public class StorageTree extends JTree implements Scrollable, Accessible {
 
@@ -78,6 +84,7 @@ public class StorageTree extends JTree implements Scrollable, Accessible {
     final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
     final int idx = indexOfStorageIndex(storageInstance, root);
     if (idx < 0) {
+      log.warn("Could not find storage instance node for {}", storageInstance);
       return null;
     }
 
@@ -116,14 +123,11 @@ public class StorageTree extends JTree implements Scrollable, Accessible {
   public ClickableTreeNode incorporateObjectEntry(final StorageInstance storageInstance,
                                                   final ObjectEntry objectEntry) {
     final var model = model();
-    final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
-    final int idx = indexOfStorageIndex(storageInstance, root);
-    if (idx < 0) {
-      log.warn("Could not find storage instance node for {}", storageInstance);
+    final StorageInstanceTreeNode sitn = nodeOf(storageInstance);
+    if (sitn == null) {
       return null;
     }
 
-    final StorageInstanceTreeNode sitn = (StorageInstanceTreeNode) root.getChildAt(idx);
     StorageSchemaTreeNode schemaNode = null;
     for (int i = 0; i < sitn.getChildCount(); i++) {
       final var child = (DefaultMutableTreeNode) sitn.getChildAt(i);
@@ -183,9 +187,121 @@ public class StorageTree extends JTree implements Scrollable, Accessible {
       return (StorageObjectTreeNode) schemaNode.getChildAt(typeIdx).getChildAt(0);
     }
 
+    final boolean alreadyPresent = enumerationToStream(typeNode.children()).anyMatch(
+        it -> Objects.equals(it.toString(), objectEntry.uuid()));
+    if (alreadyPresent) {
+      return null;
+    }
+
     final StorageObjectTreeNode objectTreeNode = new StorageObjectTreeNode(objectEntry);
-    model.insertNodeInto(objectTreeNode, typeNode, typeIdx);
+    model.insertNodeInto(objectTreeNode, typeNode, typeNode.getChildCount());
     return objectTreeNode;
+  }
+
+  public ClickableTreeNode incorporateListEntry(final StorageInstance storageInstance,
+                                                final ListEntry listEntry) {
+    final var model = model();
+    final StorageInstanceTreeNode sitn = nodeOf(storageInstance);
+    if (sitn == null) {
+      return null;
+    }
+
+    int idx = 0;
+    for (int i = 0; i < sitn.getChildCount(); i++) {
+      final var child = (DefaultMutableTreeNode) sitn.getChildAt(i);
+      if (!(child instanceof StorageListTreeNode)) {
+        break;
+      }
+
+      final var listNodeChild = (StorageListTreeNode) child;
+      if (listNodeChild.toString().equals(listEntry.displayName())) {
+        return null;
+      }
+
+      if (listNodeChild.toString().compareTo(listEntry.displayName()) > 0) {
+        idx = i + 1;
+        break;
+      }
+
+    }
+
+    final StorageListTreeNode node = new StorageListTreeNode(listEntry);
+    model.insertNodeInto(node, sitn, idx);
+    return node;
+  }
+
+  public ClickableTreeNode incorporateMapEntry(final StorageInstance storageInstance,
+                                               final MapEntry mapEntry) {
+    final var model = model();
+    final StorageInstanceTreeNode sitn = nodeOf(storageInstance);
+    if (sitn == null) {
+      return null;
+    }
+
+    int idx = 0;
+    for (int i = 0; i < sitn.getChildCount(); i++) {
+      final var child = (DefaultMutableTreeNode) sitn.getChildAt(i);
+      if (child instanceof StorageListTreeNode) {
+        idx++;
+        continue;
+      }
+
+      if (!(child instanceof StorageMapTreeNode)) {
+        break;
+      }
+
+      final var mapNodeChild = (StorageMapTreeNode) child;
+      if (mapNodeChild.toString().equals(mapEntry.displayName())) {
+        return null;
+      }
+
+      if (mapNodeChild.toString().compareTo(mapEntry.displayName()) > 0) {
+        idx = i + 1;
+        break;
+      }
+
+    }
+
+    final var node = new StorageMapTreeNode(mapEntry);
+    model.insertNodeInto(node, sitn, idx);
+    return node;
+  }
+
+  public ClickableTreeNode incorporateSequenceEntry(final StorageInstance storageInstance,
+                                                    final SequenceEntry sequenceEntry) {
+    final var model = model();
+    final StorageInstanceTreeNode sitn = nodeOf(storageInstance);
+    if (sitn == null) {
+      return null;
+    }
+
+    int idx = 0;
+    for (int i = 0; i < sitn.getChildCount(); i++) {
+      final var child = (DefaultMutableTreeNode) sitn.getChildAt(i);
+      if (child instanceof StorageListTreeNode || child instanceof StorageMapTreeNode) {
+        idx++;
+        continue;
+      }
+
+      if (!(child instanceof StorageSequenceTreeNode)) {
+        break;
+      }
+
+      final var seqNodeChild = (StorageSequenceTreeNode) child;
+      if (seqNodeChild.toString().equals(sequenceEntry.displayName())) {
+        return null;
+      }
+
+      if (seqNodeChild.toString().compareTo(sequenceEntry.displayName()) > 0) {
+        idx = i + 1;
+        break;
+      }
+
+    }
+
+    final var node = new StorageSequenceTreeNode(sequenceEntry);
+    model.insertNodeInto(node, sitn, idx);
+    return node;
   }
 
   private static final class StorageTreeNodeRenderer extends DefaultTreeCellRenderer {

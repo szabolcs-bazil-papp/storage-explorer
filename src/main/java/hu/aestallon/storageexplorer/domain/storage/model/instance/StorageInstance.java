@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.utility.StringConstant;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.Assert;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.Availability;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
@@ -143,6 +144,29 @@ public final class StorageInstance {
         }
 
         index.accept(uri, entry);
+        // >>> IMPORTANT! <<<
+        // Sadly we can't do the following, for a ScopedEntry's scope is not actually the host node
+        // (the schema belongs to the ScopedEntry itself...). Thus, we may do something else: notify 
+        // both the StorageIndex and the broader universe (the UI) that a ScopedEntry has been 
+        // discovered/acquired! But, we do not need to actually carry that out: ScopedEntries cannot
+        // be discovered automatically, only acquired through user action (because no sane Storage
+        // structure would persist a scoped entry's URI in an actual entry (!!)) -> we can only
+        // discover scoped entries through acquisition, and that path has been taken care of.
+        // 
+        // Sadly, as a side effect, the user must supply BOTH the host and scoped URIs for the 
+        // scoped entry to actually show up in the application, but that is a rendering issue, our
+        // job here is done.
+        //        if (entry instanceof ScopedEntry) {
+        //          // Scoped entries are useless without their host, we plainly discover that:
+        //          final var scopedEntry = (ScopedEntry) entry;
+        //          final var host =
+        //              discover(scopedEntry.scope()); // --- then this discovery binds to the host, for we added it to the index earlier
+        //          if (host.isEmpty()) {
+        //            // no point acquiring at this point sadly...
+        //            eventPublisher.publishEvent(new ViewController.EntryAcquisitionFailed(this, uri));
+        //            return Optional.empty();
+        //          }
+        //        }
         eventPublisher.publishEvent(new ViewController.EntryAcquired(this, entry));
         return Optional.of(entry);
       default:
