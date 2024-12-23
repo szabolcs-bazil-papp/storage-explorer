@@ -53,11 +53,11 @@ public class SequenceEntry implements StorageEntry {
   public URI uri() {
     return uri;
   }
-  
+
   public String schema() {
     return schema;
   }
-  
+
   public String name() {
     return name;
   }
@@ -71,21 +71,30 @@ public class SequenceEntry implements StorageEntry {
     if (!valid) {
       refresh();
     }
-    
+
     return current;
   }
-  
+
   @Override
   public void refresh() {
     if (name.isEmpty()) {
       log.warn("Cannot refresh sequence '{}' (sequence name is not valid)", uri);
       return;
     }
-    
+
     final StoredSequence sequence = collectionApi.sequence(schema, name);
     final Long currentBoxed = sequence.current();
     current = (currentBoxed != null) ? currentBoxed : -1L;
     valid = true;
+  }
+
+  @Override
+  public boolean valid() {
+    return valid;
+  }
+
+  public String displayName() {
+    return schema + " / " + name;
   }
 
   @Override

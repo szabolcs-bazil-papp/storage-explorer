@@ -56,4 +56,7 @@ public final class IconProvider {
   public static final ImageIcon DB_PG = new ImageIcon(loadIcon("db_pg"));
   public static final ImageIcon DB_ORA = new ImageIcon(loadIcon("db_ora"));
   public static final ImageIcon DB_H2 = new ImageIcon(loadIcon("db_h2"));
+  public static final ImageIcon DATA_TRANSFER = new ImageIcon(loadIcon("data_transfer"));
+  public static final ImageIcon OK = new ImageIcon(loadIcon("ok"));
+  public static final ImageIcon NOT_OK = new ImageIcon(loadIcon("not_ok"));
 }

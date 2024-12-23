@@ -18,18 +18,19 @@ package hu.aestallon.storageexplorer.domain.graph.service.internal;
 import java.util.stream.Stream;
 import org.graphstream.graph.Graph;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 
 public class IncomingEdgeDiscoveryService {
 
-  private final StorageIndex storageIndex;
+  private final StorageInstance storageInstance;
 
-  public IncomingEdgeDiscoveryService(StorageIndex storageIndex) {
-    this.storageIndex = storageIndex;
+  public IncomingEdgeDiscoveryService(StorageInstance storageInstance) {
+    this.storageInstance = storageInstance;
   }
 
   public Stream<StorageEntry> execute(Graph graph, StorageEntry storageEntry) {
-    return storageIndex.entities()
+    return storageInstance.entities()
         .filter(it -> it.references(storageEntry))
         .filter(it -> NodeAdditionService.edgeMissing(graph, it, storageEntry));
   }

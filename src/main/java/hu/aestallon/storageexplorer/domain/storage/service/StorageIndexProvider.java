@@ -96,6 +96,7 @@ public class StorageIndexProvider {
         .flatMap(it -> it.searchForUri(queryString));
   }
 
+  @Deprecated
   public StorageIndex indexOf(final URI uri) {
     // TODO: don't do this, store backreference!
     return storageInstancesById.values().stream()
@@ -105,9 +106,12 @@ public class StorageIndexProvider {
         .orElseThrow();
   }
 
+  public StorageInstance storageInstanceOf(final StorageEntry storageEntry) {
+    return storageInstancesById.get(storageEntry.storageId());
+  }
+
   public StorageIndex indexOf(final StorageEntry entry) {
-    final StorageInstance storageInstance = storageInstancesById.get(entry.storageId());
-    return storageInstance.index();
+    return storageInstanceOf(entry).index();
   }
 
   public void importAndIndex(final StorageInstance storageInstance) {
@@ -118,11 +122,8 @@ public class StorageIndexProvider {
     final String name = storageInstance.name();
     eventPublisher.publishEvent(
         new ViewController.BackgroundWorkStartedEvent("Importing storage: " + name + "..."));
-    final StorageIndex storageIndex = initialise(storageInstance);
-    if (storageIndex != null) {
-      // TODO: DO NOT RETURN NULL -> Instead handle response correctly!
-      storageIndex.refresh();
-    }
+    initialise(storageInstance);
+    storageInstance.refreshIndex();
 
     userConfigService.addStorageLocation(storageInstance.toDto());
     eventPublisher.publishEvent(new ViewController.StorageImportEvent(storageInstance));
@@ -147,7 +148,9 @@ public class StorageIndexProvider {
     eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
   }
 
-  private StorageIndex initialise(final StorageInstance storageInstance) {
+  private void initialise(final StorageInstance storageInstance) {
+    storageInstance.setEventPublisher(eventPublisher);
+
     final var factory = StorageIndexFactory.of(storageInstance.id());
     final var result = factory.create(storageInstance.location());
     if (result instanceof StorageIndexFactory.StorageIndexCreationResult.Ok) {
@@ -159,14 +162,11 @@ public class StorageIndexProvider {
       storageInstancesById.put(storageInstance.id(), storageInstance);
       contextsByInstance.put(storageInstance, ctx);
 
-      return index;
-
     } else {
       final var err = (StorageIndexFactory.StorageIndexCreationResult.Err) result;
       log.error("Failed to initialise Storage instance [ {} ]: {}",
           storageInstance.name(),
           err.errorMessage());
-      return null;
     }
   }
 
@@ -181,7 +181,7 @@ public class StorageIndexProvider {
       eventPublisher.publishEvent(
           new ViewController.BackgroundWorkStartedEvent(
               "Reindexing storage" + storageInstance.name() + "..."));
-      storageIndex.refresh();
+      storageInstance.refreshIndex();
       eventPublisher.publishEvent(new ViewController.StorageReindexed(storageInstance));
       eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
     });
@@ -203,7 +203,30 @@ public class StorageIndexProvider {
     if (ctx == null) {
       return;
     }
+    tryCloseCtx(ctx, storageInstance);
 
+    userConfigService.removeStorageLocation(storageInstance.toDto());
+  }
+
+  public void reimport(final StorageInstance storageInstance) {
+    executorService.submit(() -> {
+      storageInstance.index().clear();
+
+      final ConfigurableApplicationContext ctx = contextsByInstance.remove(storageInstance);
+      tryCloseCtx(ctx, storageInstance);
+
+      eventPublisher.publishEvent(new ViewController.BackgroundWorkStartedEvent(
+          "Importing storage: " + storageInstance.name() + "..."));
+      initialise(storageInstance);
+      storageInstance.refreshIndex();
+      eventPublisher.publishEvent(new ViewController.StorageReindexed(storageInstance));
+      eventPublisher.publishEvent(new ViewController.StorageReimportedEvent(storageInstance));
+      eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
+    });
+  }
+
+  private void tryCloseCtx(final ConfigurableApplicationContext ctx,
+                           final StorageInstance storageInstance) {
     try {
       ctx.close();
     } catch (Throwable t) {
@@ -211,7 +234,6 @@ public class StorageIndexProvider {
           ctx, storageInstance);
       log.error(t.getMessage(), t);
     }
-    userConfigService.removeStorageLocation(storageInstance.toDto());
   }
 
 }

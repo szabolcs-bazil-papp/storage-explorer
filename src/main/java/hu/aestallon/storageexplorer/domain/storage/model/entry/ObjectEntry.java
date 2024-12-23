@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectApi;
@@ -108,13 +109,18 @@ public class ObjectEntry implements StorageEntry {
 
   @Override
   public void refresh() {
+    log.info("Individual refresh on node: {}", uri);
     final var objectNode = load();
+    refresh(objectNode);
+  }
+  
+  public void refresh(final ObjectNode objectNode) {
     if (objectNode == null) {
       uriProperties = new HashSet<>();
       displayName = "ERROR LOADING";
       return;
     }
-    
+
     uriProperties = initUriProperties(objectNode);
     displayName = initDisplayName(objectNode);
     valid  = true;
@@ -158,13 +164,22 @@ public class ObjectEntry implements StorageEntry {
   public String typeName() {
     return typeName;
   }
+  
+  public @Nullable Path path() {
+    return path;
+  }
 
   public ObjectNode load() {
-    if (Uris.isSingleVersion(uri)) {
+    if (Uris.isSingleVersion(uri) && path != null) {
       // We have to do this...
       return tryDeserialise().map(it -> objectApi.create(null, it)).orElse(null);
     }
-    return objectApi.loadLatest(uri);
+    try {
+      return objectApi.loadLatest(uri);
+    } catch (final Exception e) {
+      log.error(e.getMessage(), e);
+      return null;
+    }
   }
 
   private Optional<Map<? , ?>> tryDeserialise() {
@@ -211,6 +226,12 @@ public class ObjectEntry implements StorageEntry {
 
     return objectApi.load(Uris.atVersion(uri, version));
   }
+
+  @Override
+  public boolean valid() {
+    return valid;
+  }
+
 
   @Override
   public boolean equals(Object o) {

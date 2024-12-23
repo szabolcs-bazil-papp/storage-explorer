@@ -71,7 +71,6 @@ public class ListEntry implements StorageEntry {
   public Set<UriProperty> uriProperties() {
     if (!valid) {
       refresh();
-      valid = true;
     }
     
     return uriProperties;
@@ -86,6 +85,12 @@ public class ListEntry implements StorageEntry {
     }
 
     this.uriProperties = uriProperties;
+    valid = true;
+  }
+
+  @Override
+  public boolean valid() {
+    return valid;
   }
 
   @Override
@@ -96,6 +101,10 @@ public class ListEntry implements StorageEntry {
       return false;
     ListEntry listEntry = (ListEntry) o;
     return Uris.equalIgnoringVersion(uri, listEntry.uri);
+  }
+  
+  public String displayName() {
+    return schema + " / " + name;
   }
 
   @Override

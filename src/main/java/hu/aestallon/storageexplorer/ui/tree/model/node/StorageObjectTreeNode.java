@@ -24,7 +24,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 
 public class StorageObjectTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 
-  private final boolean supportsChildren;
+  private boolean supportsChildren;
   public StorageObjectTreeNode(ObjectEntry objectEntry) {
     super(objectEntry, true);
 
@@ -50,7 +50,9 @@ public class StorageObjectTreeNode extends DefaultMutableTreeNode implements Cli
     return (StorageEntry) userObject;
   }
 
-
+  public void enableChildren(final boolean enable) {
+    supportsChildren = enable;
+  }
 
   @Override
   public String toString() {

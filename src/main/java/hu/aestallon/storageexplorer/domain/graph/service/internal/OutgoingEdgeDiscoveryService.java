@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 import org.graphstream.graph.Graph;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.UriProperty;
-import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.util.GraphContainmentPredicate;
 import hu.aestallon.storageexplorer.util.Pair;
 import static java.util.stream.Collectors.groupingBy;
@@ -31,10 +31,10 @@ public class OutgoingEdgeDiscoveryService {
 
   private static final GraphContainmentPredicate ANY_CONNECTION = (g, se) -> true;
 
-  private final StorageIndex storageIndex;
+  private final StorageInstance storageInstance;
 
-  public OutgoingEdgeDiscoveryService(StorageIndex storageIndex) {
-    this.storageIndex = storageIndex;
+  public OutgoingEdgeDiscoveryService(StorageInstance storageInstance) {
+    this.storageInstance = storageInstance;
   }
 
   public Stream<Pair<StorageEntry, Set<UriProperty>>> execute(Graph graph,
@@ -51,7 +51,8 @@ public class OutgoingEdgeDiscoveryService {
                                                                                  StorageEntry storageEntry,
                                                                                  GraphContainmentPredicate condition) {
     return storageEntry.uriProperties().stream()
-        .map(it -> Pair.of(storageIndex.get(it.uri), it))
+        // TODO: here we should "batch create" the missing URIs
+        .map(it -> Pair.of(storageInstance.discover(it.uri), it))
         .flatMap(Pair.streamOnA())
         .filter(it -> condition.test(graph, it.a()))
         .filter(it -> NodeAdditionService.edgeMissing(graph, storageEntry, it.a()))

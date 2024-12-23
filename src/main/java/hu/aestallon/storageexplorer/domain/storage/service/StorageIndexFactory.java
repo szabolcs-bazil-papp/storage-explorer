@@ -119,6 +119,14 @@ final class StorageIndexFactory {
     throw new NotImplementedException("Unsupported storage location: " + storageLocation);
   }
 
+  private Map<String, Object> defaultProps() {
+    final Map<String, Object> props = new HashMap<>();
+    props.put("applicationruntime.maintain.enabled", "false");
+    props.put("invocationregistry.refresh.enabled", "false");
+    props.put("application.setup.enabled", "false");
+    return props;
+  }
+
   private StorageIndexCreationResult createFs(final FsStorageLocation fsStorageLocation) {
     final Path path = fsStorageLocation.getPath().toAbsolutePath();
     final var ctx = new AnnotationConfigApplicationContext();
@@ -126,6 +134,10 @@ final class StorageIndexFactory {
     ctx.registerBean(storageId.toString(), ObjectStorage.class, () -> new StorageFS(
         path.toFile(),
         ctx.getBean(ObjectDefinitionApi.class)));
+
+    final ConfigurableEnvironment env = ctx.getEnvironment();
+    env.getPropertySources().addFirst(new MapPropertySource("default", defaultProps()));
+
     ctx.refresh();
 
     final ObjectApi objectApi = ctx.getBean(ObjectApi.class);
@@ -137,7 +149,7 @@ final class StorageIndexFactory {
 
 
   private StorageIndexCreationResult createDb(final SqlStorageLocation sqlStorageLocation) {
-    final Map<String, Object> props = new HashMap<>();
+    final Map<String, Object> props = defaultProps();
     final DatabaseVendor vendor = sqlStorageLocation.getVendor();
     if (vendor == null) {
       // we don't even need the vendor, the DriverManager can figure it out from the URL...

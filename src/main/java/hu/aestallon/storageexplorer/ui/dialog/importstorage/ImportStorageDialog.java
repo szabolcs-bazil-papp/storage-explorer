@@ -1,4 +1,4 @@
-package hu.aestallon.storageexplorer.ui.dialog;
+package hu.aestallon.storageexplorer.ui.dialog.importstorage;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -7,11 +7,9 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileSystemView;
-import org.springframework.aop.BeforeAdvice;
 import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
@@ -20,6 +18,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageLocatio
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.DatabaseConnectionData;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.DatabaseVendor;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.IndexingStrategyType;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.SqlStorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceDto;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceType;
@@ -64,18 +63,16 @@ public class ImportStorageDialog extends JDialog {
   private JTextPane noIndexingShallBeTextPane;
   private JTextPane allEntriesAndTheirTextPane;
 
-  private final StorageInstanceDto storageInstanceDto;
-  private final BiConsumer<StorageInstanceDto, StorageInstanceDto> resultConsumer;
+  private final ImportStorageController controller;
 
-  public ImportStorageDialog(final StorageInstanceDto storageInstanceDto,
-                             final BiConsumer<StorageInstanceDto, StorageInstanceDto> resultConsumer) {
-    this.storageInstanceDto = storageInstanceDto;
-    this.resultConsumer = resultConsumer;
+  public ImportStorageDialog(final ImportStorageController controller) {
+    this.controller = controller;
 
     setContentPane(contentPane);
     setModal(true);
     getRootPane().setDefaultButton(buttonOK);
 
+    StorageInstanceDto storageInstanceDto = controller.initialModel();
     final boolean editing = storageInstanceDto.getId() != null;
     setTitle(editing
         ? "Edit Storage (" + storageInstanceDto.getName() + ")"
@@ -83,12 +80,23 @@ public class ImportStorageDialog extends JDialog {
     if (!editing) {
       indexEntries.setSelected(true);
     } else {
-      indexEntries.setSelected(true); // TODO: for now
+      switch (storageInstanceDto.getIndexingStrategy()) {
+        case ON_DEMAND:
+          noIndex.setSelected(true);
+          break;
+        case INITIAL:
+          indexEntries.setSelected(true);
+          break;
+        case FULL:
+          fullIndex.setSelected(true);
+          break;
+      }
+
       if (storageInstanceDto.getType() == StorageInstanceType.DB) {
         storageTypePane.setSelectedIndex(1);
         final DatabaseConnectionData connectionData = storageInstanceDto
             .getDb()
-            .getDbConnectionData(); 
+            .getDbConnectionData();
         textFieldDbUrl.setText(connectionData.getUrl());
         textFieldDbUsername.setText(connectionData.getUsername());
         textFieldDbPassword.setText(connectionData.getPassword());
@@ -98,7 +106,7 @@ public class ImportStorageDialog extends JDialog {
       }
       storageTypePane.setEnabledAt(0, false);
       storageTypePane.setEnabledAt(1, false);
-      
+
       textFieldStorageName.setText(storageInstanceDto.getName());
     }
 
@@ -126,9 +134,11 @@ public class ImportStorageDialog extends JDialog {
     final StorageInstanceType storageInstanceType = getStorageInstanceType();
     final StorageLocation location = getAndValidateStorageLocation(storageInstanceType);
     final String name = textFieldStorageName.getText();
+    final IndexingStrategyType indexingStrategy = getIndexingStrategy();
     final var result = new StorageInstanceDto()
-        .id(storageInstanceDto.getId())
+        .id(controller.initialModel().getId())
         .name(name)
+        .indexingStrategy(indexingStrategy)
         .type(storageInstanceType);
     if (location instanceof FsStorageLocation) {
       result.setFs((FsStorageLocation) location);
@@ -138,8 +148,24 @@ public class ImportStorageDialog extends JDialog {
       throw new IllegalArgumentException("Unsupported location type: " + location);
     }
 
-    resultConsumer.accept(storageInstanceDto, result);
+    controller.finish(result);
     dispose();
+  }
+
+  private IndexingStrategyType getIndexingStrategy() {
+    if (noIndex.isSelected()) {
+      return IndexingStrategyType.ON_DEMAND;
+    }
+
+    if (indexEntries.isSelected()) {
+      return IndexingStrategyType.INITIAL;
+    }
+
+    if (fullIndex.isSelected()) {
+      return IndexingStrategyType.FULL;
+    }
+
+    throw new IllegalStateException("No indexing strategy selected!");
   }
 
   private StorageInstanceType getStorageInstanceType() {
@@ -207,12 +233,13 @@ public class ImportStorageDialog extends JDialog {
     System.setProperty("org.graphstream.ui", "swing");
     FlatIntelliJLaf.setup();
 
-    ImportStorageDialog dialog = new ImportStorageDialog(
+    final var controller = new ImportStorageController(
         new StorageInstanceDto(),
         (before, after) -> {
           System.out.println(before);
           System.out.println(after);
         });
+    ImportStorageDialog dialog = new ImportStorageDialog(controller);
     dialog.pack();
     dialog.setVisible(true);
     System.exit(0);
@@ -493,14 +520,14 @@ public class ImportStorageDialog extends JDialog {
     indexingBehaviourPane.setBorder(BorderFactory.createTitledBorder(null, "Indexing behaviour",
         TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
     noIndex = new JRadioButton();
-    noIndex.setEnabled(false);
+    noIndex.setEnabled(true);
     noIndex.setText("No Index");
     indexingBehaviourPane.add(noIndex,
         new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
             GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     indexEntries = new JRadioButton();
-    indexEntries.setEnabled(false);
+    indexEntries.setEnabled(true);
     indexEntries.setSelected(false);
     indexEntries.setText("Index Entries");
     indexingBehaviourPane.add(indexEntries,
@@ -508,7 +535,7 @@ public class ImportStorageDialog extends JDialog {
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
             GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     fullIndex = new JRadioButton();
-    fullIndex.setEnabled(false);
+    fullIndex.setEnabled(true);
     fullIndex.setText("Full Index");
     indexingBehaviourPane.add(fullIndex,
         new GridConstraints(2, 0, 1, 4, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
