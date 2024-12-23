@@ -8,6 +8,7 @@ import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.springframework.jdbc.core.JdbcTemplate;
 import com.google.common.base.Strings;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntryFactory;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 
 public final class RelationalDatabaseStorageIndex extends StorageIndex {
@@ -32,6 +33,12 @@ public final class RelationalDatabaseStorageIndex extends StorageIndex {
         .stream()
         .filter(it -> !Strings.isNullOrEmpty(it))
         .map(URI::create);
+  }
+
+  @Override
+  protected StorageEntryFactory storageEntryFactory() {
+    return StorageEntryFactory.builder(storageId, objectApi, collectionApi)
+        .build();
   }
 
 }
