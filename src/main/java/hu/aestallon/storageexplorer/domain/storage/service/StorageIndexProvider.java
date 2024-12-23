@@ -148,7 +148,9 @@ public class StorageIndexProvider {
     eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
   }
 
-  private StorageIndex initialise(final StorageInstance storageInstance) {
+  private void initialise(final StorageInstance storageInstance) {
+    storageInstance.setEventPublisher(eventPublisher);
+
     final var factory = StorageIndexFactory.of(storageInstance.id());
     final var result = factory.create(storageInstance.location());
     if (result instanceof StorageIndexFactory.StorageIndexCreationResult.Ok) {
@@ -160,14 +162,11 @@ public class StorageIndexProvider {
       storageInstancesById.put(storageInstance.id(), storageInstance);
       contextsByInstance.put(storageInstance, ctx);
 
-      return index;
-
     } else {
       final var err = (StorageIndexFactory.StorageIndexCreationResult.Err) result;
       log.error("Failed to initialise Storage instance [ {} ]: {}",
           storageInstance.name(),
           err.errorMessage());
-      return null;
     }
   }
 

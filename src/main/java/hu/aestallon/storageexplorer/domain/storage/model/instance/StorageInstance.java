@@ -1,11 +1,14 @@
 package hu.aestallon.storageexplorer.domain.storage.model.instance;
 
+import java.net.URI;
 import java.util.Collection;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.utility.StringConstant;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.Assert;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.Availability;
@@ -34,6 +37,7 @@ public final class StorageInstance {
   private IndexingStrategy indexingStrategy;
 
   private StorageIndex index;
+  private ApplicationEventPublisher eventPublisher;
 
   private StorageInstance(final StorageId id) {
     this.id = Objects.requireNonNull(id, "Storage Instance ID cannot be null!");
@@ -75,6 +79,10 @@ public final class StorageInstance {
     return location instanceof FsStorageLocation ? StorageInstanceType.FS : StorageInstanceType.DB;
   }
   
+  public IndexingStrategyType indexingStrategy() {
+    return indexingStrategy.type();
+  }
+  
   public void setIndexingStrategy(IndexingStrategyType type) {
     this.indexingStrategy = IndexingStrategy.of(type);
   }
@@ -98,6 +106,20 @@ public final class StorageInstance {
   
   public void validate(final Collection<? extends StorageEntry> entries) {
     index.revalidate(entries);
+  }
+  
+  public Optional<StorageEntry> acquire(final URI uri) {
+    final StorageIndex.EntryAcquisitionResult result = index.getOrCreate(uri);
+    switch (result.kind()) {
+      case FAIL:
+        return Optional.empty();
+      case PRESENT:
+        return Optional.of(result.entry());
+      case NEW:
+        return Optional.of(result.entry());
+        default:
+          throw new AssertionError("Unsupported acquisition kind: " + result.kind());
+    }
   }
 
   public Stream<StorageEntry> entities() {
@@ -135,6 +157,10 @@ public final class StorageInstance {
             : StorageInstanceType.DB)
         .fs(location instanceof FsStorageLocation ? (FsStorageLocation) location : null)
         .db(location instanceof SqlStorageLocation ? (SqlStorageLocation) location : null);
+  }
+  
+  public void setEventPublisher(final ApplicationEventPublisher eventPublisher) {
+    this.eventPublisher = eventPublisher;
   }
 
   @Override
