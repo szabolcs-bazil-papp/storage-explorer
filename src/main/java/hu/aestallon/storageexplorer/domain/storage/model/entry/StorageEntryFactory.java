@@ -18,10 +18,10 @@ public final class StorageEntryFactory {
 
   private static final Logger log = LoggerFactory.getLogger(StorageEntryFactory.class);
 
-  private static final String STORED_LIST_MARKER = "/storedlist";
-  private static final String STORED_MAP_MARKER = "/storedmap";
-  private static final String STORED_REF_MARKER = "/storedRef";
-  private static final String STORED_SEQ_MARKER = "/storedSeq";
+  public static final String STORED_LIST_MARKER = "/storedlist";
+  public static final String STORED_MAP_MARKER = "/storedmap";
+  public static final String STORED_REF_MARKER = "/storedRef";
+  public static final String STORED_SEQ_MARKER = "/storedSeq";
 
 
   public static Builder builder(final StorageId storageId,

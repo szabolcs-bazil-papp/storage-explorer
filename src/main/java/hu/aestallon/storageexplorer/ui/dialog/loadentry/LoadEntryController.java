@@ -2,13 +2,24 @@ package hu.aestallon.storageexplorer.ui.dialog.loadentry;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 import org.smartbit4all.core.utility.StringConstant;
 import com.google.common.base.Strings;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntryFactory;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.ui.controller.AbstractDialogController;
 
 public class LoadEntryController extends AbstractDialogController<String> {
+
+  private static final Set<String> STORED_COLLECTION_IDENTIFIERS = Set.of(
+      StorageEntryFactory.STORED_LIST_MARKER,
+      StorageEntryFactory.STORED_MAP_MARKER,
+      StorageEntryFactory.STORED_REF_MARKER,
+      StorageEntryFactory.STORED_SEQ_MARKER);
+  private static final String REGEX_TIMESTAMP = "/\\d{4}/\\d{1,2}/\\d{1,2}/\\d{1,2}";
+  private static final Pattern PATTERN_TIMESTAMP = Pattern.compile(REGEX_TIMESTAMP);
 
   public static LoadEntryController create(StorageInstance storageInstance) {
     return new LoadEntryController((before, after) ->
@@ -40,6 +51,11 @@ public class LoadEntryController extends AbstractDialogController<String> {
       return false;
     }
 
+    // must contain a stored collection identifier or a timestamp segment:
+    if (!containsStoredCollectionIdentifier(input) && !containsTimestampPattern(input)) {
+      return false;
+    }
+
     try {
       new URI(input);
       return true;
@@ -47,6 +63,14 @@ public class LoadEntryController extends AbstractDialogController<String> {
       return false;
     }
 
+  }
+
+  private static boolean containsStoredCollectionIdentifier(final String input) {
+    return STORED_COLLECTION_IDENTIFIERS.stream().anyMatch(input::contains);
+  }
+  
+  private static boolean containsTimestampPattern(final String input) {
+    return PATTERN_TIMESTAMP.matcher(input).find();
   }
 
 }
