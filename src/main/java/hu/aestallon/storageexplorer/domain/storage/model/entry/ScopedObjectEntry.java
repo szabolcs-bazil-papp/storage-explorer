@@ -21,7 +21,7 @@ import org.smartbit4all.core.object.ObjectApi;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.Uris;
 
-public class ScopedObjectEntry extends ObjectEntry implements ScopedEntry {
+public final class ScopedObjectEntry extends ObjectEntry implements StorageEntry, ScopedEntry {
 
   private final URI scopeUri;
 

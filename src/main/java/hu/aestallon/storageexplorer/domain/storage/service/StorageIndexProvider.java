@@ -35,6 +35,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstanc
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
+import jakarta.validation.constraints.NotNull;
 
 @Service
 public class StorageIndexProvider {
@@ -49,15 +50,12 @@ public class StorageIndexProvider {
     private final String namePrefix;
 
     private HighPriorityThreadFactory() {
-      SecurityManager s = System.getSecurityManager();
-      group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-      namePrefix = "pool-" +
-          poolNumber.getAndIncrement() +
-          "-thread-";
+      group = Thread.currentThread().getThreadGroup();
+      namePrefix = "pool-" + poolNumber.getAndIncrement() + "-thread-";
     }
 
     @Override
-    public Thread newThread(Runnable r) {
+    public Thread newThread(@NotNull Runnable r) {
       Thread t = new Thread(group, r, namePrefix + threadNumber.getAndIncrement(), 0);
       if (t.isDaemon()) {
         t.setDaemon(false);
@@ -152,21 +150,19 @@ public class StorageIndexProvider {
     storageInstance.setEventPublisher(eventPublisher);
 
     final var factory = StorageIndexFactory.of(storageInstance.id());
-    final var result = factory.create(storageInstance.location());
-    if (result instanceof StorageIndexFactory.StorageIndexCreationResult.Ok) {
-      final var ok = (StorageIndexFactory.StorageIndexCreationResult.Ok) result;
-      final var index = ok.storageIndex();
-      final var ctx = ok.springContext();
+    switch (factory.create(storageInstance.location())) {
+      case StorageIndexFactory.StorageIndexCreationResult.Ok ok -> {
+        final var index = ok.storageIndex();
+        final var ctx = ok.springContext();
 
-      storageInstance.setIndex(index);
-      storageInstancesById.put(storageInstance.id(), storageInstance);
-      contextsByInstance.put(storageInstance, ctx);
-
-    } else {
-      final var err = (StorageIndexFactory.StorageIndexCreationResult.Err) result;
-      log.error("Failed to initialise Storage instance [ {} ]: {}",
-          storageInstance.name(),
-          err.errorMessage());
+        storageInstance.setIndex(index);
+        storageInstancesById.put(storageInstance.id(), storageInstance);
+        contextsByInstance.put(storageInstance, ctx);
+      }
+      case StorageIndexFactory.StorageIndexCreationResult.Err err ->
+          log.error("Failed to initialise Storage instance [ {} ]: {}",
+              storageInstance.name(),
+              err.errorMessage());
     }
   }
 
@@ -189,7 +185,7 @@ public class StorageIndexProvider {
 
   @EventListener
   public void onStorageIndexDiscarded(ViewController.StorageIndexDiscardedEvent e) {
-    CompletableFuture.runAsync(() -> discardIndex(e.storageInstance));
+    CompletableFuture.runAsync(() -> discardIndex(e.storageInstance()));
   }
 
   public void discardIndex(final StorageInstance storageInstance) {

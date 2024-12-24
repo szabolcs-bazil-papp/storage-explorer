@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import javax.validation.constraints.*;
+import jakarta.validation.constraints.*;
 import org.springframework.core.env.MapPropertySource;
 
 @JsonPropertyOrder({
@@ -16,7 +16,7 @@ import org.springframework.core.env.MapPropertySource;
     DatabaseConnectionData.PASSWORD
 })
 @JsonTypeName("DatabaseConnectionData")
-@javax.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
+@jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
 public class DatabaseConnectionData {
   public static final String URL = "url";
   private String url;
@@ -36,7 +36,7 @@ public class DatabaseConnectionData {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @JsonProperty(URL)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
@@ -57,7 +57,7 @@ public class DatabaseConnectionData {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @JsonProperty(USERNAME)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
@@ -79,7 +79,7 @@ public class DatabaseConnectionData {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @JsonProperty(PASSWORD)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)

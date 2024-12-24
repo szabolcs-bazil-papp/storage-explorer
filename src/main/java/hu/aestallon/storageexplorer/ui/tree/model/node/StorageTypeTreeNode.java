@@ -19,7 +19,7 @@ import java.util.List;
 import javax.swing.tree.DefaultMutableTreeNode;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
 
-public class StorageTypeTreeNode extends DefaultMutableTreeNode {
+public final class StorageTypeTreeNode extends DefaultMutableTreeNode {
 
   public StorageTypeTreeNode(String name, List<ObjectEntry> objectEntries) {
     super(name, true);

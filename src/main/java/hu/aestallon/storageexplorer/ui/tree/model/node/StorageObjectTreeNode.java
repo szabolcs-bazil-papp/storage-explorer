@@ -22,7 +22,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedMapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 
-public class StorageObjectTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
+public final class StorageObjectTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 
   private boolean supportsChildren;
   public StorageObjectTreeNode(ObjectEntry objectEntry) {

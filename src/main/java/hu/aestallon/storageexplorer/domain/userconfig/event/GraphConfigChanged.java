@@ -15,40 +15,7 @@
 
 package hu.aestallon.storageexplorer.domain.userconfig.event;
 
-import java.util.Objects;
-
-public class GraphConfigChanged {
-
-  private final int newInboundLimit;
-  private final int newOutboundLimit;
-
-  public GraphConfigChanged(int newInboundLimit, int newOutboundLimit) {
-    this.newInboundLimit = newInboundLimit;
-    this.newOutboundLimit = newOutboundLimit;
-  }
-
-  public int newInboundLimit() {
-    return newInboundLimit;
-  }
-
-  public int newOutboundLimit() {
-    return newOutboundLimit;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o)
-      return true;
-    if (o == null || getClass() != o.getClass())
-      return false;
-    GraphConfigChanged that = (GraphConfigChanged) o;
-    return newInboundLimit == that.newInboundLimit && newOutboundLimit == that.newOutboundLimit;
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(newInboundLimit, newOutboundLimit);
-  }
+public record GraphConfigChanged(int newInboundLimit, int newOutboundLimit) {
 
   @Override
   public String toString() {

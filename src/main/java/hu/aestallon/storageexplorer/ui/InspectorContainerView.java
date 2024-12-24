@@ -20,7 +20,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -183,16 +182,14 @@ public class InspectorContainerView extends JTabbedPane {
   private static final MouseListener CLOSE_BUTTON_ROLLOVER_LISTENER = new MouseAdapter() {
     public void mouseEntered(MouseEvent e) {
       final var component = e.getComponent();
-      if (component instanceof AbstractButton) {
-        AbstractButton button = (AbstractButton) component;
+      if (component instanceof AbstractButton button) {
         button.setBorderPainted(true);
       }
     }
 
     public void mouseExited(MouseEvent e) {
       final var component = e.getComponent();
-      if (component instanceof AbstractButton) {
-        AbstractButton button = (AbstractButton) component;
+      if (component instanceof AbstractButton button) {
         button.setBorderPainted(false);
       }
     }

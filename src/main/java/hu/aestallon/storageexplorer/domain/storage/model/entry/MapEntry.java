@@ -23,7 +23,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.Uris;
 import static java.util.stream.Collectors.toSet;
 
-public class MapEntry implements StorageEntry {
+public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
 
   private final StorageId id;
   private final Path path;

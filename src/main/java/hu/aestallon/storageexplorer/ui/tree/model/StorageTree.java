@@ -11,17 +11,15 @@ import javax.swing.tree.DefaultTreeSelectionModel;
 import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreeSelectionModel;
-import org.apache.tomcat.util.modeler.modules.ModelerSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.datasource.ConnectionHolder;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ListEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.MapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.SequenceEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
-import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageLocation;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.DatabaseVendor;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.SqlStorageLocation;
@@ -36,7 +34,7 @@ import hu.aestallon.storageexplorer.ui.tree.model.node.StorageSequenceTreeNode;
 import hu.aestallon.storageexplorer.ui.tree.model.node.StorageTypeTreeNode;
 import static hu.aestallon.storageexplorer.util.Streams.enumerationToStream;
 
-public class StorageTree extends JTree implements Scrollable, Accessible {
+public final class StorageTree extends JTree implements Scrollable, Accessible {
 
   private static final Logger log = LoggerFactory.getLogger(StorageTree.class);
 
@@ -209,11 +207,10 @@ public class StorageTree extends JTree implements Scrollable, Accessible {
     int idx = 0;
     for (int i = 0; i < sitn.getChildCount(); i++) {
       final var child = (DefaultMutableTreeNode) sitn.getChildAt(i);
-      if (!(child instanceof StorageListTreeNode)) {
+      if (!(child instanceof StorageListTreeNode listNodeChild)) {
         break;
       }
 
-      final var listNodeChild = (StorageListTreeNode) child;
       if (listNodeChild.toString().equals(listEntry.displayName())) {
         return null;
       }
@@ -246,11 +243,10 @@ public class StorageTree extends JTree implements Scrollable, Accessible {
         continue;
       }
 
-      if (!(child instanceof StorageMapTreeNode)) {
+      if (!(child instanceof StorageMapTreeNode mapNodeChild)) {
         break;
       }
 
-      final var mapNodeChild = (StorageMapTreeNode) child;
       if (mapNodeChild.toString().equals(mapEntry.displayName())) {
         return null;
       }
@@ -283,11 +279,10 @@ public class StorageTree extends JTree implements Scrollable, Accessible {
         continue;
       }
 
-      if (!(child instanceof StorageSequenceTreeNode)) {
+      if (!(child instanceof StorageSequenceTreeNode seqNodeChild)) {
         break;
       }
 
-      final var seqNodeChild = (StorageSequenceTreeNode) child;
       if (seqNodeChild.toString().equals(sequenceEntry.displayName())) {
         return null;
       }

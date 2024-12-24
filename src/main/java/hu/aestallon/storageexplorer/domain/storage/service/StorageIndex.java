@@ -43,7 +43,8 @@ import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import static java.util.stream.Collectors.toList;
 
-public abstract class StorageIndex {
+public abstract sealed class StorageIndex
+    permits FileSystemStorageIndex, RelationalDatabaseStorageIndex {
 
   private static final Logger log = LoggerFactory.getLogger(StorageIndex.class);
 
@@ -81,7 +82,7 @@ public abstract class StorageIndex {
         .map(ObjectEntry.class::cast)
         .filter(it -> !it.valid())
         .distinct()
-        .collect(toList());
+        .toList();
     final List<ObjectNode> nodes = needRevalidation.stream()
         .map(StorageEntry::uri)
         .map(objectApi::getLatestUri)
@@ -129,10 +130,9 @@ public abstract class StorageIndex {
 
   public void accept(final URI uri, StorageEntry entry) {
     cache.put(uri, entry);
-    if (entry instanceof ObjectEntry && !(entry instanceof ScopedEntry)) {
+    if (entry instanceof ObjectEntry objectEntry && !(entry instanceof ScopedEntry)) {
       // here becomes obvious that a more sophisticated cache is in dire need -> this is not
       // only a repetition but woefully slow...
-      final var objectEntry = (ObjectEntry) entry;
       final Map<String, List<ScopedEntry>> knownScopedEntries = cache.values().stream()
           .filter(ScopedEntry.class::isInstance)
           .map(ScopedEntry.class::cast)
@@ -142,8 +142,7 @@ public abstract class StorageIndex {
           .forEach(objectEntry::addScopedEntry);
     }
 
-    if (entry instanceof ScopedEntry) {
-      final var scopedEntry = (ScopedEntry) entry;
+    if (entry instanceof ScopedEntry scopedEntry) {
       cache.values().stream()
           .filter(ObjectEntry.class::isInstance)
           .map(ObjectEntry.class::cast)
@@ -186,7 +185,7 @@ public abstract class StorageIndex {
   private static String examineSubsection(final String s) {
     final StringBuilder sb = new StringBuilder();
     for (char c : s.toCharArray()) {
-      if (sb.length() != 0 && Character.isUpperCase(c)) {
+      if (!sb.isEmpty() && Character.isUpperCase(c)) {
         sb.append(".*");
       }
       sb.append(c);

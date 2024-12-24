@@ -38,7 +38,7 @@ import hu.aestallon.storageexplorer.util.Pair;
 import hu.aestallon.storageexplorer.util.Uris;
 import static java.util.stream.Collectors.toSet;
 
-public class ObjectEntry implements StorageEntry {
+public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntry {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
 

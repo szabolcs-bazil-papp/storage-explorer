@@ -17,7 +17,6 @@ package hu.aestallon.storageexplorer.ui.inspector;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -35,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
-import hu.aestallon.storageexplorer.util.NotImplementedException;
 import hu.aestallon.storageexplorer.util.Uris;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {

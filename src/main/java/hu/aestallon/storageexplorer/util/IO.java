@@ -65,14 +65,14 @@ public final class IO {
       return StringConstant.EMPTY;
     }
     if (binaryData.size() == 1) {
-      try (var in = binaryData.get(0).inputStream()) {
+      try (var in = binaryData.getFirst().inputStream()) {
         return "{\"uri\":\"" + StreamUtils.copyToString(in, StandardCharsets.UTF_8);
       } catch (IOException e) {
         log.error(e.getMessage(), e);
         return StringConstant.EMPTY;
       }
     }
-    try (var in = binaryData.get(binaryData.size() - 1).inputStream()) {
+    try (var in = binaryData.getLast().inputStream()) {
       return StreamUtils.copyToString(in, StandardCharsets.UTF_8);
     } catch (IOException e) {
       log.error(e.getMessage(), e);

@@ -94,35 +94,6 @@ public class MonospaceFontProvider {
     eventPublisher.publishEvent(fontSizeChange);
   }
 
-  public static final class FontSizeChange {
-    public final int amount;
-
-    public FontSizeChange(int amount) {
-      this.amount = amount;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o)
-        return true;
-      if (o == null || getClass() != o.getClass())
-        return false;
-      FontSizeChange that = (FontSizeChange) o;
-      return amount == that.amount;
-    }
-
-    @Override
-    public int hashCode() {
-      return amount;
-    }
-
-    @Override
-    public String toString() {
-      return "FontSizeChange{" +
-          "amount=" + amount +
-          '}';
-    }
-
-  }
+  public record FontSizeChange(int amount) {}
 
 }

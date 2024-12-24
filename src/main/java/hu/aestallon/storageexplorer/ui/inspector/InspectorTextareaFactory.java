@@ -67,14 +67,10 @@ public final class InspectorTextareaFactory {
 
   private PaneAndTextarea create(final ObjectEntry objectEntry, final ObjectNode objectNode,
                                  final Type type) {
-    switch (type) {
-      case SIMPLE:
-        return createSimple(objectEntry, objectNode);
-      case FANCY:
-        return createFancy(objectEntry, objectNode);
-      default:
-        throw new AssertionError(type);
-    }
+    return switch (type) {
+      case SIMPLE -> createSimple(objectEntry, objectNode);
+      case FANCY -> createFancy(objectEntry, objectNode);
+    };
   }
 
   private PaneAndTextarea createSimple(final ObjectEntry objectEntry, final ObjectNode objectNode) {

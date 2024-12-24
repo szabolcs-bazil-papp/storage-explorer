@@ -5,14 +5,14 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import javax.validation.constraints.*;
+import jakarta.validation.constraints.*;
 
 @JsonPropertyOrder({
   PortMapping.FROM,
   PortMapping.TO
 })
 @JsonTypeName("PortMapping")
-@javax.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
+@jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
 public class PortMapping {
   public static final String FROM = "from";
   private Integer from = -1;
@@ -29,7 +29,7 @@ public class PortMapping {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @JsonProperty(FROM)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
@@ -50,7 +50,7 @@ public class PortMapping {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @JsonProperty(TO)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)

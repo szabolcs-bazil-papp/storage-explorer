@@ -1,12 +1,11 @@
 package hu.aestallon.storageexplorer.domain.storage.model.instance.dto;
 
 import java.util.Objects;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageLocation;
 
 @JsonPropertyOrder({
   SqlStorageLocation.VENDOR,
@@ -14,8 +13,8 @@ import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageLocatio
   SqlStorageLocation.SSH_CONNECTION_DATA
 })
 @JsonTypeName("SqlStorageLocation")
-@javax.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
-public class SqlStorageLocation implements StorageLocation {
+@jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
+public final class SqlStorageLocation implements StorageLocation {
   public static final String VENDOR = "vendor";
   private DatabaseVendor vendor;
 
@@ -34,7 +33,7 @@ public class SqlStorageLocation implements StorageLocation {
     return this;
   }
 
-  @javax.annotation.Nullable
+  @jakarta.annotation.Nullable
   @Valid
   @JsonProperty(VENDOR)
   @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
@@ -55,7 +54,7 @@ public class SqlStorageLocation implements StorageLocation {
     return this;
   }
 
-  @javax.annotation.Nullable
+  @jakarta.annotation.Nullable
   @Valid
   @JsonProperty(DB_CONNECTION_DATA)
   @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
@@ -75,7 +74,7 @@ public class SqlStorageLocation implements StorageLocation {
     return this;
   }
 
-  @javax.annotation.Nullable
+  @jakarta.annotation.Nullable
   @Valid
   @JsonProperty(SSH_CONNECTION_DATA)
   @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)

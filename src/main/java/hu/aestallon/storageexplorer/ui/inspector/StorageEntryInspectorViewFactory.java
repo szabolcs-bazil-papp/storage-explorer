@@ -232,7 +232,7 @@ public class StorageEntryInspectorViewFactory {
   @Order(0)
   public void discardInspectorDialogsOfStorageAt(ViewController.StorageIndexDiscardedEvent e) {
     openedDialogs.entrySet().stream()
-        .filter(it -> it.getKey().storageId().equals(e.storageInstance.id()))
+        .filter(it -> it.getKey().storageId().equals(e.storageInstance().id()))
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
         .forEach((entry, dialog) -> {
           dialog.dispose();

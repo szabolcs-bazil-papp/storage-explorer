@@ -17,7 +17,7 @@ package hu.aestallon.storageexplorer.domain.storage.model.entry;
 
 import java.net.URI;
 
-public interface ScopedEntry {
+public sealed interface ScopedEntry permits ScopedListEntry, ScopedMapEntry, ScopedObjectEntry {
 
   URI uri();
 

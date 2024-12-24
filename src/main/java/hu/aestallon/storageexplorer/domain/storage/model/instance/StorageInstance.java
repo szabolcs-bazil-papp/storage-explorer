@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.utility.StringConstant;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.Assert;
-import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.Availability;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.FsStorageLocation;
@@ -19,6 +18,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.SqlStorage
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceDto;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageInstanceType;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.service.IndexingStrategy;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndex;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
@@ -123,13 +123,13 @@ public final class StorageInstance {
    */
   public Optional<StorageEntry> acquire(final URI uri) {
     final StorageIndex.EntryAcquisitionResult result = index.getOrCreate(uri);
-    switch (result.kind()) {
-      case FAIL:
+    return switch (result.kind()) {
+      case FAIL -> {
         eventPublisher.publishEvent(new ViewController.EntryAcquisitionFailed(this, uri));
-        return Optional.empty();
-      case PRESENT:
-        return Optional.of(result.entry());
-      case NEW:
+        yield Optional.empty();
+      }
+      case PRESENT -> Optional.of(result.entry());
+      case NEW -> {
         final var entry = result.entry();
         try {
           // we must refresh the requested entry right away:
@@ -140,7 +140,7 @@ public final class StorageInstance {
         } catch (final Exception e) {
           log.error(e.getMessage(), e);
           eventPublisher.publishEvent(new ViewController.EntryAcquisitionFailed(this, uri));
-          return Optional.empty();
+          yield Optional.empty();
         }
 
         index.accept(uri, entry);
@@ -168,29 +168,27 @@ public final class StorageInstance {
         //          }
         //        }
         eventPublisher.publishEvent(new ViewController.EntryAcquired(this, entry));
-        return Optional.of(entry);
-      default:
-        throw new AssertionError("Unsupported acquisition kind: " + result.kind());
-    }
+        yield Optional.of(entry);
+      }
+    };
   }
 
   public Optional<StorageEntry> discover(final URI uri) {
     final StorageIndex.EntryAcquisitionResult result = index.getOrCreate(uri);
-    switch (result.kind()) {
-      case FAIL:
+    return switch (result.kind()) {
+      case FAIL -> {
         eventPublisher.publishEvent(new ViewController.EntryAcquisitionFailed(this, uri));
-        return Optional.empty();
-      case PRESENT:
-        return Optional.of(result.entry());
-      case NEW:
+        yield Optional.empty();
+      }
+      case PRESENT -> Optional.of(result.entry());
+      case NEW -> {
         final var entry = result.entry();
         // discovery is expected to be programmatic -> we trust the URI is valid.
         index.accept(uri, entry);
         eventPublisher.publishEvent(new ViewController.EntryDiscovered(this, entry));
-        return Optional.of(entry);
-      default:
-        throw new AssertionError("Unsupported acquisition kind: " + result.kind());
-    }
+        yield Optional.of(entry);
+      }
+    };
   }
 
   public Stream<StorageEntry> entities() {
@@ -203,14 +201,9 @@ public final class StorageInstance {
     setName(dto.getName());
     setAvailability(dto.getAvailability());
     switch (dto.getType()) {
-      case FS:
-        setLocation(dto.getFs());
-        break;
-      case DB:
-        setLocation(dto.getDb());
-        break;
-      default:
-        throw new IllegalArgumentException("Unsupported storage type: " + dto.getType());
+      case FS -> setLocation(dto.getFs());
+      case DB -> setLocation(dto.getDb());
+      default -> throw new IllegalArgumentException("Unsupported storage type: " + dto.getType());
     }
     setIndexingStrategy(dto.getIndexingStrategy());
 
