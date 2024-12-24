@@ -23,7 +23,7 @@ import org.smartbit4all.api.collection.CollectionApi;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.Uris;
 
-public class ListEntry implements StorageEntry {
+public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
 
   private final StorageId id;
   private final Path path;

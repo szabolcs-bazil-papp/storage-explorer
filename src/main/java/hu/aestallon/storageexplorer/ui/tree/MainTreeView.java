@@ -18,22 +18,18 @@ package hu.aestallon.storageexplorer.ui.tree;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import org.springframework.ui.Model;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ListEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.MapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.ObjectEntry;
@@ -47,12 +43,10 @@ import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstanc
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.IndexingStrategyType;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
-import hu.aestallon.storageexplorer.ui.AppFrame;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.dialog.importstorage.ImportStorageController;
 import hu.aestallon.storageexplorer.ui.dialog.importstorage.ImportStorageDialog;
 import hu.aestallon.storageexplorer.ui.dialog.loadentry.LoadEntryController;
-import hu.aestallon.storageexplorer.ui.dialog.loadentry.LoadEntryDialog;
 import hu.aestallon.storageexplorer.ui.misc.IconProvider;
 import hu.aestallon.storageexplorer.ui.tree.model.StorageTree;
 import hu.aestallon.storageexplorer.ui.tree.model.node.ClickableTreeNode;
@@ -112,11 +106,10 @@ public class MainTreeView extends JPanel {
             return;
           }
           final Object lastPathComponent = treePath.getLastPathComponent();
-          if (!(lastPathComponent instanceof StorageInstanceTreeNode)) {
+          if (!(lastPathComponent instanceof StorageInstanceTreeNode storageInstanceTreeNode)) {
             return;
           }
           tree.setSelectionPath(treePath);
-          final var storageInstanceTreeNode = (StorageInstanceTreeNode) lastPathComponent;
           final var popup = new StorageIndexNodePopupMenu(storageInstanceTreeNode);
           popup.show(e.getComponent(), e.getX(), e.getY());
         }
@@ -128,56 +121,50 @@ public class MainTreeView extends JPanel {
 
   public void incorporateEntryIntoTree(final StorageInstance storageInstance,
                                        final StorageEntry storageEntry) {
-    @SuppressWarnings({ "unused" })
     final ClickableTreeNode node;
-    if (storageEntry instanceof ScopedEntry) {
-      final var scopedEntry = (ScopedEntry) storageEntry;
-      final var hostEntry = treePathByEntry.keySet().stream()
-          .filter(it -> it.uri().getPath().equals(scopedEntry.scope().getPath()))
-          .findFirst();
-      if (hostEntry.isEmpty()) {
-        node = null;
-        log.warn("Failed to install scoped entry: {}", scopedEntry);
-      } else {
-        final StorageEntry host = hostEntry.get();
-        TreePath hostPath = treePathByEntry.get(host);
-        if (scopedEntry instanceof ScopedMapEntry) {
-          node = new StorageMapTreeNode((ScopedMapEntry) scopedEntry);
-        } else if (scopedEntry instanceof ScopedListEntry) {
-          node = new StorageListTreeNode((ScopedListEntry) scopedEntry);
-        } else if (scopedEntry instanceof ScopedObjectEntry) {
-          node = new StorageObjectTreeNode((ScopedObjectEntry) scopedEntry);
+    switch (storageEntry) {
+      case ScopedEntry scopedEntry -> {
+        final var hostEntry = treePathByEntry.keySet().stream()
+            .filter(it -> it.uri().getPath().equals(scopedEntry.scope().getPath()))
+            .findFirst();
+        if (hostEntry.isEmpty()) {
+          node = null;
+          log.warn("Failed to install scoped entry: {}", scopedEntry);
         } else {
-          throw new AssertionError("Unexpected scoped entry type: " + scopedEntry);
-        }
+          final StorageEntry host = hostEntry.get();
+          TreePath hostPath = treePathByEntry.get(host);
+          node = switch (scopedEntry) {
+            case ScopedMapEntry scopedMapEntry -> new StorageMapTreeNode(scopedMapEntry);
+            case ScopedListEntry scopedListEntry -> new StorageListTreeNode(scopedListEntry);
+            case ScopedObjectEntry scopedObjectEntry ->
+                new StorageObjectTreeNode(scopedObjectEntry);
+          };
 
-        final StorageObjectTreeNode hostNode =
-            (StorageObjectTreeNode) hostPath.getLastPathComponent();
-        if (enumerationToStream(hostNode.children()).anyMatch(
-            it -> it instanceof ClickableTreeNode && ((ClickableTreeNode) it).storageEntry().uri()
-                .equals(scopedEntry.uri()))) {
-          // node is already here...
-          return;
-        }
-        
-        hostNode.enableChildren(true);
-        tree.model().nodeChanged(hostNode);
-        tree.model().insertNodeInto(
-            (DefaultMutableTreeNode) node,
-            hostNode,
-            hostNode.getChildCount());
+          final StorageObjectTreeNode hostNode =
+              (StorageObjectTreeNode) hostPath.getLastPathComponent();
+          if (enumerationToStream(hostNode.children()).anyMatch(
+              it -> it instanceof ClickableTreeNode && ((ClickableTreeNode) it).storageEntry().uri()
+                  .equals(scopedEntry.uri()))) {
+            // node is already here...
+            return;
+          }
 
+          hostNode.enableChildren(true);
+          tree.model().nodeChanged(hostNode);
+          tree.model().insertNodeInto(
+              (DefaultMutableTreeNode) node,
+              hostNode,
+              hostNode.getChildCount());
+
+        }
       }
-    } else if (storageEntry instanceof ListEntry) {
-      node = tree.incorporateListEntry(storageInstance, (ListEntry) storageEntry);
-    } else if (storageEntry instanceof ObjectEntry) {
-      node = tree.incorporateObjectEntry(storageInstance, (ObjectEntry) storageEntry);
-    } else if (storageEntry instanceof MapEntry) {
-      node = tree.incorporateMapEntry(storageInstance, (MapEntry) storageEntry);
-    } else if (storageEntry instanceof SequenceEntry) {
-      node = tree.incorporateSequenceEntry(storageInstance, (SequenceEntry) storageEntry);
-    } else {
-      node = null;
+      case ListEntry listEntry -> node = tree.incorporateListEntry(storageInstance, listEntry);
+      case ObjectEntry objectEntry ->
+          node = tree.incorporateObjectEntry(storageInstance, objectEntry);
+      case MapEntry mapEntry -> node = tree.incorporateMapEntry(storageInstance, mapEntry);
+      case SequenceEntry sequenceEntry ->
+          node = tree.incorporateSequenceEntry(storageInstance, sequenceEntry);
+      case null, default -> node = null;
     }
 
     if (node != null) {

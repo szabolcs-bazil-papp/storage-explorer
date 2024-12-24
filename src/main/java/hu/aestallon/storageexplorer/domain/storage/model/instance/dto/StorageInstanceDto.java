@@ -6,8 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * StorageInstanceDto
@@ -22,7 +22,7 @@ import javax.validation.constraints.NotNull;
     StorageInstanceDto.DB
 })
 @JsonTypeName("StorageInstanceDto")
-@javax.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
+@jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
 public class StorageInstanceDto {
   public static final String ID = "id";
   private UUID id;
@@ -54,7 +54,7 @@ public class StorageInstanceDto {
     return this;
   }
 
-  @javax.annotation.Nullable
+  @jakarta.annotation.Nullable
   @Valid
   @JsonProperty(ID)
   @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
@@ -76,7 +76,7 @@ public class StorageInstanceDto {
     return this;
   }
 
-  @javax.annotation.Nullable
+  @jakarta.annotation.Nullable
   @JsonProperty(NAME)
   @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
 
@@ -95,7 +95,7 @@ public class StorageInstanceDto {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @Valid
   @JsonProperty(TYPE)
@@ -116,7 +116,7 @@ public class StorageInstanceDto {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @Valid
   @JsonProperty(INDEXING_STRATEGY)
@@ -139,7 +139,7 @@ public class StorageInstanceDto {
     return this;
   }
 
-  @javax.annotation.Nullable
+  @jakarta.annotation.Nullable
   @Valid
   @JsonProperty(AVAILABILITY)
   @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
@@ -160,7 +160,7 @@ public class StorageInstanceDto {
     return this;
   }
 
-  @javax.annotation.Nullable
+  @jakarta.annotation.Nullable
   @Valid
   @JsonProperty(FS)
   @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
@@ -181,7 +181,7 @@ public class StorageInstanceDto {
     return this;
   }
 
-  @javax.annotation.Nullable
+  @jakarta.annotation.Nullable
   @Valid
   @JsonProperty(DB)
   @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)

@@ -6,16 +6,15 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
-import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageLocation;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @JsonPropertyOrder({
   FsStorageLocation.PATH
 })
 @JsonTypeName("FsStorageLocation")
-@javax.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
-public class FsStorageLocation implements StorageLocation {
+@jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
+public final class FsStorageLocation implements StorageLocation {
   public static final String PATH = "path";
   private Path path = null;
 
@@ -28,7 +27,7 @@ public class FsStorageLocation implements StorageLocation {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @Valid
   @JsonProperty(PATH)

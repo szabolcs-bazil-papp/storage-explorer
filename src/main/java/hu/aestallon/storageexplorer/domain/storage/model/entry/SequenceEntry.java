@@ -11,7 +11,7 @@ import org.smartbit4all.api.collection.StoredSequence;
 import org.smartbit4all.core.utility.StringConstant;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 
-public class SequenceEntry implements StorageEntry {
+public final class SequenceEntry implements StorageEntry {
 
   private static final Logger log = LoggerFactory.getLogger(SequenceEntry.class);
 

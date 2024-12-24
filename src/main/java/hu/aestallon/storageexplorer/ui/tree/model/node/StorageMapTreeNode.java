@@ -19,7 +19,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.MapEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 
-public class StorageMapTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
+public final class StorageMapTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 
   public StorageMapTreeNode(MapEntry mapEntry) {
     super(mapEntry, false);

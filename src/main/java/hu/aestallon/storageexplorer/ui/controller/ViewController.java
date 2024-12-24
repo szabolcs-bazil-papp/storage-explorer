@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import hu.aestallon.storageexplorer.domain.storage.model.entry.ScopedEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.ui.ExplorerView;
@@ -34,55 +35,22 @@ public class ViewController {
   private static final Logger log = LoggerFactory.getLogger(ViewController.class);
 
 
-  public static final class EntryInspectionEvent {
-    private final StorageEntry storageEntry;
-
-    public EntryInspectionEvent(StorageEntry storageEntry) {
-      this.storageEntry = storageEntry;
-    }
-
-  }
+  public record EntryInspectionEvent(StorageEntry storageEntry) {}
 
 
-  public static final class GraphRenderingRequest {
-    private final StorageEntry storageEntry;
-
-    public GraphRenderingRequest(StorageEntry storageEntry) {
-      this.storageEntry = storageEntry;
-    }
-
-  }
+  public record GraphRenderingRequest(StorageEntry storageEntry) {}
 
 
-  public static final class TreeTouchRequest {
-    private final StorageEntry storageEntry;
-
-    public TreeTouchRequest(StorageEntry storageEntry) {this.storageEntry = storageEntry;}
-  }
+  public record TreeTouchRequest(StorageEntry storageEntry) {}
 
 
-  public static final class GraphSelectionRequest {
-    private final StorageEntry storageEntry;
-
-    public GraphSelectionRequest(StorageEntry storageEntry) {
-      this.storageEntry = storageEntry;
-    }
-
-  }
+  public record GraphSelectionRequest(StorageEntry storageEntry) {}
 
 
-  public static final class GraphViewCloseRequest {
-  }
+  public record GraphViewCloseRequest() {}
 
 
-  public static final class StorageImportEvent {
-    private final StorageInstance storageInstance;
-
-    public StorageImportEvent(final StorageInstance storageInstance) {
-      this.storageInstance = storageInstance;
-    }
-
-  }
+  public record StorageImportEvent(StorageInstance storageInstance) {}
 
 
   private final ExplorerView explorerView;
@@ -138,13 +106,7 @@ public class ViewController {
     SwingUtilities.invokeLater(() -> mainTreeView.importStorage(e.storageInstance));
   }
 
-  public static final class BackgroundWorkStartedEvent {
-    private final String displayName;
-
-    public BackgroundWorkStartedEvent(String displayName) {
-      this.displayName = displayName;
-    }
-  }
+  public record BackgroundWorkStartedEvent(String displayName) {}
 
 
   public static final class BackgroundWorkCompletedEvent {
@@ -175,14 +137,7 @@ public class ViewController {
     SwingUtilities.invokeLater(mainTreeView::removeProgressBar);
   }
 
-  public static final class StorageReindexed {
-    private final StorageInstance storageInstance;
-
-    public StorageReindexed(StorageInstance storageInstance) {
-      this.storageInstance = storageInstance;
-    }
-
-  }
+  public record StorageReindexed(StorageInstance storageInstance) {}
 
   @EventListener
   public void onStorageReindexed(StorageReindexed e) {
@@ -205,14 +160,7 @@ public class ViewController {
    * References shouldn't be set to {@code null} manually! That just hampers the garbage collector
    * in its efforts to determine whether an object is actually reachable or not.
    */
-  public static final class StorageIndexDiscardedEvent {
-    public final StorageInstance storageInstance;
-
-    public StorageIndexDiscardedEvent(StorageInstance storageInstance) {
-      this.storageInstance = storageInstance;
-    }
-
-  }
+  public record StorageIndexDiscardedEvent(StorageInstance storageInstance) {}
 
   @EventListener
   public void onStorageIndexDiscarded(StorageIndexDiscardedEvent e) {
@@ -225,14 +173,7 @@ public class ViewController {
     });
   }
 
-  public static final class StorageReimportedEvent {
-    public final StorageInstance storageInstance;
-
-    public StorageReimportedEvent(StorageInstance storageInstance) {
-      this.storageInstance = storageInstance;
-    }
-
-  }
+  public record StorageReimportedEvent(StorageInstance storageInstance) {}
 
   @EventListener
   public void onStorageReimported(StorageReimportedEvent e) {
@@ -244,15 +185,7 @@ public class ViewController {
     });
   }
 
-  public static final class EntryAcquired {
-    final StorageInstance storageInstance;
-    final StorageEntry storageEntry;
-
-    public EntryAcquired(StorageInstance storageInstance, StorageEntry storageEntry) {
-      this.storageInstance = storageInstance;
-      this.storageEntry = storageEntry;
-    }
-  }
+  public record EntryAcquired(StorageInstance storageInstance, StorageEntry storageEntry) {}
 
   @EventListener
   public void onEntryAcquired(EntryAcquired e) {
@@ -261,21 +194,12 @@ public class ViewController {
       mainTreeView.incorporateEntryIntoTree(
           e.storageInstance,
           e.storageEntry);
-      log.info("Selecting entry: {}", e.storageEntry);  
+      log.info("Selecting entry: {}", e.storageEntry);
       mainTreeView.selectEntry(e.storageEntry);
     });
   }
 
-  public static final class EntryAcquisitionFailed {
-    final StorageInstance storageInstance;
-    final URI uri;
-
-    public EntryAcquisitionFailed(StorageInstance storageInstance, URI uri) {
-      this.storageInstance = storageInstance;
-      this.uri = uri;
-    }
-
-  }
+  public record EntryAcquisitionFailed(StorageInstance storageInstance, URI uri) {}
 
   @EventListener
   public void onEntryAcquisitionFailed(EntryAcquisitionFailed e) {
@@ -284,15 +208,7 @@ public class ViewController {
     });
   }
 
-  public static final class EntryDiscovered {
-    final StorageInstance storageInstance;
-    final StorageEntry storageEntry;
-
-    public EntryDiscovered(StorageInstance storageInstance, StorageEntry storageEntry) {
-      this.storageInstance = storageInstance;
-      this.storageEntry = storageEntry;
-    }
-  }
+  public record EntryDiscovered(StorageInstance storageInstance, StorageEntry storageEntry) {}
 
   @EventListener
   public void onEntryDiscovered(EntryDiscovered e) {

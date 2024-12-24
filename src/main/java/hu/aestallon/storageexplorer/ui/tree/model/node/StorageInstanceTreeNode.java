@@ -29,7 +29,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstanc
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
-public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
+public final class StorageInstanceTreeNode extends DefaultMutableTreeNode {
 
   private final StorageInstance storageInstance;
 
@@ -42,10 +42,10 @@ public class StorageInstanceTreeNode extends DefaultMutableTreeNode {
         .filter(it -> it instanceof ListEntry
             || it instanceof MapEntry
             || it instanceof SequenceEntry)
-        .map(it -> it instanceof ListEntry
-            ? new StorageListTreeNode((ListEntry) it)
-            : it instanceof MapEntry
-                ? new StorageMapTreeNode((MapEntry) it)
+        .map(it -> it instanceof ListEntry list
+            ? new StorageListTreeNode(list)
+            : it instanceof MapEntry map
+                ? new StorageMapTreeNode(map)
                 : new StorageSequenceTreeNode((SequenceEntry) it))
         .sorted((a, b) -> (a instanceof StorageListTreeNode)
             ? -1

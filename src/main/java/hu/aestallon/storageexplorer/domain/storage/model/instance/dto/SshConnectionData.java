@@ -6,8 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.math.BigDecimal;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import javax.validation.constraints.*;
-import javax.validation.Valid;
+import jakarta.validation.constraints.*;
+import jakarta.validation.Valid;
 
 @JsonPropertyOrder({
   SshConnectionData.DOMAIN,
@@ -17,7 +17,7 @@ import javax.validation.Valid;
   SshConnectionData.PORT_MAPPING
 })
 @JsonTypeName("SshConnectionData")
-@javax.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
+@jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
 public class SshConnectionData {
   public static final String DOMAIN = "domain";
   private String domain;
@@ -42,7 +42,7 @@ public class SshConnectionData {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @JsonProperty(DOMAIN)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
@@ -63,7 +63,7 @@ public class SshConnectionData {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @Valid
   @JsonProperty(PORT)
@@ -84,7 +84,7 @@ public class SshConnectionData {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @JsonProperty(USERNAME)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
@@ -105,7 +105,7 @@ public class SshConnectionData {
     return this;
   }
 
-  @javax.annotation.Nonnull
+  @jakarta.annotation.Nonnull
   @NotNull
   @JsonProperty(PASSWORD)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
@@ -125,7 +125,7 @@ public class SshConnectionData {
     return this;
   }
 
-  @javax.annotation.Nullable
+  @jakarta.annotation.Nullable
   @Valid
   @JsonProperty(PORT_MAPPING)
   @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)

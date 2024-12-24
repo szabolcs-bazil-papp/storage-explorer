@@ -4,7 +4,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.SequenceEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 
-public class StorageSequenceTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
+public final class StorageSequenceTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
  
   public StorageSequenceTreeNode(SequenceEntry sequenceEntry) {
     super(sequenceEntry, false);

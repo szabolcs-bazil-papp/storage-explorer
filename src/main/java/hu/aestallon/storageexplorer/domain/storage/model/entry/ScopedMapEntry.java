@@ -21,7 +21,7 @@ import org.smartbit4all.api.collection.CollectionApi;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.Uris;
 
-public class ScopedMapEntry extends MapEntry implements ScopedEntry {
+public final class ScopedMapEntry extends MapEntry implements ScopedEntry, StorageEntry {
   private final URI scopeUri;
 
   ScopedMapEntry(StorageId id, Path path, URI uri, CollectionApi collectionApi, URI scopeUri) {

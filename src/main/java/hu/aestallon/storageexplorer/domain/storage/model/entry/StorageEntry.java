@@ -21,7 +21,10 @@ import org.smartbit4all.core.utility.StringConstant;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.util.Uris;
 
-public interface StorageEntry {
+public sealed interface StorageEntry permits
+    ListEntry, MapEntry, ObjectEntry,
+    SequenceEntry, ScopedListEntry, ScopedMapEntry,
+    ScopedObjectEntry {
 
   static String typeNameOf(StorageEntry storageEntry) {
     if (storageEntry == null) {

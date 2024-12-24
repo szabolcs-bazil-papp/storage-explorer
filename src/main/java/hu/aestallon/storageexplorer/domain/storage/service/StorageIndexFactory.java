@@ -33,7 +33,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageLocation;
+import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageLocation;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.Availability;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.DatabaseConnectionData;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.DatabaseVendor;
@@ -44,7 +44,9 @@ import hu.aestallon.storageexplorer.util.NotImplementedException;
 
 final class StorageIndexFactory {
 
-  static abstract class StorageIndexCreationResult {
+  static abstract sealed class StorageIndexCreationResult permits
+      StorageIndexCreationResult.Ok,
+      StorageIndexCreationResult.Err {
 
     protected final Availability availability;
 
@@ -104,19 +106,14 @@ final class StorageIndexFactory {
   StorageIndexCreationResult create(final StorageLocation storageLocation) {
     try {
 
-      if (storageLocation instanceof FsStorageLocation) {
-        final FsStorageLocation fsStorageLocation = (FsStorageLocation) storageLocation;
-        return createFs(fsStorageLocation);
-      } else if (storageLocation instanceof SqlStorageLocation) {
-        final SqlStorageLocation sqlStorageLocation = (SqlStorageLocation) storageLocation;
-        return createDb(sqlStorageLocation);
-      }
+      return switch (storageLocation) {
+        case FsStorageLocation fs -> createFs(fs);
+        case SqlStorageLocation sql -> createDb(sql);
+      };
 
     } catch (final Exception e) {
       return new StorageIndexCreationResult.Err(Availability.UNAVAILABLE, e.getMessage());
     }
-
-    throw new NotImplementedException("Unsupported storage location: " + storageLocation);
   }
 
   private Map<String, Object> defaultProps() {
@@ -212,42 +209,34 @@ final class StorageIndexFactory {
 
   private Supplier<SQLDBParameter> getSqlDBParameterFactory(final ApplicationContext ctx,
                                                             final DatabaseVendor vendor) {
-    switch (vendor) {
-      case ORACLE:
-        return SQLDBParameterOracle::new;
-      case H2:
-        return SQLDBParameterH2::new;
-      case PG:
-        return SQLDBParameterPostgres::new;
-      default:
-        throw new NotImplementedException("Unsupported database vendor: " + vendor);
-    }
+    return switch (vendor) {
+      case ORACLE -> SQLDBParameterOracle::new;
+      case H2 -> SQLDBParameterH2::new;
+      case PG -> SQLDBParameterPostgres::new;
+      default -> throw new NotImplementedException("Unsupported database vendor: " + vendor);
+    };
   }
 
   private Supplier<IdentifierService> getIdentifierServiceFactory(final ApplicationContext ctx,
                                                                   final DatabaseVendor vendor) {
-    switch (vendor) {
-      case ORACLE:
-        return () -> {
-          final JdbcTemplate jdbcTemplate = ctx.getBean(JdbcTemplate.class);
-          return new SQLIdentifierService(
-              jdbcTemplate,
-              () -> new SQLNextIdentifierOracle(jdbcTemplate),
-              () -> new SQLCurrentIdentifierOracle(jdbcTemplate));
-        };
-      case H2:
-        return () -> new SQLIdentifierServiceH2(ctx.getBean(JdbcTemplate.class));
-      case PG:
-        return () -> {
-          final JdbcTemplate jdbcTemplate = ctx.getBean(JdbcTemplate.class);
-          return new SQLIdentifierService(
-              jdbcTemplate,
-              () -> new SQLNextIdentifierPg(jdbcTemplate),
-              () -> new SQLCurrentIdentifierPg(jdbcTemplate));
-        };
-      default:
-        throw new NotImplementedException("Unsupported database vendor: " + vendor);
-    }
+    return switch (vendor) {
+      case ORACLE -> () -> {
+        final JdbcTemplate jdbcTemplate = ctx.getBean(JdbcTemplate.class);
+        return new SQLIdentifierService(
+            jdbcTemplate,
+            () -> new SQLNextIdentifierOracle(jdbcTemplate),
+            () -> new SQLCurrentIdentifierOracle(jdbcTemplate));
+      };
+      case H2 -> () -> new SQLIdentifierServiceH2(ctx.getBean(JdbcTemplate.class));
+      case PG -> () -> {
+        final JdbcTemplate jdbcTemplate = ctx.getBean(JdbcTemplate.class);
+        return new SQLIdentifierService(
+            jdbcTemplate,
+            () -> new SQLNextIdentifierPg(jdbcTemplate),
+            () -> new SQLCurrentIdentifierPg(jdbcTemplate));
+      };
+      default -> throw new NotImplementedException("Unsupported database vendor: " + vendor);
+    };
   }
 
   private Supplier<DataSource> getDataSourceFactory(final DatabaseVendor vendor,
