@@ -34,7 +34,6 @@ import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
-import hu.aestallon.storageexplorer.event.msg.ErrorMsg;
 import hu.aestallon.storageexplorer.event.msg.Msg;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import jakarta.validation.constraints.NotNull;
@@ -162,12 +161,12 @@ public class StorageIndexProvider {
         contextsByInstance.put(storageInstance, ctx);
       }
       case StorageIndexFactory.StorageIndexCreationResult.Err err -> {
-          eventPublisher.publishEvent(Msg.err(
-              "Failed to initialize " + storageInstance.name(), 
-              "Storage instance is unavailable: " + err.errorMessage()));
-          log.error("Failed to initialise Storage instance [ {} ]: {}",
-              storageInstance.name(),
-              err.errorMessage());
+        eventPublisher.publishEvent(Msg.err(
+            "Failed to initialize " + storageInstance.name(),
+            "Storage instance is unavailable: " + err.errorMessage()));
+        log.error("Failed to initialise Storage instance [ {} ]: {}",
+            storageInstance.name(),
+            err.errorMessage());
       }
     }
   }
@@ -176,6 +175,9 @@ public class StorageIndexProvider {
     executorService.submit(() -> {
       final StorageIndex storageIndex = storageInstance.index();
       if (storageIndex == null) {
+        eventPublisher.publishEvent(Msg.err(
+            "Cannot reindex " + storageInstance.name() + "!",
+            "The index is not available. Check the connection settings for this storage!"));
         log.warn("Cannot reindex storage at [ {} ] as it is unknown!", storageInstance);
         return;
       }
