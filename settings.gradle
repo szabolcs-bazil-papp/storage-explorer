@@ -1,3 +1,11 @@
 rootProject.name = 'storage-explorer'
 
 includeBuild '../platform-jdk21-silent-mode-20241222'
+include 'app-swing'
+include 'core'
+include 'graph'
+include 'swing'
+include 'spring'
+include 'spring-boot-starter'
+include 'common'
+
