@@ -47,6 +47,7 @@ bin/
 /p**/**
 
 ### run artefacts ###
+/logs
 **/*.log
 /*.jar
 /*.pid

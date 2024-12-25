@@ -1,0 +1,29 @@
+plugins {
+  id 'org.smartbit4all.platform.gradle.java' version '0.5.3'
+  id 'org.springframework.boot' version '3.3.3'
+}
+
+group = 'hu.aestallon.storageexplorer'
+version = 'unspecified'
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'org.springframework:spring-core'
+  implementation 'org.springframework:spring-context'
+  implementation project(':core')
+  implementation project(':graph')
+  implementation project(':common')
+  implementation 'org.graphstream:gs-ui-swing:2.0'
+
+  implementation 'com.fifesoft:rsyntaxtextarea:3.4.0'
+  implementation 'com.fifesoft:rstaui:3.3.1'
+
+  implementation 'com.intellij:forms_rt:7.0.3'
+}
+
+test {
+  useJUnitPlatform()
+}
