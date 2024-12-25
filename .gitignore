@@ -53,3 +53,6 @@ bin/
 /*.pid
 screens/
 /settings
+
+### Distribution artefacts ###
+**/*.msi
