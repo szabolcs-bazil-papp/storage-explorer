@@ -34,6 +34,8 @@ import hu.aestallon.storageexplorer.domain.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
+import hu.aestallon.storageexplorer.event.msg.ErrorMsg;
+import hu.aestallon.storageexplorer.event.msg.Msg;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import jakarta.validation.constraints.NotNull;
 
@@ -159,10 +161,14 @@ public class StorageIndexProvider {
         storageInstancesById.put(storageInstance.id(), storageInstance);
         contextsByInstance.put(storageInstance, ctx);
       }
-      case StorageIndexFactory.StorageIndexCreationResult.Err err ->
+      case StorageIndexFactory.StorageIndexCreationResult.Err err -> {
+          eventPublisher.publishEvent(Msg.err(
+              "Failed to initialize " + storageInstance.name(), 
+              "Storage instance is unavailable: " + err.errorMessage()));
           log.error("Failed to initialise Storage instance [ {} ]: {}",
               storageInstance.name(),
               err.errorMessage());
+      }
     }
   }
 
@@ -180,6 +186,7 @@ public class StorageIndexProvider {
       storageInstance.refreshIndex();
       eventPublisher.publishEvent(new ViewController.StorageReindexed(storageInstance));
       eventPublisher.publishEvent(ViewController.BackgroundWorkCompletedEvent.ok());
+      eventPublisher.publishEvent(Msg.info(storageInstance.name() + " reindexed!", null));
     });
   }
 
