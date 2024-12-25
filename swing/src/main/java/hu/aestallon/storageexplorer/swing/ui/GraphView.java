@@ -49,7 +49,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.graph.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.storage.model.instance.StorageInstance;
@@ -265,7 +264,7 @@ public class GraphView extends JPanel {
       }
 
       final String id = node.getId();
-      if (Strings.isNullOrEmpty(id)) {
+      if (id == null || id.isEmpty()) {
         JOptionPane.showMessageDialog(
             GraphView.this,
             "No entry under node!",

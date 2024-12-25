@@ -22,15 +22,13 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.core.object.ObjectNode;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import hu.aestallon.storageexplorer.storage.model.entry.ObjectEntry;
+import hu.aestallon.storageexplorer.storage.model.loading.ObjectEntryLoadResult;
 
 
 public final class InspectorTextareaFactory {
 
   private static final Logger log = LoggerFactory.getLogger(InspectorTextareaFactory.class);
-
 
   static final class PaneAndTextarea {
     final JScrollPane scrollPane;
@@ -61,26 +59,30 @@ public final class InspectorTextareaFactory {
     this.inspectorViewFactory = inspectorViewFactory;
   }
 
-  PaneAndTextarea create(final ObjectEntry objectEntry, final ObjectNode objectNode) {
-    return create(objectEntry, objectNode, Type.FANCY);
+  PaneAndTextarea create(final ObjectEntry objectEntry,
+                         final ObjectEntryLoadResult.SingleVersion nodeVersion) {
+    return create(objectEntry, nodeVersion, Type.FANCY);
   }
 
-  private PaneAndTextarea create(final ObjectEntry objectEntry, final ObjectNode objectNode,
+  private PaneAndTextarea create(final ObjectEntry objectEntry,
+                                 final ObjectEntryLoadResult.SingleVersion nodeVersion,
                                  final Type type) {
     return switch (type) {
-      case SIMPLE -> createSimple(objectEntry, objectNode);
-      case FANCY -> createFancy(objectEntry, objectNode);
+      case SIMPLE -> createSimple(objectEntry, nodeVersion);
+      case FANCY -> createFancy(objectEntry, nodeVersion);
     };
   }
 
-  private PaneAndTextarea createSimple(final ObjectEntry objectEntry, final ObjectNode objectNode) {
-    final var textarea = objectAsMapTextarea(objectEntry, objectNode);
+  private PaneAndTextarea createSimple(final ObjectEntry objectEntry,
+                                       final ObjectEntryLoadResult.SingleVersion nodeVersion) {
+    final var textarea = objectAsMapTextarea(objectEntry, nodeVersion);
     final var pane = textAreaContainerPane(textarea);
     return new PaneAndTextarea(pane, textarea);
   }
 
-  private PaneAndTextarea createFancy(final ObjectEntry objectEntry, final ObjectNode objectNode) {
-    final var textarea = new RSyntaxTextArea(getObjectAsMap(objectNode));
+  private PaneAndTextarea createFancy(final ObjectEntry objectEntry,
+                                      final ObjectEntryLoadResult.SingleVersion nodeVersion) {
+    final var textarea = new RSyntaxTextArea(nodeVersion.oamStr());
     textarea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
     textarea.setCodeFoldingEnabled(true);
     textarea.setWrapStyleWord(true);
@@ -99,8 +101,8 @@ public final class InspectorTextareaFactory {
   }
 
   private JTextArea objectAsMapTextarea(final ObjectEntry objectEntry,
-                                        final ObjectNode objectNode) {
-    final var textarea = new JTextArea(getObjectAsMap(objectNode), 0, 80);
+                                        final ObjectEntryLoadResult.SingleVersion nodeVersion) {
+    final var textarea = new JTextArea(nodeVersion.oamStr(), 0, 80);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
     textarea.setEditable(false);
@@ -113,18 +115,6 @@ public final class InspectorTextareaFactory {
     inspectorViewFactory.submitTextArea(objectEntry, textarea);
 
     return textarea;
-  }
-
-  private String getObjectAsMap(final ObjectNode objectNode) {
-    try {
-      return inspectorViewFactory
-          .objectMapper()
-          .writerWithDefaultPrettyPrinter()
-          .writeValueAsString(objectNode.getObjectAsMap());
-    } catch (JsonProcessingException e) {
-      log.error(e.getMessage(), e);
-      return "Cannot render object-as-map: " + e.getMessage();
-    }
   }
 
 }

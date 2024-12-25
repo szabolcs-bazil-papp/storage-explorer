@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.core.utility.StringConstant;
 import org.springframework.util.StreamUtils;
 
 public class GraphStylingProvider {
@@ -31,13 +30,13 @@ public class GraphStylingProvider {
   private static String loadStylesheet(String loc) {
     try (final var in = GraphStylingProvider.class.getResourceAsStream(loc)) {
       if (in == null) {
-        return StringConstant.EMPTY;
+        return "";
       }
 
       return StreamUtils.copyToString(in, StandardCharsets.UTF_8);
     } catch (IOException e) {
       log.error(e.getMessage(), e);
-      return StringConstant.EMPTY;
+      return "";
     }
   }
 

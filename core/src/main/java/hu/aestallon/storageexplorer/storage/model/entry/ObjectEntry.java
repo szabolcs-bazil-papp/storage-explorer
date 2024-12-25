@@ -21,7 +21,6 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -30,17 +29,22 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
 import org.smartbit4all.core.utility.StringConstant;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.StorageId;
 import hu.aestallon.storageexplorer.common.util.IO;
 import hu.aestallon.storageexplorer.common.util.ObjectMaps;
 import hu.aestallon.storageexplorer.common.util.Pair;
 import hu.aestallon.storageexplorer.common.util.Uris;
+import hu.aestallon.storageexplorer.storage.model.instance.dto.StorageId;
+import hu.aestallon.storageexplorer.storage.model.loading.ObjectEntryLoadResult;
+import hu.aestallon.storageexplorer.storage.model.loading.ObjectEntryLoadResults;
 import static java.util.stream.Collectors.toSet;
 
 public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntry {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
+  
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final StorageId id;
   private final Path path;
@@ -48,12 +52,11 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   private final ObjectApi objectApi;
   private final String typeName;
   private final String uuid;
-  
+  private final Set<ScopedEntry> scopedEntries = new HashSet<>();
+
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
   private String displayName;
-
-  private Set<ScopedEntry> scopedEntries = new HashSet<>();
 
   ObjectEntry(StorageId id, final Path path, final URI uri, final ObjectApi objectApi) {
     this.id = id;
@@ -66,10 +69,6 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   public Set<ScopedEntry> scopedEntries() {
     return scopedEntries;
-  }
-
-  public void scopedEntries(final Set<ScopedEntry> scopedEntries) {
-    this.scopedEntries = (scopedEntries == null) ? new HashSet<>() : new HashSet<>(scopedEntries);
   }
 
   public void addScopedEntry(final ScopedEntry scopedEntry) {
@@ -91,7 +90,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     if (!valid) {
       refresh();
     }
-    
+
     final var uriProperties = new HashSet<>(this.uriProperties);
     scopedEntries.stream()
         .map(e -> UriProperty.standalone(
@@ -113,7 +112,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     final var objectNode = load();
     refresh(objectNode);
   }
-  
+
   public void refresh(final ObjectNode objectNode) {
     if (objectNode == null) {
       uriProperties = new HashSet<>();
@@ -123,7 +122,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
     uriProperties = initUriProperties(objectNode);
     displayName = initDisplayName(objectNode);
-    valid  = true;
+    valid = true;
   }
 
   private Set<UriProperty> initUriProperties(final ObjectNode objectNode) {
@@ -145,11 +144,11 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
     Object dataName = null;
     try {
-       dataName = objectNode.getValue("data", "name");
+      dataName = objectNode.getValue("data", "name");
     } catch (final Exception e) {
       log.debug(e.getMessage(), e);
     }
-    
+
     if (dataName != null) {
       return String.valueOf(dataName);
     }
@@ -164,7 +163,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   public String typeName() {
     return typeName;
   }
-  
+
   public @Nullable Path path() {
     return path;
   }
@@ -182,7 +181,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     }
   }
 
-  private Optional<Map<? , ?>> tryDeserialise() {
+  private Optional<Map<?, ?>> tryDeserialise() {
     final String rawContent = IO.read(path);
     if (Strings.isNullOrEmpty(rawContent)) {
       log.error("Empty content found during deserialisation attempt of [ {} ]", uri);
@@ -203,11 +202,15 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   public ObjectEntryLoadResult tryLoad() {
     try {
-      final ObjectNode objectNode = load();
-      if (objectNode == null) {
-        return ObjectEntryLoadResult.err(null);
+      if (Uris.isSingleVersion(uri)) {
+        final var node = load();
+        return (node != null)
+            ? ObjectEntryLoadResults.singleVersion(node, OBJECT_MAPPER)
+            : ObjectEntryLoadResults.err("Failed to retrieve single version object entry!");
+      } else {
+        final var historyIterator = objectApi.objectHistory(uri);
+        return ObjectEntryLoadResults.multiVersion(historyIterator, OBJECT_MAPPER);
       }
-      return ObjectEntryLoadResult.ok(objectNode);
     } catch (Throwable t) {
       final String msg = String.format("Could not load Object Entry [ %s ] : %s",
           uri,
@@ -215,7 +218,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
       log.error(msg);
       log.error(t.getMessage(), t);
 
-      return ObjectEntryLoadResult.err(msg);
+      return ObjectEntryLoadResults.err(msg);
     }
   }
 
@@ -251,74 +254,12 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   @Override
   public String toString() {
     if (!valid) {
-        refresh();
+      refresh();
     }
-    
+
     return (displayName.isEmpty())
         ? typeName
         : typeName + " (" + displayName + ")";
-  }
-
-  public static final class ObjectEntryLoadResult {
-
-    static ObjectEntryLoadResult ok(final ObjectNode objectNode) {
-      return new ObjectEntryLoadResult(objectNode, StringConstant.EMPTY);
-    }
-
-    static ObjectEntryLoadResult err(final String errorMessage) {
-      return Strings.isNullOrEmpty(errorMessage)
-          ? new ObjectEntryLoadResult(null, "Loading node failed for unknown reason.")
-          : new ObjectEntryLoadResult(null, errorMessage);
-    }
-
-    private final ObjectNode objectNode;
-    private final String errorMessage;
-
-    private ObjectEntryLoadResult(ObjectNode objectNode, String errorMessage) {
-      this.objectNode = objectNode;
-      this.errorMessage = errorMessage;
-    }
-
-    public ObjectNode objectNode() {
-      return objectNode;
-    }
-
-    public String errorMessage() {
-      return errorMessage;
-    }
-
-    public boolean isOk() {
-      return objectNode != null;
-    }
-
-    public boolean isErr() {
-      return !isOk();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o)
-        return true;
-      if (o == null || getClass() != o.getClass())
-        return false;
-      ObjectEntryLoadResult that = (ObjectEntryLoadResult) o;
-      return Objects.equals(objectNode, that.objectNode) && Objects.equals(
-          errorMessage, that.errorMessage);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(objectNode, errorMessage);
-    }
-
-    @Override
-    public String toString() {
-      return "ObjectEntryLoadResult{" +
-          "objectNode=" + objectNode +
-          ", errorMessage='" + errorMessage + '\'' +
-          '}';
-    }
-
   }
 
 }

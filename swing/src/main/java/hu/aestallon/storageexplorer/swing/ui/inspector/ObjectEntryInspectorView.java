@@ -31,10 +31,9 @@ import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.core.object.ObjectNode;
 import hu.aestallon.storageexplorer.storage.model.entry.ObjectEntry;
+import hu.aestallon.storageexplorer.storage.model.loading.ObjectEntryLoadResult;
 import hu.aestallon.storageexplorer.swing.ui.misc.IconProvider;
-import hu.aestallon.storageexplorer.common.util.Uris;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
 
@@ -79,7 +78,6 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
   private final ObjectEntry objectEntry;
   private final StorageEntryInspectorViewFactory factory;
-  private final ObjectNode objectNode;
 
   public ObjectEntryInspectorView(ObjectEntry objectEntry,
                                   StorageEntryInspectorViewFactory factory) {
@@ -89,36 +87,28 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     this.factory = factory;
 
     final var result = objectEntry.tryLoad();
-    if (result.isOk()) {
-      objectNode = result.objectNode();
-      setUpObjectNodeDisplay(objectEntry);
-    } else {
-      objectNode = null;
-      setUpLoadingErrorDisplay(result);
+    switch (result) {
+      case ObjectEntryLoadResult.Err err -> setUpLoadingErrorDisplay(err);
+      case ObjectEntryLoadResult.SingleVersion sv -> setUpObjectNodeDisplay(sv);
+      case ObjectEntryLoadResult.MultiVersion mv -> setUpObjectNodeDisplay(mv);
     }
   }
 
-  private void setUpObjectNodeDisplay(ObjectEntry objectEntry) {
-    final long versionNr = versionNr();
-    if (versionNr == 0L) {
-      addTab(
-          Uris.isSingleVersion(objectEntry.uri()) ? "SINGLE" : "00",
-          versionPane(objectNode));
-    } else {
-      for (int i = 0; i <= versionNr; i++) {
-        final var versionedNode = objectEntry.load(i);
-        addTab(String.format("%02d", i), versionPane(versionedNode));
-      }
+  private void setUpObjectNodeDisplay(ObjectEntryLoadResult.MultiVersion multiVersion) {
+    final var versions = multiVersion.versions();
+    for (int i = 0; i < versions.size(); i++) {
+      addTab(String.format("%02d", i), versionPane(versions.get(i)));
     }
-    setSelectedIndex((int) versionNr);
+    setSelectedIndex(versions.size() - 1);
   }
 
-  private long versionNr() {
-    final Long boxed = objectNode.getVersionNr();
-    return (boxed == null) ? 0 : boxed;
+  private void setUpObjectNodeDisplay(
+      ObjectEntryLoadResult.SingleVersion singleVersion) {
+    addTab("SINGLE", versionPane(singleVersion));
+    setSelectedIndex(0);
   }
 
-  private Component versionPane(final ObjectNode objectNode) {
+  private Component versionPane(final ObjectEntryLoadResult.SingleVersion objectNode) {
     final var container = new JPanel();
     container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
     container.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -170,8 +160,9 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     return container;
   }
 
-  private String getNodeCreationValue(final ObjectNode objectNode) {
-    final OffsetDateTime createdAt = objectNode.getData().getCreatedAt();
+  private String getNodeCreationValue(
+      final ObjectEntryLoadResult.SingleVersion objectNode) {
+    final OffsetDateTime createdAt = objectNode.meta().createdAt();
     if (createdAt == null) {
       return "UNKNOWN";
     }
@@ -179,23 +170,23 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     return FORMATTER_CREATION_DATE.format(createdAt);
   }
 
-  private void setUpLoadingErrorDisplay(final ObjectEntry.ObjectEntryLoadResult loadResult) {
-    addTab("ERROR", errorPane(loadResult));
+  private void setUpLoadingErrorDisplay(final ObjectEntryLoadResult.Err err) {
+    addTab("ERROR", errorPane(err));
     setSelectedIndex(0);
   }
 
-  private JComponent errorPane(final ObjectEntry.ObjectEntryLoadResult loadResult) {
+  private JComponent errorPane(final ObjectEntryLoadResult.Err err) {
     final var container = new JPanel();
     container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
     container.setBorder(new EmptyBorder(5, 5, 5, 5));
 
     final var label = new JLabel(
-        (objectEntry == null ? "" : objectEntry.toString() + " ") + "LOADING ERROR");
+        (objectEntry == null ? "" : objectEntry + " ") + "LOADING ERROR");
     label.setFont(UIManager.getFont("h3.font"));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     container.add(label);
-    container.add(errorMessageDisplay(loadResult.errorMessage()));
+    container.add(errorMessageDisplay(err.msg()));
     return container;
   }
 

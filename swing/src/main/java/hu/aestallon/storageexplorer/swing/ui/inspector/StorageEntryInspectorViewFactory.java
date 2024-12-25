@@ -32,8 +32,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
 import hu.aestallon.storageexplorer.storage.model.entry.ListEntry;
 import hu.aestallon.storageexplorer.storage.model.entry.MapEntry;
 import hu.aestallon.storageexplorer.storage.model.entry.ObjectEntry;
@@ -51,7 +49,6 @@ import hu.aestallon.storageexplorer.common.util.Uris;
 public class StorageEntryInspectorViewFactory {
 
   private final ApplicationEventPublisher eventPublisher;
-  private final ObjectMapper objectMapper;
   private final StorageIndexProvider storageIndexProvider;
   private final MonospaceFontProvider monospaceFontProvider;
   private final InspectorTextareaFactory textareaFactory;
@@ -60,11 +57,9 @@ public class StorageEntryInspectorViewFactory {
   private final Map<StorageEntry, List<JTextArea>> textAreas;
 
   public StorageEntryInspectorViewFactory(ApplicationEventPublisher eventPublisher,
-                                          ObjectMapper objectMapper,
                                           StorageIndexProvider storageIndexProvider,
                                           MonospaceFontProvider monospaceFontProvider) {
     this.eventPublisher = eventPublisher;
-    this.objectMapper = objectMapper;
     this.storageIndexProvider = storageIndexProvider;
     this.monospaceFontProvider = monospaceFontProvider;
     this.textareaFactory = new InspectorTextareaFactory(this);
@@ -84,10 +79,6 @@ public class StorageEntryInspectorViewFactory {
 
   InspectorTextareaFactory textareaFactory() {
     return textareaFactory;
-  }
-
-  ObjectMapper objectMapper() {
-    return objectMapper;
   }
 
   public void dropInspector(final InspectorView<? extends StorageEntry> inspector) {
@@ -197,7 +188,7 @@ public class StorageEntryInspectorViewFactory {
       public void actionPerformed(ActionEvent e) {
         final JTextArea textArea = (JTextArea) e.getSource();
         final String selectedText = textArea.getSelectedText();
-        if (Strings.isNullOrEmpty(selectedText)) {
+        if (selectedText == null || selectedText.isEmpty()) {
           return;
         }
         jumpToUriBasedOnText(selectedText);
