@@ -22,7 +22,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import com.formdev.flatlaf.FlatIntelliJLaf;
-import hu.aestallon.storageexplorer.storage.service.StorageIndexProvider;
+import hu.aestallon.storageexplorer.storage.service.StorageInstanceProvider;
 import hu.aestallon.storageexplorer.swing.ui.AppFrame;
 
 @SpringBootApplication(
@@ -46,10 +46,10 @@ public class StorageExplorerApplication {
   }
 
   @Bean
-  CommandLineRunner frameLauncher(AppFrame appFrame, StorageIndexProvider storageIndexProvider) {
+  CommandLineRunner frameLauncher(AppFrame appFrame, StorageInstanceProvider storageInstanceProvider) {
     return args -> {
       appFrame.launch();
-      storageIndexProvider.fetchAllKnown();
+      storageInstanceProvider.fetchAllKnown();
     };
   }
 

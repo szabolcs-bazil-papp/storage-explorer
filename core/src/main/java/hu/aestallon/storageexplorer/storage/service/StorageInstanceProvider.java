@@ -44,9 +44,9 @@ import hu.aestallon.storageexplorer.common.event.msg.Msg;
 import jakarta.validation.constraints.NotNull;
 
 @Service
-public class StorageIndexProvider {
+public class StorageInstanceProvider {
 
-  private static final Logger log = LoggerFactory.getLogger(StorageIndexProvider.class);
+  private static final Logger log = LoggerFactory.getLogger(StorageInstanceProvider.class);
 
 
   private static final class HighPriorityThreadFactory implements ThreadFactory {
@@ -81,8 +81,8 @@ public class StorageIndexProvider {
   private final Map<StorageInstance, ConfigurableApplicationContext> contextsByInstance;
   private final ExecutorService executorService;
 
-  public StorageIndexProvider(ApplicationEventPublisher eventPublisher,
-                              UserConfigService userConfigService) {
+  public StorageInstanceProvider(ApplicationEventPublisher eventPublisher,
+                                 UserConfigService userConfigService) {
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
     storageInstancesById = new HashMap<>();
@@ -112,10 +112,6 @@ public class StorageIndexProvider {
 
   public StorageInstance storageInstanceOf(final StorageEntry storageEntry) {
     return storageInstancesById.get(storageEntry.storageId());
-  }
-
-  public StorageIndex indexOf(final StorageEntry entry) {
-    return storageInstanceOf(entry).index();
   }
 
   public void importAndIndex(final StorageInstance storageInstance) {

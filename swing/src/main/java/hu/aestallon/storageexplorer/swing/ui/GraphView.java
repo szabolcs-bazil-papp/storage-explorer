@@ -52,7 +52,7 @@ import org.springframework.stereotype.Component;
 import hu.aestallon.storageexplorer.graph.service.GraphRenderingService;
 import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.storage.model.instance.StorageInstance;
-import hu.aestallon.storageexplorer.storage.service.StorageIndexProvider;
+import hu.aestallon.storageexplorer.storage.service.StorageInstanceProvider;
 import hu.aestallon.storageexplorer.storage.userconfig.event.GraphConfigChanged;
 import hu.aestallon.storageexplorer.storage.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.storage.event.EntryInspectionEvent;
@@ -75,13 +75,13 @@ public class GraphView extends JPanel {
   private StorageEntry currentHighlight;
   private GraphRenderingService graphRenderingService;
 
-  private final StorageIndexProvider storageIndexProvider;
+  private final StorageInstanceProvider storageInstanceProvider;
   private final ApplicationEventPublisher eventPublisher;
   private final UserConfigService userConfigService;
 
-  public GraphView(StorageIndexProvider storageIndexProvider,
+  public GraphView(StorageInstanceProvider storageInstanceProvider,
                    ApplicationEventPublisher eventPublisher, UserConfigService userConfigService) {
-    this.storageIndexProvider = storageIndexProvider;
+    this.storageInstanceProvider = storageInstanceProvider;
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
 
@@ -115,7 +115,7 @@ public class GraphView extends JPanel {
       graph.clear();
     }
 
-    final StorageInstance storageInstance = storageIndexProvider.storageInstanceOf(storageEntry);
+    final StorageInstance storageInstance = storageInstanceProvider.storageInstanceOf(storageEntry);
     if (graphRenderingService == null || !storageInstance.equals(
         graphRenderingService.storageInstance())) {
       final var userConfig = userConfigService.graphSettings();

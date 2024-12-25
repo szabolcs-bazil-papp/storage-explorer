@@ -20,9 +20,7 @@ import java.awt.event.KeyEvent;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import hu.aestallon.storageexplorer.storage.model.instance.StorageInstance;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.StorageInstanceDto;
-import hu.aestallon.storageexplorer.storage.service.StorageIndexProvider;
+import hu.aestallon.storageexplorer.storage.service.StorageInstanceProvider;
 import hu.aestallon.storageexplorer.storage.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.swing.ui.dialog.GraphSettingsDialog;
 import hu.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
@@ -34,15 +32,15 @@ import hu.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 public class AppFrame extends JFrame {
 
   private final ApplicationEventPublisher eventPublisher;
-  private final StorageIndexProvider storageIndexProvider;
+  private final StorageInstanceProvider storageInstanceProvider;
   private final UserConfigService userConfigService;
   private final MainView mainView;
 
   public AppFrame(ApplicationEventPublisher eventPublisher,
-                  StorageIndexProvider storageIndexProvider, UserConfigService userConfigService,
+                  StorageInstanceProvider storageInstanceProvider, UserConfigService userConfigService,
                   MainView mainView) {
     this.eventPublisher = eventPublisher;
-    this.storageIndexProvider = storageIndexProvider;
+    this.storageInstanceProvider = storageInstanceProvider;
     this.userConfigService = userConfigService;
     this.mainView = mainView;
 
@@ -108,7 +106,7 @@ public class AppFrame extends JFrame {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      final var dialog = new SearchForEntryDialog(storageIndexProvider, eventPublisher);
+      final var dialog = new SearchForEntryDialog(storageInstanceProvider, eventPublisher);
       dialog.setLocationRelativeTo(AppFrame.this);
       dialog.setVisible(true);
     }
@@ -125,7 +123,7 @@ public class AppFrame extends JFrame {
     @Override
     public void actionPerformed(ActionEvent e) {
       final ImportStorageDialog dialog = new ImportStorageDialog(
-          ImportStorageController.forCreatingNew(storageIndexProvider));
+          ImportStorageController.forCreatingNew(storageInstanceProvider));
       dialog.pack();
       dialog.setLocationRelativeTo(AppFrame.this);
       dialog.setVisible(true);

@@ -37,7 +37,7 @@ import hu.aestallon.storageexplorer.storage.model.entry.MapEntry;
 import hu.aestallon.storageexplorer.storage.model.entry.ObjectEntry;
 import hu.aestallon.storageexplorer.storage.model.entry.SequenceEntry;
 import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
-import hu.aestallon.storageexplorer.storage.service.StorageIndexProvider;
+import hu.aestallon.storageexplorer.storage.service.StorageInstanceProvider;
 import hu.aestallon.storageexplorer.storage.event.EntryInspectionEvent;
 import hu.aestallon.storageexplorer.graph.event.GraphRenderingRequest;
 import hu.aestallon.storageexplorer.storage.event.StorageIndexDiscardedEvent;
@@ -49,7 +49,7 @@ import hu.aestallon.storageexplorer.common.util.Uris;
 public class StorageEntryInspectorViewFactory {
 
   private final ApplicationEventPublisher eventPublisher;
-  private final StorageIndexProvider storageIndexProvider;
+  private final StorageInstanceProvider storageInstanceProvider;
   private final MonospaceFontProvider monospaceFontProvider;
   private final InspectorTextareaFactory textareaFactory;
   private final Map<StorageEntry, InspectorView<? extends StorageEntry>> openedInspectors;
@@ -57,10 +57,10 @@ public class StorageEntryInspectorViewFactory {
   private final Map<StorageEntry, List<JTextArea>> textAreas;
 
   public StorageEntryInspectorViewFactory(ApplicationEventPublisher eventPublisher,
-                                          StorageIndexProvider storageIndexProvider,
+                                          StorageInstanceProvider storageInstanceProvider,
                                           MonospaceFontProvider monospaceFontProvider) {
     this.eventPublisher = eventPublisher;
-    this.storageIndexProvider = storageIndexProvider;
+    this.storageInstanceProvider = storageInstanceProvider;
     this.monospaceFontProvider = monospaceFontProvider;
     this.textareaFactory = new InspectorTextareaFactory(this);
 
@@ -203,7 +203,7 @@ public class StorageEntryInspectorViewFactory {
 
   void jumpToUri(final URI uri) {
     // TODO: Absolutely DO NOT DO THIS!
-    storageIndexProvider.indexOf(uri).get(uri).ifPresentOrElse(
+    storageInstanceProvider.indexOf(uri).get(uri).ifPresentOrElse(
         it -> eventPublisher.publishEvent(new EntryInspectionEvent(it)),
         () -> JOptionPane.showMessageDialog(
             null,

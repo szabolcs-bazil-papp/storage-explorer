@@ -41,7 +41,7 @@ import hu.aestallon.storageexplorer.storage.model.entry.SequenceEntry;
 import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
 import hu.aestallon.storageexplorer.storage.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.storage.model.instance.dto.IndexingStrategyType;
-import hu.aestallon.storageexplorer.storage.service.StorageIndexProvider;
+import hu.aestallon.storageexplorer.storage.service.StorageInstanceProvider;
 import hu.aestallon.storageexplorer.storage.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.common.event.msg.Msg;
 import hu.aestallon.storageexplorer.storage.event.StorageIndexDiscardedEvent;
@@ -71,14 +71,14 @@ public class MainTreeView extends JPanel {
 
   private final AtomicBoolean propagate = new AtomicBoolean(true);
   private final ApplicationEventPublisher eventPublisher;
-  private final StorageIndexProvider storageIndexProvider;
+  private final StorageInstanceProvider storageInstanceProvider;
   private final UserConfigService userConfigService;
 
   public MainTreeView(ApplicationEventPublisher eventPublisher,
-                      StorageIndexProvider storageIndexProvider,
+                      StorageInstanceProvider storageInstanceProvider,
                       UserConfigService userConfigService) {
     this.eventPublisher = eventPublisher;
-    this.storageIndexProvider = storageIndexProvider;
+    this.storageInstanceProvider = storageInstanceProvider;
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     setPreferredSize(new Dimension(300, 500));
@@ -267,7 +267,7 @@ public class MainTreeView extends JPanel {
 
 
       final var reindex = new JMenuItem("Reload", IconProvider.REFRESH);
-      reindex.addActionListener(e -> storageIndexProvider.reindex(sitn.storageInstance()));
+      reindex.addActionListener(e -> storageInstanceProvider.reindex(sitn.storageInstance()));
       reindex.setToolTipText(
           "Reload this storage to let the application reflect its current state.");
       add(reindex);
@@ -286,7 +286,7 @@ public class MainTreeView extends JPanel {
         final var controller = ImportStorageController.forUpdating(
             sitn.storageInstance(),
             userConfigService,
-            storageIndexProvider,
+            storageInstanceProvider,
             after -> {
               sitn.setUserObject(after.getName());
               tree.model().nodeChanged(sitn);
