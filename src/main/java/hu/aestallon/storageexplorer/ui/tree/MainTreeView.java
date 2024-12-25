@@ -43,6 +43,7 @@ import hu.aestallon.storageexplorer.domain.storage.model.instance.StorageInstanc
 import hu.aestallon.storageexplorer.domain.storage.model.instance.dto.IndexingStrategyType;
 import hu.aestallon.storageexplorer.domain.storage.service.StorageIndexProvider;
 import hu.aestallon.storageexplorer.domain.userconfig.service.UserConfigService;
+import hu.aestallon.storageexplorer.event.msg.Msg;
 import hu.aestallon.storageexplorer.ui.controller.ViewController;
 import hu.aestallon.storageexplorer.ui.dialog.importstorage.ImportStorageController;
 import hu.aestallon.storageexplorer.ui.dialog.importstorage.ImportStorageDialog;
@@ -129,7 +130,9 @@ public class MainTreeView extends JPanel {
             .findFirst();
         if (hostEntry.isEmpty()) {
           node = null;
-          log.warn("Failed to install scoped entry: {}", scopedEntry);
+          eventPublisher.publishEvent(Msg.warn(
+              "Cannot add orphan scoped entry to Tree!",
+              "Entry " + storageEntry + " has been indexed, but will not show on the tree until its host entry is missing."));
         } else {
           final StorageEntry host = hostEntry.get();
           TreePath hostPath = treePathByEntry.get(host);
