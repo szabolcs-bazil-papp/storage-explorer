@@ -16,6 +16,7 @@
 package hu.aestallon.storageexplorer.storage.userconfig.service;
 
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -57,9 +58,10 @@ public class UserConfigService {
   private final AtomicReference<GraphSettings> graphSettings;
   private final AtomicReference<StorageLocationSettings> storageLocationSettings;
 
-  public UserConfigService(@Value("${app.settings.folder:./settings/}") String settingsFolder,
-                           ApplicationEventPublisher eventPublisher, ObjectMapper objectMapper) {
-    this.settingsFolder = settingsFolder;
+  public UserConfigService(ApplicationEventPublisher eventPublisher, ObjectMapper objectMapper) {
+    this.settingsFolder = System.getProperty("java.io.tmpdir")
+        + FileSystems.getDefault().getSeparator()
+        + "storage-explorer";
     this.eventPublisher = eventPublisher;
     this.objectMapper = objectMapper;
     graphSettings = new AtomicReference<>(readSettingsAt(
