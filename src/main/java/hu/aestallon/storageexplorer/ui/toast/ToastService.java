@@ -14,7 +14,7 @@ import hu.aestallon.storageexplorer.ui.misc.Severity;
 
 @Service
 public class ToastService {
-  
+
   private static final int TOAST_WIDTH = 400;
   private static final int TOAST_HEIGHT = 130;
   private static final int TOAST_GAP = 10;
@@ -26,27 +26,31 @@ public class ToastService {
     this.appFrame = appFrame;
     activeToasts = new ArrayList<>();
   }
-  
+
   @EventListener
   public void onInfoEvent(InfoMsg msg) {
     showToast(msg);
   }
+
   @EventListener
   public void onWarnEvent(WarnMsg msg) {
     showToast(msg);
   }
+
   @EventListener
   public void onErrEvent(ErrorMsg msg) {
     showToast(msg);
   }
-  
+
   public void showToast(final Msg msg) {
     final Severity severity = switch (msg) {
       case InfoMsg info -> Severity.INFO;
       case WarnMsg warn -> Severity.WARNING;
       case ErrorMsg err -> Severity.ERROR;
     };
-    final JPanel toast = new ToastView(severity, msg.title(), msg.message()).getMainPanel();
+    ToastView toastView = new ToastView(severity, msg.title(), msg.message());
+    final JPanel toast = toastView.getMainPanel();
+    toastView.getCloseButton().addActionListener(e -> removeToast(toast));
     addToast(toast);
   }
 
@@ -68,9 +72,13 @@ public class ToastService {
   }
 
   private void removeToast(JPanel toast) {
+    final boolean removed = activeToasts.remove(toast);
+    if (!removed) {
+      return;
+    }
+
     JLayeredPane layeredPane = appFrame.getLayeredPane();
     layeredPane.remove(toast);
-    activeToasts.remove(toast);
 
     repositionToasts();
     layeredPane.revalidate();
@@ -85,7 +93,5 @@ public class ToastService {
       toast.setBounds(x, y, TOAST_WIDTH, TOAST_HEIGHT);
     }
   }
-  
-  
 
 }
