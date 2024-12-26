@@ -81,7 +81,7 @@ public final class FileSystemStorageIndex extends StorageIndex {
 
   private final Path pathToStorage;
 
-  FileSystemStorageIndex(
+  public FileSystemStorageIndex(
       StorageId storageId,
       ObjectApi objectApi,
       CollectionApi collectionApi,

@@ -17,7 +17,7 @@ public final class RelationalDatabaseStorageIndex extends StorageIndex {
 
   private final JdbcTemplate db;
 
-  RelationalDatabaseStorageIndex(
+  public RelationalDatabaseStorageIndex(
       StorageId storageId,
       ObjectApi objectApi,
       CollectionApi collectionApi,

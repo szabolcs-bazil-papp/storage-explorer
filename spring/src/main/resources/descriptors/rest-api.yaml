@@ -1,0 +1,196 @@
+openapi: 3.0.1
+info:
+  title: Storage Explorer Embedded RESTful API
+  description: |
+    API exposed by applications running an embedded Storage Explorer service for web clients to
+    interact with.
+  version: 1.0.0
+  contact:
+    name: Szabolcs Bazil Papp
+tags:
+  - name: Explorer
+paths:
+  /storageIndex:
+    get:
+      operationId: getStorageIndex
+      summary: Retrieves the index for the storage overseen by the application.
+      description: |
+        ...
+      tags: [Explorer]
+      parameters:
+        - in: query
+          required: true
+          name: method
+          schema:
+            type: string
+            enum: [ FULL, SURFACE ]
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageIndexDto'
+  /acquire:
+    post:
+      operationId: getStorageEntry
+      summary: Acquires one or more entries from the storage overseen by the application
+      description: |
+        ...
+      tags: [Explorer]
+      requestBody:
+        required: true
+        content: 
+          application/json:
+            schema: 
+              $ref: "#/components/schemas/EntryAcquisitionRequest"
+      responses: 
+        "200":
+          description: Ok
+          content: 
+            application/json:
+              schema: 
+                $ref: "#/components/schemas/EntryAcquisitionResult"
+  /load:
+    post:
+      operationId: loadStorageEntry
+      summary: Fully loads an entry for inspection from the storage overseen by the application
+      description: |
+        ...
+      tags: [Explorer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntryLoadRequest"
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntryLoadResult"
+
+components:
+  schemas:
+    StorageIndexDto:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorageEntryDto'
+    
+    StorageEntryType:
+      type: string
+      enum: [ LIST, MAP, SEQUENCE, OBJECT ]
+    Reference:
+      type: object
+      properties:
+        propName:
+          type: string
+        uri:
+          type: string
+          format: uri
+        pos:
+          type: integer
+          format: int32
+      required: [ propName, uri ]
+    StorageEntryDto:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/StorageEntryType'
+        uri:
+          type: string
+          format: uri
+        schema:
+          type: string
+        name:
+          type: string
+        typeName:
+          description: |
+            Type identifier returned for OBJECTs.
+          type: string
+        seqVal:
+          description: |
+            Current sequence value returned for SEQUENCEs.
+          type: integer
+          format: int64
+        scopeHost:
+          description: |
+            Host entry URI returned for scoped entries.
+          type: string
+          format: uri
+        references:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reference'
+      required: [ type, uri, schema, name, references ]
+    
+    EntryAcquisitionRequest:
+      type: object
+      properties:
+        uris:
+          type: array
+          items:
+            type: string
+            format: uri
+      required: [ uris ]
+    EntryAcquisitionResult:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorageEntryDto'
+    
+    EntryLoadRequest:
+      type: object
+      properties:
+        uri:
+          type: string
+          format: uri
+      required: [ uri ]
+    
+    EntryLoadResultType:
+      type: string
+      enum: [ FAILED, SINGLE, MULTI ]
+    EntryMeta:
+      type: object
+      properties:
+        uri:
+          type: string
+          format: uri
+        qualifiedName:
+          type: string
+        storageSchema:
+          type: string
+        versionNr:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: datetime
+        lastModifiedAt:
+          type: integer
+          format: int64
+    EntryVersionDto:
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/EntryMeta'
+        objectAsMap:
+          type: object
+          additionalProperties:
+            type: object
+    EntryLoadResult:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/EntryLoadResultType'
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntryVersionDto'
