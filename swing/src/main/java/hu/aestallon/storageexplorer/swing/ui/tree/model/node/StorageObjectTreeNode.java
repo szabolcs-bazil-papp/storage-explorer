@@ -22,21 +22,20 @@ import hu.aestallon.storageexplorer.storage.model.entry.ScopedMapEntry;
 import hu.aestallon.storageexplorer.storage.model.entry.ScopedObjectEntry;
 import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
 
-public final class StorageObjectTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
+public final class StorageObjectTreeNode
+    extends DefaultMutableTreeNode
+    implements ClickableTreeNode {
 
   private boolean supportsChildren;
+
   public StorageObjectTreeNode(ObjectEntry objectEntry) {
     super(objectEntry, true);
 
-    objectEntry.scopedEntries().forEach(it -> {
-      if (it instanceof ScopedMapEntry) {
-        add(new StorageMapTreeNode((ScopedMapEntry) it));
-      } else if (it instanceof ScopedListEntry) {
-        add(new StorageListTreeNode((ScopedListEntry) it));
-      } else if (it instanceof ScopedObjectEntry) {
-        add(new StorageObjectTreeNode((ScopedObjectEntry) it));
-      }
-    });
+    objectEntry.scopedEntries().forEach(it -> add(switch (it) {
+      case ScopedMapEntry m -> new StorageMapTreeNode(m);
+      case ScopedObjectEntry m -> new StorageObjectTreeNode(m);
+      case ScopedListEntry m -> new StorageListTreeNode(m);
+    }));
     supportsChildren = !objectEntry.scopedEntries().isEmpty();
   }
 
