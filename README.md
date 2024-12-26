@@ -18,18 +18,25 @@ their relationships in a directed graph.
 
 ## Installation and Execution
 
-While standing in the project's root folder, execute the following command:
+### Swing App
 
-```shell
-./gradlew build
-```
+1. Build the project:
+   ```shell
+   .\gradlew app-swing:bootJar
+   ```
+2. Create installer:
+   ```shell
+   cd .\distribution
+   .\win64.bat
+   ```
+### SpringBoot Starter
 
-The created JAR can be launched with:
-
-```shell
-java -jar ./build/libs/storage-explorer-0.1.0.jar
-```
-
+1. Build the library:
+   ```shell
+   .\gradlew spring-boot-starter:build
+   .\gradlew spring-boot-starter:publishToMavenLocal
+   ```
+2. Verify changes by experimenting with app-demo.
 ---
 
 ## Configuration
