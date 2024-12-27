@@ -16,7 +16,7 @@ paths:
       summary: Retrieves the index for the storage overseen by the application.
       description: |
         ...
-      tags: [Explorer]
+      tags: [ Explorer ]
       parameters:
         - in: query
           required: true
@@ -37,19 +37,19 @@ paths:
       summary: Acquires one or more entries from the storage overseen by the application
       description: |
         ...
-      tags: [Explorer]
+      tags: [ Explorer ]
       requestBody:
         required: true
-        content: 
+        content:
           application/json:
-            schema: 
+            schema:
               $ref: "#/components/schemas/EntryAcquisitionRequest"
-      responses: 
+      responses:
         "200":
           description: Ok
-          content: 
+          content:
             application/json:
-              schema: 
+              schema:
                 $ref: "#/components/schemas/EntryAcquisitionResult"
   /load:
     post:
@@ -57,7 +57,7 @@ paths:
       summary: Fully loads an entry for inspection from the storage overseen by the application
       description: |
         ...
-      tags: [Explorer]
+      tags: [ Explorer ]
       requestBody:
         required: true
         content:
@@ -172,7 +172,7 @@ components:
           format: int64
         createdAt:
           type: string
-          format: datetime
+          format: date-time
         lastModifiedAt:
           type: integer
           format: int64
@@ -185,12 +185,16 @@ components:
           type: object
           additionalProperties:
             type: object
+      required: [ objectAsMap ]
     EntryLoadResult:
       type: object
       properties:
         type:
           $ref: '#/components/schemas/EntryLoadResultType'
+        entry:
+          $ref: "#/components/schemas/StorageEntryDto"
         versions:
           type: array
           items:
             $ref: '#/components/schemas/EntryVersionDto'
+      required: [ versions ]

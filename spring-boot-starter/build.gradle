@@ -1,7 +1,7 @@
 plugins {
   id 'java-library'
   id 'io.spring.dependency-management' version '1.1.6'
-  id 'maven-publish'
+  id 'tech.medivh.plugin.publisher' version '1.2.1'
 }
 
 group = 'hu.aestallon.storageexplorer'
@@ -27,7 +27,7 @@ dependencyManagement {
 }
 
 dependencies {
-  api project(':spring')
+  compileOnly project(':spring')
   compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
   compileOnly 'org.springframework.boot:spring-boot-starter'
   api("jakarta.annotation:jakarta.annotation-api:3.0.0")
@@ -50,31 +50,31 @@ test {
   useJUnitPlatform()
 }
 
-publishing {
-  publications {
-    mavenJava(MavenPublication) {
-      groupId = 'hu.aestallon.storageexplorer'
-      artifactId = 'storageexplorer-spring-boot-starter'
-      version = '0.2.0'
-      from components.java
-      pom {
-        name = 'Storage Explorer SpringBoot Starter'
-        description = 'Enables a RESTful API for introspecting the embedded smartbit4all storage'
-        url = 'https://aestallon.com'
-        licenses {
-          license {
-            name = 'The Apache License, Version 2.0'
-            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-          }
-        }
-        developers {
-          developer {
-            id = 'bazilp'
-            name = 'Szabolcs Bazil Papp'
-            email = 'szabolcs.papp@it4all.hu'
-          }
-        }
+medivhPublisher {
+  groupId = 'com.aestallon.storageexplorer'
+  artifactId = 'storageexplorer-spring-boot-starter'
+  version = '0.0.2'
+
+  pom {
+    name = "Storage Explorer Spring Boot Starter"
+    description = "Spring Boot starter to serve a RESTful API for an embedded smartbit4all storage explorer"
+    url = "https://github.com/szabolcs-bazil-papp/storage-explorer"
+    licenses {
+      license {
+        name = "GPL-3.0 license"
+        url = "https://www.gnu.org/licenses/gpl-3.0.txt"
       }
+    }
+    developers {
+      developer {
+        id = "bazilp"
+        name = "Szabolcs Bazil Papp"
+        email = "papp.szabolcs.bazil@gmail.com"
+      }
+    }
+    scm {
+      connection = "scm:git:"
+      url = "https://github.com/szabolcs-bazil-papp/storage-explorer"
     }
   }
 }

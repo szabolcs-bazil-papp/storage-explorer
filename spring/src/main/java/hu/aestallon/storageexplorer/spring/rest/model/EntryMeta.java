@@ -3,6 +3,8 @@ package hu.aestallon.storageexplorer.spring.rest.model;
 import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.OffsetDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -24,7 +26,8 @@ public class EntryMeta {
 
   private Long versionNr;
 
-  private String createdAt;
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private OffsetDateTime createdAt;
 
   private Long lastModifiedAt;
 
@@ -108,7 +111,7 @@ public class EntryMeta {
     this.versionNr = versionNr;
   }
 
-  public EntryMeta createdAt(String createdAt) {
+  public EntryMeta createdAt(OffsetDateTime createdAt) {
     this.createdAt = createdAt;
     return this;
   }
@@ -117,14 +120,14 @@ public class EntryMeta {
    * Get createdAt
    * @return createdAt
    */
-  
+  @Valid 
   @Schema(name = "createdAt", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("createdAt")
-  public String getCreatedAt() {
+  public OffsetDateTime getCreatedAt() {
     return createdAt;
   }
 
-  public void setCreatedAt(String createdAt) {
+  public void setCreatedAt(OffsetDateTime createdAt) {
     this.createdAt = createdAt;
   }
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 
@@ -19,8 +20,21 @@ public class EntryLoadResult {
 
   private EntryLoadResultType type;
 
+  private StorageEntryDto entry;
+
   @Valid
   private List<@Valid EntryVersionDto> versions = new ArrayList<>();
+
+  public EntryLoadResult() {
+    super();
+  }
+
+  /**
+   * Constructor with only required parameters
+   */
+  public EntryLoadResult(List<@Valid EntryVersionDto> versions) {
+    this.versions = versions;
+  }
 
   public EntryLoadResult type(EntryLoadResultType type) {
     this.type = type;
@@ -42,6 +56,26 @@ public class EntryLoadResult {
     this.type = type;
   }
 
+  public EntryLoadResult entry(StorageEntryDto entry) {
+    this.entry = entry;
+    return this;
+  }
+
+  /**
+   * Get entry
+   * @return entry
+   */
+  @Valid 
+  @Schema(name = "entry", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("entry")
+  public StorageEntryDto getEntry() {
+    return entry;
+  }
+
+  public void setEntry(StorageEntryDto entry) {
+    this.entry = entry;
+  }
+
   public EntryLoadResult versions(List<@Valid EntryVersionDto> versions) {
     this.versions = versions;
     return this;
@@ -59,8 +93,8 @@ public class EntryLoadResult {
    * Get versions
    * @return versions
    */
-  @Valid 
-  @Schema(name = "versions", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @NotNull @Valid 
+  @Schema(name = "versions", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("versions")
   public List<@Valid EntryVersionDto> getVersions() {
     return versions;
@@ -80,12 +114,13 @@ public class EntryLoadResult {
     }
     EntryLoadResult entryLoadResult = (EntryLoadResult) o;
     return Objects.equals(this.type, entryLoadResult.type) &&
+        Objects.equals(this.entry, entryLoadResult.entry) &&
         Objects.equals(this.versions, entryLoadResult.versions);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(type, versions);
+    return Objects.hash(type, entry, versions);
   }
 
   @Override
@@ -93,6 +128,7 @@ public class EntryLoadResult {
     StringBuilder sb = new StringBuilder();
     sb.append("class EntryLoadResult {\n");
     sb.append("    type: ").append(toIndentedString(type)).append("\n");
+    sb.append("    entry: ").append(toIndentedString(entry)).append("\n");
     sb.append("    versions: ").append(toIndentedString(versions)).append("\n");
     sb.append("}");
     return sb.toString();
