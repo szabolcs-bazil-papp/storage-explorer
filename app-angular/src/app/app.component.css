@@ -1,0 +1,24 @@
+.app-container {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  flex-direction: column;
+}
+
+.app-header {
+  width: 100%;
+}
+
+.app-content {
+  display: flex;
+  flex-direction: row;
+}
+
+.app-tree-view {
+  flex: 3;
+  max-height: 80vh;
+}
+
+.app-display {
+  flex: 7;
+}
