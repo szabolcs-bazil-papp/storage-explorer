@@ -28,8 +28,8 @@ import com.aestallon.storageexplorer.swing.ui.AppFrame;
 @SpringBootApplication(
     exclude = DataSourceAutoConfiguration.class,
     scanBasePackages = {
-        "hu.aestallon.storageexplorer.storage",
-        "hu.aestallon.storageexplorer.swing"
+        "com.aestallon.storageexplorer.core",
+        "com.aestallon.storageexplorer.swing"
     })
 public class StorageExplorerApplication {
 
