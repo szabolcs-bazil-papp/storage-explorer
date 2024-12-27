@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'hu.aestallon.storageexplorer'
-version = '0.2.0'
+version = '0.3.0'
 
 java {
   toolchain {
@@ -53,7 +53,7 @@ test {
 medivhPublisher {
   groupId = 'com.aestallon.storageexplorer'
   artifactId = 'storageexplorer-spring-boot-starter'
-  version = '0.0.2'
+  version = '0.3.0'
 
   pom {
     name = "Storage Explorer Spring Boot Starter"

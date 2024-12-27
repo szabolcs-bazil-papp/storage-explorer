@@ -14,9 +14,8 @@ repositories {
 dependencies {
   implementation 'org.smartbit4all.platform:api'
   implementation 'org.smartbit4all.platform:api-srv-rest'
+  implementation 'com.aestallon.storageexplorer:storageexplorer-spring-boot-starter:0.3.0'
   implementation 'org.springframework.boot:spring-boot-starter-web'
-  
-  implementation 'hu.aestallon.storageexplorer:storageexplorer-spring-boot-starter:0.2.0'
   implementation 'org.springframework.boot:spring-boot-starter-actuator'
 }
 
