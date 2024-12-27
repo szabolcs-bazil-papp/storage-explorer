@@ -17,7 +17,7 @@ package hu.aestallon.storageexplorer.swing.ui.tree.model.node;
 
 import java.util.List;
 import javax.swing.tree.DefaultMutableTreeNode;
-import hu.aestallon.storageexplorer.storage.model.entry.ObjectEntry;
+import hu.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 
 public final class StorageTypeTreeNode extends DefaultMutableTreeNode {
 

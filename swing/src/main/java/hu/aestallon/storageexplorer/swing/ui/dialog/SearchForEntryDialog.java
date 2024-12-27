@@ -24,9 +24,9 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import org.springframework.context.ApplicationEventPublisher;
-import hu.aestallon.storageexplorer.storage.event.EntryInspectionEvent;
-import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
-import hu.aestallon.storageexplorer.storage.service.StorageInstanceProvider;
+import hu.aestallon.storageexplorer.core.event.EntryInspectionEvent;
+import hu.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 
 public class SearchForEntryDialog extends JFrame {
 

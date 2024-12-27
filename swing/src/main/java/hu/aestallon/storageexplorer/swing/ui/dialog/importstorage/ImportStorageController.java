@@ -3,10 +3,10 @@ package hu.aestallon.storageexplorer.swing.ui.dialog.importstorage;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import hu.aestallon.storageexplorer.storage.model.instance.StorageInstance;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.StorageInstanceDto;
-import hu.aestallon.storageexplorer.storage.service.StorageInstanceProvider;
-import hu.aestallon.storageexplorer.storage.userconfig.service.UserConfigService;
+import hu.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import hu.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
+import hu.aestallon.storageexplorer.core.service.StorageInstanceProvider;
+import hu.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
 import hu.aestallon.storageexplorer.swing.ui.controller.AbstractDialogController;
 
 public final class ImportStorageController extends AbstractDialogController<StorageInstanceDto> {

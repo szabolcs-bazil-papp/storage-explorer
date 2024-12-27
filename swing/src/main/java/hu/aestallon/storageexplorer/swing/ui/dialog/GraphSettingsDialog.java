@@ -18,8 +18,8 @@ package hu.aestallon.storageexplorer.swing.ui.dialog;
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import hu.aestallon.storageexplorer.storage.userconfig.model.GraphSettings;
-import hu.aestallon.storageexplorer.storage.userconfig.service.UserConfigService;
+import hu.aestallon.storageexplorer.core.userconfig.model.GraphSettings;
+import hu.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
 
 public class GraphSettingsDialog extends JFrame {
 

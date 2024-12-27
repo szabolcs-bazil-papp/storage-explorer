@@ -5,9 +5,9 @@ import java.util.UUID;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import hu.aestallon.storageexplorer.spring.service.StorageIndexProvider;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.StorageId;
-import hu.aestallon.storageexplorer.storage.service.FileSystemStorageIndex;
-import hu.aestallon.storageexplorer.storage.service.StorageIndex;
+import hu.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import hu.aestallon.storageexplorer.core.service.FileSystemStorageIndex;
+import hu.aestallon.storageexplorer.core.service.StorageIndex;
 
 public class FileSystemStorageIndexProvider implements StorageIndexProvider {
   

@@ -22,7 +22,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import com.formdev.flatlaf.FlatIntelliJLaf;
-import hu.aestallon.storageexplorer.storage.service.StorageInstanceProvider;
+import hu.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import hu.aestallon.storageexplorer.swing.ui.AppFrame;
 
 @SpringBootApplication(

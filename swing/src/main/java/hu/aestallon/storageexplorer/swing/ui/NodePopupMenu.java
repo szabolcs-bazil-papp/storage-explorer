@@ -18,7 +18,7 @@ package hu.aestallon.storageexplorer.swing.ui;
 import javax.swing.*;
 import org.graphstream.graph.Graph;
 import hu.aestallon.storageexplorer.graph.service.GraphRenderingService;
-import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
 public class NodePopupMenu extends JPopupMenu {
 

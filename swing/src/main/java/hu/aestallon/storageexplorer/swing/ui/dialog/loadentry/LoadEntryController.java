@@ -5,8 +5,8 @@ import java.net.URISyntaxException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
-import hu.aestallon.storageexplorer.storage.model.entry.StorageEntryFactory;
-import hu.aestallon.storageexplorer.storage.model.instance.StorageInstance;
+import hu.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
+import hu.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.swing.ui.controller.AbstractDialogController;
 
 public class LoadEntryController extends AbstractDialogController<String> {

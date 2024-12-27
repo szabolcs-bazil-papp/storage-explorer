@@ -12,14 +12,14 @@ import javax.swing.filechooser.FileSystemView;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.StorageLocation;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.DatabaseConnectionData;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.DatabaseVendor;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.FsStorageLocation;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.IndexingStrategyType;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.SqlStorageLocation;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.StorageInstanceDto;
-import hu.aestallon.storageexplorer.storage.model.instance.dto.StorageInstanceType;
+import hu.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
+import hu.aestallon.storageexplorer.core.model.instance.dto.DatabaseConnectionData;
+import hu.aestallon.storageexplorer.core.model.instance.dto.DatabaseVendor;
+import hu.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
+import hu.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
+import hu.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
+import hu.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
+import hu.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
 
 public class ImportStorageDialog extends JDialog {
   private JPanel contentPane;

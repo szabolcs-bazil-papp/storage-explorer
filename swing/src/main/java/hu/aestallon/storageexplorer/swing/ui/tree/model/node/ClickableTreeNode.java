@@ -15,7 +15,7 @@
 
 package hu.aestallon.storageexplorer.swing.ui.tree.model.node;
 
-import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
 public sealed interface ClickableTreeNode permits
     StorageListTreeNode, StorageMapTreeNode,

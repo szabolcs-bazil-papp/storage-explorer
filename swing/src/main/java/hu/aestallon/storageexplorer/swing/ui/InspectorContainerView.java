@@ -25,9 +25,9 @@ import java.util.List;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
-import hu.aestallon.storageexplorer.storage.event.TreeTouchRequest;
-import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
-import hu.aestallon.storageexplorer.storage.model.instance.StorageInstance;
+import hu.aestallon.storageexplorer.core.event.TreeTouchRequest;
+import hu.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import hu.aestallon.storageexplorer.swing.ui.inspector.InspectorView;
 import hu.aestallon.storageexplorer.swing.ui.inspector.StorageEntryInspectorViewFactory;
 

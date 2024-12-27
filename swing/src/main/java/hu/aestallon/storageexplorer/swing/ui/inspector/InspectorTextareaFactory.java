@@ -22,8 +22,8 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import hu.aestallon.storageexplorer.storage.model.entry.ObjectEntry;
-import hu.aestallon.storageexplorer.storage.model.loading.ObjectEntryLoadResult;
+import hu.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import hu.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 
 
 public final class InspectorTextareaFactory {

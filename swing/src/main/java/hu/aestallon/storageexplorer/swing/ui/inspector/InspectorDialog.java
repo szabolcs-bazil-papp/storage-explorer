@@ -18,7 +18,7 @@ package hu.aestallon.storageexplorer.swing.ui.inspector;
 import javax.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
 public class InspectorDialog extends JFrame {
 

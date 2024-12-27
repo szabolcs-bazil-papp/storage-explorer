@@ -17,7 +17,7 @@ package hu.aestallon.storageexplorer.graph;
 
 import java.util.function.BiPredicate;
 import org.graphstream.graph.Graph;
-import hu.aestallon.storageexplorer.storage.model.entry.StorageEntry;
+import hu.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
 @FunctionalInterface
 public interface GraphContainmentPredicate extends BiPredicate<Graph, StorageEntry> {}

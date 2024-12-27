@@ -31,8 +31,8 @@ import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import hu.aestallon.storageexplorer.storage.model.entry.ObjectEntry;
-import hu.aestallon.storageexplorer.storage.model.loading.ObjectEntryLoadResult;
+import hu.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import hu.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import hu.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
