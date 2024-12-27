@@ -1,0 +1,24 @@
+plugins {
+  id 'org.smartbit4all.platform.gradle.java' version '0.5.3'
+  id 'org.springframework.boot' version '3.3.3'
+}
+
+group = 'hu.aestallon.storageexplorer'
+version = 'unspecified'
+
+repositories {
+  mavenCentral()
+  mavenLocal()
+}
+
+dependencies {
+  implementation 'org.smartbit4all.platform:api'
+  implementation 'org.smartbit4all.platform:api-srv-rest'
+  implementation 'com.aestallon.storageexplorer:storageexplorer-spring-boot-starter:0.3.0'
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  implementation 'org.springframework.boot:spring-boot-starter-actuator'
+}
+
+test {
+  useJUnitPlatform()
+}

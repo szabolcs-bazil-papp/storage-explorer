@@ -1,6 +1,7 @@
 plugins {
-  id 'org.smartbit4all.platform.gradle.java' version '0.5.3'
   id 'org.springframework.boot' version '3.3.3'
+  id 'org.smartbit4all.platform.gradle.java' version '0.5.3'
+  id 'org.smartbit4all.platform.gradle.openapi' version '0.5.3'
 }
 
 group = 'hu.aestallon.storageexplorer'
@@ -10,10 +11,35 @@ repositories {
   mavenCentral()
 }
 
+java {
+  toolchain {
+    languageVersion.set(JavaLanguageVersion.of(21))
+  }
+}
+
 dependencies {
   api project(':core')
+  implementation project(':common')
+
+  compileOnly 'org.smartbit4all.platform:api'
+  compileOnly 'org.springframework.boot:spring-boot-starter-web'
+
+  compileOnly 'org.smartbit4all.platform:sql'
+  compileOnly 'org.springframework.boot:spring-boot-starter-jdbc'
 }
 
 test {
   useJUnitPlatform()
+}
+
+smartbit4all {
+  openApi {
+    def prefix = 'hu.aestallon.storageexplorer.spring'
+    apiPackagePrefix = prefix
+    apiPackagePostfix = 'api'
+    modelPackagePrefix = prefix
+    modelPackagePostfix = 'model'
+    genModel = true
+    genApiRestServer = true
+  }
 }
