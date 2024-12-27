@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-hu.aestallon.storageexplorer.springstarter.EmbeddedStorageExplorerAutoConfiguration
+com.aestallon.storageexplorer.springstarter.EmbeddedStorageExplorerAutoConfiguration
