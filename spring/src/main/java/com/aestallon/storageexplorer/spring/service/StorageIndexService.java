@@ -167,7 +167,7 @@ public class StorageIndexService {
         loadResultType = EntryLoadResultType.SINGLE;
       }
       case ObjectEntry o -> {
-        entryDto = null;
+        entryDto = convertObjectEntry(true, o);
         final var loadResult = o.tryLoad();
         switch (loadResult) {
           case ObjectEntryLoadResult.Err err -> {
