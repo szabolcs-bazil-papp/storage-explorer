@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'hu.aestallon.storageexplorer'
-version = 'unspecified'
+version = '0.3.0'
 
 repositories {
   mavenCentral()
