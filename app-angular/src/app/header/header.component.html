@@ -1,0 +1,14 @@
+<p-toolbar>
+  <ng-template #start>
+    <h1>Storage Explorer</h1>
+  </ng-template>
+  <ng-template #center>
+    <p-icon-field iconPosition="left">
+      <p-inputicon [styleClass]="PrimeIcons.SEARCH"></p-inputicon>
+      <input type="search" pInputText (search)="onSearch($event)" />
+    </p-icon-field>
+  </ng-template>
+  <ng-template #end>
+    <p-menubar [model]="menuItems"></p-menubar>
+  </ng-template>
+</p-toolbar>

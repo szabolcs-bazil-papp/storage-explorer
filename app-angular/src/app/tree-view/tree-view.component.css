@@ -1,0 +1,8 @@
+.tree-scroll-panel {
+  height: 100%;
+  display: flex;
+}
+.tree {
+  display: flex;
+  max-height: fit-content;
+}

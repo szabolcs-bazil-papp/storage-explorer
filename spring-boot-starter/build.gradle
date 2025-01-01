@@ -1,19 +1,80 @@
 plugins {
-  id 'org.smartbit4all.platform.gradle.java' version '0.5.3'
-  id 'org.springframework.boot' version '3.3.3'
+  id 'java-library'
+  id 'io.spring.dependency-management' version '1.1.6'
+  id 'tech.medivh.plugin.publisher' version '1.2.1'
 }
 
 group = 'hu.aestallon.storageexplorer'
-version = 'unspecified'
+version = '0.3.0'
+
+java {
+  toolchain {
+    languageVersion.set(JavaLanguageVersion.of(21))
+  }
+
+  withSourcesJar()
+  withJavadocJar()
+}
 
 repositories {
   mavenCentral()
 }
 
+dependencyManagement {
+  imports {
+    mavenBom 'org.springframework.boot:spring-boot-dependencies:3.3.3'
+  }
+}
+
 dependencies {
-  api project(':spring')
+  compileOnly project(':spring')
+  compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
+  compileOnly 'org.springframework.boot:spring-boot-starter'
+  api("jakarta.annotation:jakarta.annotation-api:3.0.0")
+  compileOnly 'org.smartbit4all.platform:api'
+  compileOnly 'org.springframework.boot:spring-boot-starter-web'
+
+  compileOnly 'org.smartbit4all.platform:sql'
+  compileOnly 'org.springframework.boot:spring-boot-starter-jdbc'
+}
+
+jar {
+  from(
+    project(':common').sourceSets.main.output,
+    project(':core').sourceSets.main.output,
+    project(':spring').sourceSets.main.output
+  )
 }
 
 test {
   useJUnitPlatform()
+}
+
+medivhPublisher {
+  groupId = 'com.aestallon.storageexplorer'
+  artifactId = 'storageexplorer-spring-boot-starter'
+  version = '0.3.0'
+
+  pom {
+    name = "Storage Explorer Spring Boot Starter"
+    description = "Spring Boot starter to serve a RESTful API for an embedded smartbit4all storage explorer"
+    url = "https://github.com/szabolcs-bazil-papp/storage-explorer"
+    licenses {
+      license {
+        name = "GPL-3.0 license"
+        url = "https://www.gnu.org/licenses/gpl-3.0.txt"
+      }
+    }
+    developers {
+      developer {
+        id = "bazilp"
+        name = "Szabolcs Bazil Papp"
+        email = "papp.szabolcs.bazil@gmail.com"
+      }
+    }
+    scm {
+      connection = "scm:git:"
+      url = "https://github.com/szabolcs-bazil-papp/storage-explorer"
+    }
+  }
 }

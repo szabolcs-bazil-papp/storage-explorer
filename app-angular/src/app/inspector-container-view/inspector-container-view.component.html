@@ -1,0 +1,22 @@
+<p-scroll-panel class="ins-scroll-panel">
+  <div class="ins" *ngIf="currentEntry()">
+    <p-tabs [value]="currentEntry()!" scrollable>
+
+      <p-tablist>
+        @for (entry of entries; track entry.uri) {
+          <p-tab [value]="entry.uri">
+            {{ entry.schema }}
+            / {{ entry.type === StorageEntryType.OBJECT ? (entry.typeName + ' / ') : '' }} {{ entry.name }}
+          </p-tab>
+        }
+      </p-tablist>
+      <p-tabpanels>
+        @for (entry of entries; track entry.uri) {
+          <p-tabpanel [value]="entry.uri">
+            <app-inspector-view [entry]="entry"></app-inspector-view>
+          </p-tabpanel>
+        }
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+</p-scroll-panel>
