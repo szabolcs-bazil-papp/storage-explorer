@@ -31,5 +31,7 @@
 
 .inspector-container-view {
   flex: 1;
+  display: flex;
+  max-height: 80vh;
 }
 

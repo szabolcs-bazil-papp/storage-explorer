@@ -2,13 +2,15 @@ import {Component, OnDestroy, signal, WritableSignal} from '@angular/core';
 import {StorageIndexService} from '../services/storage-index.service';
 import {VisualisationService} from '../services/visualisation.service';
 import {TabsModule} from 'primeng/tabs';
-import {StorageEntryDto} from '../../api/se';
+import {StorageEntryDto, StorageEntryType} from '../../api/se';
 import {Subscription} from 'rxjs';
 import {CommonModule} from '@angular/common';
+import {InspectorViewComponent} from './inspector-view/inspector-view.component';
+import {ScrollPanel} from 'primeng/scrollpanel';
 
 @Component({
   selector: 'app-inspector-container-view',
-  imports: [CommonModule, TabsModule],
+  imports: [CommonModule, TabsModule, InspectorViewComponent, ScrollPanel],
   standalone: true,
   templateUrl: './inspector-container-view.component.html',
   styleUrl: './inspector-container-view.component.css',
@@ -37,4 +39,6 @@ export class InspectorContainerViewComponent implements OnDestroy {
     }
     this.currentEntry.set(entry.uri);
   }
+
+  protected readonly StorageEntryType = StorageEntryType;
 }

@@ -5,7 +5,7 @@ import { Injectable } from '@angular/core';
 })
 export class VisualisationService {
 
-  showGraph: boolean = true;
+  showGraph: boolean = false;
   showInspectors: boolean = true;
 
   constructor() { }

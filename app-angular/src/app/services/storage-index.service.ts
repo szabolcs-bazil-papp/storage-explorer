@@ -1,5 +1,5 @@
 import {Injectable, signal, WritableSignal} from '@angular/core';
-import {EntryLoadResultType, ExplorerService, StorageEntryDto} from '../../api/se';
+import {EntryLoadResult, EntryLoadResultType, ExplorerService, StorageEntryDto} from '../../api/se';
 import {Subject} from 'rxjs';
 
 @Injectable({
@@ -9,6 +9,8 @@ export class StorageIndexService {
 
   entries: WritableSignal<Map<string, StorageEntryDto>> = signal(new Map());
   entrySelection: Subject<StorageEntryDto> = new Subject();
+
+  entryDetails: WritableSignal<Map<string, EntryLoadResult>> = signal(new Map());
 
   constructor(private explorerService: ExplorerService) {
 
@@ -36,10 +38,6 @@ export class StorageIndexService {
       });
   }
 
-  acquire(uris: Array<string>): void {
-
-  }
-
   async load(uri: string): Promise<boolean> {
     const result = await this.explorerService
       .loadStorageEntry({uri})
@@ -48,7 +46,23 @@ export class StorageIndexService {
       return false;
     }
 
+    const entry = result.entry;
+    if (entry) {
+      this.entries.update(it => it.set(uri, entry));
+    }
+
+    this.entryDetails.update(it => it.set(uri, result));
     return true;
+  }
+
+  async getDetailsOfEntry(uri: string): Promise<EntryLoadResult | undefined> {
+    const details = this.entryDetails().get(uri);
+    if (!details) {
+      const yes = await this.load(uri);
+      return yes ? this.getDetailsOfEntry(uri) : undefined;
+    }
+
+    return details;
   }
 
   entrySelected(uri: string) {

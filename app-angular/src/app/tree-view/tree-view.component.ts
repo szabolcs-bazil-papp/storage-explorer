@@ -1,4 +1,4 @@
-import {AfterViewInit, Component, computed, Signal} from '@angular/core';
+import {AfterViewInit, Component, computed, Signal, ViewChild} from '@angular/core';
 import {ScrollPanel} from 'primeng/scrollpanel';
 import {Tree} from 'primeng/tree';
 import {StorageIndexService} from '../services/storage-index.service';

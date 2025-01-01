@@ -13,6 +13,7 @@ import {
   selector: 'app-root',
   imports: [NgIf, TreeViewComponent, HeaderComponent, GraphViewComponent, InspectorContainerViewComponent],
   templateUrl: './app.component.html',
+  standalone: true,
   styleUrl: './app.component.css',
 })
 export class AppComponent implements AfterViewInit {
