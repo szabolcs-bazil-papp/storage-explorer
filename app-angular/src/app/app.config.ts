@@ -1,4 +1,4 @@
-import {ApplicationConfig, provideZoneChangeDetection} from '@angular/core';
+import {ApplicationConfig, importProvidersFrom, provideZoneChangeDetection} from '@angular/core';
 import {provideRouter} from '@angular/router';
 
 import {routes} from './app.routes';
@@ -9,6 +9,8 @@ import Lara from '@primeng/themes/lara';
 import {provideHttpClient} from '@angular/common/http';
 import {BASE_PATH, ExplorerService} from '../api/se';
 import {StorageIndexService} from './services/storage-index.service';
+import {TabsModule} from 'primeng/tabs';
+import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 
 export const appConfig: ApplicationConfig = {
   providers: [

@@ -29,7 +29,9 @@ export class TreeViewComponent implements AfterViewInit {
   }
 
   onNodeSelected(event: any): void {
-    console.log('Selected node: ', event);
+    const uri = event?.node?.data;
+    if (!uri) return;
+    this.storageIndexService.entrySelected(uri as string);
   }
 
   private processEntries(entries: Array<StorageEntryDto>): Array<TreeNode> {
@@ -128,7 +130,7 @@ export class TreeViewComponent implements AfterViewInit {
       const v = byTypeName.get(typeName);
       if (!v) {
         byTypeName.set(typeName, [entry]);
-        console.log('Set entry to type', entry,  typeName);
+        console.log('Set entry to type', entry, typeName);
       } else {
         v.push(entry);
         console.log('Added entry to type', entry, typeName);

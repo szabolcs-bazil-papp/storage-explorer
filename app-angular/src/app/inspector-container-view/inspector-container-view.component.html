@@ -1,0 +1,16 @@
+<div class="card" *ngIf="currentEntry()">
+  <p-tabs [value]="currentEntry()!" scrollable>
+    <p-tablist>
+      @for (entry of entries; track entry.uri) {
+        <p-tab [value]="entry.uri">{{ entry.schema }} / {{ entry.name }}</p-tab>
+      }
+    </p-tablist>
+    <p-tabpanels>
+      @for (entry of entries; track entry.uri) {
+        <p-tabpanel [value]="entry.uri">
+          <p>Hello from {{ entry.schema }} {{ entry.name }} {{ entry.typeName ?? 'collection' }}</p>
+        </p-tabpanel>
+      }
+    </p-tabpanels>
+  </p-tabs>
+</div>

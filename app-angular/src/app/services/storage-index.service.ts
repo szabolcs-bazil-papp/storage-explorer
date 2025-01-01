@@ -1,5 +1,6 @@
 import {Injectable, signal, WritableSignal} from '@angular/core';
 import {EntryLoadResultType, ExplorerService, StorageEntryDto} from '../../api/se';
+import {Subject} from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -7,6 +8,7 @@ import {EntryLoadResultType, ExplorerService, StorageEntryDto} from '../../api/s
 export class StorageIndexService {
 
   entries: WritableSignal<Map<string, StorageEntryDto>> = signal(new Map());
+  entrySelection: Subject<StorageEntryDto> = new Subject();
 
   constructor(private explorerService: ExplorerService) {
 
@@ -47,6 +49,15 @@ export class StorageIndexService {
     }
 
     return true;
+  }
+
+  entrySelected(uri: string) {
+    const entry = this.entries().get(uri)
+    if (entry) {
+      this.entrySelection.next(entry);
+    } else {
+      console.log('fooo!');
+    }
   }
 
 
