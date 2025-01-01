@@ -54,3 +54,6 @@ bin/
 screens/
 /settings
 **/dev-fs/
+
+### Distribution artefacts ###
+**/*.msi
