@@ -1,13 +1,7 @@
 plugins {
+  id 'buildlogic.java-conventions'
   id 'org.smartbit4all.platform.gradle.java' version '0.5.3'
   id 'org.springframework.boot' version '3.3.3'
-}
-
-group = 'hu.aestallon.storageexplorer'
-version = '0.3.0'
-
-repositories {
-  mavenCentral()
 }
 
 dependencies {
@@ -17,8 +11,4 @@ dependencies {
   // implementation files('../spring-boot-starter/build/libs/spring-boot-starter-0.3.0.jar')
   implementation 'org.springframework.boot:spring-boot-starter-web'
   implementation 'org.springframework.boot:spring-boot-starter-actuator'
-}
-
-test {
-  useJUnitPlatform()
 }

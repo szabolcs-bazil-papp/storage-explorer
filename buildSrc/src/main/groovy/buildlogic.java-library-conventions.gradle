@@ -1,0 +1,16 @@
+plugins {
+  id 'buildlogic.java-conventions'
+  id 'java-library'
+  id 'io.spring.dependency-management'
+}
+
+java {
+  withSourcesJar()
+  withJavadocJar()
+}
+
+dependencyManagement {
+  imports {
+    mavenBom 'org.springframework.boot:spring-boot-dependencies:3.3.3'
+  }
+}

@@ -1,29 +1,6 @@
 plugins {
-  id 'java-library'
-  id 'io.spring.dependency-management' version '1.1.6'
+  id 'buildlogic.java-library-conventions'
   id 'tech.medivh.plugin.publisher' version '1.2.1'
-}
-
-group = 'hu.aestallon.storageexplorer'
-version = '0.3.0'
-
-java {
-  toolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
-  }
-
-  withSourcesJar()
-  withJavadocJar()
-}
-
-repositories {
-  mavenCentral()
-}
-
-dependencyManagement {
-  imports {
-    mavenBom 'org.springframework.boot:spring-boot-dependencies:3.3.3'
-  }
 }
 
 dependencies {
@@ -44,10 +21,6 @@ jar {
     project(':core').sourceSets.main.output,
     project(':spring').sourceSets.main.output
   )
-}
-
-test {
-  useJUnitPlatform()
 }
 
 medivhPublisher {

@@ -1,0 +1,25 @@
+plugins {
+  id 'java'
+}
+
+group = 'hu.aestallon.storageexplorer'
+version = '0.3.1'
+
+repositories {
+  mavenCentral()
+}
+
+java {
+  toolchain {
+    languageVersion.set(JavaLanguageVersion.of(21))
+  }
+}
+
+dependencies {
+  testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+  useJUnitPlatform()
+}

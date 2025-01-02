@@ -1,41 +1,16 @@
 plugins {
-  id 'io.spring.dependency-management' version '1.1.6'
-  id 'org.smartbit4all.platform.gradle.java' version '0.5.3'
+  id 'buildlogic.java-library-conventions'
   id 'org.smartbit4all.platform.gradle.openapi' version '0.5.3'
-}
-
-group = 'hu.aestallon.storageexplorer'
-version = '0.3.0'
-
-repositories {
-  mavenCentral()
-}
-
-java {
-  toolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
-  }
-}
-
-dependencyManagement {
-  imports {
-    mavenBom 'org.springframework.boot:spring-boot-dependencies:3.3.3'
-  }
 }
 
 dependencies {
   api project(':core')
-  implementation project(':common')
 
   compileOnly 'org.smartbit4all.platform:api'
   compileOnly 'org.springframework.boot:spring-boot-starter-web'
 
   compileOnly 'org.smartbit4all.platform:sql'
   compileOnly 'org.springframework.boot:spring-boot-starter-jdbc'
-}
-
-test {
-  useJUnitPlatform()
 }
 
 smartbit4all {
