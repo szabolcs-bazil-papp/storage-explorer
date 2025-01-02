@@ -25,6 +25,12 @@ test {
   useJUnitPlatform()
 }
 
+// this only disables the plain jar creation, not the executable bootJar
+// see: https://docs.spring.io/spring-boot/gradle-plugin/packaging.html#packaging-executable.and-plain-archives
+tasks.named('jar') {
+  enabled = false
+}
+
 tasks.named('bootJar') {
   manifest {
     attributes(
