@@ -40,18 +40,12 @@ public enum DatabaseVendor {
   }
 
   public String driverClassName() {
-    switch (this) {
-      case H2:
-        return "org.h2.Driver";
-      case PG:
-        return "org.postgresql.Driver";
-      case ORACLE:
-        return "oracle.jdbc.driver.OracleDriver";
-      case SQLITE:
-        return "org.sqlite.JDBC";
-      default:
-        throw new IllegalArgumentException("Unexpected value '" + this + "'");
-    }
+    return switch (this) {
+      case H2 -> "org.h2.Driver";
+      case PG -> "org.postgresql.Driver";
+      case ORACLE -> "oracle.jdbc.driver.OracleDriver";
+      case SQLITE -> "org.sqlite.JDBC";
+    };
   }
 }
 

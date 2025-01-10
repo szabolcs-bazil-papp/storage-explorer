@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
   implementation project(':common')
+  implementation project(':storage-sqlite')
   compileOnly 'org.smartbit4all.platform:api'
   compileOnly 'org.springframework.boot:spring-boot-starter-web'
   compileOnly 'jakarta.validation:jakarta.validation-api:3.0.2'

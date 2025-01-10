@@ -1,0 +1,7 @@
+plugins {
+  id 'buildlogic.java-library-conventions'
+}
+
+dependencies {
+  compileOnly 'org.smartbit4all.platform:sql'
+}

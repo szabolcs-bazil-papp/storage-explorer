@@ -41,6 +41,9 @@ import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.common.util.NotImplementedException;
+import com.aestallon.storageexplorer.storage.sqlite.SQLCurrentIdentifierSqlite;
+import com.aestallon.storageexplorer.storage.sqlite.SQLDBParameterSqlite;
+import com.aestallon.storageexplorer.storage.sqlite.SQLNextIdentifierSqlite;
 
 final class StorageIndexFactory {
 
@@ -213,7 +216,7 @@ final class StorageIndexFactory {
       case ORACLE -> SQLDBParameterOracle::new;
       case H2 -> SQLDBParameterH2::new;
       case PG -> SQLDBParameterPostgres::new;
-      default -> throw new NotImplementedException("Unsupported database vendor: " + vendor);
+      case SQLITE -> SQLDBParameterSqlite::new;
     };
   }
 
@@ -235,7 +238,13 @@ final class StorageIndexFactory {
             () -> new SQLNextIdentifierPg(jdbcTemplate),
             () -> new SQLCurrentIdentifierPg(jdbcTemplate));
       };
-      default -> throw new NotImplementedException("Unsupported database vendor: " + vendor);
+      case SQLITE -> () -> {
+        final JdbcTemplate jdbcTemplate = ctx.getBean(JdbcTemplate.class);
+        return new SQLIdentifierService(
+            jdbcTemplate,
+            () -> new SQLNextIdentifierSqlite(jdbcTemplate),
+            () -> new SQLCurrentIdentifierSqlite(jdbcTemplate));
+      };
     };
   }
 
