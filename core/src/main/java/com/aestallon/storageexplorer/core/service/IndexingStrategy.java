@@ -25,20 +25,12 @@ public interface IndexingStrategy {
   IndexingStrategy STRATEGY_FULL = new FullIndexingStrategy();
 
   static IndexingStrategy of(IndexingStrategyType type) {
-    if (type == null) {
-      return STRATEGY_INITIAL;
-    }
-
-    switch (type) {
-      case ON_DEMAND:
-        return STRATEGY_ON_DEMAND;
-      case INITIAL:
-        return STRATEGY_INITIAL;
-      case FULL:
-        return STRATEGY_FULL;
-      default:
-        throw new IllegalArgumentException("Unsupported indexing strategy type: " + type);
-    }
+    return switch (type) {
+      case null -> STRATEGY_INITIAL;
+      case ON_DEMAND -> STRATEGY_ON_DEMAND;
+      case INITIAL -> STRATEGY_INITIAL;
+      case FULL -> STRATEGY_FULL;
+    };
   }
 
   IndexingStrategyType type();

@@ -88,7 +88,6 @@ public class UserConfigService {
       log.error(
           "Could not read user configuration from [ {} ], falling back to default values!",
           settingsFile);
-      log.error(e.getMessage(), e);
       return fallback.get();
     }
   }

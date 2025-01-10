@@ -33,8 +33,8 @@ public final class StorageObjectTreeNode
 
     objectEntry.scopedEntries().forEach(it -> add(switch (it) {
       case ScopedMapEntry m -> new StorageMapTreeNode(m);
-      case ScopedObjectEntry m -> new StorageObjectTreeNode(m);
-      case ScopedListEntry m -> new StorageListTreeNode(m);
+      case ScopedObjectEntry o -> new StorageObjectTreeNode(o);
+      case ScopedListEntry l -> new StorageListTreeNode(l);
     }));
     supportsChildren = !objectEntry.scopedEntries().isEmpty();
   }

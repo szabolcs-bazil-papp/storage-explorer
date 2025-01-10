@@ -28,7 +28,7 @@ public final class ImportStorageController extends AbstractDialogController<Stor
         (before, after) -> CompletableFuture.runAsync(() -> {
           userConfigService.updateStorageLocation(after);
           storageInstance.applyDto(after);
-          
+
           if (!Objects.equals(before.getType(), after.getType()) ||
               !Objects.equals(before.getFs(), after.getFs()) ||
               !Objects.equals(before.getDb(), after.getDb())) {
@@ -36,7 +36,7 @@ public final class ImportStorageController extends AbstractDialogController<Stor
             // almost everything:
             storageInstanceProvider.reimport(storageInstance);
           } else if (!Objects.equals(before.getIndexingStrategy(), after.getIndexingStrategy())) {
-              // if only the indexing strategy is changed, we may just re-index:
+            // if only the indexing strategy is changed, we may just re-index:
             storageInstanceProvider.reindex(storageInstance);
           }
         }),
