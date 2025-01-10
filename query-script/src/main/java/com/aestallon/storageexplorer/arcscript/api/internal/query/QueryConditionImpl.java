@@ -1,8 +1,7 @@
-package com.aestallon.storageexplorer.queryscript.api.internal;
+package com.aestallon.storageexplorer.arcscript.api.internal.query;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.aestallon.storageexplorer.queryscript.api.QueryCondition;
 import groovy.lang.Closure;
 
 public class QueryConditionImpl implements QueryCondition {

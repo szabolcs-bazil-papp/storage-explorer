@@ -1,24 +1,13 @@
 package hu.aestallon.storageexplorer
 
-import com.aestallon.storageexplorer.queryscript.api.QueryScript
-
+import com.aestallon.storageexplorer.arcscript.api.ArcScript
 
 static void main(String[] args) {
-  def qs = QueryScript.evaluate("""
+  def qs = ArcScript.evaluate("""
     query {
           a 'User'
        from 'org'
-      where { str 'name' contains 'Attila' } and { bool 'inactive' is false }
+      where { str 'name' is false } and { bool 'inactive' is false }
     }""")
   println qs
-
 }
-
-/*
-
-}
-
-
-
-
- */

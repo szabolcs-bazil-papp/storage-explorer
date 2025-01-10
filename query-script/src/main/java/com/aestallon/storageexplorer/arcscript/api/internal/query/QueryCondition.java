@@ -1,4 +1,4 @@
-package com.aestallon.storageexplorer.queryscript.api;
+package com.aestallon.storageexplorer.arcscript.api.internal.query;
 
 import groovy.lang.Closure;
 

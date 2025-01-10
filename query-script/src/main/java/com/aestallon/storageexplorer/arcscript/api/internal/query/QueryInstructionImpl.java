@@ -1,18 +1,25 @@
-package com.aestallon.storageexplorer.queryscript.api.internal;
+package com.aestallon.storageexplorer.arcscript.api.internal.query;
 
-import com.aestallon.storageexplorer.queryscript.api.Query;
-import com.aestallon.storageexplorer.queryscript.api.QueryCondition;
+import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
 import groovy.lang.Closure;
 
-public class QueryImpl implements Query {
+public class QueryInstructionImpl implements QueryInstruction {
 
   private String typeName;
   private String schema;
   private QueryCondition condition;
+  private long limit = -1L;
 
   @Override
   public void a(String typeName) {
     this.typeName = typeName;
+    this.limit = 1L;
+  }
+
+  @Override
+  public void every(String typeName) {
+    this.typeName = typeName;
+    this.limit = -1L;
   }
 
   @Override
@@ -28,11 +35,25 @@ public class QueryImpl implements Query {
   }
 
   @Override
+  public void limit(long limit) {
+    if (limit < 0) {
+      throw new IllegalArgumentException("Query limit cannot be negative!");
+    }
+    
+    if (this.limit == 1L) {
+      return;
+    }
+    
+    this.limit = limit;
+  }
+
+  @Override
   public String toString() {
     return "QueryImpl {" +
            "\n  typeName: " + typeName +
            ",\n  schema: " + schema +
            ",\n  condition: " + condition +
+           ",\n  limit: " + limit +
            "\n}";
   }
 }
