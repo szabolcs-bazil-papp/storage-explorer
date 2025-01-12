@@ -3,7 +3,7 @@ package com.aestallon.storageexplorer.arcscript.api;
 import com.aestallon.storageexplorer.arcscript.api.internal.query.QueryCondition;
 import groovy.lang.Closure;
 
-public interface QueryInstruction { 
+public interface QueryInstruction extends Instruction { 
   
   void a(final String typeName);
   

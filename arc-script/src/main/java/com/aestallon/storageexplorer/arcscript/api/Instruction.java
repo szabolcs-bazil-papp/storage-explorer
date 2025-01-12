@@ -1,4 +1,4 @@
 package com.aestallon.storageexplorer.arcscript.api;
 
-public interface UpdateInstruction {
+public interface Instruction {
 }

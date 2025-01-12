@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.utility.StringConstant;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.Assert;
+import org.w3c.dom.events.EventTarget;
 import com.aestallon.storageexplorer.core.event.EntryAcquired;
 import com.aestallon.storageexplorer.core.event.EntryAcquisitionFailed;
 import com.aestallon.storageexplorer.core.event.EntryDiscovered;
@@ -24,6 +25,7 @@ import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 
 public final class StorageInstance {
 
@@ -46,6 +48,12 @@ public final class StorageInstance {
   private StorageInstance(final StorageId id) {
     this.id = Objects.requireNonNull(id, "Storage Instance ID cannot be null!");
     availability = Availability.UNAVAILABLE;
+  }
+
+  private <EVENT> void publishEvent(final EVENT e) {
+    if (eventPublisher != null) {
+      eventPublisher.publishEvent(e);
+    }
   }
 
   public StorageId id() {
@@ -127,7 +135,7 @@ public final class StorageInstance {
     final StorageIndex.EntryAcquisitionResult result = index.getOrCreate(uri);
     return switch (result.kind()) {
       case FAIL -> {
-        eventPublisher.publishEvent(new EntryAcquisitionFailed(this, uri));
+        publishEvent(new EntryAcquisitionFailed(this, uri));
         yield Optional.empty();
       }
       case PRESENT -> Optional.of(result.entry());
@@ -141,7 +149,7 @@ public final class StorageInstance {
           entry.refresh();
         } catch (final Exception e) {
           log.error(e.getMessage(), e);
-          eventPublisher.publishEvent(new EntryAcquisitionFailed(this, uri));
+          publishEvent(new EntryAcquisitionFailed(this, uri));
           yield Optional.empty();
         }
 
@@ -169,7 +177,7 @@ public final class StorageInstance {
         //            return Optional.empty();
         //          }
         //        }
-        eventPublisher.publishEvent(new EntryAcquired(this, entry));
+        publishEvent(new EntryAcquired(this, entry));
         yield Optional.of(entry);
       }
     };
@@ -179,7 +187,7 @@ public final class StorageInstance {
     final StorageIndex.EntryAcquisitionResult result = index.getOrCreate(uri);
     return switch (result.kind()) {
       case FAIL -> {
-        eventPublisher.publishEvent(new EntryAcquisitionFailed(this, uri));
+        publishEvent(new EntryAcquisitionFailed(this, uri));
         yield Optional.empty();
       }
       case PRESENT -> Optional.of(result.entry());
@@ -187,7 +195,7 @@ public final class StorageInstance {
         final var entry = result.entry();
         // discovery is expected to be programmatic -> we trust the URI is valid.
         index.accept(uri, entry);
-        eventPublisher.publishEvent(new EntryDiscovered(this, entry));
+        publishEvent(new EntryDiscovered(this, entry));
         yield Optional.of(entry);
       }
     };
@@ -227,6 +235,10 @@ public final class StorageInstance {
 
   public void setEventPublisher(final ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
+  }
+  
+  public StorageInstanceExaminer examiner() {
+    return new StorageInstanceExaminer(this::discover);
   }
 
   @Override

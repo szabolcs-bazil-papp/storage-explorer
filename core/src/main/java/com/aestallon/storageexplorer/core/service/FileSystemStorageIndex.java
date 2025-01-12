@@ -20,6 +20,7 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.common.util.IO;
+import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 
 public final class FileSystemStorageIndex extends StorageIndex {
 
@@ -101,6 +102,16 @@ public final class FileSystemStorageIndex extends StorageIndex {
     }
 
     return queue.stream();
+  }
+
+  @Override
+  protected Stream<URI> fetchEntries(IndexingTarget target) {
+    if (target.isAny()) {
+      return fetchEntries();
+    }
+    
+    // TODO: Do a sophisticated file walking for target types...
+    return fetchEntries();
   }
 
   @Override

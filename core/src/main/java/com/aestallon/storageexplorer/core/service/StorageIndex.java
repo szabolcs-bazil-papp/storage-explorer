@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
+import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.google.common.base.Strings;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -70,6 +71,15 @@ public abstract sealed class StorageIndex
     ensureStorageEntryFactory();
     cache.putAll(strategy.processEntries(fetchEntries(), storageEntryFactory::create));
   }
+  
+  public void refresh(final IndexingStrategy strategy, final IndexingTarget target) {
+    if (!strategy.fetchEntries()) {
+      return;
+    }
+    
+    ensureStorageEntryFactory();
+    cache.putAll(strategy.processEntries(fetchEntries(target), storageEntryFactory::create));
+  }
 
   void clear() {
     cache.clear();
@@ -98,6 +108,8 @@ public abstract sealed class StorageIndex
   }
 
   protected abstract Stream<URI> fetchEntries();
+
+  protected abstract Stream<URI> fetchEntries(IndexingTarget target);
 
   protected abstract StorageEntryFactory storageEntryFactory();
 
@@ -148,6 +160,10 @@ public abstract sealed class StorageIndex
           .filter(it -> it.uri().getPath().equals(scopedEntry.scope().getPath()))
           .forEach(it -> it.addScopedEntry(scopedEntry));
     }
+  }
+  
+  public void printCount() {
+    System.out.println(cache.size());
   }
 
   public Stream<StorageEntry> searchForUri(final String queryString) {

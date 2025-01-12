@@ -229,7 +229,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
     return objectApi.load(Uris.atVersion(uri, version));
   }
-
+  
   @Override
   public boolean valid() {
     return valid;

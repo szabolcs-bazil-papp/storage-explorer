@@ -2,7 +2,7 @@ package com.aestallon.storageexplorer.arcscript.api;
 
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 
-public interface IndexInstruction {
+public interface IndexInstruction extends Instruction {
   
   void schemas(String... schemas);
   
