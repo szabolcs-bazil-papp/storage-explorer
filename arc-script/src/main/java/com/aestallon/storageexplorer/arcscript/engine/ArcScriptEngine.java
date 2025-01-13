@@ -1,8 +1,11 @@
 package com.aestallon.storageexplorer.arcscript.engine;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -14,11 +17,15 @@ import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
 import com.aestallon.storageexplorer.arcscript.api.UpdateInstruction;
 import com.aestallon.storageexplorer.arcscript.api.internal.ArcScriptImpl;
 import com.aestallon.storageexplorer.arcscript.api.internal.index.IndexInstructionImpl;
+import com.aestallon.storageexplorer.arcscript.api.internal.query.Assertion;
+import com.aestallon.storageexplorer.arcscript.api.internal.query.QueryConditionImpl;
 import com.aestallon.storageexplorer.arcscript.api.internal.query.QueryInstructionImpl;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 import static java.util.stream.Collectors.toSet;
 
 public class ArcScriptEngine {
@@ -33,6 +40,8 @@ public class ArcScriptEngine {
     if (!(arcScript instanceof ArcScriptImpl as)) {
       return Collections.emptyList();
     }
+    
+    final List<URI> sumResult = new ArrayList<>();
 
     for (final Instruction instruction : as.instructions) {
       switch (instruction) {
@@ -42,6 +51,39 @@ public class ArcScriptEngine {
                 "Query instructions must be instance of QueryInstructionImpl");
           }
 
+          final IndexingTarget target = new IndexingTarget(query._schemas, query._types);
+          final var condition = query.condition;
+          // for now, only one, and hardcoded
+          final Assertion assertion = condition.assertions.stream()
+              .flatMap(List::stream)
+              .findFirst()
+              .orElseThrow();
+          String prop = assertion.prop;
+          String expected = assertion.value;
+
+          final Set<StorageEntry> res = new HashSet<>();
+          long cnt = 0;
+          final Set<StorageEntry> entries = storageInstance.index().get(target);
+          final var examiner = storageInstance.examiner();
+          for (final StorageEntry entry : entries) { // TODO: Not a freaking for-loop
+            final var result = examiner.discoverProperty(entry, prop);
+            // TODO: Handle everything not just primitives as String!
+            if (result instanceof StorageInstanceExaminer.PrimitiveFound<?> primitive) {
+              final String actual = String.valueOf(primitive.value());
+              // TODO: Actual intelligent tests here.
+              if (actual.contains(expected)) {
+                res.add(entry);
+                cnt++;
+              }
+            }
+            
+            if (query._limit > 0 && cnt == query._limit) {
+              break;
+            }
+          }
+
+          sumResult.addAll(res.stream().map(StorageEntry::uri).toList());
+          
         }
         case IndexInstruction indexIF -> {
           if (!(indexIF instanceof IndexInstructionImpl index)) {
@@ -61,7 +103,7 @@ public class ArcScriptEngine {
     }
 
 
-    return Collections.emptyList();
+    return sumResult;
   }
 
 

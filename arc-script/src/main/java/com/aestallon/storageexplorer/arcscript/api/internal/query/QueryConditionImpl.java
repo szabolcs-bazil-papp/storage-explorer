@@ -6,7 +6,7 @@ import groovy.lang.Closure;
 
 public class QueryConditionImpl implements QueryCondition {
 
-  private final List<List<Assertion>> assertions = new ArrayList<>();
+  public final List<List<Assertion>> assertions = new ArrayList<>();
 
   QueryConditionImpl createClause(final Closure closure) {
     return (QueryConditionImpl) or(closure);
@@ -36,4 +36,5 @@ public class QueryConditionImpl implements QueryCondition {
            "\n  assertions: " + assertions +
            "\n}";
   }
+  
 }

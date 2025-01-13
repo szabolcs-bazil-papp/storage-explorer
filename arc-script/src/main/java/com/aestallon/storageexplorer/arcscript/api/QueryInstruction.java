@@ -11,9 +11,9 @@ public interface QueryInstruction extends Instruction {
     a(typeName);
   }
   
-  void every(final String typeName);
+  void every(final String... typeNames);
   
-  void from(final String schema);
+  void from(final String... schema);
   
   QueryCondition where(Closure closure);
   

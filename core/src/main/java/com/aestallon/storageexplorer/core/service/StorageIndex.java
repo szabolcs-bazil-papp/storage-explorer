@@ -28,6 +28,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -42,6 +44,7 @@ import com.google.common.base.Strings;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 public abstract sealed class StorageIndex
     permits FileSystemStorageIndex, RelationalDatabaseStorageIndex {
@@ -125,6 +128,17 @@ public abstract sealed class StorageIndex
 
   public Optional<StorageEntry> get(final URI uri) {
     return Optional.ofNullable(cache.get(uri));
+  }
+  
+  public Set<StorageEntry> get(final IndexingTarget target) {
+    final Predicate<StorageEntry> schema = target.schemas().isEmpty()
+        ? e -> true
+        : e -> target.schemas().contains(e.uri().getScheme());
+    final Predicate<StorageEntry> type = target.types().isEmpty()
+        ? e -> true
+        : e -> e instanceof ObjectEntry o && target.types().contains(o.typeName());
+    final var p = schema.and(type);
+    return cache.values().stream().filter(p).collect(toSet());
   }
 
   public EntryAcquisitionResult getOrCreate(final URI uri) {

@@ -2,9 +2,9 @@ package com.aestallon.storageexplorer.arcscript.api.internal.query;
 
 public class Assertion {
   
-  private String prop;
-  String op;
-  String value;
+  public String prop;
+  public String op;
+  public String value;
   
   public AssertionOperation.AssertionOperationStr str(final String prop) {
     this.prop = prop;
