@@ -5,11 +5,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.arcscript.api.ArcScript;
 import com.aestallon.storageexplorer.arcscript.api.IndexInstruction;
 import com.aestallon.storageexplorer.arcscript.api.Instruction;
@@ -18,13 +16,11 @@ import com.aestallon.storageexplorer.arcscript.api.UpdateInstruction;
 import com.aestallon.storageexplorer.arcscript.api.internal.ArcScriptImpl;
 import com.aestallon.storageexplorer.arcscript.api.internal.index.IndexInstructionImpl;
 import com.aestallon.storageexplorer.arcscript.api.internal.query.Assertion;
-import com.aestallon.storageexplorer.arcscript.api.internal.query.QueryConditionImpl;
 import com.aestallon.storageexplorer.arcscript.api.internal.query.QueryInstructionImpl;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 import static java.util.stream.Collectors.toSet;
 
@@ -68,8 +64,8 @@ public class ArcScriptEngine {
           for (final StorageEntry entry : entries) { // TODO: Not a freaking for-loop
             final var result = examiner.discoverProperty(entry, prop);
             // TODO: Handle everything not just primitives as String!
-            if (result instanceof StorageInstanceExaminer.PrimitiveFound<?> primitive) {
-              final String actual = String.valueOf(primitive.value());
+            if (result instanceof StorageInstanceExaminer.StringFound s) {
+              final String actual = s.string(); 
               // TODO: Actual intelligent tests here.
               if (actual.contains(expected)) {
                 res.add(entry);
