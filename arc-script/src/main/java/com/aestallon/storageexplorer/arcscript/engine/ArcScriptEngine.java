@@ -55,7 +55,6 @@ public class ArcScriptEngine {
               .findFirst()
               .orElseThrow();
           String prop = assertion.prop;
-          String expected = assertion.value;
 
           final Set<StorageEntry> res = new HashSet<>();
           long cnt = 0;
@@ -63,14 +62,9 @@ public class ArcScriptEngine {
           final var examiner = storageInstance.examiner();
           for (final StorageEntry entry : entries) { // TODO: Not a freaking for-loop
             final var result = examiner.discoverProperty(entry, prop);
-            // TODO: Handle everything not just primitives as String!
-            if (result instanceof StorageInstanceExaminer.StringFound s) {
-              final String actual = s.string(); 
-              // TODO: Actual intelligent tests here.
-              if (actual.contains(expected)) {
-                res.add(entry);
-                cnt++;
-              }
+            if (assertion._predicate.test(result)) {
+              res.add(entry);
+              cnt++;
             }
             
             if (query._limit > 0 && cnt == query._limit) {
