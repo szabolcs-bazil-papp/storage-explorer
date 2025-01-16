@@ -26,6 +26,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.AbstractTableModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
@@ -77,8 +78,8 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
         }
 
         final Object value = tableModel.getValueAt(row, col);
-        if (value instanceof URI) {
-          factory.jumpToUri((URI) value);
+        if (value instanceof URI uri) {
+          factory.jumpToUri(storageEntry.storageId(), Uris.latest(uri));
         }
       }
 

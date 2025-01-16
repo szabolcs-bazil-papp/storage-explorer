@@ -32,11 +32,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
+import com.aestallon.storageexplorer.core.event.EntryAcquired;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.graph.event.GraphRenderingRequest;
@@ -177,7 +180,7 @@ public class StorageEntryInspectorViewFactory {
     });
   }
 
-  void addJumpAction(final JTextArea component) {
+  void addJumpAction(final StorageId storageId, final JTextArea component) {
     final var ctrlShiftI = KeyStroke.getKeyStroke(
         KeyEvent.VK_I,
         KeyEvent.CTRL_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK);
@@ -191,20 +194,20 @@ public class StorageEntryInspectorViewFactory {
         if (selectedText == null || selectedText.isEmpty()) {
           return;
         }
-        jumpToUriBasedOnText(selectedText);
+        jumpToUriBasedOnText(storageId, selectedText);
       }
 
     });
   }
 
-  private void jumpToUriBasedOnText(String selectedText) {
-    Uris.parse(selectedText).ifPresent(this::jumpToUri);
+  private void jumpToUriBasedOnText(StorageId storageId, String selectedText) {
+    Uris.parse(selectedText).ifPresent(it -> jumpToUri(storageId, it));
   }
 
-  void jumpToUri(final URI uri) {
-    // TODO: Absolutely DO NOT DO THIS!
-    storageInstanceProvider.indexOf(uri).get(uri).ifPresentOrElse(
-        it -> eventPublisher.publishEvent(new EntryInspectionEvent(it)),
+  void jumpToUri(final StorageId storageId, final URI uri) {
+    StorageInstance storageInstance = storageInstanceProvider.get(storageId);
+    storageInstance.acquire(Uris.latest(uri)).ifPresentOrElse(
+        it -> eventPublisher.publishEvent(new EntryAcquired(storageInstance, it)),
         () -> JOptionPane.showMessageDialog(
             null,
             "Cannot show URI: " + uri,

@@ -30,19 +30,11 @@ public final class InspectorTextareaFactory {
 
   private static final Logger log = LoggerFactory.getLogger(InspectorTextareaFactory.class);
 
-  static final class PaneAndTextarea {
-    final JScrollPane scrollPane;
-    final JTextArea textArea;
 
-    PaneAndTextarea(JScrollPane scrollPane, JTextArea textArea) {
-      this.scrollPane = scrollPane;
-      this.textArea = textArea;
-    }
-
-  }
+  record PaneAndTextarea(JScrollPane scrollPane, JTextArea textArea) {}
 
 
-  public enum Type { SIMPLE, FANCY; }
+  public enum Type { SIMPLE, FANCY }
 
   static JScrollPane textAreaContainerPane(JTextArea objectAsMapTextarea) {
     final var pane = new JScrollPane(
@@ -90,7 +82,7 @@ public final class InspectorTextareaFactory {
     textarea.setEditable(false);
     textarea.setFont(inspectorViewFactory.monospaceFontProvider().getFont());
 
-    inspectorViewFactory.addJumpAction(textarea);
+    inspectorViewFactory.addJumpAction(objectEntry.storageId(), textarea);
     inspectorViewFactory.monospaceFontProvider().applyFontSizeChangeAction(textarea);
 
     inspectorViewFactory.submitTextArea(objectEntry, textarea);
@@ -109,7 +101,7 @@ public final class InspectorTextareaFactory {
     textarea.setOpaque(false);
     textarea.setFont(inspectorViewFactory.monospaceFontProvider().getFont());
 
-    inspectorViewFactory.addJumpAction(textarea);
+    inspectorViewFactory.addJumpAction(objectEntry.storageId(), textarea);
     inspectorViewFactory.monospaceFontProvider().applyFontSizeChangeAction(textarea);
 
     inspectorViewFactory.submitTextArea(objectEntry, textarea);

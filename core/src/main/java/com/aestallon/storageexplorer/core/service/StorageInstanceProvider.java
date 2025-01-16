@@ -18,6 +18,7 @@ package com.aestallon.storageexplorer.core.service;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -94,20 +95,14 @@ public class StorageInstanceProvider {
     return storageInstancesById.values().stream().map(StorageInstance::index);
   }
 
+  public StorageInstance get(final StorageId id) {
+    return storageInstancesById.get(id);
+  }
+
   public Stream<StorageEntry> searchForUri(final String queryString) {
     return storageInstancesById.values().stream()
         .map(StorageInstance::index)
         .flatMap(it -> it.searchForUri(queryString));
-  }
-
-  @Deprecated
-  public StorageIndex indexOf(final URI uri) {
-    // TODO: don't do this, store backreference!
-    return storageInstancesById.values().stream()
-        .map(StorageInstance::index)
-        .filter(it -> it.get(uri).isPresent())
-        .findFirst()
-        .orElseThrow();
   }
 
   public StorageInstance storageInstanceOf(final StorageEntry storageEntry) {
