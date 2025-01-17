@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 import javax.sql.DataSource;
+import org.checkerframework.checker.formatter.qual.ReturnsFormat;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.config.PlatformApiConfig;
 import org.smartbit4all.core.object.ObjectApi;
@@ -163,6 +164,7 @@ final class StorageIndexFactory {
       return new StorageIndexCreationResult.Err(Availability.MISCONFIGURED, "No Connection Data!");
     }
     props.putAll(connectionData.asProperties());
+    final String targetSchema = connectionData.getTargetSchema();
 
     final var ctx = new AnnotationConfigApplicationContext();
 
@@ -175,7 +177,7 @@ final class StorageIndexFactory {
     ctx.registerBean(
         "sqlDbParameter",
         SQLDBParameter.class,
-        getSqlDBParameterFactory(ctx, vendor), it -> it.setDependsOn("jdbcTemplate"));
+        getSqlDBParameterFactory(ctx, vendor, targetSchema), it -> it.setDependsOn("jdbcTemplate"));
     ctx.registerBean(
         "identifierService",
         IdentifierService.class,
@@ -199,18 +201,28 @@ final class StorageIndexFactory {
     final CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
     final JdbcTemplate jdbcTemplate = ctx.getBean(JdbcTemplate.class);
 
+    
     final var index = new RelationalDatabaseStorageIndex(
         storageId,
         objectApi,
         collectionApi,
-        jdbcTemplate);
+        jdbcTemplate,
+        targetSchema);
     return new StorageIndexCreationResult.Ok(index, ctx);
   }
 
   private Supplier<SQLDBParameter> getSqlDBParameterFactory(final ApplicationContext ctx,
-                                                            final DatabaseVendor vendor) {
+                                                            final DatabaseVendor vendor,
+                                                            final String targetSchema) {
     return switch (vendor) {
-      case ORACLE -> SQLDBParameterOracle::new;
+      case ORACLE -> () -> {
+        final var p = new SQLDBParameterOracle();
+        if (targetSchema != null && !targetSchema.isEmpty()) {
+          p.setSchema(targetSchema);
+        }
+        
+        return p;
+      };
       case H2 -> SQLDBParameterH2::new;
       case PG -> SQLDBParameterPostgres::new;
       default -> throw new NotImplementedException("Unsupported database vendor: " + vendor);

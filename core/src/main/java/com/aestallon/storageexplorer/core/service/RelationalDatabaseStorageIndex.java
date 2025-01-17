@@ -20,14 +20,17 @@ public final class RelationalDatabaseStorageIndex extends StorageIndex {
   private static final Logger log = LoggerFactory.getLogger(RelationalDatabaseStorageIndex.class);
 
   private final JdbcTemplate db;
+  private final String targetSchema;
 
   public RelationalDatabaseStorageIndex(
       StorageId storageId,
       ObjectApi objectApi,
       CollectionApi collectionApi,
-      JdbcTemplate db) {
+      JdbcTemplate db,
+      String targetSchema) {
     super(storageId, objectApi, collectionApi);
     this.db = db;
+    this.targetSchema = targetSchema;
   }
 
   @Override
@@ -43,10 +46,16 @@ public final class RelationalDatabaseStorageIndex extends StorageIndex {
         .filter(it -> !Strings.isNullOrEmpty(it))
         .map(URI::create);
   }
+  
+  private String rawUriSelect() {
+    return (targetSchema == null) 
+        ? "SELECT URI FROM OBJECT_ENTRY"
+        : "SELECT URI FROM %s.OBJECT_ENTRY".formatted(targetSchema);
+  }
 
   private String buildQuery(IndexingTarget target) {
     if (target.isAny()) {
-      return "SELECT URI FROM OBJECT_ENTRY";
+      return rawUriSelect();
     }
 
     /*
@@ -65,7 +74,8 @@ public final class RelationalDatabaseStorageIndex extends StorageIndex {
     final boolean filterSchema = !target.schemas().isEmpty();
     final boolean filterType = !target.types().isEmpty();
 
-    final StringBuilder sb = new StringBuilder("SELECT URI FROM OBJECT_ENTRY WHERE ");
+    final StringBuilder sb = new StringBuilder(rawUriSelect());
+    sb.append(" WHERE ");
     if (filterSchema) {
       sb.append(schemaClause(target.schemas()));
     }

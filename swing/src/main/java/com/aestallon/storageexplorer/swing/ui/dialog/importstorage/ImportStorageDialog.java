@@ -6,6 +6,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileSystemView;
@@ -60,6 +61,8 @@ public class ImportStorageDialog extends JDialog {
   private JTextPane entriesShallBeIndexedTextPane;
   private JTextPane noIndexingShallBeTextPane;
   private JTextPane allEntriesAndTheirTextPane;
+  private JTextField textFieldSchema;
+  private JLabel labelSchema;
 
   private final ImportStorageController controller;
 
@@ -98,6 +101,7 @@ public class ImportStorageDialog extends JDialog {
         textFieldDbUrl.setText(connectionData.getUrl());
         textFieldDbUsername.setText(connectionData.getUsername());
         textFieldDbPassword.setText(connectionData.getPassword());
+        textFieldSchema.setText(connectionData.getTargetSchema());
       } else {
         storageTypePane.setSelectedIndex(0);
         textFieldFsRootDir.setText(storageInstanceDto.getFs().getPath().toString());
@@ -194,7 +198,8 @@ public class ImportStorageDialog extends JDialog {
           .dbConnectionData(new DatabaseConnectionData()
               .url(textFieldDbUrl.getText())
               .username(textFieldDbUsername.getText())
-              .password(textFieldDbPassword.getText()));
+              .password(textFieldDbPassword.getText())
+              .targetSchema(textFieldSchema.getText()));
 
     } else {
       throw new IllegalArgumentException("Unsupported storage type: " + storageInstanceType);
@@ -224,6 +229,12 @@ public class ImportStorageDialog extends JDialog {
 
       textFieldFsRootDir.setText(selectedFile.getAbsolutePath());
     }
+  }
+
+  public static void main(String[] args) {
+    new ImportStorageDialog(
+        new ImportStorageController(new StorageInstanceDto().fs(new FsStorageLocation().path(
+            Paths.get(""))), (a, b) -> {})).show();
   }
 
   {
@@ -340,7 +351,7 @@ public class ImportStorageDialog extends JDialog {
     sqlPane.setLayout(new GridLayoutManager(3, 1, new Insets(5, 5, 5, 5), -1, -1));
     storageTypePane.addTab("SQL ", new ImageIcon(getClass().getResource("/icons/db.png")), sqlPane);
     databaseConnectionForm = new JPanel();
-    databaseConnectionForm.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
+    databaseConnectionForm.setLayout(new GridLayoutManager(3, 5, new Insets(0, 0, 0, 0), -1, -1));
     sqlPane.add(databaseConnectionForm,
         new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
@@ -389,6 +400,17 @@ public class ImportStorageDialog extends JDialog {
         new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
             GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    labelSchema = new JLabel();
+    labelSchema.setText("Schema");
+    databaseConnectionForm.add(labelSchema,
+        new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
+            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
+            false));
+    textFieldSchema = new JTextField();
+    databaseConnectionForm.add(textFieldSchema,
+        new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_WEST,
+            GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW,
+            GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
     sshForm = new JPanel();
     sshForm.setLayout(new GridLayoutManager(3, 4, new Insets(0, 0, 0, 0), -1, -1));
     sqlPane.add(sshForm,
