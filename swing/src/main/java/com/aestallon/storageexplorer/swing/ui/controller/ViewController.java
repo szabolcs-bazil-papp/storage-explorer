@@ -35,8 +35,8 @@ import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.event.StorageReimportedEvent;
 import com.aestallon.storageexplorer.core.event.StorageReindexed;
 import com.aestallon.storageexplorer.core.event.TreeTouchRequest;
-import com.aestallon.storageexplorer.swing.ui.ExplorerView;
-import com.aestallon.storageexplorer.swing.ui.GraphView;
+import com.aestallon.storageexplorer.swing.ui.explorer.ExplorerView;
+import com.aestallon.storageexplorer.swing.ui.graph.GraphView;
 import com.aestallon.storageexplorer.swing.ui.tree.MainTreeView;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.ClickableTreeNode;
 

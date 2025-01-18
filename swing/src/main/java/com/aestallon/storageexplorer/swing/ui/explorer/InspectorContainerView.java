@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui;
+package com.aestallon.storageexplorer.swing.ui.explorer;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;

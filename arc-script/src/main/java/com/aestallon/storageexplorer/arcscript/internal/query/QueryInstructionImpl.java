@@ -1,11 +1,13 @@
-package com.aestallon.storageexplorer.arcscript.api.internal.query;
+package com.aestallon.storageexplorer.arcscript.internal.query;
 
 import java.util.HashSet;
 import java.util.Set;
+import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
+import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import groovy.lang.Closure;
 
-public class QueryInstructionImpl implements QueryInstruction {
+public class QueryInstructionImpl implements QueryInstruction, Instruction {
 
   public Set<String> _types = new HashSet<>();
   public Set<String> _schemas = new HashSet<>();
@@ -40,21 +42,39 @@ public class QueryInstructionImpl implements QueryInstruction {
     if (schemas == null || schemas.length == 0) {
       throw new IllegalArgumentException("schemas cannot be null or empty");
     }
-    
+
     for (String schema : schemas) {
       if (schema == null) {
         throw new IllegalArgumentException("schema cannot be null");
       }
-      
+
       _schemas.add(schema);
     }
   }
 
   @Override
   public QueryCondition where(Closure closure) {
-    QueryConditionImpl condition = new QueryConditionImpl();
+    QueryConditionImpl condition = new QueryConditionImpl(this);
     this.condition = condition;
     return condition.createClause(closure);
+  }
+
+  @Override
+  public QueryCondition where(QueryCondition condition) {
+    this.condition = new QueryConditionImpl(this);
+    this.condition.or(condition);
+    return this.condition;
+  }
+
+  @Override
+  public QueryCondition expr(Closure closure) {
+    QueryConditionImpl condition = new QueryConditionImpl(this);
+    return condition.createClause(closure);
+  }
+
+  @Override
+  public QueryCondition expr(QueryCondition condition) {
+    return condition;
   }
 
   @Override
@@ -72,11 +92,17 @@ public class QueryInstructionImpl implements QueryInstruction {
 
   @Override
   public String toString() {
-    return "QueryImpl {" +
-           "\n  typeName: " + _types +
-           ",\n  schema: " + _schemas +
-           ",\n  condition: " + condition +
-           ",\n  limit: " + _limit +
-           "\n}";
+    final String conditionStr;
+    if (this.condition == null) {
+      conditionStr = "true";
+    } else {
+      String condStr = condition.toString();
+      conditionStr = condStr.substring(1, condStr.length() - 1);
+    }
+
+    return "select types " + _types +
+           " from schema(e) " + _schemas +
+           " where " + conditionStr +
+           ((_limit > 0) ? (" limit " + _limit) : "");
   }
 }

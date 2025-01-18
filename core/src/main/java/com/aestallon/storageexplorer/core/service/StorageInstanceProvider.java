@@ -91,8 +91,8 @@ public class StorageInstanceProvider {
     executorService = Executors.newSingleThreadExecutor(new HighPriorityThreadFactory());
   }
 
-  public Stream<StorageIndex> provide() {
-    return storageInstancesById.values().stream().map(StorageInstance::index);
+  public Stream<StorageInstance> provide() {
+    return storageInstancesById.values().stream();
   }
 
   public StorageInstance get(final StorageId id) {

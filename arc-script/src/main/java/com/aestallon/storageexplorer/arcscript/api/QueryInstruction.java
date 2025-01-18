@@ -1,10 +1,13 @@
 package com.aestallon.storageexplorer.arcscript.api;
 
-import com.aestallon.storageexplorer.arcscript.api.internal.query.QueryCondition;
 import groovy.lang.Closure;
 
-public interface QueryInstruction extends Instruction { 
-  
+public interface QueryInstruction {
+
+  /**
+   * 
+   * @param typeName
+   */
   void a(final String typeName);
   
   default void an(final String typeName) {
@@ -17,6 +20,12 @@ public interface QueryInstruction extends Instruction {
   
   QueryCondition where(Closure closure);
   
+  QueryCondition where(QueryCondition condition);
+  
   void limit(final long limit);
+  
+  QueryCondition expr(Closure closure);
+  
+  QueryCondition expr(QueryCondition condition);
   
 }

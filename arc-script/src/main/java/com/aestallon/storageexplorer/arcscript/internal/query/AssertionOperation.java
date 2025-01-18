@@ -1,4 +1,4 @@
-package com.aestallon.storageexplorer.arcscript.api.internal.query;
+package com.aestallon.storageexplorer.arcscript.internal.query;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -23,15 +23,11 @@ public abstract sealed class AssertionOperation<T> permits
   }
 
   public final void is(final T value) {
-    assertion.op = "is";
-    assertion.value = String.valueOf(value);
-    assertion._predicate = equalityPredicate(value);
+    assertion.set("is", value, equalityPredicate(value));
   }
 
   public final void not(final T value) {
-    assertion.op = "not";
-    assertion.value = String.valueOf(value);
-    assertion._predicate = equalityPredicate(value).negate();
+    assertion.set("not", value, equalityPredicate(value).negate());
   }
 
   private Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> equalityPredicate(
@@ -57,10 +53,8 @@ public abstract sealed class AssertionOperation<T> permits
     }
 
     public void contains(final String value) {
-      assertion.op = "contains";
-      assertion.value = String.valueOf(value);
-      assertion._predicate = it -> it instanceof StorageInstanceExaminer.StringFound str
-                                   && str.string().contains(value);
+      assertion.set("contains", value, it -> it instanceof StorageInstanceExaminer.StringFound str
+                                             && str.string().contains(value));
     }
   }
 
@@ -103,30 +97,32 @@ public abstract sealed class AssertionOperation<T> permits
         });
       };
     }
-    
+
     public void overlaps(Closure closure) {
       JsonBuilder b = new JsonBuilder();
       Object json = b.call(closure);
-      
-      assertion.op = "overlaps";
-      assertion.value = String.valueOf(b.toString());
-      
+
+      final var op = "overlaps";
+      final var strVal = b.toString();
+      final Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> p;
       if (json instanceof Map) {
         final var expected = (Map<String, Object>) json;
-        assertion._predicate = it -> {
+        p = it -> {
           if (!(it instanceof StorageInstanceExaminer.ComplexFound complex)) {
             return false;
           }
-          
+
           final var actual = complex.value();
           final Set<String> union = new HashSet<>(expected.keySet());
           union.addAll(actual.keySet());
-          
+
           return union.stream().anyMatch(k -> Objects.equals(actual.get(k), expected.get(k)));
         };
       } else {
-        assertion._predicate = it -> false;
+        p = it -> false;
       }
+      
+      assertion.set(op, strVal, p);
     }
   }
 

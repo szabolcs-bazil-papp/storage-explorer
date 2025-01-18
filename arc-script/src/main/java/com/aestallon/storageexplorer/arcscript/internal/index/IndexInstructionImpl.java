@@ -1,4 +1,4 @@
-package com.aestallon.storageexplorer.arcscript.api.internal.index;
+package com.aestallon.storageexplorer.arcscript.internal.index;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -6,13 +6,14 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.arcscript.api.IndexInstruction;
+import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 
-public class IndexInstructionImpl implements IndexInstruction {
+public class IndexInstructionImpl implements IndexInstruction, Instruction {
 
   public final Set<String> _schemas = new HashSet<>();
   public final Set<String> _types = new HashSet<>();
-  public IndexingStrategyType _strategy = IndexingStrategyType.FULL;
+  public IndexingStrategyType _strategy = IndexingStrategyType.INITIAL;
 
   @Override
   public void schemas(String... schemas) {
@@ -36,5 +37,9 @@ public class IndexInstructionImpl implements IndexInstruction {
   public void method(IndexingStrategyType method) {
     _strategy = method;
   }
-  
+
+  @Override
+  public String toString() {
+    return "index schema(e) " + _schemas + " type(s) " + _types + " with method " + _strategy;
+  }
 }

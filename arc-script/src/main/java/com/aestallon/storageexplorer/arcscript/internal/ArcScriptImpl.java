@@ -1,15 +1,14 @@
-package com.aestallon.storageexplorer.arcscript.api.internal;
+package com.aestallon.storageexplorer.arcscript.internal;
 
 import java.util.ArrayList;
 import java.util.List;
 import com.aestallon.storageexplorer.arcscript.api.ArcScript;
 import com.aestallon.storageexplorer.arcscript.api.IndexInstruction;
-import com.aestallon.storageexplorer.arcscript.api.Instruction;
 import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
 import com.aestallon.storageexplorer.arcscript.api.UpdateInstruction;
-import com.aestallon.storageexplorer.arcscript.api.internal.index.IndexInstructionImpl;
-import com.aestallon.storageexplorer.arcscript.api.internal.query.QueryInstructionImpl;
-import com.aestallon.storageexplorer.arcscript.api.internal.update.UpdateInstructionImpl;
+import com.aestallon.storageexplorer.arcscript.internal.index.IndexInstructionImpl;
+import com.aestallon.storageexplorer.arcscript.internal.query.QueryInstructionImpl;
+import com.aestallon.storageexplorer.arcscript.internal.update.UpdateInstructionImpl;
 import groovy.lang.Closure;
 import groovy.lang.Script;
 
@@ -19,7 +18,7 @@ public abstract class ArcScriptImpl extends Script implements ArcScript {
   
   @Override
   public QueryInstruction query(Closure closure) {
-    final QueryInstruction q = new QueryInstructionImpl();
+    final QueryInstructionImpl q = new QueryInstructionImpl();
     final Closure code = closure.rehydrate(q, this, this);
     code.setResolveStrategy(Closure.DELEGATE_ONLY);
     code.call();
@@ -29,7 +28,7 @@ public abstract class ArcScriptImpl extends Script implements ArcScript {
 
   @Override
   public IndexInstruction index(Closure closure) {
-    final IndexInstruction indexInstruction = new IndexInstructionImpl();
+    final IndexInstructionImpl indexInstruction = new IndexInstructionImpl();
     final Closure code = closure.rehydrate(indexInstruction, this, this);
     code.setResolveStrategy(Closure.DELEGATE_ONLY);
     code.call();
@@ -39,7 +38,7 @@ public abstract class ArcScriptImpl extends Script implements ArcScript {
 
   @Override
   public UpdateInstruction update(Closure closure) {
-    final UpdateInstruction updateInstruction = new UpdateInstructionImpl();
+    final UpdateInstructionImpl updateInstruction = new UpdateInstructionImpl();
     final Closure code = closure.rehydrate(updateInstruction, this, this);
     code.setResolveStrategy(Closure.DELEGATE_ONLY);
     code.call();

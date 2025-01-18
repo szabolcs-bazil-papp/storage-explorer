@@ -105,6 +105,9 @@ final class StorageIndexFactory {
   }
 
   StorageIndexCreationResult create(final StorageLocation storageLocation) {
+    final ClassLoader original = Thread.currentThread().getContextClassLoader();
+    final ClassLoader swap = ClassLoader.getSystemClassLoader();
+    Thread.currentThread().setContextClassLoader(swap);
     try {
 
       return switch (storageLocation) {
@@ -114,6 +117,8 @@ final class StorageIndexFactory {
 
     } catch (final Exception e) {
       return new StorageIndexCreationResult.Err(Availability.UNAVAILABLE, e.getMessage());
+    } finally {
+      Thread.currentThread().setContextClassLoader(original);
     }
   }
 

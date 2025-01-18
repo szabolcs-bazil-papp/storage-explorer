@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.swing.ui;
 
 import javax.swing.*;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.swing.ui.explorer.ExplorerView;
 import com.aestallon.storageexplorer.swing.ui.tree.MainTreeView;
 
 @Component

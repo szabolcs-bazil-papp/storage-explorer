@@ -43,6 +43,7 @@ import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.google.common.base.Strings;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.google.errorprone.annotations.Var;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 
@@ -66,22 +67,26 @@ public abstract sealed class StorageIndex
     this.cache = new HashMap<>();
   }
 
-  public void refresh(IndexingStrategy strategy) {
+  public int refresh(IndexingStrategy strategy) {
     clear();
     if (!strategy.fetchEntries()) {
-      return;
+      return 0;
     }
     ensureStorageEntryFactory();
-    cache.putAll(strategy.processEntries(fetchEntries(), storageEntryFactory::create));
+    final var res = strategy.processEntries(fetchEntries(), storageEntryFactory::create);
+    cache.putAll(res);
+    return res.size();
   }
-  
-  public void refresh(final IndexingStrategy strategy, final IndexingTarget target) {
+
+  public int refresh(final IndexingStrategy strategy, final IndexingTarget target) {
     if (!strategy.fetchEntries()) {
-      return;
+      return 0;
     }
-    
+
     ensureStorageEntryFactory();
-    cache.putAll(strategy.processEntries(fetchEntries(target), storageEntryFactory::create));
+    final var res = strategy.processEntries(fetchEntries(target), storageEntryFactory::create);
+    cache.putAll(res);
+    return res.size();
   }
 
   void clear() {
@@ -129,7 +134,7 @@ public abstract sealed class StorageIndex
   public Optional<StorageEntry> get(final URI uri) {
     return Optional.ofNullable(cache.get(uri));
   }
-  
+
   public Set<StorageEntry> get(final IndexingTarget target) {
     final Predicate<StorageEntry> schema = target.schemas().isEmpty()
         ? e -> true
@@ -174,10 +179,6 @@ public abstract sealed class StorageIndex
           .filter(it -> it.uri().getPath().equals(scopedEntry.scope().getPath()))
           .forEach(it -> it.addScopedEntry(scopedEntry));
     }
-  }
-  
-  public void printCount() {
-    System.out.println(cache.size());
   }
 
   public Stream<StorageEntry> searchForUri(final String queryString) {

@@ -63,4 +63,8 @@ public final class IconProvider {
   public static final ImageIcon ERROR = new ImageIcon(loadIcon("error"));
   public static final ImageIcon WARNING = new ImageIcon(loadIcon("warn"));
   public static final ImageIcon INFO = new ImageIcon(loadIcon("info"));
+
+  public static final ImageIcon SAVE = new ImageIcon(loadIcon("save"));
+  public static final ImageIcon PLAY = new ImageIcon(loadIcon("play"));
+
 }
