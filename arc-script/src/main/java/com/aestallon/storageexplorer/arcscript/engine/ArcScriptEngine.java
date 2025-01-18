@@ -134,7 +134,9 @@ public class ArcScriptEngine {
                                     final QueryConditionImpl c) {
       this.examiner = examiner;
       this.entry = entry;
-      this.iterator = c.assertionIterator();
+      this.iterator = (c != null)
+          ? c.assertionIterator()
+          : QueryConditionImpl.AssertionIterator.empty();
     }
 
     private QueryConditionEvaluator(final QueryConditionEvaluator orig,

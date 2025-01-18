@@ -14,10 +14,11 @@ public final class QueryConditionImpl implements QueryCondition, QueryElement {
 
 
   public record AssertionElement(AssertionRelation relation, QueryElement element) {}
-  
+
+
   private final QueryInstructionImpl instruction;
   private final List<AssertionElement> elements = new ArrayList<>();
-  
+
   QueryConditionImpl(QueryInstructionImpl instruction) {
     this.instruction = instruction;
   }
@@ -85,14 +86,22 @@ public final class QueryConditionImpl implements QueryCondition, QueryElement {
     }
     return sb.append(")").toString();
   }
-  
+
   public AssertionIterator assertionIterator() {
     return new AssertionIterator(this);
   }
-  
+
   public static final class AssertionIterator implements Iterator<AssertionElement> {
 
+    private static final AssertionIterator EMPTY_ITERATOR = new AssertionIterator();
+
+    public static AssertionIterator empty() {return EMPTY_ITERATOR;}
+
     private final Deque<AssertionElement> stack;
+
+    private AssertionIterator() {
+      this.stack = new ArrayDeque<>();
+    }
 
     public AssertionIterator(QueryConditionImpl c) {
       this.stack = new ArrayDeque<>(c.elements);
@@ -107,7 +116,7 @@ public final class QueryConditionImpl implements QueryCondition, QueryElement {
     public AssertionElement next() {
       return stack.pop();
     }
-    
+
     public AssertionRelation peekRelation() {
       return stack.peek().relation;
     }
