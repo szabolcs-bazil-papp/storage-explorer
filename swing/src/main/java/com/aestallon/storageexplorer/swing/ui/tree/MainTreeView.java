@@ -30,6 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.common.event.msg.Msg;
+import com.aestallon.storageexplorer.common.util.Pair;
+import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -43,8 +46,6 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.common.event.msg.Msg;
-import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.swing.ui.dialog.arcscript.ArcScriptDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
@@ -56,7 +57,6 @@ import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageInstanceTre
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageListTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageMapTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageObjectTreeNode;
-import com.aestallon.storageexplorer.common.util.Pair;
 import static com.aestallon.storageexplorer.common.util.Streams.enumerationToStream;
 
 @Component
@@ -66,7 +66,6 @@ public class MainTreeView extends JPanel {
 
   private StorageTree tree;
   private JScrollPane treePanel;
-  private JProgressBar progressBar;
 
   private Map<StorageEntry, TreePath> treePathByEntry;
 
@@ -225,26 +224,6 @@ public class MainTreeView extends JPanel {
 
   public void removeStorageNodeOf(final StorageInstance storageInstance) {
     tree.removeStorage(storageInstance);
-  }
-
-  public void showProgressBar(final String displayName) {
-    if (progressBar == null) {
-      progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
-      progressBar.setPreferredSize(new Dimension(300, 20));
-    }
-    progressBar.setString(displayName);
-    progressBar.setStringPainted(true);
-    progressBar.setIndeterminate(true);
-    add(progressBar);
-    revalidate();
-  }
-
-  public void removeProgressBar() {
-    if (progressBar == null) {
-      return;
-    }
-    remove(progressBar);
-    revalidate();
   }
 
   private final class StorageIndexNodePopupMenu extends JPopupMenu {

@@ -85,7 +85,12 @@ public abstract sealed class StorageIndex
 
     ensureStorageEntryFactory();
     final var res = strategy.processEntries(fetchEntries(target), storageEntryFactory::create);
-    cache.putAll(res);
+    // we need a bit more sophisticated work here:
+    // If entry was absent from cache -> put it in.
+    // If entry was present in the cache, and the indexing strategy was FULL -> refresh the entry 
+    // with the UriProperties found in the newly indexed one.
+    // We should emit an event for each (!) refreshed entry, so UIs may update (inspectors, graph)
+    res.forEach(cache::putIfAbsent);
     return res.size();
   }
 

@@ -19,6 +19,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import javax.swing.*;
 import org.springframework.util.StreamUtils;
+import com.aestallon.storageexplorer.core.model.entry.ListEntry;
+import com.aestallon.storageexplorer.core.model.entry.MapEntry;
+import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.ScopedListEntry;
+import com.aestallon.storageexplorer.core.model.entry.ScopedMapEntry;
+import com.aestallon.storageexplorer.core.model.entry.ScopedObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
 public final class IconProvider {
 
@@ -36,6 +44,24 @@ public final class IconProvider {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+  
+  public static ImageIcon getIconForStorageEntry(StorageEntry entry) {
+    return switch (entry) {
+      case ListEntry list -> switch (list) {
+        case ScopedListEntry scoped -> SCOPED_LIST;
+        default -> LIST;
+      };
+      case MapEntry map -> switch (map) {
+        case ScopedMapEntry scoped -> SCOPED_MAP;
+        default -> MAP;
+      };
+      case ObjectEntry object -> switch (object) {
+        case ScopedObjectEntry scoped -> SCOPED_OBJ;
+        default -> OBJ;
+      };
+      case SequenceEntry seq -> SEQUENCE;
+    };
   }
 
   public static final ImageIcon LIST = new ImageIcon(loadIcon("list"));

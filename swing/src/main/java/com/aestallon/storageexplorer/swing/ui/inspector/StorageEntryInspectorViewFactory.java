@@ -45,6 +45,7 @@ import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.graph.event.GraphRenderingRequest;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
 import com.aestallon.storageexplorer.common.util.Uris;
 
@@ -205,14 +206,7 @@ public class StorageEntryInspectorViewFactory {
   }
 
   void jumpToUri(final StorageId storageId, final URI uri) {
-    StorageInstance storageInstance = storageInstanceProvider.get(storageId);
-    storageInstance.acquire(Uris.latest(uri)).ifPresentOrElse(
-        it -> eventPublisher.publishEvent(new EntryAcquired(storageInstance, it)),
-        () -> JOptionPane.showMessageDialog(
-            null,
-            "Cannot show URI: " + uri,
-            "Unreachable URI",
-            JOptionPane.ERROR_MESSAGE));
+    JumpToUri.jump(eventPublisher, uri, storageInstanceProvider, storageId);
   }
 
   void addRenderAction(final StorageEntry storageEntry, final JToolBar toolbar) {

@@ -4,6 +4,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
 import com.aestallon.storageexplorer.arcscript.api.ArcScript;
 import com.aestallon.storageexplorer.arcscript.internal.ArcScriptImpl;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
@@ -75,44 +80,38 @@ public class ArcScriptEngine {
     }
     inserts.forEach(it -> instructions.add(it.idx, it.instruction));
 
-    final List<ArcScriptResult.ActionElement> actionElements = new ArrayList<>();
+    final List<ArcScriptResult.InstructionResult> instructionResults = new ArrayList<>();
     for (final Instruction instruction : instructions) {
       switch (instruction) {
         case QueryInstructionImpl query -> {
-          System.out.println(query);
+          final long start = System.nanoTime();
 
           final IndexingTarget target = new IndexingTarget(query._schemas, query._types);
-          final var condition = query.condition;
-          final Set<StorageEntry> res = new HashSet<>();
-          long cnt = 0;
-
           final Set<StorageEntry> entries = storageInstance.index().get(target);
           final var examiner = storageInstance.examiner();
-          for (final StorageEntry entry : entries) {
-            final var evaluator = new QueryConditionEvaluator(examiner, entry, condition);
-            if (evaluator.evaluate()) {
-              res.add(entry);
-              cnt++;
-            }
-
-            if (query._limit > 0 && cnt == query._limit) {
-              break;
-            }
-          }
-
-          actionElements.add(new ArcScriptResult.QueryPerformed(query.toString(), res));
+          final var condition = query.condition;
+          final var limit = query._limit;
+          final var res = new ArcEvaluationExecutor(examiner, entries, condition).execute(limit);
+          final long end = System.nanoTime();
+          instructionResults.add(new ArcScriptResult.QueryPerformed(
+              query.toString(),
+              res,
+              end - start));
         }
         case IndexInstructionImpl index -> {
+          final long start = System.nanoTime();
           final IndexingTarget target = new IndexingTarget(index._schemas, index._types);
           final int size = storageInstance
               .index()
               .refresh(IndexingStrategy.of(index._strategy), target);
-          actionElements.add(new ArcScriptResult.IndexingPerformed(
+          final long end = System.nanoTime();
+          instructionResults.add(new ArcScriptResult.IndexingPerformed(
               index instanceof ImplicitIndexInstruction,
               index._schemas,
               index._types,
               index.toString(),
-              size));
+              size,
+              end - start));
         }
         case UpdateInstructionImpl update ->
             throw new IllegalArgumentException("Updates are not yet supported!");
@@ -120,7 +119,7 @@ public class ArcScriptEngine {
       }
     }
 
-    return new ArcScriptResult.Ok(actionElements);
+    return new ArcScriptResult.Ok(instructionResults);
   }
 
   private static final class QueryConditionEvaluator {
@@ -205,6 +204,56 @@ public class ArcScriptEngine {
       final var val = examiner.discoverProperty(entry, assertion.prop());
       return assertion.check(val);
     }
+  }
+
+
+  private static final class ArcEvaluationExecutor {
+
+    private final StorageInstanceExaminer examiner;
+    private final Set<StorageEntry> entries;
+    private final QueryConditionImpl c;
+    private final LinkedBlockingQueue<StorageEntry> matchedEntries = new LinkedBlockingQueue<>();
+
+    private ArcEvaluationExecutor(StorageInstanceExaminer examiner, Set<StorageEntry> entries,
+                                  QueryConditionImpl c) {
+      this.examiner = examiner;
+      this.entries = entries;
+      this.c = c;
+    }
+
+    private Set<StorageEntry> execute(final long limit) {
+      try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        final var semaphore = new Semaphore(10);
+        final List<Future<?>> futures = new ArrayList<>();
+        for (final StorageEntry entry : entries) {
+          futures.add(executor.submit(() -> {
+            if (limit > 0 && matchedEntries.size() >= limit) {
+              return;
+            }
+
+            try {
+              semaphore.acquire();
+              final var evaluator = new QueryConditionEvaluator(examiner, entry, c);
+              if (evaluator.evaluate() && (limit <= 0 || matchedEntries.size() < limit)) {
+                matchedEntries.add(entry);
+              }
+            } catch (final InterruptedException ignored) {
+            } finally {
+              semaphore.release();
+            }
+          }));
+        }
+
+        for (final Future<?> future : futures) {
+          future.get();
+        }
+      } catch (InterruptedException | ExecutionException e) {
+        throw new IllegalStateException(e);
+      }
+
+      return new HashSet<>(matchedEntries);
+    }
+
   }
 
 

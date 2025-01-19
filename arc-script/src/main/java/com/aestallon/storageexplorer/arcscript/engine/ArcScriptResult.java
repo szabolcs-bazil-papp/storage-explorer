@@ -39,14 +39,14 @@ public sealed interface ArcScriptResult {
     return new UnknownError(message);
   }
 
-  static ArcScriptResult ok(final List<ActionElement> elements) {
+  static ArcScriptResult ok(final List<InstructionResult> elements) {
     return new Ok(elements);
   }
 
   static ArcScriptResult empty() {
     return new Ok(Collections.emptyList());
   }
-  
+
   static ArcScriptResult impermissible(String message, Instruction instruction) {
     return new ImpermissibleInstruction(message, instruction.toString());
   }
@@ -56,20 +56,23 @@ public sealed interface ArcScriptResult {
 
   record UnknownError(String msg) implements ArcScriptResult {}
 
+
   record ImpermissibleInstruction(String msg, String prettyPrint) implements ArcScriptResult {}
-  
-  sealed interface ActionElement {}
+
+
+  sealed interface InstructionResult {}
 
 
   record IndexingPerformed(boolean implicit,
       Set<String> schemae, Set<String> types,
-      String prettyPrint, long entriesFound)
-      implements ActionElement {}
+      String prettyPrint, long entriesFound, long timeTaken)
+      implements InstructionResult {}
 
 
-  record QueryPerformed(String prettyPrint, Set<StorageEntry> resultSet) implements ActionElement {}
+  record QueryPerformed(String prettyPrint, Set<StorageEntry> resultSet, long timeTaken)
+      implements InstructionResult {}
 
 
-  record Ok(List<ActionElement> elements) implements ArcScriptResult {}
+  record Ok(List<InstructionResult> elements) implements ArcScriptResult {}
 
 }
