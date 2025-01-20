@@ -57,8 +57,10 @@ import com.aestallon.storageexplorer.core.userconfig.event.GraphConfigChanged;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
+import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.GraphStylingProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
 @Component
 public class GraphView extends JPanel {
@@ -78,12 +80,15 @@ public class GraphView extends JPanel {
   private final StorageInstanceProvider storageInstanceProvider;
   private final ApplicationEventPublisher eventPublisher;
   private final UserConfigService userConfigService;
+  private final LafService lafService;
 
   public GraphView(StorageInstanceProvider storageInstanceProvider,
-                   ApplicationEventPublisher eventPublisher, UserConfigService userConfigService) {
+                   ApplicationEventPublisher eventPublisher,
+                   UserConfigService userConfigService, LafService lafService) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
+    this.lafService = lafService;
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     setMinimumSize(new Dimension(500, 500));
@@ -93,14 +98,15 @@ public class GraphView extends JPanel {
 
   private void initToolbar() {
     final var toolbar = new JToolBar();
-    toolbar.add(Box.createHorizontalGlue());
     toolbar.add(new AbstractAction(null, IconProvider.CLOSE) {
       @Override
       public void actionPerformed(ActionEvent e) {
         eventPublisher.publishEvent(new ViewController.GraphViewCloseRequest());
       }
     });
-    toolbar.setPreferredSize(new Dimension(500, 40));
+    toolbar.setAlignmentX(RIGHT_ALIGNMENT);
+    toolbar.setMinimumSize(null);
+    toolbar.setPreferredSize(new Dimension(20, 20));
     add(toolbar);
   }
 
@@ -129,7 +135,10 @@ public class GraphView extends JPanel {
     graph = new MultiGraph("fs");
     sprites = new SpriteManager(graph);
 
-    graph.setAttribute("ui.stylesheet", GraphStylingProvider.LIGHT);
+    graph.setAttribute("ui.stylesheet", switch (lafService.getLaf()) {
+      case DARK -> GraphStylingProvider.DARK;
+      case LIGHT -> GraphStylingProvider.LIGHT;
+    });
     graph.setAttribute("ui.antialias");
     graph.setAttribute("ui.quality");
 
@@ -206,6 +215,7 @@ public class GraphView extends JPanel {
 
     private int x = -1;
     private int y = -1;
+
     @Override
     public void mouseDragged(MouseEvent event) {
       if (SwingUtilities.isLeftMouseButton(event)) {
@@ -334,5 +344,17 @@ public class GraphView extends JPanel {
 
       init(origin);
     });
+  }
+
+  @EventListener
+  public void onLafChanged(final LafChanged event) {
+    if (graph == null) {
+      return;
+    }
+
+    SwingUtilities.invokeLater(() -> graph.setAttribute("ui.stylesheet", switch (event.laf()) {
+      case DARK -> GraphStylingProvider.DARK;
+      case LIGHT -> GraphStylingProvider.LIGHT;
+    }));
   }
 }

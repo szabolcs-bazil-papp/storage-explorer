@@ -16,14 +16,17 @@
 package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import java.awt.*;
+import java.io.IOException;
 import javax.swing.*;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 
 
 public final class InspectorTextareaFactory {
@@ -46,9 +49,49 @@ public final class InspectorTextareaFactory {
   }
 
   private final StorageEntryInspectorViewFactory inspectorViewFactory;
+  private final Theme lightTheme;
+  private final Theme darkTheme;
+
+  private Theme currentTheme;
 
   public InspectorTextareaFactory(StorageEntryInspectorViewFactory inspectorViewFactory) {
     this.inspectorViewFactory = inspectorViewFactory;
+    lightTheme = loadLightTheme();
+    darkTheme = loadDarkTheme();
+
+    currentTheme = lightTheme;
+  }
+
+  private Theme loadLightTheme() {
+    try {
+      return Theme.load(getClass().getResourceAsStream(
+          "/org/fife/ui/rsyntaxtextarea/themes/idea.xml"));
+    } catch (IOException ignored) {
+      return null;
+    }
+  }
+
+  public void setCurrentTheme(LafChanged.Laf laf) {
+    this.currentTheme = switch (laf) {
+      case LIGHT -> lightTheme;
+      case DARK -> darkTheme;
+    };
+  }
+  
+  public void applyCurrentTheme(JTextArea textArea) {
+    if (textArea instanceof RSyntaxTextArea fancy) {
+      currentTheme.apply(fancy);
+      
+    }
+  }
+
+  private Theme loadDarkTheme() {
+    try {
+      return Theme.load(getClass().getResourceAsStream(
+          "/org/fife/ui/rsyntaxtextarea/themes/dark.xml"));
+    } catch (IOException ignored) {
+      return null;
+    }
   }
 
   PaneAndTextarea create(final ObjectEntry objectEntry,
@@ -75,6 +118,10 @@ public final class InspectorTextareaFactory {
   private PaneAndTextarea createFancy(final ObjectEntry objectEntry,
                                       final ObjectEntryLoadResult.SingleVersion nodeVersion) {
     final var textarea = new RSyntaxTextArea(nodeVersion.oamStr());
+    if (currentTheme != null) {
+      currentTheme.apply(textarea);
+    }
+
     textarea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
     textarea.setCodeFoldingEnabled(true);
     textarea.setWrapStyleWord(true);
@@ -91,6 +138,7 @@ public final class InspectorTextareaFactory {
     //scrollPane.add(textarea);
     return new PaneAndTextarea(scrollPane, textarea);
   }
+
 
   private JTextArea objectAsMapTextarea(final ObjectEntry objectEntry,
                                         final ObjectEntryLoadResult.SingleVersion nodeVersion) {

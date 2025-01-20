@@ -16,10 +16,8 @@ import javax.swing.table.DefaultTableModel;
 import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
-import com.aestallon.storageexplorer.arcscript.internal.query.QueryElement;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkCompletedEvent;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkStartedEvent;
-import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.event.StorageReindexed;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
@@ -152,8 +150,12 @@ public class ArcScriptView extends JPanel {
   private void save() {
 
   }
+  
+  public ArcScriptEditor editor() {
+    return editor;
+  }
 
-  private static final class ArcScriptEditor extends JTextArea {
+  static final class ArcScriptEditor extends JTextArea {
     public ArcScriptEditor() {
     }
   }

@@ -15,15 +15,19 @@
 
 package com.aestallon.storageexplorer;
 
+import javax.swing.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
-import com.formdev.flatlaf.FlatIntelliJLaf;
+import org.springframework.context.event.EventListener;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
+import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.formdev.flatlaf.FlatDarculaLaf;
+import com.formdev.flatlaf.FlatIntelliJLaf;
 
 @SpringBootApplication(
     exclude = DataSourceAutoConfiguration.class,
@@ -32,6 +36,12 @@ import com.aestallon.storageexplorer.swing.ui.AppFrame;
         "com.aestallon.storageexplorer.swing"
     })
 public class StorageExplorerApplication {
+
+  private final AppFrame frame;
+
+  public StorageExplorerApplication(AppFrame frame) {
+    this.frame = frame;
+  }
 
   public static void main(String[] args) {
     System.setProperty("sun.java2d.uiScale", "100%");
@@ -46,11 +56,23 @@ public class StorageExplorerApplication {
   }
 
   @Bean
-  CommandLineRunner frameLauncher(AppFrame appFrame, StorageInstanceProvider storageInstanceProvider) {
+  CommandLineRunner frameLauncher(AppFrame appFrame,
+                                  StorageInstanceProvider storageInstanceProvider) {
     return args -> {
       appFrame.launch();
       storageInstanceProvider.fetchAllKnown();
     };
+  }
+
+  @EventListener
+  public void onLafChanged(final LafChanged event) {
+    SwingUtilities.invokeLater(() -> {
+      switch (event.laf()) {
+        case LIGHT -> FlatIntelliJLaf.setup();
+        case DARK -> FlatDarculaLaf.setup();
+      }
+      SwingUtilities.updateComponentTreeUI(frame);
+    });
   }
 
 }
