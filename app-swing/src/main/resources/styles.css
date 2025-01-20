@@ -6,17 +6,20 @@ graph {
 
 node {
     size: 15px;
+    fill-color: black;
     text-alignment: under;
     text-padding: 5px, 4px;
     text-background-mode: rounded-box;
     text-background-color: #e0f9f488;
     text-size: 14;
+    text-color: black;
     size-mode: fit;
 }
 
 edge {
     shape: line;
     arrow-size: 12px, 6px;
+    fill-color: black;
     text-alignment: along;
     text-padding: 5px, 4px;
     text-style: bold;
