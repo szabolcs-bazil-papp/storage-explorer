@@ -16,7 +16,6 @@
 package com.aestallon.storageexplorer.swing.ui.graph;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -49,13 +48,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import com.aestallon.storageexplorer.graph.service.GraphRenderingService;
+import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.event.GraphConfigChanged;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
+import com.aestallon.storageexplorer.graph.service.GraphRenderingService;
 import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.GraphStylingProvider;
@@ -71,6 +70,7 @@ public class GraphView extends JPanel {
   private Graph graph;
   private Viewer viewer;
   private ViewPanel panel;
+  private JPanel overlay;
   private SpriteManager sprites;
   private KeyListener screenshotListener;
   private StorageEntry origin;
@@ -90,24 +90,8 @@ public class GraphView extends JPanel {
     this.userConfigService = userConfigService;
     this.lafService = lafService;
 
-    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+    setLayout(new OverlayLayout(this));
     setMinimumSize(new Dimension(500, 500));
-
-    initToolbar();
-  }
-
-  private void initToolbar() {
-    final var toolbar = new JToolBar();
-    toolbar.add(new AbstractAction(null, IconProvider.CLOSE) {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        eventPublisher.publishEvent(new ViewController.GraphViewCloseRequest());
-      }
-    });
-    toolbar.setAlignmentX(RIGHT_ALIGNMENT);
-    toolbar.setMinimumSize(null);
-    toolbar.setPreferredSize(new Dimension(20, 20));
-    add(toolbar);
   }
 
   public void init(StorageEntry storageEntry) {
@@ -116,6 +100,9 @@ public class GraphView extends JPanel {
     }
     if (panel != null) {
       remove(panel);
+    }
+    if (overlay != null) {
+      remove(overlay);
     }
     if (graph != null) {
       graph.clear();
@@ -154,10 +141,33 @@ public class GraphView extends JPanel {
 
     screenshotListener = new ScreenshotListener();
     panel.addKeyListener(screenshotListener);
+
+    overlay = overlay();
+    add(overlay);
     add(panel);
     setVisible(true);
     revalidate();
     CompletableFuture.runAsync(() -> graphRenderingService.render(graph, storageEntry));
+  }
+
+  private JPanel overlay() {
+    final var overlay = new JPanel();
+    overlay.setOpaque(false);
+    overlay.setLayout(new BoxLayout(overlay, BoxLayout.Y_AXIS));
+
+    final var closeBtn = new JButton(IconProvider.CLOSE);
+    closeBtn.addActionListener(
+        e -> eventPublisher.publishEvent(new ViewController.GraphViewCloseRequest()));
+    closeBtn.setAlignmentY(TOP_ALIGNMENT);
+    closeBtn.setAlignmentX(RIGHT_ALIGNMENT);
+
+    final var box = Box.createHorizontalBox();
+    box.setOpaque(false);
+    box.add(Box.createGlue());
+    box.add(closeBtn);
+
+    overlay.add(box);
+    return overlay;
   }
 
   public void discard() {
@@ -166,6 +176,12 @@ public class GraphView extends JPanel {
       remove(panel);
       panel = null;
     }
+
+    if (overlay != null) {
+      remove(overlay);
+      overlay = null;
+    }
+
     viewer = null;
     sprites = null;
     if (graph != null) {
