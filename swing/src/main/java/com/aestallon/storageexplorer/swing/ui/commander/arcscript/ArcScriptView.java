@@ -13,6 +13,13 @@ import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.parser.AbstractParser;
+import org.fife.ui.rsyntaxtextarea.parser.DefaultParseResult;
+import org.fife.ui.rsyntaxtextarea.parser.DefaultParserNotice;
+import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
+import org.fife.ui.rsyntaxtextarea.parser.Parser;
 import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
@@ -25,37 +32,38 @@ import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
 public class ArcScriptView extends JPanel {
 
   private final ApplicationEventPublisher applicationEventPublisher;
   private final UserConfigService userConfigService;
-  private final MonospaceFontProvider monospaceFontProvider;
   private final StorageInstance storageInstance;
 
   private final JSplitPane content;
   private ScriptResultView scriptResultView;
-  private final ArcScriptEditor editor;
+  private final JTextArea editor;
 
   private AbstractAction saveAction;
   private AbstractAction playAction;
 
+  private ErrorMarker compilationError;
+
   public ArcScriptView(ApplicationEventPublisher applicationEventPublisher,
                        UserConfigService userConfigService,
+                       RSyntaxTextAreaThemeProvider themeProvider,
                        MonospaceFontProvider monospaceFontProvider,
                        StorageInstance storageInstance) {
     this.applicationEventPublisher = applicationEventPublisher;
     this.userConfigService = userConfigService;
-    this.monospaceFontProvider = monospaceFontProvider;
     this.storageInstance = storageInstance;
 
     BoxLayout mgr = new BoxLayout(this, BoxLayout.PAGE_AXIS);
     setLayout(mgr);
 
-    editor = new ArcScriptEditor();
-    editor.setFont(monospaceFontProvider.getFont());
-    monospaceFontProvider.applyFontSizeChangeAction(editor);
-    final var editorView = new ArcScriptEditorView(editor);
+    final var factory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
+    final var arcScriptTextArea = factory.create(null);
+    editor = arcScriptTextArea.textArea();
 
     final var toolbar = new JToolBar(SwingConstants.HORIZONTAL);
     saveAction = new AbstractAction(null, IconProvider.SAVE) {
@@ -82,7 +90,7 @@ public class ArcScriptView extends JPanel {
 
     Box b2 = new Box(BoxLayout.X_AXIS);
     content = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-    content.setLeftComponent(editorView);
+    content.setLeftComponent(arcScriptTextArea.scrollPane());
 
     scriptResultView = new Initial();
     content.setRightComponent(scriptResultView.asComponent());
@@ -96,12 +104,13 @@ public class ArcScriptView extends JPanel {
   private void play() {
     editor.setEnabled(false);
     playAction.setEnabled(false);
+    removeCompilationError();
 
     CompletableFuture.runAsync(() -> {
       applicationEventPublisher.publishEvent(
           new BackgroundWorkStartedEvent("Running ArcScript on " + storageInstance.name()));
       switch (Arc.evaluate(editor.getText(), storageInstance)) {
-        case ArcScriptResult.CompilationError cErr -> showErr("Compilation error", cErr.msg());
+        case ArcScriptResult.CompilationError cErr -> showCompilationError(cErr);
         case ArcScriptResult.ImpermissibleInstruction iErr ->
             showErr("Impermissible instruction", iErr.msg());
         case ArcScriptResult.UnknownError uErr -> showErr("Unknown error", uErr.msg());
@@ -114,6 +123,34 @@ public class ArcScriptView extends JPanel {
         }
       }
     });
+  }
+
+  private void showCompilationError(ArcScriptResult.CompilationError error) {
+    editor.setEnabled(true);
+    playAction.setEnabled(true);
+    applicationEventPublisher.publishEvent(new BackgroundWorkCompletedEvent(
+        BackgroundWorkCompletedEvent.BackgroundWorkResult.ERR));
+    SwingUtilities.invokeLater(() -> {
+      if (!(editor instanceof RSyntaxTextArea r)) {
+        return;
+      }
+
+      compilationError = new ErrorMarker(error);
+      r.addParser(compilationError);
+    });
+
+  }
+
+  private void removeCompilationError() {
+    if (compilationError == null) {
+      return;
+    }
+
+    if (!(editor instanceof RSyntaxTextArea r)) {
+      return;
+    }
+
+    r.removeParser(compilationError);
   }
 
   private void showErr(String title, String msg) {
@@ -150,21 +187,9 @@ public class ArcScriptView extends JPanel {
   private void save() {
 
   }
-  
-  public ArcScriptEditor editor() {
+
+  public JTextArea editor() {
     return editor;
-  }
-
-  static final class ArcScriptEditor extends JTextArea {
-    public ArcScriptEditor() {
-    }
-  }
-
-
-  private static final class ArcScriptEditorView extends JScrollPane {
-    public ArcScriptEditorView(ArcScriptEditor editor) {
-      super(editor, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
-    }
   }
 
 
@@ -234,7 +259,7 @@ public class ArcScriptView extends JPanel {
         case ArcScriptResult.IndexingPerformed i -> new OperationResultTableModel(i);
         case ArcScriptResult.QueryPerformed q -> new OperationResultTableModel(q);
       };
-      
+
       final var table = new JTable(tableModel);
       table.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
       table.setAlignmentX(LEFT_ALIGNMENT);
@@ -333,7 +358,7 @@ public class ArcScriptView extends JPanel {
         label.setAlignmentX(LEFT_ALIGNMENT);
         add(label);
         add(createOperationResultTable(q));
-        
+
         final var tableModel = new QueryResultTableModel(q);
         final var table = new JTable(tableModel);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
@@ -404,6 +429,25 @@ public class ArcScriptView extends JPanel {
       public Class<?> getColumnClass(int columnIndex) {
         return COL_CLASSES[columnIndex];
       }
+    }
+
+  }
+
+
+  private static final class ErrorMarker extends AbstractParser {
+
+    private final ArcScriptResult.CompilationError error;
+
+    private ErrorMarker(ArcScriptResult.CompilationError error) {
+      this.error = error;
+    }
+
+    @Override
+    public ParseResult parse(RSyntaxDocument doc, String style) {
+      DefaultParseResult result = new DefaultParseResult(this);
+      final var line = error.line() < 1 ? 0 : error.line() - 1;
+      result.addNotice(new DefaultParserNotice(this, error.msg(), line));
+      return result;
     }
 
   }

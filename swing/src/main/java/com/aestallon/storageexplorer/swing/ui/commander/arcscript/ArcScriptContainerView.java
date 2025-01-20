@@ -15,8 +15,10 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
 @Component
 public class ArcScriptContainerView extends JTabbedPane {
@@ -24,6 +26,7 @@ public class ArcScriptContainerView extends JTabbedPane {
   private final StorageInstanceProvider storageInstanceProvider;
   private final ApplicationEventPublisher applicationEventPublisher;
   private final UserConfigService userConfigService;
+  private final RSyntaxTextAreaThemeProvider themeProvider;
   private final MonospaceFontProvider monospaceFontProvider;
 
   private final NewScriptView newScriptView;
@@ -32,12 +35,14 @@ public class ArcScriptContainerView extends JTabbedPane {
   public ArcScriptContainerView(StorageInstanceProvider storageInstanceProvider,
                                 ApplicationEventPublisher applicationEventPublisher,
                                 UserConfigService userConfigService,
+                                RSyntaxTextAreaThemeProvider themeProvider,
                                 MonospaceFontProvider monospaceFontProvider) {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
 
     this.storageInstanceProvider = storageInstanceProvider;
     this.applicationEventPublisher = applicationEventPublisher;
     this.userConfigService = userConfigService;
+    this.themeProvider = themeProvider;
     this.monospaceFontProvider = monospaceFontProvider;
 
     newScriptView = addNewScriptView();
@@ -55,6 +60,7 @@ public class ArcScriptContainerView extends JTabbedPane {
     final var view = new ArcScriptView(
         applicationEventPublisher,
         userConfigService,
+        themeProvider,
         monospaceFontProvider,
         storageInstance);
     arcScriptViews.add(view);
@@ -95,7 +101,18 @@ public class ArcScriptContainerView extends JTabbedPane {
     SwingUtilities.invokeLater(() -> {
       final Font font = monospaceFontProvider.getFont();
       arcScriptViews.forEach(it -> it.editor().setFont(font));
+    });
+  }
 
+  @EventListener
+  public void onLafChanged(final LafChanged e) {
+    SwingUtilities.invokeLater(() -> {
+      themeProvider.setCurrentTheme(e.laf());
+      final var font = monospaceFontProvider.getFont();
+      arcScriptViews.forEach(it -> {
+        themeProvider.applyCurrentTheme(it.editor());
+        it.editor().setFont(font);
+      });
     });
   }
 

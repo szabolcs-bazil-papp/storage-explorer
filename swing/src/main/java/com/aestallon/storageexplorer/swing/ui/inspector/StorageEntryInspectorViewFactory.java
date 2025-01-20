@@ -32,23 +32,21 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
-import com.aestallon.storageexplorer.core.event.EntryAcquired;
+import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
-import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
-import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.graph.event.GraphRenderingRequest;
-import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
-import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
 @Service
 public class StorageEntryInspectorViewFactory {
@@ -57,17 +55,20 @@ public class StorageEntryInspectorViewFactory {
   private final StorageInstanceProvider storageInstanceProvider;
   private final MonospaceFontProvider monospaceFontProvider;
   private final InspectorTextareaFactory textareaFactory;
+  private final RSyntaxTextAreaThemeProvider themeProvider;
   private final Map<StorageEntry, InspectorView<? extends StorageEntry>> openedInspectors;
   private final Map<StorageEntry, InspectorDialog> openedDialogs;
   private final Map<StorageEntry, List<JTextArea>> textAreas;
 
   public StorageEntryInspectorViewFactory(ApplicationEventPublisher eventPublisher,
                                           StorageInstanceProvider storageInstanceProvider,
-                                          MonospaceFontProvider monospaceFontProvider) {
+                                          MonospaceFontProvider monospaceFontProvider,
+                                          RSyntaxTextAreaThemeProvider themeProvider) {
     this.eventPublisher = eventPublisher;
     this.storageInstanceProvider = storageInstanceProvider;
     this.monospaceFontProvider = monospaceFontProvider;
-    this.textareaFactory = new InspectorTextareaFactory(this);
+    this.themeProvider = themeProvider;
+    this.textareaFactory = new InspectorTextareaFactory(this, themeProvider);
 
     openedInspectors = new ConcurrentHashMap<>();
     openedDialogs = new ConcurrentHashMap<>();
@@ -185,10 +186,10 @@ public class StorageEntryInspectorViewFactory {
   @EventListener
   void onLafChanged(final LafChanged lafChanged) {
     SwingUtilities.invokeLater(() -> {
-      textareaFactory.setCurrentTheme(lafChanged.laf());
+      themeProvider.setCurrentTheme(lafChanged.laf());
       final var font = monospaceFontProvider.getFont();
       textAreas.values().stream().flatMap(List::stream).forEach(it -> {
-        textareaFactory.applyCurrentTheme(it);
+        themeProvider.applyCurrentTheme(it);
         it.setFont(font);
       });
     });
