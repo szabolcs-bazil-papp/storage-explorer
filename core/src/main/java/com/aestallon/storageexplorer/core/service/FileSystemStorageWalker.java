@@ -114,7 +114,7 @@ public final class FileSystemStorageWalker {
                                          LinkedBlockingQueue<URI> queue) {
       final Predicate<Path> p = it -> it.toFile().isDirectory()
                                       && (target.types().isEmpty()) || target.types().stream()
-                                          .anyMatch(it::endsWith);
+                                          .anyMatch(t -> it.toString().endsWith(t));
       try (final var childrenStream = Files.list(root.resolve(schemaFolder))) {
         final List<Path> children = childrenStream.toList();
         final var typesWalkers = children.stream()
