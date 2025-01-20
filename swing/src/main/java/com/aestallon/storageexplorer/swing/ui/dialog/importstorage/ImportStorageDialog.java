@@ -206,11 +206,17 @@ public class ImportStorageDialog extends JDialog {
   }
 
   private void onFsRootDirLookup() {
-    final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
+    final File f;
+    if (textFieldFsRootDir.getText() == null || textFieldFsRootDir.getText().isBlank()) {
+      f = new File(".");
+    } else {
+      f = new File(textFieldFsRootDir.getText());
+    }
+    
+    final var fileChooser = new JFileChooser(f, FileSystemView.getFileSystemView());
     fileChooser.setDialogType(JFileChooser.OPEN_DIALOG);
     fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
     fileChooser.setDialogTitle("Import Storage...");
-    fileChooser.setCurrentDirectory(new File("."));
 
     final int result = fileChooser.showDialog(this, "Import");
     if (JFileChooser.APPROVE_OPTION == result) {
