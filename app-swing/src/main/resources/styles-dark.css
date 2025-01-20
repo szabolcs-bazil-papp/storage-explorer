@@ -1,25 +1,25 @@
 graph {
-    fill-color: #fff, #96eedc;
+    fill-color: #032918, #348878;
     fill-mode: gradient-diagonal1;
     padding: 50px;
 }
 
 node {
     size: 15px;
-    fill-color: black;
+    fill-color: #96eedc;
     text-alignment: under;
     text-padding: 5px, 4px;
     text-background-mode: rounded-box;
-    text-background-color: #e0f9f488;
+    text-background-color: rgba(55, 71, 70, 0.13);
     text-size: 14;
-    text-color: black;
+    text-color: white;
     size-mode: fit;
 }
 
 edge {
     shape: line;
     arrow-size: 12px, 6px;
-    fill-color: black;
+    fill-color: white;
     text-alignment: along;
     text-padding: 5px, 4px;
     text-style: bold;
@@ -40,7 +40,7 @@ node.highlighted {
 }
 
 edge.listref {
-    fill-color: #006e00;
+    fill-color: #4bfd4b;
 }
 
 node.origin {

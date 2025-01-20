@@ -44,6 +44,7 @@ import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.graph.event.GraphRenderingRequest;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
+import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
@@ -178,6 +179,18 @@ public class StorageEntryInspectorViewFactory {
     SwingUtilities.invokeLater(() -> {
       final Font font = monospaceFontProvider.getFont();
       textAreas.values().stream().flatMap(List::stream).forEach(it -> it.setFont(font));
+    });
+  }
+
+  @EventListener
+  void onLafChanged(final LafChanged lafChanged) {
+    SwingUtilities.invokeLater(() -> {
+      textareaFactory.setCurrentTheme(lafChanged.laf());
+      final var font = monospaceFontProvider.getFont();
+      textAreas.values().stream().flatMap(List::stream).forEach(it -> {
+        textareaFactory.applyCurrentTheme(it);
+        it.setFont(font);
+      });
     });
   }
 

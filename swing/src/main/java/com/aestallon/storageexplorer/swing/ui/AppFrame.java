@@ -19,6 +19,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
@@ -26,7 +27,9 @@ import com.aestallon.storageexplorer.swing.ui.dialog.GraphSettingsDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.SearchForEntryDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
+import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
 @Component
 public class AppFrame extends JFrame {
@@ -35,14 +38,18 @@ public class AppFrame extends JFrame {
   private final StorageInstanceProvider storageInstanceProvider;
   private final UserConfigService userConfigService;
   private final AppContentView appContentView;
+  private final LafService lafService;
 
   public AppFrame(ApplicationEventPublisher eventPublisher,
-                  StorageInstanceProvider storageInstanceProvider, UserConfigService userConfigService,
-                  AppContentView appContentView) {
+                  StorageInstanceProvider storageInstanceProvider, 
+                  UserConfigService userConfigService,
+                  AppContentView appContentView, 
+                  LafService lafService) {
     this.eventPublisher = eventPublisher;
     this.storageInstanceProvider = storageInstanceProvider;
     this.userConfigService = userConfigService;
     this.appContentView = appContentView;
+    this.lafService = lafService;
 
     setTitle("Storage Explorer");
     setSize(900, 600);
@@ -86,18 +93,23 @@ public class AppFrame extends JFrame {
       dialog.setVisible(true);
     });
     settings.add(graphSettings);
+    
+    final var darkMode = new JCheckBoxMenuItem("Dark Mode");
+    darkMode.addActionListener(e -> {
+      final LafChanged.Laf laf = darkMode.isSelected() ? LafChanged.Laf.DARK : LafChanged.Laf.LIGHT;
+      lafService.changeLaf(laf);
+    });
+    settings.add(darkMode);
+    
     menubar.add(settings);
 
     setJMenuBar(menubar);
   }
 
-
-
   public void launch() {
     setVisible(true);
   }
-
-
+  
   private final class SearchAction extends AbstractAction {
 
     private SearchAction() {

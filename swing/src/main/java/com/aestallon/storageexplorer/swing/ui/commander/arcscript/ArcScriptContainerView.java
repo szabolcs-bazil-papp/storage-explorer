@@ -51,18 +51,18 @@ public class ArcScriptContainerView extends JTabbedPane {
   }
 
   private void newScript(final StorageInstance storageInstance) {
-    
+
     final var view = new ArcScriptView(
-        applicationEventPublisher, 
+        applicationEventPublisher,
         userConfigService,
         monospaceFontProvider,
         storageInstance);
     arcScriptViews.add(view);
     insertTab(
-        "(%s) New Script-%02d".formatted(storageInstance.name(), getTabCount()), 
-        null, 
-        view, 
-        "Hello World!", 
+        "(%s) New Script-%02d".formatted(storageInstance.name(), getTabCount()),
+        null,
+        view,
+        "Hello World!",
         getTabCount() - 1);
     setSelectedIndex(getTabCount() - 2);
   }
@@ -85,6 +85,16 @@ public class ArcScriptContainerView extends JTabbedPane {
       if (newScriptView.content.storageBtns.isEmpty()) {
         newScriptView.content.addEmptyMessage();
       }
+
+    });
+  }
+
+  @EventListener
+  public void onFontSizeChanged(
+      @SuppressWarnings("unused") MonospaceFontProvider.FontSizeChange fontSizeChange) {
+    SwingUtilities.invokeLater(() -> {
+      final Font font = monospaceFontProvider.getFont();
+      arcScriptViews.forEach(it -> it.editor().setFont(font));
 
     });
   }

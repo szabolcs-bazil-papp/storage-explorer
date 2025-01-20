@@ -41,5 +41,6 @@ public class GraphStylingProvider {
   }
 
   public static final String LIGHT = loadStylesheet("/styles.css");
+  public static final String DARK = loadStylesheet("/styles-dark.css");
 
 }
