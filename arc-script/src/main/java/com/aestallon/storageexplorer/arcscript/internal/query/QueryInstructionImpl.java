@@ -92,6 +92,24 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
 
   @Override
   public String toString() {
+    final StringBuilder sb = new StringBuilder("select ");
+    if (_types.isEmpty()) {
+      sb.append("every type ");
+    } else if (_types.size() == 1) {
+      sb.append("type ").append(_types.iterator().next()).append(" ");
+    } else {
+      sb.append("types ").append(_types).append(" ");
+    }
+
+    sb.append("from ");
+    if (_schemas.isEmpty()) {
+      sb.append("every schema ");
+    } else if (_schemas.size() == 1) {
+      sb.append("schema ").append(_schemas.iterator().next()).append(" ");
+    } else {
+      sb.append("schemas ").append(_schemas).append(" ");
+    }
+
     final String conditionStr;
     if (this.condition == null) {
       conditionStr = "true";
@@ -99,10 +117,13 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
       String condStr = condition.toString();
       conditionStr = condStr.substring(1, condStr.length() - 1);
     }
+    sb.append("where ").append(conditionStr);
 
-    return "select types " + _types +
-           " from schema(e) " + _schemas +
-           " where " + conditionStr +
-           ((_limit > 0) ? (" limit " + _limit) : "");
+    if (_limit > 0) {
+      sb.append(" limit ").append(_limit);
+    }
+
+    return sb.toString();
   }
+
 }

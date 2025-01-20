@@ -40,6 +40,21 @@ public class IndexInstructionImpl implements IndexInstruction, Instruction {
 
   @Override
   public String toString() {
-    return "index schema(e) " + _schemas + " type(s) " + _types + " with method " + _strategy;
+    final StringBuilder sb = new StringBuilder("index ");
+    if (_types.size() == 1) {
+      sb.append("type ").append(_types.iterator().next()).append(" ");
+    } else if (_types.size() > 1) {
+      sb.append("types ").append(_types).append(" ");
+    }
+    
+    if (_schemas.isEmpty()) {
+      sb.append("everywhere ");
+    } else if (_schemas.size() == 1) {
+      sb.append("in schema ").append(_schemas.iterator().next()).append(" ");
+    } else {
+      sb.append("in schemas ").append(_schemas).append(" ");
+    }
+    
+    return sb.append("with method ").append(_strategy).toString();
   }
 }
