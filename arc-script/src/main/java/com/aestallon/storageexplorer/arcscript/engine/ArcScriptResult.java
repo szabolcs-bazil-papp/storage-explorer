@@ -30,10 +30,6 @@ public sealed interface ArcScriptResult {
       if (ste.getFileName() != null && ste.getFileName().contains(".groovy")) {
         return new CompilationError(ste.getLineNumber(), 0, message);
       }
-
-      if (ste.getClassName().contains("Script")) {
-        return new CompilationError(ste.getLineNumber(), 0, message);
-      }
     }
 
     return new UnknownError(message);
