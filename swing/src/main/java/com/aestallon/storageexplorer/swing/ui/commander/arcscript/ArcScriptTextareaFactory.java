@@ -46,7 +46,7 @@ public final class ArcScriptTextareaFactory {
       themeProvider.applyCurrentTheme(textarea);
     }
 
-    textarea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_GROOVY);
+    textarea.setSyntaxEditingStyle(RSyntaxTextAreaThemeProvider.SYNTAX_STYLE_ARCSCRIPT);
     textarea.setCodeFoldingEnabled(true);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);

@@ -17,13 +17,17 @@ package com.aestallon.storageexplorer.swing.ui.misc;
 
 import java.io.IOException;
 import javax.swing.*;
+import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Theme;
+import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 
 @Service
 public class RSyntaxTextAreaThemeProvider {
+
+  public static final String SYNTAX_STYLE_ARCSCRIPT = "text/arcscript";
 
   private final Theme lightTheme;
   private final Theme darkTheme;
@@ -34,6 +38,12 @@ public class RSyntaxTextAreaThemeProvider {
     lightTheme = loadLightTheme();
     darkTheme = loadDarkTheme();
     currentTheme = lightTheme;
+
+    AbstractTokenMakerFactory atmf =
+        (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
+    atmf.putMapping(
+        SYNTAX_STYLE_ARCSCRIPT,
+        "com.aestallon.storageexplorer.swing.ui.commander.arcscript.ArcScriptTokenMaker");
   }
 
   private Theme loadLightTheme() {
