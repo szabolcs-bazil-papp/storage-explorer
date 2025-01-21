@@ -41,19 +41,29 @@ public class StorageInstanceExaminer {
                                             final StorageEntry host,
                                             final String propQuery) {
     return host.uriProperties().stream()
-        .filter(it -> it.propertyName().startsWith(propQuery))
+        .filter(it -> propQuery.startsWith(it.propertyName()))
         .findFirst()
         .map(it -> discoverer.apply(it.uri())
-            .map(e -> discoverProperty(e, propQuery.substring(it.propertyName().length())))
+            .map(e -> {
+              final int propertyNameLength = it.propertyName().length();
+              final int queryLength = propQuery.length();
+              if (queryLength == propertyNameLength) {
+                // we are looking for the referenced entry:
+                return discoverProperty(e, "");
+              }
+
+              // exclude the trailing dot:
+              return discoverProperty(e, propQuery.substring(propertyNameLength + 1));
+            })
             .orElseGet(() -> new NotFound(it.uri() + " is unreachable!")))
-        .orElseGet(() -> inObjectMap(sv.objectAsMap(), host, propQuery));
+        .orElseGet(() -> inObject(sv.objectAsMap(), host, propQuery));
   }
 
-  private PropertyDiscoveryResult inObjectMap(final Map<String, Object> oam,
-                                              final StorageEntry host,
-                                              final String propQuery) {
+  private PropertyDiscoveryResult inObject(final Map<String, Object> oam,
+                                           final StorageEntry host,
+                                           final String propQuery) {
     final String[] es = propQuery.split("\\.");
-    return inObjectMap(oam, host, es);
+    return inObject(oam, host, es);
   }
 
   private PropertyDiscoveryResult inObjectMap(final Map<String, Object> map,

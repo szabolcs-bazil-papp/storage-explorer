@@ -94,7 +94,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     final var uriProperties = new HashSet<>(this.uriProperties);
     scopedEntries.stream()
         .map(e -> UriProperty.standalone(
-            (e instanceof ObjectEntry) ? ((ObjectEntry) e).uuid : e.uri().toString(),
+            (e instanceof ObjectEntry o) ? o.uuid : e.uri().toString(),
             e.uri()))
         .forEach(uriProperties::add);
     return uriProperties;
