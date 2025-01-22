@@ -424,7 +424,8 @@ URL						= (((https?|f(tp|ile))"://"|"www.")({URLCharacters}{URLEndCharacter})?)
   "str"    |
   "num"    |
   "json"   |
-  "time"   { addToken(Token.RESERVED_WORD); }
+  "time"   |
+  "bool"   { addToken(Token.RESERVED_WORD); }
       
   /* ArcScript built-in functions */
   "is"  |  // generic for all types
@@ -441,7 +442,7 @@ URL						= (((https?|f(tp|ile))"://"|"www.")({URLCharacters}{URLEndCharacter})?)
   "is_lesser_than"           |
   "is_strictly_greater_than" |
   "is_strictly_lesser_than"  |
-  "is_between"               { addToken(Token.FUNCTION); }
+  "is_between"               { addToken(Token.RESERVED_WORD_2); }
 
 	/* Data types. */
 	"boolean" |

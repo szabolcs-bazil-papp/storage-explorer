@@ -21,6 +21,8 @@ import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.Theme;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
+import org.fife.ui.rsyntaxtextarea.folding.CurlyFoldParser;
+import org.fife.ui.rsyntaxtextarea.folding.FoldParserManager;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 
@@ -44,6 +46,7 @@ public class RSyntaxTextAreaThemeProvider {
     atmf.putMapping(
         SYNTAX_STYLE_ARCSCRIPT,
         "com.aestallon.storageexplorer.swing.ui.commander.arcscript.ArcScriptTokenMaker");
+    FoldParserManager.get().addFoldParserMapping(SYNTAX_STYLE_ARCSCRIPT, new CurlyFoldParser());
   }
 
   private Theme loadLightTheme() {
