@@ -1,0 +1,4 @@
+Benchmark                                 Mode  Cnt      Score      Error  Units
+FileSystemStorageWalkerBenchmark.current  avgt    5  13109.309 ±  638.504  ms/op
+FileSystemStorageWalkerBenchmark.legacy0  avgt    5  94021.890 ± 5088.443  ms/op
+FileSystemStorageWalkerBenchmark.legacy1  avgt    5  91510.244 ± 5571.266  ms/op

@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.core.service;
+package com.aestallon.storageexplorer.core.service.walker;
 
 import java.io.IOException;
 import java.net.URI;
@@ -52,9 +52,9 @@ import static java.util.stream.Collectors.toSet;
  *
  * @author Szabolcs Bazil Papp
  */
-public final class FileSystemStorageWalker {
+public final class FileSystemStorageWalkerImpl extends FileSystemStorageWalker {
 
-  private static final Logger log = LoggerFactory.getLogger(FileSystemStorageWalker.class);
+  private static final Logger log = LoggerFactory.getLogger(FileSystemStorageWalkerImpl.class);
 
   private static final String SPECIAL_SCHEMA_APIS = "apis";
   private static final Set<String> SPECIAL_DIRS = Set.of(
@@ -62,20 +62,14 @@ public final class FileSystemStorageWalker {
       SPECIAL_SCHEMA_APIS,
       "storedSeq");
 
-  static FileSystemStorageWalker of(final Path pathToStorage) {
-    if (pathToStorage == null || !pathToStorage.isAbsolute()) {
-      throw new IllegalArgumentException("Path to storage must be absolute!");
-    }
-    return new FileSystemStorageWalker(pathToStorage);
+
+
+  FileSystemStorageWalkerImpl(Path pathToStorage) {
+    super(pathToStorage);
   }
 
-  private final Path pathToStorage;
-
-  private FileSystemStorageWalker(Path pathToStorage) {
-    this.pathToStorage = pathToStorage;
-  }
-
-  Stream<URI> walk(final IndexingTarget target) {
+  @Override
+  public Stream<URI> walk(final IndexingTarget target) {
     final LinkedBlockingQueue<URI> queue = new LinkedBlockingQueue<>();
     final List<Thread> virtualThreads = new ArrayList<>();
     final var typeWalkers = schemaWalkers(target).stream()
@@ -186,7 +180,7 @@ public final class FileSystemStorageWalker {
         }
 
       } catch (IOException e) {
-        log.error(e.getMessage(), e);
+        // log.error(e.getMessage(), e);
       }
     });
   }
@@ -201,7 +195,7 @@ public final class FileSystemStorageWalker {
       try {
         f.accept(e);
       } catch (final Exception ex) {
-        log.error(ex.getMessage(), ex);
+        // log.error(ex.getMessage(), ex);
       }
     }
   }

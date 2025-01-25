@@ -27,6 +27,8 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
+import com.aestallon.storageexplorer.core.service.walker.FileSystemStorageWalkerFactory;
+import com.aestallon.storageexplorer.core.service.walker.FileSystemStorageWalkerImpl;
 
 public final class FileSystemStorageIndex extends StorageIndex {
 
@@ -50,7 +52,7 @@ public final class FileSystemStorageIndex extends StorageIndex {
 
   @Override
   protected Stream<URI> fetchEntries(IndexingTarget target) {
-    return FileSystemStorageWalker.of(pathToStorage).walk(target);
+    return FileSystemStorageWalkerFactory.createDefault(pathToStorage).walk(target);
   }
 
   @Override
