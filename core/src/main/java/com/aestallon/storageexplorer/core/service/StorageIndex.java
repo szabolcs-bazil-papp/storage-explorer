@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -64,7 +65,7 @@ public abstract sealed class StorageIndex
     this.storageId = storageId;
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
-    this.cache = new HashMap<>();
+    this.cache = new ConcurrentHashMap<>();
   }
 
   public int refresh(IndexingStrategy strategy) {

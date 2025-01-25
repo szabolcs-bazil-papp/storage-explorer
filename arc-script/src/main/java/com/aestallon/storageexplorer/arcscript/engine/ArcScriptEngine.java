@@ -126,13 +126,16 @@ public class ArcScriptEngine {
 
     private final StorageInstanceExaminer examiner;
     private final StorageEntry entry;
+    private final StorageInstanceExaminer.ObjectEntryLookupTable cache;
     private final QueryConditionImpl.AssertionIterator iterator;
 
     private QueryConditionEvaluator(final StorageInstanceExaminer examiner,
                                     final StorageEntry entry,
+                                    final StorageInstanceExaminer.ObjectEntryLookupTable cache,
                                     final QueryConditionImpl c) {
       this.examiner = examiner;
       this.entry = entry;
+      this.cache = cache;
       this.iterator = (c != null)
           ? c.assertionIterator()
           : QueryConditionImpl.AssertionIterator.empty();
@@ -140,7 +143,7 @@ public class ArcScriptEngine {
 
     private QueryConditionEvaluator(final QueryConditionEvaluator orig,
                                     final QueryConditionImpl c) {
-      this(orig.examiner, orig.entry, c);
+      this(orig.examiner, orig.entry, orig.cache, c);
     }
 
     private boolean evaluate() {
@@ -222,8 +225,9 @@ public class ArcScriptEngine {
     }
 
     private Set<StorageEntry> execute(final long limit) {
+      final var cache = StorageInstanceExaminer.ObjectEntryLookupTable.newInstance();
       try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-        final var semaphore = new Semaphore(10);
+        final var semaphore = new Semaphore(5);
         final List<Future<?>> futures = new ArrayList<>();
         for (final StorageEntry entry : entries) {
           futures.add(executor.submit(() -> {
@@ -232,12 +236,13 @@ public class ArcScriptEngine {
             }
 
             try {
-              semaphore.acquire();
-              final var evaluator = new QueryConditionEvaluator(examiner, entry, c);
+             semaphore.acquire();
+              final var evaluator = new QueryConditionEvaluator(examiner, entry, cache, c);
               if (evaluator.evaluate() && (limit <= 0 || matchedEntries.size() < limit)) {
                 matchedEntries.add(entry);
               }
-            } catch (final InterruptedException ignored) {
+            } catch (final Exception e) {
+              System.err.println(e.getMessage());
             } finally {
               semaphore.release();
             }

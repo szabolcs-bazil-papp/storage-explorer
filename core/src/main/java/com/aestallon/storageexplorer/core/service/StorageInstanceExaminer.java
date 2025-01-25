@@ -5,12 +5,32 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 
 public class StorageInstanceExaminer {
+
+  public static final class ObjectEntryLookupTable {
+
+    public static ObjectEntryLookupTable newInstance() {
+      return new ObjectEntryLookupTable();
+    }
+
+    private final ConcurrentHashMap<ObjectEntry, ObjectEntryLoadResult> inner;
+
+    private ObjectEntryLookupTable() {
+      inner = new ConcurrentHashMap<>();
+    }
+    
+    private ObjectEntryLoadResult computeIfAbsent(final ObjectEntry objectEntry,
+                                                  final Function<? super ObjectEntry, ? extends ObjectEntryLoadResult> f) {
+      return inner.computeIfAbsent(objectEntry, f);
+    }
+  }
+
 
   private final Function<URI, Optional<StorageEntry>> discoverer;
 
@@ -20,14 +40,21 @@ public class StorageInstanceExaminer {
 
   public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
                                                   final String propQuery) {
+   final var cache = ObjectEntryLookupTable.newInstance();
+   return discoverProperty(entry, propQuery, cache);
+  }
+
+  public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
+                                                  final String propQuery,
+                                                  final ObjectEntryLookupTable cache) {
     return switch (entry) {
       case ObjectEntry o -> {
-        final var loadResult = o.tryLoad();
+        final var loadResult = cache.computeIfAbsent(o, ObjectEntry::tryLoad);
         yield switch (loadResult) {
           case ObjectEntryLoadResult.Err err -> new NotFound(err.msg());
-          case ObjectEntryLoadResult.SingleVersion sv -> inVersion(sv, entry, propQuery);
+          case ObjectEntryLoadResult.SingleVersion sv -> inVersion(sv, entry, propQuery, cache);
           case ObjectEntryLoadResult.MultiVersion mv -> mv.versions().stream()
-              .map(sv -> inVersion(sv, entry, propQuery))
+              .map(sv -> inVersion(sv, entry, propQuery, cache))
               .filter(it -> !(it instanceof NotFound))
               .findFirst()
               .orElseGet(NoValue::new);
@@ -39,7 +66,8 @@ public class StorageInstanceExaminer {
 
   private PropertyDiscoveryResult inVersion(final ObjectEntryLoadResult.SingleVersion sv,
                                             final StorageEntry host,
-                                            final String propQuery) {
+                                            final String propQuery,
+                                            final ObjectEntryLookupTable cache) {
     return host.uriProperties().stream()
         .filter(it -> propQuery.startsWith(it.propertyName()))
         .findFirst()
@@ -49,11 +77,11 @@ public class StorageInstanceExaminer {
               final int queryLength = propQuery.length();
               if (queryLength == propertyNameLength) {
                 // we are looking for the referenced entry:
-                return discoverProperty(e, "");
+                return discoverProperty(e, "", cache);
               }
 
               // exclude the trailing dot:
-              return discoverProperty(e, propQuery.substring(propertyNameLength + 1));
+              return discoverProperty(e, propQuery.substring(propertyNameLength + 1), cache);
             })
             .orElseGet(() -> new NotFound(it.uri() + " is unreachable!")))
         .orElseGet(() -> inObject(sv.objectAsMap(), host, propQuery));
