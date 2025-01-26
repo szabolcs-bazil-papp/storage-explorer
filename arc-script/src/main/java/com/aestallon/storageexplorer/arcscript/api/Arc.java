@@ -15,21 +15,26 @@ import groovy.transform.Final;
 
 public final class Arc {
 
-  public static <SCRIPT extends Script & ArcScript> SCRIPT parse(final String script) {
+  static <SCRIPT extends Script & ArcScript> SCRIPT parse(final String script) {
     final CompilerConfiguration config = new CompilerConfiguration();
     config.setScriptBaseClass(ArcScriptImpl.class.getName());
     final var shell = new GroovyShell(Arc.class.getClassLoader(), config);
     return (SCRIPT) shell.parse(script);
   }
 
-  public static <SCRIPT extends Script & ArcScript> ArcScript evaluate(final SCRIPT script) {
+  static <SCRIPT extends Script & ArcScript> ArcScript evaluate(final SCRIPT script) {
     script.run();
     return script;
   }
 
-  public static ArcScriptResult execute(final ArcScript arcScript, final StorageInstance storageInstance) {
+  static ArcScriptResult execute(final ArcScript arcScript, final StorageInstance storageInstance) {
     final var engine = new ArcScriptEngine(null);
     return engine.execute(arcScript, storageInstance);
+  }
+  
+  public static ArcScript compile(final String script) {
+    final var s = parse(script);
+    return evaluate(s);
   }
 
   public static ArcScriptResult evaluate(final String script,

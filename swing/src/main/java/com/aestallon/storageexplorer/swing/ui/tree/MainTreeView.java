@@ -46,7 +46,6 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.swing.ui.dialog.arcscript.ArcScriptDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
@@ -258,15 +257,6 @@ public class MainTreeView extends JPanel {
       discard.setToolTipText("Close this storage to reclaim system resources.\n"
           + "This storage won't be preloaded on the next startup.");
       add(discard);
-      
-      final var script = new JMenuItem("Script...");
-      script.addActionListener(e -> {
-        final var dialog = new ArcScriptDialog(sitn.storageInstance(), eventPublisher);
-        dialog.setLocationRelativeTo(MainTreeView.this);
-        dialog.pack();
-        dialog.setVisible(true);
-      });
-      add(script);
     }
 
     private JMenuItem createEditMenuItem(StorageInstanceTreeNode sitn) {
