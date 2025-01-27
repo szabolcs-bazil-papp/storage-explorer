@@ -1,7 +1,11 @@
 package com.aestallon.storageexplorer.arcscript.internal.query;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.IntToDoubleFunction;
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
@@ -9,10 +13,12 @@ import groovy.lang.Closure;
 
 public class QueryInstructionImpl implements QueryInstruction, Instruction {
 
-  public Set<String> _types = new HashSet<>();
-  public Set<String> _schemas = new HashSet<>();
-  public QueryConditionImpl condition;
+  public final Set<String> _types = new HashSet<>();
+  public final Set<String> _schemas = new HashSet<>();
+  public final List<ShowColumn> _columns = new ArrayList<>();
+
   public long _limit = -1L;
+  public QueryConditionImpl condition;
 
   @Override
   public void a(String typeName) {
@@ -88,6 +94,52 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
     }
 
     this._limit = limit;
+  }
+
+  @Override
+  public Column show(String property) {
+    final var col = new ShowColumn(property);
+    this._columns.add(col);
+    return col;
+  }
+
+  @Override
+  public void show(String property, String... properties) {
+    if (properties == null) {
+      throw new IllegalArgumentException("property cannot be null or empty");
+    }
+
+    this._columns.add(new ShowColumn(property));
+    for (final String prop : properties) {
+      this._columns.add(new ShowColumn(prop));
+    }
+  }
+
+  public static final class ShowColumn implements Column {
+    private final String property;
+    private String displayName;
+
+    public ShowColumn(String property) {
+      if (property == null || property.isBlank()) {
+        throw new IllegalArgumentException("property cannot be null or empty");
+      }
+
+      this.property = property;
+    }
+
+    @Override
+    public void as(String displayName) {
+      this.displayName = displayName;
+    }
+
+    public String propertyInternal() {
+      return property;
+    }
+
+    public String displayNameInternal() {
+      return (displayName == null || displayName.isBlank()) ? property : displayName;
+    }
+
   }
 
   @Override

@@ -28,4 +28,14 @@ public interface QueryInstruction {
   
   QueryCondition expr(QueryCondition condition);
   
+  Column show(String property);
+  
+  void show(String property, String... properties);
+  
+  interface Column {
+    
+    void as(String displayName);
+  
+  }
+  
 }
