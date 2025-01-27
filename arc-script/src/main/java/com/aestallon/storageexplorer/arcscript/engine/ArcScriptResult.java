@@ -2,9 +2,12 @@ package com.aestallon.storageexplorer.arcscript.engine;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
@@ -65,8 +68,56 @@ public sealed interface ArcScriptResult {
       implements InstructionResult {}
 
 
-  record QueryPerformed(String prettyPrint, Set<StorageEntry> resultSet, long timeTaken)
+  record QueryPerformed(String prettyPrint, ResultSet resultSet, long timeTaken)
       implements InstructionResult {}
+
+
+  record ColumnDescriptor(String prop, String title) {}
+
+
+  record ResultSetMeta(List<ColumnDescriptor> columns) {}
+
+
+  enum CellType { SIMPLE, COMPLEX }
+
+
+  record DataCell(CellType type, String value) {
+
+    static DataCell noValue() {
+      return new DataCell(CellType.SIMPLE, "");
+    }
+
+    static DataCell simple(String value) {
+      return new DataCell(CellType.SIMPLE, value);
+    }
+
+    static DataCell complex(Object value) {
+      return new DataCell(CellType.COMPLEX, String.valueOf(value));
+    }
+
+  }
+
+
+  record QueryResultRow(StorageEntry entry, Map<String, DataCell> cells) {
+
+    public QueryResultRow(StorageEntry entry) {
+      this(entry, Collections.emptyMap());
+    }
+
+  }
+
+
+  record ResultSet(ResultSetMeta meta, List<QueryResultRow> rows) {
+
+    public int size() {
+      return rows.size();
+    }
+    
+    public List<StorageEntry> entries() {
+      return rows.stream().map(QueryResultRow::entry).collect(Collectors.toList());
+    }
+
+  }
 
 
   record Ok(List<InstructionResult> elements) implements ArcScriptResult {}

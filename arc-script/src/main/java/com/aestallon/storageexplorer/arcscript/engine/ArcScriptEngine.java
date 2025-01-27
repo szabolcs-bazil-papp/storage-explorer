@@ -1,24 +1,18 @@
 package com.aestallon.storageexplorer.arcscript.engine;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Semaphore;
 import com.aestallon.storageexplorer.arcscript.api.ArcScript;
 import com.aestallon.storageexplorer.arcscript.internal.ArcScriptImpl;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import com.aestallon.storageexplorer.arcscript.internal.index.IndexInstructionImpl;
-import com.aestallon.storageexplorer.arcscript.internal.query.Assertion;
-import com.aestallon.storageexplorer.arcscript.internal.query.QueryConditionImpl;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryInstructionImpl;
 import com.aestallon.storageexplorer.arcscript.internal.update.UpdateInstructionImpl;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
@@ -91,11 +85,39 @@ public class ArcScriptEngine {
           final var examiner = storageInstance.examiner();
           final var condition = query.condition;
           final var limit = query._limit;
-          final var res = new ArcEvaluationExecutor(examiner, entries, condition).execute(limit);
+          final var runningOnFs = StorageInstanceType.FS == storageInstance.type();
+          final var cache = StorageInstanceExaminer.ObjectEntryLookupTable.newInstance();
+          final var res = ConditionEvaluationExecutor.builder(examiner, entries, condition, limit)
+              .useSemaphore(!runningOnFs)
+              .useCache(cache)
+              .build()
+              .execute();
           final long end = System.nanoTime();
+
+          final var showColumns = query._columns;
+          final ArcScriptResult.ResultSet resultSet;
+          if (showColumns.isEmpty()) {
+            resultSet = new ArcScriptResult.ResultSet(
+                new ArcScriptResult.ResultSetMeta(Collections.emptyList()),
+                res.stream().map(ArcScriptResult.QueryResultRow::new).toList());
+          } else {
+            final var columns = showColumns.stream()
+                .map(it -> new ArcScriptResult.ColumnDescriptor(
+                    it.propertyInternal(),
+                    it.displayNameInternal()))
+                .toList();
+            final var meta = new ArcScriptResult.ResultSetMeta(columns);
+            final var rows = QueryResultRowEvaluationExecutor.builder(examiner, res, columns)
+                .useSemaphore(!runningOnFs)
+                .useCache(cache)
+                .build()
+                .execute();
+            resultSet = new ArcScriptResult.ResultSet(meta, new ArrayList<>(rows));
+          }
+
           instructionResults.add(new ArcScriptResult.QueryPerformed(
               query.toString(),
-              res,
+              resultSet,
               end - start));
         }
         case IndexInstructionImpl index -> {
@@ -122,145 +144,7 @@ public class ArcScriptEngine {
     return new ArcScriptResult.Ok(instructionResults);
   }
 
-  private static final class QueryConditionEvaluator {
-
-    private final StorageInstanceExaminer examiner;
-    private final StorageEntry entry;
-    private final StorageInstanceExaminer.ObjectEntryLookupTable cache;
-    private final QueryConditionImpl.AssertionIterator iterator;
-
-    private QueryConditionEvaluator(final StorageInstanceExaminer examiner,
-                                    final StorageEntry entry,
-                                    final StorageInstanceExaminer.ObjectEntryLookupTable cache,
-                                    final QueryConditionImpl c) {
-      this.examiner = examiner;
-      this.entry = entry;
-      this.cache = cache;
-      this.iterator = (c != null)
-          ? c.assertionIterator()
-          : QueryConditionImpl.AssertionIterator.empty();
-    }
-
-    private QueryConditionEvaluator(final QueryConditionEvaluator orig,
-                                    final QueryConditionImpl c) {
-      this(orig.examiner, orig.entry, orig.cache, c);
-    }
-
-    private boolean evaluate() {
-      if (!iterator.hasNext()) {
-        // this is equivalent
-        return true;
-      }
-
-      var state = evalNext();
-      while (iterator.hasNext()) {
-        final var relationNext = iterator.peekRelation();
-        // because we are evaluating strictly left to right, we cannot short-circuit anywhere.
-        // E.g. with C-style precedence, a || b && c can be short-circuited after verifying !!a,
-        // for the precedence implies brackets: a || b && c IS EQUIVALENT TO a || (b && c).
-        // Our Smalltalk-like strict adherence to left-to-right means implicit brackets starting
-        // from the left: ((a || b) && c).
-        // What _can_ we do then? We can skip evaluating operands! (this is not as cool as short-
-        // circuiting, but hey). Following the above example (a || b && c), if a then b can be
-        // skipped, reducing to (true && c)
-        switch (relationNext) {
-          case AND -> {
-            if (state) {
-              // if a then a && b = b
-              state = evalNext();
-            } else {
-              // else if !a then a && b = false
-              skipNext();
-            }
-          }
-          case OR -> {
-            if (state) {
-              // if a then a || b = true
-              skipNext();
-            } else {
-              // if !a then a || b = b
-              state = evalNext();
-            }
-          }  // end case
-        } // end switch
-      } // end when
-      return state;
-    }
-
-    private void skipNext() {
-      iterator.next();
-    }
-
-    private boolean evalNext() {
-      final var next = iterator.next();
-      return switch (next.element()) {
-        case Assertion a -> resolveValue(a);
-        case QueryConditionImpl q -> evalNext(q);
-      };
-    }
-
-    private boolean evalNext(QueryConditionImpl qc) {
-      return new QueryConditionEvaluator(this, qc).evaluate();
-    }
-
-    private boolean resolveValue(final Assertion assertion) {
-      final var val = examiner.discoverProperty(entry, assertion.prop());
-      return assertion.check(val);
-    }
-  }
-
-
-  private static final class ArcEvaluationExecutor {
-
-    private final StorageInstanceExaminer examiner;
-    private final Set<StorageEntry> entries;
-    private final QueryConditionImpl c;
-    private final LinkedBlockingQueue<StorageEntry> matchedEntries = new LinkedBlockingQueue<>();
-
-    private ArcEvaluationExecutor(StorageInstanceExaminer examiner, Set<StorageEntry> entries,
-                                  QueryConditionImpl c) {
-      this.examiner = examiner;
-      this.entries = entries;
-      this.c = c;
-    }
-
-    private Set<StorageEntry> execute(final long limit) {
-      final var cache = StorageInstanceExaminer.ObjectEntryLookupTable.newInstance();
-      try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-        final var semaphore = new Semaphore(5);
-        final List<Future<?>> futures = new ArrayList<>();
-        for (final StorageEntry entry : entries) {
-          futures.add(executor.submit(() -> {
-            if (limit > 0 && matchedEntries.size() >= limit) {
-              return;
-            }
-
-            try {
-             semaphore.acquire();
-              final var evaluator = new QueryConditionEvaluator(examiner, entry, cache, c);
-              if (evaluator.evaluate() && (limit <= 0 || matchedEntries.size() < limit)) {
-                matchedEntries.add(entry);
-              }
-            } catch (final Exception e) {
-              System.err.println(e.getMessage());
-            } finally {
-              semaphore.release();
-            }
-          }));
-        }
-
-        for (final Future<?> future : futures) {
-          future.get();
-        }
-      } catch (InterruptedException | ExecutionException e) {
-        throw new IllegalStateException(e);
-      }
-
-      return new HashSet<>(matchedEntries);
-    }
-
-  }
-
 
   private static final class ImplicitIndexInstruction extends IndexInstructionImpl {}
+
 }
