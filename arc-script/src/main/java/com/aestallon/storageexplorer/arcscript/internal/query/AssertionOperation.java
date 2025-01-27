@@ -15,14 +15,18 @@
 
 package com.aestallon.storageexplorer.arcscript.internal.query;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 import groovy.json.JsonBuilder;
 import groovy.lang.Closure;
+import static java.util.stream.Collectors.joining;
 
 public abstract sealed class AssertionOperation<T> permits
     AssertionOperation.AssertionOperationStr,
@@ -45,15 +49,39 @@ public abstract sealed class AssertionOperation<T> permits
     assertion.set("not", value, equalityPredicate(value).negate());
   }
 
-  private Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> equalityPredicate(
-      final T value) {
+  @SafeVarargs
+  public final void in(final T... values) {
+    if (values == null) {
+      throw new IllegalArgumentException(
+          "Null argument is not acceptable for IN clause! Try `is null` or `in (null)` instead.");
+    }
+
+    if (values.length == 0) {
+      assertion.set("in", "{{ EMPTY SET }}", it -> false);
+      return;
+    }
+
+    Arrays.stream(values)
+        .map(this::equalityPredicate)
+        .reduce(PropertyPredicate::or)
+        .ifPresentOrElse(
+            p -> assertion.set(
+                "in",
+                Arrays.stream(values).map(String::valueOf).collect(joining(", ", "( ", " )")),
+                p),
+            () -> assertion.set(
+                "in",
+                "{{ EMPTY SET }}",
+                it -> false));
+  }
+
+  private PropertyPredicate equalityPredicate(final T value) {
     return (value == null)
         ? it -> it instanceof StorageInstanceExaminer.NoValue
         : equality(value);
   }
 
-  protected abstract Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> equality(
-      final T value);
+  protected abstract PropertyPredicate equality(final T value);
 
   public static final class AssertionOperationStr extends AssertionOperation<String> {
     public AssertionOperationStr(Assertion assertion) {
@@ -61,8 +89,7 @@ public abstract sealed class AssertionOperation<T> permits
     }
 
     @Override
-    protected Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> equality(
-        String value) {
+    protected PropertyPredicate equality(final String value) {
       return it -> it instanceof StorageInstanceExaminer.StringFound str
                    && str.string().equals(value);
     }
@@ -71,9 +98,33 @@ public abstract sealed class AssertionOperation<T> permits
       if (value == null) {
         throw new IllegalArgumentException("Cannot call str contains with null value!");
       }
-      
+
       assertion.set("contains", value, it -> it instanceof StorageInstanceExaminer.StringFound str
                                              && str.string().contains(value));
+    }
+
+    public void starts_with(final String value) {
+      if (value == null) {
+        throw new IllegalArgumentException("Cannot call str starts_with with null value!");
+      }
+
+      assertion.set(
+          "starts_with",
+          value,
+          it -> it instanceof StorageInstanceExaminer.StringFound str
+                && str.string().startsWith(value));
+    }
+
+    public void ends_with(final String value) {
+      if (value == null) {
+        throw new IllegalArgumentException("Cannot call str ends_with with null value!");
+      }
+
+      assertion.set(
+          "starts_with",
+          value,
+          it -> it instanceof StorageInstanceExaminer.StringFound str
+                && str.string().endsWith(value));
     }
   }
 
@@ -84,8 +135,7 @@ public abstract sealed class AssertionOperation<T> permits
     }
 
     @Override
-    protected Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> equality(
-        Boolean value) {
+    protected PropertyPredicate equality(final Boolean value) {
       return it -> it instanceof StorageInstanceExaminer.BooleanFound bool
                    && bool.bool() == value;
     }
@@ -98,8 +148,7 @@ public abstract sealed class AssertionOperation<T> permits
     }
 
     @Override
-    protected Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> equality(
-        Map<String, Object> value) {
+    protected PropertyPredicate equality(Map<String, Object> value) {
       return it -> {
         if (!(it instanceof StorageInstanceExaminer.ComplexFound complex)) {
           return false;
@@ -123,7 +172,7 @@ public abstract sealed class AssertionOperation<T> permits
 
       final var op = "overlaps";
       final var strVal = b.toString();
-      final Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> p;
+      final PropertyPredicate p;
       if (json instanceof Map) {
         final var expected = (Map<String, Object>) json;
         p = it -> {
@@ -140,7 +189,7 @@ public abstract sealed class AssertionOperation<T> permits
       } else {
         p = it -> false;
       }
-      
+
       assertion.set(op, strVal, p);
     }
   }
@@ -152,8 +201,7 @@ public abstract sealed class AssertionOperation<T> permits
     }
 
     @Override
-    protected Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> equality(
-        Number value) {
+    protected PropertyPredicate equality(final Number value) {
       return it -> {
         if (!(it instanceof StorageInstanceExaminer.NumberFound n)) {
           return false;

@@ -22,6 +22,11 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 class AssertionOperationTest {
 
+  // -----------------------------------------------------------------------------------------------
+  // STRING OPERATIONS
+  // -----------------------------------------------------------------------------------------------
+
+  // ~~EQUALITY~~ ----------------------------------------------------------------------------------
 
   @Test
   void stringEqualityChecksOutWhenStringsAreEqual() {
@@ -100,6 +105,34 @@ class AssertionOperationTest {
     // then
     assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
   }
+  
+  @Test
+  void stringInMatches_IfValueIsFound() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").in("Foo", "Bar", "Baz");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("Bar", null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringInMatches_IfLookingForNull_andDiscoveryFindsNull() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").in("Foo", "Bar", null);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NoValue();
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  // ~~CONTAINS~~ ----------------------------------------------------------------------------------
 
   @Test
   void stringContainsChecksOut_whenDiscoveredStringIsEqual() {
@@ -153,4 +186,234 @@ class AssertionOperationTest {
         .hasMessageContaining("Cannot call str contains with null value");
   }
 
+  // ~~STARTS_WITH~~ -------------------------------------------------------------------------------
+
+  @Test
+  void stringStartsWithChecksOut_whenDiscoveredStringIsEqual() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").starts_with("John");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("John", null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringStartsWithChecksOut_whenDiscoveredStringStartsWithQueryString() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").starts_with("John");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("Johnny Silverhand", null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringStartsWithFails_whenDiscoveredStringDoesNotStartWithQueryString() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").starts_with("John");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("BJohn", null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringStartsWithDoesNotAcceptNullValues() {
+    // given
+    final var assertion = new Assertion();
+    final var op = assertion.str("name");
+    // when
+    assertThatCode(() -> op.starts_with(null))
+        // then
+        .as("Invoking str starts_with with null value")
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot call str starts_with with null value");
+  }
+
+  // ~~ENDS_WITH~~ ---------------------------------------------------------------------------------
+
+  @Test
+  void stringEndsWithChecksOut_whenDiscoveredStringIsEqual() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").ends_with("John");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("John", null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringEndsWithChecksOut_whenDiscoveredStringEndsWithQueryString() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").ends_with("John");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("Not John", null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringEndsWithFails_whenDiscoveredStringDoesNotEndWithQueryString() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").ends_with("John");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("Silverhand", null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringEndsWithDoesNotAcceptNullValues() {
+    // given
+    final var assertion = new Assertion();
+    final var op = assertion.str("name");
+    // when
+    assertThatCode(() -> op.ends_with(null))
+        // then
+        .as("Invoking str ends_with with null value")
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot call str ends_with with null value");
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // NUMERIC OPERATIONS
+  // -----------------------------------------------------------------------------------------------
+
+  // ~~EQUALITY~~ ----------------------------------------------------------------------------------
+
+  @Test
+  void numEqualityChecksOutWhenNumbersAreEqual() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").is(69);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NumberFound(69, null);
+
+    //then
+    assertThat(assertion).matches(it -> it.check(discovery), "Number found: 69");
+  }
+
+  @Test
+  void numEqualityDoesNotCheckOutWhenNumbersAreNotEqual() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").is(69);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NumberFound(70, null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void numEqualityChecksOutForNullValue_whenDiscoveryFindsNull() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").is(null);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NoValue();
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void numEqualityDoesNotCheckOutForNullValue_whenDiscoveryFindsNonNullValue() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").is(null);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("Foo", null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void numEqualityDoesNotCheckOutForNullValue_whenDiscoveryCannotReachTargetProperty() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").is(null);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NotFound(null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void numEqualityDoesNotCheckOut_whenDiscoveredTypeIsDifferent() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").is(69);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("69", null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+  
+  @Test
+  void numEqualityChecksOut_whenLookingForLongValue_andDiscoveringEquivalentDouble() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").is(69L);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NumberFound(69.0d, null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void numEqualityChecksOut_whenLookingForDoubleValue_andDiscoveringEquivalentInteger() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").is(69.0d);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NumberFound(69, null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void numEqualityChecksOut_whenLookingForFloatValue_andDiscoveringEquivalentDouble() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").is(69.0f);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NumberFound(69.0d, null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
 }

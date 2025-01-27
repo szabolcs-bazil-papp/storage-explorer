@@ -1,6 +1,6 @@
 package com.aestallon.storageexplorer.arcscript.internal.query;
 
-import java.util.function.Predicate;
+import org.apache.groovy.parser.antlr4.GroovyParser;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 
 public final class Assertion implements QueryElement {
@@ -8,9 +8,9 @@ public final class Assertion implements QueryElement {
   private String prop;
   private String op;
   private String value;
-  private Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> _predicate;
+  private PropertyPredicate _predicate;
   
-  void set(String op, Object value, Predicate<StorageInstanceExaminer.PropertyDiscoveryResult> p) {
+  void set(String op, Object value, PropertyPredicate p) {
     this.op = op;
     this.value = String.valueOf(value);
     this._predicate = p;
@@ -18,6 +18,7 @@ public final class Assertion implements QueryElement {
   
   public String prop() { return prop; }
   public String displayValue() { return value; }
+  public String op() { return op; }
   public boolean check(StorageInstanceExaminer.PropertyDiscoveryResult val) {
     return _predicate.test(val);
   }

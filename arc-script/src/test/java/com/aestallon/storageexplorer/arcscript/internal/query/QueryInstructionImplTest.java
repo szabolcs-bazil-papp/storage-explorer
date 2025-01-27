@@ -81,6 +81,7 @@ class QueryInstructionImplTest {
     assertThat(onlyAssertion.element()).isInstanceOf(Assertion.class);
     assertThat((Assertion) onlyAssertion.element())
         .returns("name", Assertion::prop)
+        .returns("contains", Assertion::op)
         .returns("John", Assertion::displayValue);
 
     assertThat(assertionIterator.hasNext()).isFalse();
