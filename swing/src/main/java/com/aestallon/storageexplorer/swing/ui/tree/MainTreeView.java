@@ -121,6 +121,10 @@ public class MainTreeView extends JPanel {
 
   public void incorporateEntryIntoTree(final StorageInstance storageInstance,
                                        final StorageEntry storageEntry) {
+    if (treePathByEntry.containsKey(storageEntry)) {
+      return;
+    }
+
     final ClickableTreeNode node;
     switch (storageEntry) {
       case ScopedEntry scopedEntry -> {
@@ -131,7 +135,8 @@ public class MainTreeView extends JPanel {
           node = null;
           eventPublisher.publishEvent(Msg.warn(
               "Cannot add orphan scoped entry to Tree!",
-              "Entry " + storageEntry + " has been indexed, but will not show on the tree until its host entry is missing."));
+              "Entry " + storageEntry
+              + " has been indexed, but will not show on the tree until its host entry is missing."));
         } else {
           final StorageEntry host = hostEntry.get();
           TreePath hostPath = treePathByEntry.get(host);
@@ -255,7 +260,7 @@ public class MainTreeView extends JPanel {
       discard.addActionListener(e -> eventPublisher.publishEvent(
           new StorageIndexDiscardedEvent(sitn.storageInstance())));
       discard.setToolTipText("Close this storage to reclaim system resources.\n"
-          + "This storage won't be preloaded on the next startup.");
+                             + "This storage won't be preloaded on the next startup.");
       add(discard);
     }
 
