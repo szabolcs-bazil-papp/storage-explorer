@@ -133,14 +133,14 @@ public final class StorageInstance {
    */
   public Optional<StorageEntry> acquire(final URI uri) {
     final StorageIndex.EntryAcquisitionResult result = index.getOrCreate(uri);
-    return switch (result.kind()) {
-      case FAIL -> {
+    return switch (result) {
+      case StorageIndex.EntryAcquisitionResult.Fail f -> {
         publishEvent(new EntryAcquisitionFailed(this, uri));
         yield Optional.empty();
       }
-      case PRESENT -> Optional.of(result.entry());
-      case NEW -> {
-        final var entry = result.entry();
+      case StorageIndex.EntryAcquisitionResult.Present p -> Optional.of(p.entry());
+      case StorageIndex.EntryAcquisitionResult.New n -> {
+        final var entry = n.entry();
         try {
           // we must refresh the requested entry right away:
           // - the programme requested acquisition for future load anyway
@@ -185,14 +185,14 @@ public final class StorageInstance {
 
   public Optional<StorageEntry> discover(final URI uri) {
     final StorageIndex.EntryAcquisitionResult result = index.getOrCreate(uri);
-    return switch (result.kind()) {
-      case FAIL -> {
+    return switch (result) {
+      case StorageIndex.EntryAcquisitionResult.Fail f -> {
         publishEvent(new EntryAcquisitionFailed(this, uri));
         yield Optional.empty();
       }
-      case PRESENT -> Optional.of(result.entry());
-      case NEW -> {
-        final var entry = result.entry();
+      case StorageIndex.EntryAcquisitionResult.Present p -> Optional.of(p.entry());
+      case StorageIndex.EntryAcquisitionResult.New n -> {
+        final var entry = n.entry();
         // discovery is expected to be programmatic -> we trust the URI is valid.
         index.accept(uri, entry);
         publishEvent(new EntryDiscovered(this, entry));
@@ -236,7 +236,7 @@ public final class StorageInstance {
   public void setEventPublisher(final ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
   }
-  
+
   public StorageInstanceExaminer examiner() {
     return new StorageInstanceExaminer(this::discover);
   }

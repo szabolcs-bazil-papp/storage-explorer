@@ -18,6 +18,7 @@ package com.aestallon.storageexplorer.core.model.entry;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import org.smartbit4all.api.collection.CollectionApi;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
@@ -72,7 +73,7 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
     if (!valid) {
       refresh();
     }
-    
+
     return uriProperties;
   }
 
@@ -94,6 +95,14 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
   }
 
   @Override
+  public void accept(StorageEntry storageEntry) {
+    if (Objects.requireNonNull(storageEntry) instanceof ListEntry that && that.valid) {
+      this.uriProperties = new HashSet<>(that.uriProperties());
+      valid = true;
+    }
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (this == o)
       return true;
@@ -102,7 +111,7 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
     ListEntry listEntry = (ListEntry) o;
     return Uris.equalIgnoringVersion(uri, listEntry.uri);
   }
-  
+
   public String displayName() {
     return schema + " / " + name;
   }

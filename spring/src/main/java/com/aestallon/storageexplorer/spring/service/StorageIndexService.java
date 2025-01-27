@@ -128,8 +128,11 @@ public class StorageIndexService {
     final var index = indexProvider.provide();
     index.refresh(IndexingStrategy.STRATEGY_ON_DEMAND);
     final var entries = uris.stream().map(index::getOrCreate)
-        .filter(it -> StorageIndex.AcquisitionKind.FAIL != it.kind())
-        .map(StorageIndex.EntryAcquisitionResult::entry)
+        .flatMap(it -> switch (it) {
+          case StorageIndex.EntryAcquisitionResult.New n -> Stream.of(n.entry());
+          case StorageIndex.EntryAcquisitionResult.Present p -> Stream.of(p.entry());
+          case StorageIndex.EntryAcquisitionResult.Fail f -> Stream.empty();
+        })
         .toList();
     index.revalidate(entries);
     return entries.stream()
@@ -142,11 +145,16 @@ public class StorageIndexService {
     final var uri = loadRequest.getUri();
     final var index = indexProvider.provide();
     final var result = index.getOrCreate(uri);
-    if (StorageIndex.AcquisitionKind.FAIL == result.kind()) {
+
+    final StorageEntry entry = switch (result) {
+      case StorageIndex.EntryAcquisitionResult.New n -> n.entry();
+      case StorageIndex.EntryAcquisitionResult.Present p -> p.entry();
+      case StorageIndex.EntryAcquisitionResult.Fail f -> null;
+    };
+    if (entry == null) {
       return new EntryLoadResult().type(EntryLoadResultType.FAILED);
     }
-
-    final StorageEntry entry = result.entry();
+    
     final StorageEntryDto entryDto;
     final List<EntryVersionDto> versions;
     final EntryLoadResultType loadResultType;

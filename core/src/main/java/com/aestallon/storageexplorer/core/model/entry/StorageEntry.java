@@ -45,6 +45,8 @@ public sealed interface StorageEntry permits
   void refresh();
 
   boolean valid();
+  
+  void accept(StorageEntry storageEntry);
 
   default boolean references(StorageEntry that) {
     return uriProperties().stream()

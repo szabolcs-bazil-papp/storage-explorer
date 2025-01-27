@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -154,6 +155,15 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     }
 
     return StringConstant.EMPTY;
+  }
+
+  @Override
+  public void accept(StorageEntry storageEntry) {
+    if (Objects.requireNonNull(storageEntry) instanceof ObjectEntry that && that.valid) {
+      uriProperties = that.uriProperties;
+      displayName = that.displayName;
+      valid = true;
+    }
   }
 
   public String uuid() {

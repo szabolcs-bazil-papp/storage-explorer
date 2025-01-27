@@ -10,6 +10,7 @@ import java.util.function.Function;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import static com.aestallon.storageexplorer.common.util.Streams.reverse;
 
 public class StorageInstanceExaminer {
 
@@ -24,7 +25,7 @@ public class StorageInstanceExaminer {
     private ObjectEntryLookupTable() {
       inner = new ConcurrentHashMap<>();
     }
-    
+
     private ObjectEntryLoadResult computeIfAbsent(final ObjectEntry objectEntry,
                                                   final Function<? super ObjectEntry, ? extends ObjectEntryLoadResult> f) {
       return inner.computeIfAbsent(objectEntry, f);
@@ -40,8 +41,8 @@ public class StorageInstanceExaminer {
 
   public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
                                                   final String propQuery) {
-   final var cache = ObjectEntryLookupTable.newInstance();
-   return discoverProperty(entry, propQuery, cache);
+    final var cache = ObjectEntryLookupTable.newInstance();
+    return discoverProperty(entry, propQuery, cache);
   }
 
   public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
@@ -54,6 +55,7 @@ public class StorageInstanceExaminer {
           case ObjectEntryLoadResult.Err err -> new NotFound(err.msg());
           case ObjectEntryLoadResult.SingleVersion sv -> inVersion(sv, entry, propQuery, cache);
           case ObjectEntryLoadResult.MultiVersion mv -> mv.versions().stream()
+              .collect(reverse())
               .map(sv -> inVersion(sv, entry, propQuery, cache))
               .filter(it -> !(it instanceof NotFound))
               .findFirst()
@@ -166,13 +168,19 @@ public class StorageInstanceExaminer {
   public sealed interface PropertyDiscoveryResult {}
 
 
-  public record NoValue() implements PropertyDiscoveryResult {}
+  public sealed interface None extends PropertyDiscoveryResult {}
 
 
-  public record NotFound(String errMsg) implements PropertyDiscoveryResult {}
+  public record NoValue() implements None {}
 
 
-  public sealed interface PrimitiveDiscoveryResult extends PropertyDiscoveryResult {}
+  public record NotFound(String errMsg) implements None {}
+
+
+  public sealed interface Some extends PropertyDiscoveryResult {}
+
+
+  public sealed interface PrimitiveDiscoveryResult extends Some {}
 
 
   public record StringFound(String string, StorageEntry host) implements PrimitiveDiscoveryResult {}
@@ -184,9 +192,10 @@ public class StorageInstanceExaminer {
   public record BooleanFound(boolean bool, StorageEntry host) implements PrimitiveDiscoveryResult {}
 
 
-  public record ComplexFound(Map<String, Object> value, StorageEntry host)
-      implements PropertyDiscoveryResult {}
+  public record ComplexFound(Map<String, Object> value, StorageEntry host) implements Some {}
 
 
-  public record ListFound<E>(List<E> value, StorageEntry host) implements PropertyDiscoveryResult {}
+  public record ListFound<E>(List<E> value, StorageEntry host) implements Some {}
+
+
 }
