@@ -1,7 +1,21 @@
+/*
+ * Copyright (C) 2025 Szabolcs Bazil Papp
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with this program.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -16,7 +30,6 @@ import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
-import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
@@ -128,7 +141,8 @@ public class ArcScriptContainerView extends JTabbedPane {
 
       setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-      final var label = new JLabel("<h1>Select target Storage:</h1>");
+      final var label = new JLabel("Select target Storage:");
+      label.putClientProperty("FlatLaf.styleClass", "h2");
       add(label);
 
       final var storageInstances = containerView.storageInstanceProvider
@@ -146,7 +160,8 @@ public class ArcScriptContainerView extends JTabbedPane {
         return;
       }
 
-      emptyMessage = new JLabel("<h2>Import at least one Storage to get started!</h2>");
+      emptyMessage = new JLabel("Import at least one Storage to get started!");
+      emptyMessage.putClientProperty("FlatLaf.styleClass", "h2");
       emptyMessage.setForeground(Color.RED);
       add(emptyMessage);
     }

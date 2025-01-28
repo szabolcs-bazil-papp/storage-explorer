@@ -10,16 +10,20 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import javax.sound.midi.MetaEventListener;
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.parser.AbstractParser;
 import org.fife.ui.rsyntaxtextarea.parser.DefaultParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.DefaultParserNotice;
 import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
-import org.fife.ui.rsyntaxtextarea.parser.Parser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
@@ -29,6 +33,7 @@ import com.aestallon.storageexplorer.core.event.StorageReindexed;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
@@ -36,6 +41,7 @@ import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
 public class ArcScriptView extends JPanel {
 
+  private static final Logger log = LoggerFactory.getLogger(ArcScriptView.class);
   private final ApplicationEventPublisher applicationEventPublisher;
   private final UserConfigService userConfigService;
   private final StorageInstance storageInstance;
@@ -359,8 +365,38 @@ public class ArcScriptView extends JPanel {
         add(label);
         add(createOperationResultTable(q));
 
-        final var tableModel = new QueryResultTableModel(q);
+        final var resultSet = q.resultSet();
+        final var tableModel = resultSet.meta().columns().isEmpty()
+            ? new DefaultQueryResultTableModel(resultSet)
+            : new CustomisedQueryResultTableModel(resultSet);
         final var table = new JTable(tableModel);
+
+        for (int column = 0; column < table.getColumnCount(); column++)
+        {
+          TableColumn tableColumn = table.getColumnModel().getColumn(column);
+          int preferredWidth = tableColumn.getMinWidth();
+          int maxWidth = tableColumn.getMaxWidth();
+
+          for (int row = 0; row < table.getRowCount(); row++)
+          {
+            TableCellRenderer cellRenderer = table.getCellRenderer(row, column);
+            Component c = table.prepareRenderer(cellRenderer, row, column);
+            int width = c.getPreferredSize().width + table.getIntercellSpacing().width;
+            preferredWidth = Math.max(preferredWidth, width);
+
+            //  We've exceeded the maximum width, no need to check other rows
+
+            if (preferredWidth >= maxWidth)
+            {
+              preferredWidth = maxWidth;
+              break;
+            }
+          }
+
+          tableColumn.setPreferredWidth( preferredWidth );
+        }
+        
+        
         table.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
         table.setAlignmentX(LEFT_ALIGNMENT);
         table.setFillsViewportHeight(true);
@@ -370,15 +406,12 @@ public class ArcScriptView extends JPanel {
           public void mouseClicked(MouseEvent e) {
             final Point eventLocation = e.getPoint();
             final int row = table.rowAtPoint(eventLocation);
-            final int col = table.columnAtPoint(eventLocation);
-            if (row < 0 || col != 1) {
+            if (row < 0) {
               return;
             }
 
-            final Object value = tableModel.getValueAt(row, col);
-            if (value instanceof URI uri) {
-              JumpToUri.jump(eventPublisher, uri, storageInstance);
-            }
+            final URI uri = tableModel.uriAt(row);
+            JumpToUri.jump(eventPublisher, uri, storageInstance);
           }
 
         });
@@ -390,14 +423,16 @@ public class ArcScriptView extends JPanel {
     }
 
 
-    private static final class QueryResultTableModel extends AbstractTableModel {
-      private static final String[] COLS = { "Entry type", "URI (click to load)" };
-      private static final Class<?>[] COL_CLASSES = { Icon.class, URI.class };
+    private static final class DefaultQueryResultTableModel
+        extends AbstractTableModel
+        implements EnumeratorWithUri {
+      private static final String[] COLS = { "#", "Entry type", "URI (click to load)" };
+      private static final Class<?>[] COL_CLASSES = { Integer.class, Icon.class, URI.class };
 
       private final List<StorageEntry> storageEntries;
 
-      private QueryResultTableModel(ArcScriptResult.QueryPerformed result) {
-        this.storageEntries = new ArrayList<>(result.resultSet());
+      private DefaultQueryResultTableModel(ArcScriptResult.ResultSet resultSet) {
+        this.storageEntries = new ArrayList<>(resultSet.entries());
       }
 
       @Override
@@ -419,8 +454,9 @@ public class ArcScriptView extends JPanel {
       public Object getValueAt(int rowIndex, int columnIndex) {
         final var e = storageEntries.get(rowIndex);
         return switch (columnIndex) {
-          case 0 -> IconProvider.getIconForStorageEntry(e);
-          case 1 -> e.uri();
+          case 0 -> rowIndex + 1;
+          case 1 -> IconProvider.getIconForStorageEntry(e);
+          case 2 -> e.uri();
           default -> null;
         };
       }
@@ -429,8 +465,72 @@ public class ArcScriptView extends JPanel {
       public Class<?> getColumnClass(int columnIndex) {
         return COL_CLASSES[columnIndex];
       }
+
+      @Override
+      public URI uriAt(int idx) {
+        return storageEntries.get(idx).uri();
+      }
     }
 
+  }
+
+
+  private static final class CustomisedQueryResultTableModel
+      extends AbstractTableModel
+      implements EnumeratorWithUri {
+
+    private final List<ArcScriptResult.ColumnDescriptor> columnDescriptors;
+    private final List<ArcScriptResult.QueryResultRow> rows;
+
+    private CustomisedQueryResultTableModel(ArcScriptResult.ResultSet resultSet) {
+      columnDescriptors = resultSet.meta().columns();
+      rows = resultSet.rows();
+    }
+
+    @Override
+    public String getColumnName(int column) {
+      if (column == 0) {
+        return "#";
+      }
+
+      return columnDescriptors.get(column - 1).title();
+    }
+
+    @Override
+    public int getRowCount() {
+      return rows.size();
+    }
+
+    @Override
+    public int getColumnCount() {
+      return columnDescriptors.size() + 1;
+    }
+
+    @Override
+    public Object getValueAt(int rowIndex, int columnIndex) {
+      if (columnIndex == 0) {
+        return rowIndex + 1;
+      }
+
+      final String prop = columnDescriptors.get(columnIndex - 1).prop();
+      final var cell = rows.get(rowIndex).cells().get(prop);
+      if (cell == null) {
+        log.error("No cell found for property '{}' in row {}", prop, rows.get(rowIndex));
+        return "";
+      }
+
+      return cell.value();
+    }
+
+    @Override
+    public Class<?> getColumnClass(int columnIndex) {
+      return (columnIndex == 0) ? Integer.class : String.class;
+    }
+
+    @Override
+    public URI uriAt(int idx) {
+      return rows.get(idx).entry().uri();
+    }
   }
 
 

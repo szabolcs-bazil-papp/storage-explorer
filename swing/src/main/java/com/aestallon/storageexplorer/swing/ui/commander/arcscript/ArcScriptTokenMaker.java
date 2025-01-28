@@ -23,13 +23,14 @@ import org.fife.ui.rsyntaxtextarea.*;
 
 
 /**
- * Scanner for the ArcScript query language.<p>
+ * Scanner for the ArcScript query language.
  *
+ * <p>
  * This implementation was created based on the Groovy Token Maker for RSyntaxTextArea by Robert
- * Futrell. The source of the original flex file can be found
- * <a
+ * Futrell. The source of the original flex file can be found <a
  * href="https://github.com/bobbylight/RSyntaxTextArea/blob/master/RSyntaxTextArea/src/main/java/org/fife/ui/rsyntaxtextarea/modes/GroovyTokenMaker.flex">here</a>.
  *
+ * <p>
  * This implementation was created using
  * <a href="https://www.jflex.de/">JFlex</a> 1.4.1; however, the generated file
  * was modified for performance.  Memory allocation needs to be almost completely removed to be
@@ -38,11 +39,14 @@ import org.fife.ui.rsyntaxtextarea.*;
  * has to worry about refilling its buffer (needlessly copying chars around). We can achieve this
  * because RText always scans exactly 1 line of tokens at a time, and hands the scanner this line as
  * an array of characters (a Segment really).  Since tokens contain pointers to char arrays instead
- * of Strings holding their contents, there is no need for allocating new memory for Strings.<p>
+ * of Strings holding their contents, there is no need for allocating new memory for Strings.
  *
- * The actual algorithm generated for scanning has, of course, not been modified.<p>
+ * <p>
+ * The actual algorithm generated for scanning has, of course, not been modified.
  *
+ * <p>
  * If you wish to regenerate this file yourself, keep in mind the following:
+ *
  * <ul>
  *   <li>The generated <code>GroovyTokenMaker.java</code> file will contain two
  *       definitions of both <code>zzRefill</code> and <code>yyreset</code>.
