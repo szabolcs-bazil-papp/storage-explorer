@@ -255,6 +255,7 @@ public class ArcScriptView extends JPanel {
                                      + "indexing: ");
         label.putClientProperty("FlatLaf.styleClass", "h2");
         label.setAlignmentX(LEFT_ALIGNMENT);
+        label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
         add(label);
         add(createOperationResultTable(i));
       }
@@ -267,13 +268,14 @@ public class ArcScriptView extends JPanel {
       };
 
       final var table = new JTable(tableModel);
+      doMagicTableColumnResizing(table);
       table.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
       table.setAlignmentX(LEFT_ALIGNMENT);
       table.setFillsViewportHeight(true);
 
       final JScrollPane pane = new JScrollPane(table);
       pane.setAlignmentX(LEFT_ALIGNMENT);
-      pane.setPreferredSize(new Dimension(-1, 100));
+      pane.setPreferredSize(new Dimension(-1, table.getPreferredSize().height * 3));
       return pane;
     }
 
@@ -362,6 +364,7 @@ public class ArcScriptView extends JPanel {
         final var label = new JLabel((idx + 1) + ". Performed query:");
         label.putClientProperty("FlatLaf.styleClass", "h2");
         label.setAlignmentX(LEFT_ALIGNMENT);
+        label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
         add(label);
         add(createOperationResultTable(q));
 
@@ -370,33 +373,7 @@ public class ArcScriptView extends JPanel {
             ? new DefaultQueryResultTableModel(resultSet)
             : new CustomisedQueryResultTableModel(resultSet);
         final var table = new JTable(tableModel);
-
-        for (int column = 0; column < table.getColumnCount(); column++)
-        {
-          TableColumn tableColumn = table.getColumnModel().getColumn(column);
-          int preferredWidth = tableColumn.getMinWidth();
-          int maxWidth = tableColumn.getMaxWidth();
-
-          for (int row = 0; row < table.getRowCount(); row++)
-          {
-            TableCellRenderer cellRenderer = table.getCellRenderer(row, column);
-            Component c = table.prepareRenderer(cellRenderer, row, column);
-            int width = c.getPreferredSize().width + table.getIntercellSpacing().width;
-            preferredWidth = Math.max(preferredWidth, width);
-
-            //  We've exceeded the maximum width, no need to check other rows
-
-            if (preferredWidth >= maxWidth)
-            {
-              preferredWidth = maxWidth;
-              break;
-            }
-          }
-
-          tableColumn.setPreferredWidth( preferredWidth );
-        }
-        
-        
+        doMagicTableColumnResizing(table);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
         table.setAlignmentX(LEFT_ALIGNMENT);
         table.setFillsViewportHeight(true);
@@ -552,4 +529,30 @@ public class ArcScriptView extends JPanel {
 
   }
 
+  // this is eldritch horror by today's standards, but eternal thanks to Rob Camick!
+  // source: https://tips4java.wordpress.com/2008/11/10/table-column-adjuster/
+  // full-feature alternative: https://github.com/tips4java/tips4java/blob/main/source/TableColumnAdjuster.java
+  private static void doMagicTableColumnResizing(final JTable table) {
+    for (int column = 0; column < table.getColumnCount(); column++) {
+      TableColumn tableColumn = table.getColumnModel().getColumn(column);
+      int preferredWidth = tableColumn.getMinWidth();
+      int maxWidth = tableColumn.getMaxWidth();
+
+      for (int row = 0; row < table.getRowCount(); row++) {
+        TableCellRenderer cellRenderer = table.getCellRenderer(row, column);
+        Component c = table.prepareRenderer(cellRenderer, row, column);
+        int width = c.getPreferredSize().width + table.getIntercellSpacing().width;
+        preferredWidth = Math.max(preferredWidth, width);
+
+        //  We've exceeded the maximum width, no need to check other rows
+
+        if (preferredWidth >= maxWidth) {
+          preferredWidth = maxWidth;
+          break;
+        }
+      }
+
+      tableColumn.setPreferredWidth(preferredWidth);
+    }
+  }
 }
