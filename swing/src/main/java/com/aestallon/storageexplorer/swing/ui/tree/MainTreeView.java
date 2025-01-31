@@ -215,7 +215,10 @@ public class MainTreeView extends JPanel {
   public void selectEntry(StorageEntry storageEntry) {
     Optional
         .ofNullable(treePathByEntry.get(storageEntry))
-        .ifPresent(this::selectEntryInternal);
+        .ifPresent(path -> {
+          selectEntryInternal(path);
+          eventPublisher.publishEvent(new BreadCrumbsChanged(path));
+        });
   }
 
   public void softSelectEntry(final StorageEntry storageEntry) {
@@ -232,7 +235,6 @@ public class MainTreeView extends JPanel {
   private void selectEntryInternal(final TreePath path) {
     tree.setSelectionPath(path);
     tree.scrollPathToVisible(path);
-    eventPublisher.publishEvent(new BreadCrumbsChanged(path));
   }
 
   public void removeStorageNodeOf(final StorageInstance storageInstance) {
