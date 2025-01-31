@@ -49,6 +49,7 @@ import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
+import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.tree.model.StorageTree;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.ClickableTreeNode;
@@ -214,16 +215,24 @@ public class MainTreeView extends JPanel {
   public void selectEntry(StorageEntry storageEntry) {
     Optional
         .ofNullable(treePathByEntry.get(storageEntry))
-        .ifPresent(path -> {
-          tree.setSelectionPath(path);
-          tree.scrollPathToVisible(path);
-        });
+        .ifPresent(this::selectEntryInternal);
   }
 
   public void softSelectEntry(final StorageEntry storageEntry) {
     propagate.set(false);  // FIXME: This is a freaking hack!
     selectEntry(storageEntry);
     propagate.set(true);
+  }
+
+  public void softSelectNode(final DefaultMutableTreeNode node) {
+    final var path = new TreePath(node.getPath());
+    selectEntryInternal(path);
+  }
+
+  private void selectEntryInternal(final TreePath path) {
+    tree.setSelectionPath(path);
+    tree.scrollPathToVisible(path);
+    eventPublisher.publishEvent(new BreadCrumbsChanged(path));
   }
 
   public void removeStorageNodeOf(final StorageInstance storageInstance) {
