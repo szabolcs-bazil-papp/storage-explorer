@@ -15,9 +15,11 @@
 
 package com.aestallon.storageexplorer.swing.ui;
 
+import java.awt.*;
 import javax.swing.*;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.swing.ui.explorer.ExplorerView;
+import com.aestallon.storageexplorer.swing.ui.misc.HiddenPaneSize;
 import com.aestallon.storageexplorer.swing.ui.tree.MainTreeView;
 
 @Component
@@ -25,10 +27,43 @@ public class MainView extends JSplitPane {
 
   private final MainTreeView mainTreeView;
   private final ExplorerView explorerView;
+
+  private HiddenPaneSize hiddenPaneSize;
+
   public MainView(MainTreeView mainTreeView, ExplorerView explorerView) {
     super(JSplitPane.HORIZONTAL_SPLIT, mainTreeView, explorerView);
     this.mainTreeView = mainTreeView;
     this.explorerView = explorerView;
+  }
+
+  private boolean showingTree() {
+    return hiddenPaneSize == null;
+  }
+
+  public void showHideTree(final boolean show) {
+    if (show == showingTree()) {
+      return;
+    }
+
+    if (show) {
+      setDividerLocation(hiddenPaneSize.dividerLocation());
+      setDividerSize(hiddenPaneSize.dividerSize());
+      mainTreeView.setMinimumSize(null);
+      mainTreeView.setMaximumSize(null);
+      mainTreeView.setPreferredSize(hiddenPaneSize.toPreferredSize());
+
+      hiddenPaneSize = null;
+    } else {
+      final Dimension preferredSize = mainTreeView.getPreferredSize();
+      final int dividerLocation = getDividerLocation();
+      final int dividerSize = getDividerSize();
+      hiddenPaneSize = HiddenPaneSize.of(preferredSize, dividerLocation, dividerSize);
+
+      setDividerLocation(0);
+      setDividerSize(0);
+      mainTreeView.setMinimumSize(new Dimension(0, 0));
+      mainTreeView.setMaximumSize(new Dimension(0, 0));
+    }
   }
 
   public MainTreeView mainTreeView() {

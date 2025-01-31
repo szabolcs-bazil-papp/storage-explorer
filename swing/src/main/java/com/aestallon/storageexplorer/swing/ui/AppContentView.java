@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
+import com.aestallon.storageexplorer.swing.ui.misc.HiddenPaneSize;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 @Component
 public class AppContentView extends JPanel {
@@ -23,6 +25,7 @@ public class AppContentView extends JPanel {
   private final JToolBar toolBar;
   private final BreadCrumbs breadCrumbs;
   private JProgressBar progressBar;
+  private HiddenPaneSize hiddenPaneSize;
 
   public AppContentView(MainView mainView, CommanderView commanderView) {
     this.mainView = mainView;
@@ -30,26 +33,71 @@ public class AppContentView extends JPanel {
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-    content = new JSplitPane(JSplitPane.VERTICAL_SPLIT, mainView, commanderView);
-    content.setResizeWeight(1);
-    content.setDividerLocation(0.7);
-    content.setAlignmentX(0);
-    add(content);
+    /* Inner content stuff */
+    final var inner = new JPanel();
+    inner.setAlignmentX(LEFT_ALIGNMENT);
+    inner.setLayout(new BoxLayout(inner, BoxLayout.X_AXIS));
+    inner.add(new SideBar());
 
+    content = new JSplitPane(JSplitPane.VERTICAL_SPLIT, mainView, null);
+    content.setResizeWeight(1);
+    content.setDividerSize(0);
+    content.setAlignmentX(LEFT_ALIGNMENT);
+    inner.add(content);
+    add(inner);
+
+    /* Toolbar stuff */
     breadCrumbs = new BreadCrumbs();
     toolBar = initToolBar();
-    toolBar.setAlignmentX(0);
     add(toolBar);
 
+    hiddenPaneSize = new HiddenPaneSize(-1, -1, 500, 5);
   }
 
   private JToolBar initToolBar() {
     final var tb = new JToolBar(SwingConstants.HORIZONTAL);
+    tb.setAlignmentX(LEFT_ALIGNMENT);
     tb.add(breadCrumbs);
     tb.addSeparator();
     tb.add(Box.createGlue());
     return tb;
   }
+
+  private boolean showingCommander() {
+    return hiddenPaneSize == null;
+  }
+
+  public void showHideCommander(final boolean show) {
+    if (show == showingCommander()) {
+      return;
+    }
+
+    if (show) {
+      if (content.getRightComponent() == null) {
+        content.setRightComponent(commanderView);
+      }
+
+      content.setDividerLocation(hiddenPaneSize.dividerLocation());
+      content.setDividerSize(hiddenPaneSize.dividerSize());
+      commanderView.setMinimumSize(null);
+      commanderView.setMaximumSize(null);
+      commanderView.setPreferredSize(hiddenPaneSize.toPreferredSize());
+
+      hiddenPaneSize = null;
+    } else {
+      final Dimension preferredSize = commanderView.getPreferredSize();
+      final int dividerLocation = content.getDividerLocation();
+      final int dividerSize = content.getDividerSize();
+      hiddenPaneSize = HiddenPaneSize.of(preferredSize, dividerLocation, dividerSize);
+
+      content.setDividerLocation(1.0);
+      content.setDividerSize(0);
+      commanderView.setMinimumSize(new Dimension(0, 0));
+      commanderView.setMaximumSize(new Dimension(0, 0));
+      content.setRightComponent(null);
+    }
+  }
+
 
   public void showProgressBar(final String displayName) {
     if (progressBar == null) {
@@ -78,7 +126,7 @@ public class AppContentView extends JPanel {
   public CommanderView commanderView() {
     return commanderView;
   }
-  
+
   @EventListener
   public void onBreadCrumbsChanged(final BreadCrumbsChanged e) {
     breadCrumbs.set(e.path().getPath());
@@ -177,6 +225,31 @@ public class AppContentView extends JPanel {
     public void actionPerformed(ActionEvent e) {
       mainView().mainTreeView().softSelectNode(node);
     }
+  }
+
+
+  private final class SideBar extends JPanel {
+    private static final int MIN_WIDTH = 30;
+
+    private SideBar() {
+      setMinimumSize(new Dimension(MIN_WIDTH, 60));
+      setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+      setAlignmentY(TOP_ALIGNMENT);
+
+      final var showHideTree = new JToggleButton(IconProvider.TREE);
+      showHideTree.setToolTipText("Show/hide tree displaying storage hierarchy");
+      showHideTree.setFocusPainted(false);
+      showHideTree.setSelected(true);
+      showHideTree.addActionListener(e -> mainView().showHideTree(showHideTree.isSelected()));
+      add(showHideTree);
+
+      final var showHideCommander = new JToggleButton(IconProvider.TERMINAL);
+      showHideCommander.setToolTipText("Show/hide scripting facilities");
+      showHideCommander.setFocusPainted(false);
+      showHideCommander.addActionListener(e -> showHideCommander(showHideCommander.isSelected()));
+      add(showHideCommander);
+    }
+
   }
 
 }
