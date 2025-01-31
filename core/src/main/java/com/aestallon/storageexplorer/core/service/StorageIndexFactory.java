@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 import javax.sql.DataSource;
+import javax.xml.validation.Schema;
 import org.checkerframework.checker.formatter.qual.ReturnsFormat;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.config.PlatformApiConfig;
@@ -106,7 +107,7 @@ final class StorageIndexFactory {
 
   StorageIndexCreationResult create(final StorageLocation storageLocation) {
     final ClassLoader original = Thread.currentThread().getContextClassLoader();
-    final ClassLoader swap = ClassLoader.getSystemClassLoader();
+    final ClassLoader swap = getClass().getClassLoader();
     Thread.currentThread().setContextClassLoader(swap);
     try {
 
@@ -264,6 +265,11 @@ final class StorageIndexFactory {
       dataSource.setUrl(connectionData.getUrl());
       dataSource.setUsername(connectionData.getUsername());
       dataSource.setPassword(connectionData.getPassword());
+      
+      final var schema = connectionData.getTargetSchema();
+      if (schema != null && !schema.isEmpty()) {
+        dataSource.setSchema(schema);
+      }
       return dataSource;
     };
   }
