@@ -30,6 +30,7 @@ import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
+import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
 import static java.util.stream.Collectors.toList;
 
 public class CollectionEntryInspectorView extends JPanel implements InspectorView<StorageEntry> {
@@ -72,15 +73,12 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
       public void mouseClicked(MouseEvent e) {
         final Point eventLocation = e.getPoint();
         final int row = table.rowAtPoint(eventLocation);
-        final int col = table.columnAtPoint(eventLocation);
-        if (row < 0 || col != 1) {
+        if (row < 0) {
           return;
         }
 
-        final Object value = tableModel.getValueAt(row, col);
-        if (value instanceof URI uri) {
-          factory.jumpToUri(storageEntry.storageId(), Uris.latest(uri));
-        }
+        final URI uri = tableModel.uriAt(row);
+        factory.jumpToUri(storageEntry.storageId(), Uris.latest(uri));
       }
 
     });
@@ -95,7 +93,9 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     return storageEntry;
   }
 
-  private final static class StorageCollectionTableModel extends AbstractTableModel {
+  private final static class StorageCollectionTableModel
+      extends AbstractTableModel
+      implements EnumeratorWithUri {
 
     private final StorageEntry storageEntry;
     private final List<UriProperty> uris;
@@ -127,8 +127,8 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     public Object getValueAt(int rowIndex, int columnIndex) {
       return columnIndex == 0
           ? (storageEntry instanceof ListEntry)
-            ? Integer.parseInt(uris.get(rowIndex).propertyName())
-            : uris.get(rowIndex).propertyName()
+          ? Integer.parseInt(uris.get(rowIndex).propertyName())
+          : uris.get(rowIndex).propertyName()
           : uris.get(rowIndex).uri();
     }
 
@@ -139,6 +139,10 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
           : columnIndex == 1 ? URI.class : null;
     }
 
+    @Override
+    public URI uriAt(int idx) {
+      return uris.get(idx).uri();
+    }
   }
 
 }

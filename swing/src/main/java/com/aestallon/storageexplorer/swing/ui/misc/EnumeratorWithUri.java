@@ -18,7 +18,7 @@ package com.aestallon.storageexplorer.swing.ui.misc;
 import java.net.URI;
 
 public interface EnumeratorWithUri {
-
+  
   URI uriAt(int idx);
 
 }
