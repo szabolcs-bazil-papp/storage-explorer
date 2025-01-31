@@ -85,6 +85,8 @@ public final class IconProvider {
   public static final ImageIcon DATA_TRANSFER = new ImageIcon(loadIcon("data_transfer"));
   public static final ImageIcon OK = new ImageIcon(loadIcon("ok"));
   public static final ImageIcon NOT_OK = new ImageIcon(loadIcon("not_ok"));
+  public static final ImageIcon TREE = new ImageIcon(loadIcon("tree"));
+  public static final ImageIcon TERMINAL = new ImageIcon(loadIcon("terminal"));
   
   public static final ImageIcon ERROR = new ImageIcon(loadIcon("error"));
   public static final ImageIcon WARNING = new ImageIcon(loadIcon("warn"));
