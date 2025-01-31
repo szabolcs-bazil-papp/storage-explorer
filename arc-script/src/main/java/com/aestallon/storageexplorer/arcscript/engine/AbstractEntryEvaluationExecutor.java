@@ -97,16 +97,23 @@ abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends Abstract
       for (final StorageEntry entry : entries) {
         futures.add(executor.submit(() -> {
           if (doNotExecute()) {
+            // this is our guard condition: if upon execution start the work is no longer required,
+            // we can return immediately:
             return;
           }
 
           try {
             if (semaphore != null) {
               semaphore.acquire();
+              if (doNotExecute()) {
+                // if we had a semaphore, we might have blocked above, while waiting for its
+                // acquisition -> it's possible the work is no longer needed since, and we can
+                // return early, without executing the work itself:
+                return;
+              }
             }
 
             work(entry);
-
 
           } catch (final Exception e) {
             System.err.println(e.getMessage());

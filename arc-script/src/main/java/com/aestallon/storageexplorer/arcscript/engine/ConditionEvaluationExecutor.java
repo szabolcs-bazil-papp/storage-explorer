@@ -79,7 +79,7 @@ public final class ConditionEvaluationExecutor
   @Override
   protected void work(StorageEntry entry) {
     final var evaluator = new ConditionEvaluator(examiner, entry, cache, c);
-    if (evaluator.evaluate() && !doNotExecute()) {
+    if (evaluator.evaluate()) {
       results.add(entry);
     }
   }
