@@ -2,6 +2,7 @@ package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
@@ -10,7 +11,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import javax.sound.midi.MetaEventListener;
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
@@ -70,6 +70,7 @@ public class ArcScriptView extends JPanel {
     final var factory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
     final var arcScriptTextArea = factory.create(null);
     editor = arcScriptTextArea.textArea();
+    installPlayAction();
 
     final var toolbar = new JToolBar(SwingConstants.HORIZONTAL);
     saveAction = new AbstractAction(null, IconProvider.SAVE) {
@@ -105,6 +106,19 @@ public class ArcScriptView extends JPanel {
     b2.add(Box.createGlue());
     add(b2);
     updateUI();
+  }
+
+  private void installPlayAction() {
+    final var ctrlEnter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK);
+    editor.getInputMap().put(ctrlEnter, "play");
+    editor.getActionMap().put("play", new AbstractAction() {
+
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        play();
+      }
+
+    });
   }
 
   private void play() {
