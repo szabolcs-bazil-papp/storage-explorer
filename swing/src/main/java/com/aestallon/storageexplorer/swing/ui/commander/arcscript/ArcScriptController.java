@@ -24,8 +24,11 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
+import com.aestallon.storageexplorer.core.userconfig.service.ArcScriptFileService;
+import com.aestallon.storageexplorer.core.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
@@ -40,6 +43,8 @@ public class ArcScriptController {
   private final ArcScriptTextareaFactory arcScriptTextareaFactory;
   private final List<ArcScriptView> arcScriptViews = new ArrayList<>();
 
+  private ArcScriptContainerView containerView;
+
   public ArcScriptController(final StorageInstanceProvider storageInstanceProvider,
                              final ApplicationEventPublisher applicationEventPublisher,
                              final UserConfigService userConfigService,
@@ -50,8 +55,12 @@ public class ArcScriptController {
     this.userConfigService = userConfigService;
     this.themeProvider = themeProvider;
     this.monospaceFontProvider = monospaceFontProvider;
-    
+
     arcScriptTextareaFactory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
+  }
+
+  void containerView(ArcScriptContainerView containerView) {
+    this.containerView = containerView;
   }
 
   UserConfigService userConfigService() {
@@ -73,7 +82,7 @@ public class ArcScriptController {
   ApplicationEventPublisher eventPublisher() {
     return applicationEventPublisher;
   }
-  
+
   void add(ArcScriptView arcScriptView) {
     arcScriptViews.add(arcScriptView);
   }
@@ -98,9 +107,45 @@ public class ArcScriptController {
       });
     });
   }
-  
+
   List<StorageInstance> availableStorageInstances() {
     return storageInstanceProvider.provide().toList();
   }
+
+  void rename(ArcScriptView arcScriptView, String title) {
+    final StoredArcScript storedArcScript = arcScriptView.storedArcScript();
+    final var result = userConfigService.arcScriptFileService().rename(storedArcScript, title);
+    switch (result) {
+      case ArcScriptFileService.ArcScriptIoResult.Ok(StoredArcScript arcScript) -> {
+        arcScriptView.storedArcScript(arcScript);
+        final int idx = containerView.indexOfComponent(arcScriptView);
+        containerView.setTitleAt(idx, arcScript.title());
+      }
+      case ArcScriptFileService.ArcScriptIoResult.Err(String msg) -> JOptionPane.showMessageDialog(
+          arcScriptView,
+          msg,
+          "Renaming failed",
+          JOptionPane.ERROR_MESSAGE,
+          IconProvider.ERROR);
+    }
+  }
   
+  void save(ArcScriptView arcScriptView, String text) {
+    final StoredArcScript storedArcScript = arcScriptView.storedArcScript();
+    final var result = userConfigService.arcScriptFileService().save(storedArcScript, text);
+    switch (result) {
+      case ArcScriptFileService.ArcScriptIoResult.Ok(StoredArcScript arcScript) -> {
+        arcScriptView.storedArcScript(arcScript);
+        arcScriptView.disableSave();
+      }
+      case ArcScriptFileService.ArcScriptIoResult.Err(String msg) -> JOptionPane.showMessageDialog(
+          arcScriptView,
+          msg,
+          "Save failed",
+          JOptionPane.ERROR_MESSAGE,
+          IconProvider.ERROR
+      );
+    }
+  } 
+
 }

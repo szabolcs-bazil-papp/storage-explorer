@@ -39,6 +39,8 @@ public class ArcScriptContainerView extends JTabbedPane {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
 
     this.controller = controller;
+    controller.containerView(this);
+
     newScriptView = addNewScriptView();
   }
 

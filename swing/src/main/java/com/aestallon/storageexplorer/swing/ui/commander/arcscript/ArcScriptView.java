@@ -10,8 +10,11 @@ import java.text.DecimalFormat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
@@ -48,14 +51,14 @@ public class ArcScriptView extends JPanel {
   private ScriptResultView scriptResultView;
   private final JTextArea editor;
 
-  private AbstractAction saveAction;
-  private AbstractAction playAction;
+  private final AbstractAction saveAction;
+  private final AbstractAction playAction;
 
   private ErrorMarker compilationError;
 
-  public ArcScriptView(ArcScriptController controller,
-                       StorageInstance storageInstance,
-                       StoredArcScript storedArcScript) {
+  ArcScriptView(ArcScriptController controller,
+                StorageInstance storageInstance,
+                StoredArcScript storedArcScript) {
     this.controller = controller;
     this.storageInstance = storageInstance;
     this.storedArcScript = storedArcScript;
@@ -68,6 +71,7 @@ public class ArcScriptView extends JPanel {
         .create(storedArcScript.script());
     editor = arcScriptTextArea.textArea();
     installPlayAction();
+    installSaveAction();
 
     final var toolbar = new JToolBar(SwingConstants.HORIZONTAL);
     saveAction = new AbstractAction(null, IconProvider.SAVE) {
@@ -76,8 +80,9 @@ public class ArcScriptView extends JPanel {
         save();
       }
     };
-
+    disableSave();
     toolbar.add(saveAction);
+
     playAction = new AbstractAction(null, IconProvider.PLAY) {
 
       @Override
@@ -85,8 +90,25 @@ public class ArcScriptView extends JPanel {
         play();
       }
     };
-
     toolbar.add(playAction);
+
+    final var renameAction = new AbstractAction(null, IconProvider.EDIT) {
+
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        final var oldTitle = ArcScriptView.this.storedArcScript.title();
+        final var newTitle = JOptionPane.showInputDialog(
+            ArcScriptView.this,
+            "Enter title for this script:",
+            oldTitle);
+        if (Objects.equals(oldTitle, newTitle)) {
+          return;
+        }
+        controller.rename(ArcScriptView.this, newTitle);
+      }
+    };
+    toolbar.add(renameAction);
+
     Box b1 = new Box(BoxLayout.X_AXIS);
     b1.add(toolbar);
     b1.add(Box.createGlue());
@@ -105,6 +127,14 @@ public class ArcScriptView extends JPanel {
     updateUI();
   }
 
+  StoredArcScript storedArcScript() {
+    return storedArcScript;
+  }
+
+  void storedArcScript(StoredArcScript storedArcScript) {
+    this.storedArcScript = storedArcScript;
+  }
+
   private void installPlayAction() {
     final var ctrlEnter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK);
     editor.getInputMap().put(ctrlEnter, "play");
@@ -115,6 +145,44 @@ public class ArcScriptView extends JPanel {
         play();
       }
 
+    });
+  }
+
+  private void installSaveAction() {
+    final var ctrlS = KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK);
+    editor.getInputMap().put(ctrlS, "save");
+    editor.getActionMap().put("save", new AbstractAction() {
+
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        save();
+      }
+
+    });
+    editor.getDocument().addDocumentListener(new DocumentListener() {
+
+      @Override
+      public void insertUpdate(DocumentEvent e) {
+        checkChanges();
+      }
+
+      @Override
+      public void removeUpdate(DocumentEvent e) {
+        checkChanges();
+      }
+
+      @Override
+      public void changedUpdate(DocumentEvent e) {
+        checkChanges();
+      }
+
+      private void checkChanges() {
+        String text = editor.getText();
+        text = (text == null) ? "" : text;
+
+        final String oldText = storedArcScript().script();
+        saveAction.setEnabled(!text.equals(oldText));
+      }
     });
   }
 
@@ -202,7 +270,11 @@ public class ArcScriptView extends JPanel {
   }
 
   private void save() {
+    controller.save(this, editor.getText());
+  }
 
+  void disableSave() {
+    saveAction.setEnabled(false);
   }
 
   public JTextArea editor() {
