@@ -20,44 +20,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javax.swing.*;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.core.event.StorageImportEvent;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
-import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
-import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
-import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
+import com.aestallon.storageexplorer.core.userconfig.service.ArcScriptFileService;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 @Component
 public class ArcScriptContainerView extends JTabbedPane {
 
-  private final StorageInstanceProvider storageInstanceProvider;
-  private final ApplicationEventPublisher applicationEventPublisher;
-  private final UserConfigService userConfigService;
-  private final RSyntaxTextAreaThemeProvider themeProvider;
-  private final MonospaceFontProvider monospaceFontProvider;
-
+  private final ArcScriptController controller;
   private final NewScriptView newScriptView;
-  private final List<ArcScriptView> arcScriptViews = new ArrayList<>();
 
-  public ArcScriptContainerView(StorageInstanceProvider storageInstanceProvider,
-                                ApplicationEventPublisher applicationEventPublisher,
-                                UserConfigService userConfigService,
-                                RSyntaxTextAreaThemeProvider themeProvider,
-                                MonospaceFontProvider monospaceFontProvider) {
+  public ArcScriptContainerView(ArcScriptController controller) {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
 
-    this.storageInstanceProvider = storageInstanceProvider;
-    this.applicationEventPublisher = applicationEventPublisher;
-    this.userConfigService = userConfigService;
-    this.themeProvider = themeProvider;
-    this.monospaceFontProvider = monospaceFontProvider;
-
+    this.controller = controller;
     newScriptView = addNewScriptView();
   }
 
@@ -69,21 +50,35 @@ public class ArcScriptContainerView extends JTabbedPane {
   }
 
   private void newScript(final StorageInstance storageInstance) {
-
-    final var view = new ArcScriptView(
-        applicationEventPublisher,
-        userConfigService,
-        themeProvider,
-        monospaceFontProvider,
-        storageInstance);
-    arcScriptViews.add(view);
-    insertTab(
-        "(%s) New Script-%02d".formatted(storageInstance.name(), getTabCount()),
-        null,
-        view,
-        "Hello World!",
-        getTabCount() - 1);
-    setSelectedIndex(getTabCount() - 2);
+    final String titleSuggestion = "(%s) New Script-%02d".formatted(
+        storageInstance.name(),
+        getTabCount());
+    final var result = controller
+        .userConfigService()
+        .arcScriptFileService()
+        .saveAsNew(storageInstance.id(), titleSuggestion, "");
+    switch (result) {
+      case ArcScriptFileService.ArcScriptIoResult.Ok ok -> {
+        final var view = new ArcScriptView(
+            controller,
+            storageInstance,
+            ok.storedArcScript());
+        controller.add(view);
+        insertTab(
+            ok.storedArcScript().title(),
+            null,
+            view,
+            "Hello World!",
+            getTabCount() - 1);
+        setSelectedIndex(getTabCount() - 2);
+      }
+      case ArcScriptFileService.ArcScriptIoResult.Err err -> JOptionPane.showMessageDialog(
+          this,
+          "Could not create new ArcScript file: " + err.msg(),
+          "ArcScript Editor init failure",
+          JOptionPane.ERROR_MESSAGE,
+          IconProvider.ERROR);
+    }
   }
 
   @EventListener
@@ -108,26 +103,7 @@ public class ArcScriptContainerView extends JTabbedPane {
     });
   }
 
-  @EventListener
-  public void onFontSizeChanged(
-      @SuppressWarnings("unused") MonospaceFontProvider.FontSizeChange fontSizeChange) {
-    SwingUtilities.invokeLater(() -> {
-      final Font font = monospaceFontProvider.getFont();
-      arcScriptViews.forEach(it -> it.editor().setFont(font));
-    });
-  }
 
-  @EventListener
-  public void onLafChanged(final LafChanged e) {
-    SwingUtilities.invokeLater(() -> {
-      themeProvider.setCurrentTheme(e.laf());
-      final var font = monospaceFontProvider.getFont();
-      arcScriptViews.forEach(it -> {
-        themeProvider.applyCurrentTheme(it.editor());
-        it.editor().setFont(font);
-      });
-    });
-  }
 
   private static final class NewScriptViewContent extends JPanel {
 
@@ -145,9 +121,7 @@ public class ArcScriptContainerView extends JTabbedPane {
       label.putClientProperty("FlatLaf.styleClass", "h2");
       add(label);
 
-      final var storageInstances = containerView.storageInstanceProvider
-          .provide()
-          .toList();
+      final var storageInstances = containerView.controller.availableStorageInstances();
       if (storageInstances.isEmpty()) {
         addEmptyMessage();
       } else {

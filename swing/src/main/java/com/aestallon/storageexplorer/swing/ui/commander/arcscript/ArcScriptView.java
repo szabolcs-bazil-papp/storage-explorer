@@ -32,19 +32,17 @@ import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkStartedEv
 import com.aestallon.storageexplorer.core.event.StorageReindexed;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
-import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.core.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
-import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
-import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
 public class ArcScriptView extends JPanel {
 
   private static final Logger log = LoggerFactory.getLogger(ArcScriptView.class);
-  private final ApplicationEventPublisher applicationEventPublisher;
-  private final UserConfigService userConfigService;
+  private final ArcScriptController controller;
   private final StorageInstance storageInstance;
+  private StoredArcScript storedArcScript;
 
   private final JSplitPane content;
   private ScriptResultView scriptResultView;
@@ -55,20 +53,19 @@ public class ArcScriptView extends JPanel {
 
   private ErrorMarker compilationError;
 
-  public ArcScriptView(ApplicationEventPublisher applicationEventPublisher,
-                       UserConfigService userConfigService,
-                       RSyntaxTextAreaThemeProvider themeProvider,
-                       MonospaceFontProvider monospaceFontProvider,
-                       StorageInstance storageInstance) {
-    this.applicationEventPublisher = applicationEventPublisher;
-    this.userConfigService = userConfigService;
+  public ArcScriptView(ArcScriptController controller,
+                       StorageInstance storageInstance,
+                       StoredArcScript storedArcScript) {
+    this.controller = controller;
     this.storageInstance = storageInstance;
+    this.storedArcScript = storedArcScript;
 
     BoxLayout mgr = new BoxLayout(this, BoxLayout.PAGE_AXIS);
     setLayout(mgr);
 
-    final var factory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
-    final var arcScriptTextArea = factory.create(null);
+    final var arcScriptTextArea = controller
+        .arcScriptTextareaFactory()
+        .create(storedArcScript.script());
     editor = arcScriptTextArea.textArea();
     installPlayAction();
 
@@ -127,7 +124,7 @@ public class ArcScriptView extends JPanel {
     removeCompilationError();
 
     CompletableFuture.runAsync(() -> {
-      applicationEventPublisher.publishEvent(
+      controller.eventPublisher().publishEvent(
           new BackgroundWorkStartedEvent("Running ArcScript on " + storageInstance.name()));
       switch (Arc.evaluate(editor.getText(), storageInstance)) {
         case ArcScriptResult.CompilationError cErr -> showCompilationError(cErr);
@@ -137,7 +134,7 @@ public class ArcScriptView extends JPanel {
         case ArcScriptResult.Ok ok -> {
           if (ok.elements().stream()
               .anyMatch(it -> it instanceof ArcScriptResult.IndexingPerformed)) {
-            applicationEventPublisher.publishEvent(new StorageReindexed(storageInstance));
+            controller.eventPublisher().publishEvent(new StorageReindexed(storageInstance));
           }
           showOk(ok);
         }
@@ -148,7 +145,7 @@ public class ArcScriptView extends JPanel {
   private void showCompilationError(ArcScriptResult.CompilationError error) {
     editor.setEnabled(true);
     playAction.setEnabled(true);
-    applicationEventPublisher.publishEvent(new BackgroundWorkCompletedEvent(
+    controller.eventPublisher().publishEvent(new BackgroundWorkCompletedEvent(
         BackgroundWorkCompletedEvent.BackgroundWorkResult.ERR));
     SwingUtilities.invokeLater(() -> {
       if (!(editor instanceof RSyntaxTextArea r)) {
@@ -174,7 +171,7 @@ public class ArcScriptView extends JPanel {
   }
 
   private void showErr(String title, String msg) {
-    applicationEventPublisher.publishEvent(new BackgroundWorkCompletedEvent(
+    controller.eventPublisher().publishEvent(new BackgroundWorkCompletedEvent(
         BackgroundWorkCompletedEvent.BackgroundWorkResult.ERR));
     SwingUtilities.invokeLater(() -> {
       JOptionPane.showMessageDialog(
@@ -188,11 +185,11 @@ public class ArcScriptView extends JPanel {
   }
 
   private void showOk(ArcScriptResult.Ok ok) {
-    applicationEventPublisher.publishEvent(new BackgroundWorkCompletedEvent(
+    controller.eventPublisher().publishEvent(new BackgroundWorkCompletedEvent(
         BackgroundWorkCompletedEvent.BackgroundWorkResult.OK));
     SwingUtilities.invokeLater(() -> {
       int dividerLocation = content.getDividerLocation();
-      scriptResultView = new ResultDisplay(ok, applicationEventPublisher, storageInstance);
+      scriptResultView = new ResultDisplay(ok, controller.eventPublisher(), storageInstance);
       final var scrollPlane = new JScrollPane(
           scriptResultView.asComponent(),
           ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,

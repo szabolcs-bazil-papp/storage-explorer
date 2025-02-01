@@ -21,9 +21,8 @@ import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.PaneAndTextarea;
 import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
-// this is largely copy-paste code: I practically settled on RSyntaxTextArea ---> so refactor!
 public final class ArcScriptTextareaFactory {
-  
+
   private final RSyntaxTextAreaThemeProvider themeProvider;
   private final MonospaceFontProvider monospaceFontProvider;
 
@@ -32,7 +31,7 @@ public final class ArcScriptTextareaFactory {
     this.themeProvider = themeProvider;
     this.monospaceFontProvider = monospaceFontProvider;
   }
-  
+
   PaneAndTextarea create(final String text) {
     final RSyntaxTextArea textarea;
     if (text == null) {
@@ -40,7 +39,7 @@ public final class ArcScriptTextareaFactory {
     } else {
       textarea = new RSyntaxTextArea(text);
     }
-    
+
     if (themeProvider.hasTheme()) {
       themeProvider.applyCurrentTheme(textarea);
     }
@@ -55,5 +54,6 @@ public final class ArcScriptTextareaFactory {
     final var scrollPane = new RTextScrollPane(textarea);
     return new PaneAndTextarea(scrollPane, textarea);
   }
-  
+
 }
+// this is largely copy-paste code: I practically settled on RSyntaxTextArea ---> so refactor!
