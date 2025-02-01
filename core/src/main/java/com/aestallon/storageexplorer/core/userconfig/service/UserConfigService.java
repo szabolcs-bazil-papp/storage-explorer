@@ -164,5 +164,9 @@ public class UserConfigService {
         graphSettings.getGraphTraversalInboundLimit(),
         graphSettings.getGraphTraversalOutboundLimit()));
   }
+  
+  public ArcScriptFileService arcScriptFileService() {
+    return new ArcScriptFileService(Path.of(settingsFolder));
+  }
 
 }
