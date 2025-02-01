@@ -106,7 +106,7 @@ public final class ArcScriptFileService {
 
     int cnt = 0;
     while (++cnt < 100) {
-      final String titleToUse = "%s (%02d)";
+      final String titleToUse = "%s (%02d)".formatted(title, cnt);
       filename = titleToUse + EXTENSION;
       if (!Files.exists(storageDir.resolve(filename))) {
         return new FileAndTitle(storageDir.resolve(filename), titleToUse);
