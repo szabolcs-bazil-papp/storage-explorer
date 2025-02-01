@@ -45,7 +45,7 @@ public final class IconProvider {
       throw new RuntimeException(e);
     }
   }
-  
+
   public static ImageIcon getIconForStorageEntry(StorageEntry entry) {
     return switch (entry) {
       case ListEntry list -> switch (list) {
@@ -87,11 +87,12 @@ public final class IconProvider {
   public static final ImageIcon NOT_OK = new ImageIcon(loadIcon("not_ok"));
   public static final ImageIcon TREE = new ImageIcon(loadIcon("tree"));
   public static final ImageIcon TERMINAL = new ImageIcon(loadIcon("terminal"));
-  
+
   public static final ImageIcon ERROR = new ImageIcon(loadIcon("error"));
   public static final ImageIcon WARNING = new ImageIcon(loadIcon("warn"));
   public static final ImageIcon INFO = new ImageIcon(loadIcon("info"));
 
+  public static final ImageIcon ARC_SCRIPT = new ImageIcon(loadIcon("arc_script"));
   public static final ImageIcon SAVE = new ImageIcon(loadIcon("save"));
   public static final ImageIcon PLAY = new ImageIcon(loadIcon("play"));
 

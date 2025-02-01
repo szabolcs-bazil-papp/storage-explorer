@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.swing.ui.commander.arcscript.ArcScriptContainerView;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 @Component
 public class CommanderView extends JTabbedPane {
@@ -32,37 +33,12 @@ public class CommanderView extends JTabbedPane {
   public CommanderView(ArcScriptContainerView arcScriptContainerView) {
     super(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
     this.arcScriptContainerView = arcScriptContainerView;
-    
+
     initArcScriptTab();
   }
-  
+
   private void initArcScriptTab() {
-    addTab("AS", arcScriptContainerView);
+    addTab(null, IconProvider.ARC_SCRIPT, arcScriptContainerView);
   }
 
-  @Override
-  protected void paintComponent(Graphics g) {
-    super.paintComponent(g);
-    int width = getWidth();
-    int height = getHeight();
-    Graphics2D graphics = (Graphics2D) g;
-
-    //Sets antialiasing if HQ.
-    graphics.setRenderingHint(
-        RenderingHints.KEY_ANTIALIASING,
-        RenderingHints.VALUE_ANTIALIAS_ON);
-
-
-    //Draws the rounded opaque panel with borders.
-    graphics.setColor(getBackground());
-    graphics.fillRoundRect(0, 0, width - 1,
-        height - 1, 20, 20);
-    graphics.setColor(getBackground().darker());
-    graphics.setStroke(new BasicStroke(2));
-    graphics.drawRoundRect(0, 0, width - 1,
-        height - 1, 20, 20);
-
-    //Sets strokes to default, is better.
-    graphics.setStroke(new BasicStroke());
-  }
 }
