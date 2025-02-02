@@ -26,6 +26,7 @@ import org.springframework.context.event.EventListener;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.swing.ui.misc.WelcomePopup;
 import com.formdev.flatlaf.FlatDarculaLaf;
 import com.formdev.flatlaf.FlatIntelliJLaf;
 
@@ -61,6 +62,10 @@ public class StorageExplorerApplication {
     return args -> {
       appFrame.launch();
       storageInstanceProvider.fetchAllKnown();
+
+      if (storageInstanceProvider.provide().findAny().isEmpty()) {
+        WelcomePopup.show(appFrame);
+      }
     };
   }
 

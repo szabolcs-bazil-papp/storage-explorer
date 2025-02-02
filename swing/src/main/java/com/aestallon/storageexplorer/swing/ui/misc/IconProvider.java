@@ -90,6 +90,8 @@ public final class IconProvider {
     }
   }
 
+  public static final ImageIcon FAVICON = new ImageIcon(loadIcon("favicon"));
+
   public static final ImageIcon LIST = new ImageIcon(loadIcon("list"));
   public static final ImageIcon MAP = new ImageIcon(loadIcon("map"));
   public static final ImageIcon OBJ = new ImageIcon(loadIcon("object"));
