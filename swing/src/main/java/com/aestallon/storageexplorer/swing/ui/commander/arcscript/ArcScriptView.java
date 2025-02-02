@@ -43,6 +43,7 @@ import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 public class ArcScriptView extends JPanel {
 
   private static final Logger log = LoggerFactory.getLogger(ArcScriptView.class);
+
   private final ArcScriptController controller;
   final StorageInstance storageInstance;
   private StoredArcScript storedArcScript;
@@ -80,7 +81,7 @@ public class ArcScriptView extends JPanel {
         save();
       }
     };
-    
+
     disableSave();
     toolbar.add(saveAction).setToolTipText("Save your changes (Ctrl+S)");
 
@@ -109,6 +110,24 @@ public class ArcScriptView extends JPanel {
       }
     };
     toolbar.add(renameAction).setToolTipText("Rename script...");
+    
+    final var deleteAction = new AbstractAction(null, IconProvider.DELETE) {
+
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        final int answer = JOptionPane.showConfirmDialog(
+            ArcScriptView.this, 
+            "Are you sure you want to delete " + storedArcScript.title() + "?",
+            "Delete " + storedArcScript.title(), 
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE);
+        if (answer == JOptionPane.YES_OPTION) {
+          delete();
+        }
+      }
+      
+    };
+    toolbar.add(deleteAction).setToolTipText("Permanently delete this script...");
 
     Box b1 = new Box(BoxLayout.X_AXIS);
     b1.add(toolbar);
@@ -276,6 +295,10 @@ public class ArcScriptView extends JPanel {
 
   void disableSave() {
     saveAction.setEnabled(false);
+  }
+  
+  private void delete() {
+    controller.delete(this);
   }
 
   public JTextArea editor() {

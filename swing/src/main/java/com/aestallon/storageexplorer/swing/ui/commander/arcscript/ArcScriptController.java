@@ -20,7 +20,6 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
-import org.apache.groovy.parser.antlr4.GroovyParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -148,13 +147,10 @@ public class ArcScriptController {
         containerView.newScriptView.repaint();
       }
 
-      List<ArcScriptView> viewsToRemove = arcScriptViews.stream()
+      final List<ArcScriptView> viewsToRemove = arcScriptViews.stream()
           .filter(it -> it.storageInstance.equals(storageInstance))
           .toList();
-      viewsToRemove.forEach(it -> {
-        arcScriptViews.remove(it);
-        containerView.remove(it);
-      });
+      viewsToRemove.forEach(this::delete);
     });
   }
 
@@ -177,8 +173,7 @@ public class ArcScriptController {
     switch (result) {
       case ArcScriptFileService.ArcScriptIoResult.Ok(StoredArcScript arcScript) -> {
         arcScriptView.storedArcScript(arcScript);
-        final int idx = containerView.indexOfComponent(arcScriptView);
-        containerView.setTitleAt(idx, arcScript.title());
+        containerView.rename(arcScriptView, title);
       }
       case ArcScriptFileService.ArcScriptIoResult.Err(String msg) -> JOptionPane.showMessageDialog(
           arcScriptView,
@@ -204,6 +199,32 @@ public class ArcScriptController {
           JOptionPane.ERROR_MESSAGE,
           IconProvider.ERROR
       );
+    }
+  }
+
+  void delete(ArcScriptView arcScriptView) {
+    close(arcScriptView, false);
+    userConfigService.arcScriptFileService().delete(
+        arcScriptView.storedArcScript().storageId(),
+        arcScriptView.storedArcScript().title());
+  }
+
+  void close(ArcScriptView arcScriptView, boolean reclaim) {
+    containerView.remove(arcScriptView);
+    arcScriptViews.remove(arcScriptView);
+    if (reclaim) {
+      containerView.newScriptView.content.tree.addScript(
+          arcScriptView.storedArcScript().storageId(),
+          arcScriptView.storedArcScript().title());
+    }
+  }
+
+  void closeAllBut(ArcScriptView arcScriptView) {
+    final var views = new ArrayList<>(arcScriptViews);
+    for (final var view : views) {
+      if (!arcScriptView.equals(view)) {
+        close(view, true);
+      }
     }
   }
 
@@ -286,13 +307,7 @@ public class ArcScriptController {
             storageInstance,
             ok.storedArcScript());
         add(view);
-        containerView.insertTab(
-            ok.storedArcScript().title(),
-            null,
-            view,
-            "Hello World!",
-            containerView.getTabCount() - 1);
-        containerView.setSelectedIndex(containerView.getTabCount() - 2);
+        containerView.insertAndSelect(view);
         yield true;
       }
       case ArcScriptFileService.ArcScriptIoResult.Err err -> {

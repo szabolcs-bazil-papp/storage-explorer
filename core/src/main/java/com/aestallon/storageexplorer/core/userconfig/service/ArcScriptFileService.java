@@ -198,8 +198,6 @@ public final class ArcScriptFileService {
     }
   }
 
-
-
   public void deleteAll(final StorageId storageId) {
     try {
       final var storageDir = storageDir(storageId);
@@ -219,6 +217,16 @@ public final class ArcScriptFileService {
           return FileVisitResult.CONTINUE;
         }
       });
+    } catch (final IOException ignored) {
+      // :)
+    }
+  }
+  
+  public void delete(final StorageId storageId, final String title) {
+    try {
+      final var storageDir = storageDir(storageId);
+      final var file = storageDir.resolve(title + EXTENSION);
+      Files.deleteIfExists(file);
     } catch (final IOException ignored) {
       // :)
     }

@@ -16,10 +16,10 @@
 package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import javax.swing.*;
 import org.springframework.stereotype.Component;
-import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
-import com.aestallon.storageexplorer.core.userconfig.service.ArcScriptFileService;
+import com.aestallon.storageexplorer.swing.ui.misc.CloseTabButton;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 @Component
@@ -44,6 +44,53 @@ public class ArcScriptContainerView extends JTabbedPane {
     return view;
   }
 
+  void insertAndSelect(ArcScriptView arcScriptView) {
+    insertTab(
+        null,
+        null,
+        arcScriptView,
+        "Hello World!",
+        getTabCount() - 1);
+    installTabComponent(arcScriptView);
+    setSelectedComponent(arcScriptView);
+  }
+
+  void rename(ArcScriptView arcScriptView, String title) {
+    final int index = indexOfComponent(arcScriptView);
+    final var tab = getTabComponentAt(index);
+    ((TabComponent) tab).label.setText(title);
+  }
+
+  private void installTabComponent(ArcScriptView arcScriptView) {
+    final int idx = indexOfComponent(arcScriptView);
+
+    final var closeTabButton = new CloseTabButton(e -> {
+      final int alt = ActionEvent.ALT_MASK;
+      if ((e.getModifiers() & alt) == alt) {
+        setSelectedComponent(arcScriptView);
+        controller.closeAllBut(arcScriptView);
+      } else {
+        controller.close(arcScriptView, true);
+      }
+    });
+    final var tab = new TabComponent(arcScriptView, closeTabButton);
+    setTabComponentAt(idx, tab);
+  }
+
+  private static final class TabComponent extends JPanel {
+
+    private final JLabel label;
+
+    private TabComponent(ArcScriptView arcScriptView, CloseTabButton closeTabButton) {
+      super(new FlowLayout(FlowLayout.LEFT, 0, 0));
+      setOpaque(false);
+      label = new JLabel(arcScriptView.storedArcScript().title());
+      add(label);
+      add(closeTabButton);
+    }
+
+  }
+
 
   static final class NewScriptViewContent extends JPanel {
 
@@ -66,7 +113,7 @@ public class ArcScriptContainerView extends JTabbedPane {
       add(learnMore);
 
 
-      final var label = new JLabel("Select target Storage:");
+      final var label = new JLabel("Load a previous ArcScript file, or select a storage to create a new one!");
       label.putClientProperty("FlatLaf.styleClass", "h2");
       label.setAlignmentX(LEFT_ALIGNMENT);
       add(label);
@@ -102,6 +149,10 @@ public class ArcScriptContainerView extends JTabbedPane {
       /*
        * +--TreeContainer-----------------------------------------------+
        * |                                                              |
+       * |  +--TreeControlContainer----------------------------------+  |
+       * |  |<-- Glue ~~~~~~~~~~~~~~~~~~~~~~~~~~-->[ LOAD ][ CREATE ]|  |
+       * |  +--------------------------------------------------------+  |
+       * |                                                              |
        * |  +--TreePane----------------------------------------------+  |
        * |  |                                                        |  |
        * |  |  +--Tree--------------------------------------------+  |  |
@@ -113,19 +164,10 @@ public class ArcScriptContainerView extends JTabbedPane {
        * |  |                                                        |  |
        * |  +--------------------------------------------------------+  |
        * |                                                              |
-       * |  +--TreeControlContainer----------------------------------+  |
-       * |  |<-- Glue ~~~~~~~~~~~~~~~~~~~~~~~~~~-->[ LOAD ][ CREATE ]|  |
-       * |  +--------------------------------------------------------+  |
-       * |                                                              |
        * +--------------------------------------------------------------+
        */
       treeContainer = new JPanel();
       treeContainer.setLayout(new BoxLayout(treeContainer, BoxLayout.Y_AXIS));
-
-      tree.onSelectionChanged(containerView.controller.treeListener());
-      final var treePane = new JScrollPane(tree);
-      treePane.setAlignmentX(LEFT_ALIGNMENT);
-      treeContainer.add(treePane);
 
       final var treeControlContainer = new JPanel();
       treeControlContainer.setAlignmentX(LEFT_ALIGNMENT);
@@ -141,13 +183,16 @@ public class ArcScriptContainerView extends JTabbedPane {
       containerView.controller.setControlButtons(loadBtn, createBtn);
 
       treeContainer.add(treeControlContainer);
+
+      tree.onSelectionChanged(containerView.controller.treeListener());
+      final var treePane = new JScrollPane(tree);
+      treePane.setAlignmentX(LEFT_ALIGNMENT);
+      treeContainer.add(treePane);
+
       add(treeContainer);
     }
 
-
-
   }
-
 
 
   static final class NewScriptView extends JScrollPane {
