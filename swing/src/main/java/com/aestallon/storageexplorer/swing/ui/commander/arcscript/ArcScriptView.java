@@ -44,7 +44,7 @@ public class ArcScriptView extends JPanel {
 
   private static final Logger log = LoggerFactory.getLogger(ArcScriptView.class);
   private final ArcScriptController controller;
-  private final StorageInstance storageInstance;
+  final StorageInstance storageInstance;
   private StoredArcScript storedArcScript;
 
   private final JSplitPane content;
@@ -80,8 +80,9 @@ public class ArcScriptView extends JPanel {
         save();
       }
     };
+    
     disableSave();
-    toolbar.add(saveAction);
+    toolbar.add(saveAction).setToolTipText("Save your changes (Ctrl+S)");
 
     playAction = new AbstractAction(null, IconProvider.PLAY) {
 
@@ -90,7 +91,7 @@ public class ArcScriptView extends JPanel {
         play();
       }
     };
-    toolbar.add(playAction);
+    toolbar.add(playAction).setToolTipText("Run (Ctrl+Enter)");
 
     final var renameAction = new AbstractAction(null, IconProvider.EDIT) {
 
@@ -107,7 +108,7 @@ public class ArcScriptView extends JPanel {
         controller.rename(ArcScriptView.this, newTitle);
       }
     };
-    toolbar.add(renameAction);
+    toolbar.add(renameAction).setToolTipText("Rename script...");
 
     Box b1 = new Box(BoxLayout.X_AXIS);
     b1.add(toolbar);

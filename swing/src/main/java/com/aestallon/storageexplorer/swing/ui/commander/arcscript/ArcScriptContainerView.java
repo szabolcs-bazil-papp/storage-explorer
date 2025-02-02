@@ -16,16 +16,9 @@
 package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import javax.swing.*;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import com.aestallon.storageexplorer.core.event.StorageImportEvent;
-import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.userconfig.service.ArcScriptFileService;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
@@ -33,7 +26,7 @@ import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 public class ArcScriptContainerView extends JTabbedPane {
 
   private final ArcScriptController controller;
-  private final NewScriptView newScriptView;
+  final NewScriptView newScriptView;
 
   public ArcScriptContainerView(ArcScriptController controller) {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
@@ -47,70 +40,17 @@ public class ArcScriptContainerView extends JTabbedPane {
   private NewScriptView addNewScriptView() {
     final var content = new NewScriptViewContent(this);
     final var view = new NewScriptView(content);
-    addTab("+", view);
+    addTab(null, IconProvider.PLUS, view);
     return view;
   }
 
-  private void newScript(final StorageInstance storageInstance) {
-    final String titleSuggestion = "(%s) New Script-%02d".formatted(
-        storageInstance.name(),
-        getTabCount());
-    final var result = controller
-        .userConfigService()
-        .arcScriptFileService()
-        .saveAsNew(storageInstance.id(), titleSuggestion, "");
-    switch (result) {
-      case ArcScriptFileService.ArcScriptIoResult.Ok ok -> {
-        final var view = new ArcScriptView(
-            controller,
-            storageInstance,
-            ok.storedArcScript());
-        controller.add(view);
-        insertTab(
-            ok.storedArcScript().title(),
-            null,
-            view,
-            "Hello World!",
-            getTabCount() - 1);
-        setSelectedIndex(getTabCount() - 2);
-      }
-      case ArcScriptFileService.ArcScriptIoResult.Err err -> JOptionPane.showMessageDialog(
-          this,
-          "Could not create new ArcScript file: " + err.msg(),
-          "ArcScript Editor init failure",
-          JOptionPane.ERROR_MESSAGE,
-          IconProvider.ERROR);
-    }
-  }
 
-  @EventListener
-  public void onStorageImported(StorageImportEvent event) {
-    SwingUtilities.invokeLater(() -> {
+  static final class NewScriptViewContent extends JPanel {
 
-      newScriptView.content.removeEmptyMessage();
-      newScriptView.content.addStorageBtn(event.storageInstance());
+    JLabel emptyMessage;
 
-    });
-  }
-
-  @EventListener
-  public void onStorageDeleted(StorageIndexDiscardedEvent event) {
-    SwingUtilities.invokeLater(() -> {
-
-      newScriptView.content.removeStorageBtn(event.storageInstance().id());
-      if (newScriptView.content.storageBtns.isEmpty()) {
-        newScriptView.content.addEmptyMessage();
-      }
-
-    });
-  }
-
-
-
-  private static final class NewScriptViewContent extends JPanel {
-
-    private JLabel emptyMessage;
-    private final List<StorageBtn> storageBtns = new ArrayList<>();
+    JPanel treeContainer;
+    ArcScriptSelectorTree tree;
 
     private final ArcScriptContainerView containerView;
 
@@ -119,21 +59,28 @@ public class ArcScriptContainerView extends JTabbedPane {
 
       setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
+      tree = ArcScriptSelectorTree.create();
+
+      final var learnMore = new LearnMoreView();
+      learnMore.setAlignmentX(LEFT_ALIGNMENT);
+      add(learnMore);
+
+
       final var label = new JLabel("Select target Storage:");
       label.putClientProperty("FlatLaf.styleClass", "h2");
+      label.setAlignmentX(LEFT_ALIGNMENT);
       add(label);
 
-      final var storageInstances = containerView.controller.availableStorageInstances();
-      if (storageInstances.isEmpty()) {
-        addEmptyMessage();
-      } else {
-        storageInstances.forEach(this::addStorageBtn);
-      }
+      addEmptyMessage();
     }
 
-    private void addEmptyMessage() {
+    void addEmptyMessage() {
       if (emptyMessage != null) {
         return;
+      }
+
+      if (treeContainer != null) {
+        remove(treeContainer);
       }
 
       emptyMessage = new JLabel("Import at least one Storage to get started!");
@@ -142,52 +89,70 @@ public class ArcScriptContainerView extends JTabbedPane {
       add(emptyMessage);
     }
 
-    private void removeEmptyMessage() {
-      if (emptyMessage == null) {
+    void addTree() {
+      if (treeContainer != null) {
         return;
       }
 
-      remove(emptyMessage);
-      emptyMessage = null;
+      if (emptyMessage != null) {
+        remove(emptyMessage);
+        emptyMessage = null;
+      }
+
+      /*
+       * +--TreeContainer-----------------------------------------------+
+       * |                                                              |
+       * |  +--TreePane----------------------------------------------+  |
+       * |  |                                                        |  |
+       * |  |  +--Tree--------------------------------------------+  |  |
+       * |  |  |**************************************************|  |  |
+       * |  |  |**************************************************|  |  |
+       * |  |  |**************************************************|  |  |
+       * |  |  |**************************************************|  |  |
+       * |  |  +--------------------------------------------------+  |  |
+       * |  |                                                        |  |
+       * |  +--------------------------------------------------------+  |
+       * |                                                              |
+       * |  +--TreeControlContainer----------------------------------+  |
+       * |  |<-- Glue ~~~~~~~~~~~~~~~~~~~~~~~~~~-->[ LOAD ][ CREATE ]|  |
+       * |  +--------------------------------------------------------+  |
+       * |                                                              |
+       * +--------------------------------------------------------------+
+       */
+      treeContainer = new JPanel();
+      treeContainer.setLayout(new BoxLayout(treeContainer, BoxLayout.Y_AXIS));
+
+      tree.onSelectionChanged(containerView.controller.treeListener());
+      final var treePane = new JScrollPane(tree);
+      treePane.setAlignmentX(LEFT_ALIGNMENT);
+      treeContainer.add(treePane);
+
+      final var treeControlContainer = new JPanel();
+      treeControlContainer.setAlignmentX(LEFT_ALIGNMENT);
+      treeControlContainer.setLayout(new BoxLayout(treeControlContainer, BoxLayout.X_AXIS));
+      treeControlContainer.add(Box.createHorizontalGlue());
+
+      final var loadBtn = new JButton("Load");
+      loadBtn.setEnabled(false);
+      final var createBtn = new JButton("Create");
+      createBtn.setEnabled(false);
+      treeControlContainer.add(loadBtn);
+      treeControlContainer.add(createBtn);
+      containerView.controller.setControlButtons(loadBtn, createBtn);
+
+      treeContainer.add(treeControlContainer);
+      add(treeContainer);
     }
 
-    private void addStorageBtn(final StorageInstance storageInstance) {
-      final var btn = new StorageBtn(storageInstance);
-      btn.addActionListener(e -> containerView.newScript(storageInstance));
-      add(btn);
-      storageBtns.add(btn);
-    }
 
-    private void removeStorageBtn(final StorageId id) {
-      StorageBtn storageBtn = null;
-      for (var btn : storageBtns) {
-        if (Objects.equals(btn.storageId, id)) {
-          storageBtn = btn;
-          break;
-        }
-      }
-      if (storageBtn != null) {
-        remove(storageBtn);
-        storageBtns.remove(storageBtn);
-      }
-    }
+
   }
 
 
-  private static final class StorageBtn extends JButton {
 
-    private final StorageId storageId;
+  static final class NewScriptView extends JScrollPane {
 
-    private StorageBtn(StorageInstance storageInstance) {
-      super(storageInstance.name());
-      storageId = storageInstance.id();
-    }
-  }
-
-
-  private static final class NewScriptView extends JScrollPane {
-
-    private final NewScriptViewContent content;
+    final NewScriptViewContent content;
 
     private NewScriptView(NewScriptViewContent content) {
       super(content, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_NEVER);

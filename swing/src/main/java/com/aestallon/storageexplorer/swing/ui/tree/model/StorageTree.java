@@ -19,10 +19,6 @@ import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
-import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseVendor;
-import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
-import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.ClickableTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageInstanceTreeNode;
@@ -45,6 +41,8 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
     selectionModel.setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
     tree.setSelectionModel(selectionModel);
     tree.setCellRenderer(new StorageTreeNodeRenderer());
+    tree.setRootVisible(false);
+    tree.setShowsRootHandles(true);
     return tree;
   }
 
@@ -329,24 +327,7 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
 
       } else if (value instanceof StorageInstanceTreeNode) {
         final StorageInstance storageInstance = ((StorageInstanceTreeNode) value).storageInstance();
-        final StorageLocation location = storageInstance.location();
-        if (location instanceof FsStorageLocation) {
-          setIcon(IconProvider.DB_FS);
-        } else if (location instanceof SqlStorageLocation) {
-          final DatabaseVendor vendor = ((SqlStorageLocation) location).getVendor();
-          if (DatabaseVendor.PG == vendor) {
-            setIcon(IconProvider.DB_PG);
-          } else if (DatabaseVendor.ORACLE == vendor) {
-            setIcon(IconProvider.DB_ORA);
-          } else if (DatabaseVendor.H2 == vendor) {
-            setIcon(IconProvider.DB_H2);
-          } else {
-            setIcon(IconProvider.DB);
-          }
-
-        } else {
-          setIcon(IconProvider.DB);
-        }
+        setIcon(IconProvider.getIconForStorageInstance(storageInstance));
 
       } else if (value instanceof StorageSequenceTreeNode) {
         setIcon(IconProvider.SEQUENCE);

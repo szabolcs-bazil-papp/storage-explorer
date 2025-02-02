@@ -27,6 +27,11 @@ import com.aestallon.storageexplorer.core.model.entry.ScopedMapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseVendor;
+import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
+import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
 
 public final class IconProvider {
 
@@ -64,6 +69,27 @@ public final class IconProvider {
     };
   }
 
+  public static ImageIcon getIconForStorageInstance(final StorageInstance storageInstance) {
+    final StorageLocation location = storageInstance.location();
+    if (location instanceof FsStorageLocation) {
+      return (IconProvider.DB_FS);
+    } else if (location instanceof SqlStorageLocation) {
+      final DatabaseVendor vendor = ((SqlStorageLocation) location).getVendor();
+      if (DatabaseVendor.PG == vendor) {
+        return (IconProvider.DB_PG);
+      } else if (DatabaseVendor.ORACLE == vendor) {
+        return (IconProvider.DB_ORA);
+      } else if (DatabaseVendor.H2 == vendor) {
+        return (IconProvider.DB_H2);
+      } else {
+        return (IconProvider.DB);
+      }
+
+    } else {
+      return (IconProvider.DB);
+    }
+  }
+
   public static final ImageIcon LIST = new ImageIcon(loadIcon("list"));
   public static final ImageIcon MAP = new ImageIcon(loadIcon("map"));
   public static final ImageIcon OBJ = new ImageIcon(loadIcon("object"));
@@ -95,5 +121,6 @@ public final class IconProvider {
   public static final ImageIcon ARC_SCRIPT = new ImageIcon(loadIcon("arc_script"));
   public static final ImageIcon SAVE = new ImageIcon(loadIcon("save"));
   public static final ImageIcon PLAY = new ImageIcon(loadIcon("play"));
+  public static final ImageIcon PLUS = new ImageIcon(loadIcon("plus"));
 
 }

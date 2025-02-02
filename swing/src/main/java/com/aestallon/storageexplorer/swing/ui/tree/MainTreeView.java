@@ -50,6 +50,7 @@ import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorage
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
+import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.tree.model.StorageTree;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.ClickableTreeNode;
@@ -285,6 +286,7 @@ public class MainTreeView extends JPanel {
             after -> {
               sitn.setUserObject(after.getName());
               tree.model().nodeChanged(sitn);
+              eventPublisher.publishEvent(new StorageInstanceRenamed(sitn.storageInstance()));
             });
         final ImportStorageDialog dialog = new ImportStorageDialog(controller);
         dialog.pack();
