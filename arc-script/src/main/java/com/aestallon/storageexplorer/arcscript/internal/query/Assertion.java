@@ -1,6 +1,5 @@
 package com.aestallon.storageexplorer.arcscript.internal.query;
 
-import org.apache.groovy.parser.antlr4.GroovyParser;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 
 public final class Assertion implements QueryElement {
@@ -9,11 +8,18 @@ public final class Assertion implements QueryElement {
   private String op;
   private String value;
   private PropertyPredicate _predicate;
+  private QueryConditionImpl _listElementCondition;
   
   void set(String op, Object value, PropertyPredicate p) {
     this.op = op;
     this.value = String.valueOf(value);
     this._predicate = p;
+  }
+  
+  void set(String op, QueryConditionImpl c) {
+    this.op = op;
+    this.value = c.toString();
+    this._listElementCondition = c;
   }
   
   public String prop() { return prop; }
@@ -41,6 +47,19 @@ public final class Assertion implements QueryElement {
   public AssertionOperation.AssertionOperationJson json(final String prop) {
     this.prop = prop;
     return new AssertionOperation.AssertionOperationJson(this);
+  }
+  
+  public AssertionOperation.AssertionOperationList list(final String prop) {
+    this.prop = prop;
+    return new AssertionOperation.AssertionOperationList(this);
+  }
+  
+  public boolean isSingle() {
+    return _predicate != null;
+  }
+  
+  public QueryConditionImpl listElementCondition() {
+    return _listElementCondition;
   }
 
   @Override

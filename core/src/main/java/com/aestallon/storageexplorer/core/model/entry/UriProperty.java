@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Objects;
 import java.util.OptionalInt;
 import org.smartbit4all.domain.annotation.property.Id;
@@ -47,6 +48,10 @@ public final class UriProperty {
       return segments;
     }
 
+    static String asString(final List<Segment> segments) {
+      return asString(segments.toArray(Segment[]::new));
+    }
+
     static String asString(final Segment[] segments) {
       return asString(segments, 0);
     }
@@ -56,7 +61,7 @@ public final class UriProperty {
       if (start < 0 || start > segments.length) {
         throw new IllegalArgumentException("start index cannot be less than or equal to zero!");
       }
-      
+
       if (start == segments.length) {
         return "";
       }

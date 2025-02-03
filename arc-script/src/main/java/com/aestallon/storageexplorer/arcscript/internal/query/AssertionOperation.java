@@ -18,11 +18,13 @@ package com.aestallon.storageexplorer.arcscript.internal.query;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 import groovy.json.JsonBuilder;
 import groovy.lang.Closure;
@@ -32,7 +34,8 @@ public abstract sealed class AssertionOperation<T> permits
     AssertionOperation.AssertionOperationStr,
     AssertionOperation.AssertionOperationBool,
     AssertionOperation.AssertionOperationJson,
-    AssertionOperation.AssertionOperationNum/*,
+    AssertionOperation.AssertionOperationNum,
+    AssertionOperation.AssertionOperationList/*,
     AssertionOperation.AssertionOperationTime*/ {
 
   protected final Assertion assertion;
@@ -73,6 +76,14 @@ public abstract sealed class AssertionOperation<T> permits
                 "in",
                 "{{ EMPTY SET }}",
                 it -> false));
+  }
+
+  public final void is_empty() {
+    assertion.set("is", "empty", it -> it instanceof StorageInstanceExaminer.None);
+  }
+
+  public final void is_present() {
+    assertion.set("is", "present", it -> it instanceof StorageInstanceExaminer.Some);
   }
 
   private PropertyPredicate equalityPredicate(final T value) {
@@ -219,6 +230,47 @@ public abstract sealed class AssertionOperation<T> permits
         }
       };
     }
+  }
+
+
+  public static final class AssertionOperationList extends AssertionOperation<List<Object>> {
+    public AssertionOperationList(Assertion assertion) {
+      super(assertion);
+    }
+
+    @Override
+    protected PropertyPredicate equality(List<Object> value) {
+      throw new IllegalArgumentException("Q!");
+    }
+
+    public void has_size(final int expected) {
+
+    }
+
+    public void contains(Object... expected) {
+
+    }
+
+    public void contains_exactly(Object... expected) {
+
+    }
+
+    public void contains_exactly_in_any_order(Object... expected) {
+
+    }
+
+    public QueryCondition all_match(Closure closure) {
+      final var condition = new QueryConditionImpl();
+      assertion.set("all_match", condition.createClause(closure));
+      return condition;
+    }
+
+    public QueryCondition all_match(QueryConditionImpl condition) {
+      final var c = new QueryConditionImpl().or(condition);
+      assertion.set("all_match", (QueryConditionImpl) c);
+      return c;
+    }
+
   }
 
 

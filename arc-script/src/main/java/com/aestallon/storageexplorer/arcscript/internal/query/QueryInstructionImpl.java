@@ -3,9 +3,7 @@ package com.aestallon.storageexplorer.arcscript.internal.query;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
-import java.util.function.IntToDoubleFunction;
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
@@ -60,21 +58,21 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
 
   @Override
   public QueryCondition where(Closure closure) {
-    QueryConditionImpl condition = new QueryConditionImpl(this);
+    QueryConditionImpl condition = new QueryConditionImpl();
     this.condition = condition;
     return condition.createClause(closure);
   }
 
   @Override
   public QueryCondition where(QueryCondition condition) {
-    this.condition = new QueryConditionImpl(this);
+    this.condition = new QueryConditionImpl();
     this.condition.or(condition);
     return this.condition;
   }
 
   @Override
   public QueryCondition expr(Closure closure) {
-    QueryConditionImpl condition = new QueryConditionImpl(this);
+    QueryConditionImpl condition = new QueryConditionImpl();
     return condition.createClause(closure);
   }
 

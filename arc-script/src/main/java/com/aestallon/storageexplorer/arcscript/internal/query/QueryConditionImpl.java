@@ -16,12 +16,9 @@ public final class QueryConditionImpl implements QueryCondition, QueryElement {
   public record AssertionElement(AssertionRelation relation, QueryElement element) {}
 
 
-  private final QueryInstructionImpl instruction;
   private final List<AssertionElement> elements = new ArrayList<>();
 
-  QueryConditionImpl(QueryInstructionImpl instruction) {
-    this.instruction = instruction;
-  }
+  QueryConditionImpl() {}
 
   QueryConditionImpl createClause(final Closure closure) {
     return (QueryConditionImpl) or(closure);

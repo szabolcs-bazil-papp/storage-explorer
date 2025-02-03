@@ -10,7 +10,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -53,6 +52,18 @@ public class StorageInstanceExaminer {
                                                   final String propQuery) {
     final var cache = ObjectEntryLookupTable.newInstance();
     return discoverProperty(entry, propQuery, cache);
+  }
+
+  public PropertyDiscoveryResult discoverProperty(final PropertyDiscoveryResult medial,
+                                                  final String propQuery,
+                                                  final ObjectEntryLookupTable cache) {
+    return switch (medial) {
+      case None none -> switch (none) {
+        case NoValue noValue when propQuery.isEmpty() -> new NoValue();
+        default -> new NotFound("No value present to continue on " + propQuery);
+      };
+      case Some some -> new InlinePropertyDiscoverer(some.host(), propQuery).discover(some.val(), true /* add path!*/);
+    };
   }
 
   public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
@@ -135,67 +146,96 @@ public class StorageInstanceExaminer {
               .map(it -> Pair.of(it, discoverer.apply(it.uri())))
               .flatMap(Pair.streamOnB())
               .map(p -> discoverProperty(p.b(), q.drop(p.a()), cache))
-              .collect(collectingAndThen(toList(), rs -> Optional.of(ListFound.of(rs))));
+              .collect(collectingAndThen(toList(), rs -> Optional.of(ListFound.of(rs, ""))));
         })
-        .orElseGet(() -> inObject(sv.objectAsMap(), host, propQuery));
+        .orElseGet(() -> new InlinePropertyDiscoverer(host, propQuery).discover(sv.objectAsMap(), false));
   }
 
-  private PropertyDiscoveryResult inObject(final Map<String, Object> oam,
-                                           final StorageEntry host,
-                                           final String propQuery) {
-    final String[] es = propQuery.split("\\.");
-    return inObject(oam, host, es);
-  }
+  private static final class InlinePropertyDiscoverer {
 
-  private PropertyDiscoveryResult inObjectMap(final Map<String, Object> map,
-                                              final StorageEntry host,
-                                              final String[] es) {
-    if (es == null || es.length == 0) {
-      return new NoValue();
+    private final StorageEntry host;
+    private final String[] pathElements;
+
+    private InlinePropertyDiscoverer(final StorageEntry host, final String propQuery) {
+      this.host = host;
+      this.pathElements = propQuery.split("\\.");
     }
 
-    return inObject(map.get(es[0]), host, restOf(es));
-  }
+    private PropertyDiscoveryResult discover(final Object root, final boolean backtrack) {
+      final List<UriProperty.Segment> segments = new ArrayList<>();
+      return inObject(root, pathElements, segments);
+    }
 
-  private PropertyDiscoveryResult inObjectList(final List<Object> list,
-                                               final StorageEntry host,
-                                               final String[] es) {
-    try {
-      final var idx = Integer.parseInt(es[0]);
-      if (idx < 0) {
-        return new NotFound("Index value [ %d ] is not a valid index number.".formatted(idx));
-      }
+    @SuppressWarnings({ "unchecked" })
+    private PropertyDiscoveryResult inObject(final Object o,
+                                             final String[] es,
+                                             final List<UriProperty.Segment> segments) {
+      final boolean terminal = es.length == 0;
+      return switch (o) {
+        case null -> new NoValue();
+        case List<?> l -> terminal
+            ? ListFound.of(l, host, UriProperty.Segment.asString(segments))
+            : inObjectList((List<Object>) l, es, segments);
+        case Map<?, ?> m -> terminal
+            ? new ComplexFound((Map<String, Object>) m, host,
+            UriProperty.Segment.asString(segments))
+            : inObjectMap((Map<String, Object>) m, es, segments);
+        case Boolean b -> terminal
+            ? new BooleanFound(b, host, UriProperty.Segment.asString(segments))
+            : earlyTermination(es, b);
+        case Number n -> terminal
+            ? new NumberFound(n, host, UriProperty.Segment.asString(segments))
+            : earlyTermination(es, n);
+        case String s -> terminal
+            ? new StringFound(s, host, UriProperty.Segment.asString(segments))
+            : earlyTermination(es, s);
+        // FIXME: maybe we need more sophisticated type recognition?
+        default -> terminal
+            ? new StringFound(String.valueOf(o), host, UriProperty.Segment.asString(segments))
+            : earlyTermination(es, o);
+      };
+    }
 
-      if (idx >= list.size()) {
+    private PropertyDiscoveryResult inObjectMap(final Map<String, Object> map,
+                                                final String[] es,
+                                                final List<UriProperty.Segment> segments) {
+      if (es == null || es.length == 0) {
         return new NoValue();
       }
 
-      return inObject(list.get(idx), host, restOf(es));
-    } catch (NumberFormatException e) {
-      // not a numeric, we multicast:
-      return list.stream()
-          .map(it -> inObject(it, host, es /* !!! */))
-          .collect(collectingAndThen(toList(), ListFound::of));
+      segments.add(new UriProperty.Segment.Key(es[0]));
+      return inObject(map.get(es[0]), restOf(es), segments);
     }
-  }
 
-  @SuppressWarnings({ "unchecked" })
-  private PropertyDiscoveryResult inObject(final Object o,
-                                           final StorageEntry host,
-                                           final String[] es) {
-    final boolean terminal = es.length == 0;
-    return switch (o) {
-      case null -> new NoValue();
-      case List<?> l -> terminal ? ListFound.of(l, host) : inObjectList((List<Object>) l, host, es);
-      case Map<?, ?> m -> terminal
-          ? new ComplexFound((Map<String, Object>) m, host)
-          : inObjectMap((Map<String, Object>) m, host, es);
-      case Boolean b -> terminal ? new BooleanFound(b, host) : earlyTermination(es, b);
-      case Number n -> terminal ? new NumberFound(n, host) : earlyTermination(es, n);
-      case String s -> terminal ? new StringFound(s, host) : earlyTermination(es, s);
-      // FIXME: maybe we need more sophisticated type recognition?
-      default -> terminal ? new StringFound(String.valueOf(o), host) : earlyTermination(es, o);
-    };
+    private PropertyDiscoveryResult inObjectList(final List<Object> list,
+                                                 final String[] es,
+                                                 final List<UriProperty.Segment> segments) {
+      try {
+        final var idx = Integer.parseInt(es[0]);
+        if (idx < 0) {
+          return new NotFound("Index value [ %d ] is not a valid index number.".formatted(idx));
+        }
+
+        if (idx >= list.size()) {
+          return new NoValue();
+        }
+
+        segments.add(new UriProperty.Segment.Idx(idx));
+        return inObject(list.get(idx), restOf(es), segments);
+      } catch (NumberFormatException e) {
+        // not a numeric, we multicast:
+        final List<PropertyDiscoveryResult> ret = new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+          final Object o = list.get(i);
+          final var segmentsI = new ArrayList<>(segments);
+          segmentsI.add(new UriProperty.Segment.Idx(i));
+          final PropertyDiscoveryResult res = inObject(o, es /* !!! */, segmentsI);
+          ret.add(res);
+        }
+        return ListFound.of(ret, UriProperty.Segment.asString(segments));
+      }
+    }
+
   }
 
 
@@ -242,23 +282,42 @@ public class StorageInstanceExaminer {
   }
 
 
-  public sealed interface Some extends PropertyDiscoveryResult {}
+  public sealed interface Some extends PropertyDiscoveryResult {
+
+    StorageEntry host();
+    
+    Object val();
+
+    String path();
+
+  }
 
 
   public sealed interface PrimitiveDiscoveryResult extends Some {}
 
 
-  public record StringFound(String string, StorageEntry host) implements PrimitiveDiscoveryResult {
+  public record StringFound(String string, StorageEntry host, String path)
+      implements PrimitiveDiscoveryResult {
 
     @Override
     public String toString() {
       return "\"" + string + "\"";
     }
 
+    @Override
+    public Object val() {
+      return string;
+    }
   }
 
 
-  public record NumberFound(Number number, StorageEntry host) implements PrimitiveDiscoveryResult {
+  public record NumberFound(Number number, StorageEntry host, String path)
+      implements PrimitiveDiscoveryResult {
+
+    @Override
+    public Object val() {
+      return number;
+    }
 
     @Override
     public String toString() {
@@ -268,54 +327,67 @@ public class StorageInstanceExaminer {
   }
 
 
-  public record BooleanFound(boolean bool, StorageEntry host) implements PrimitiveDiscoveryResult {
+  public record BooleanFound(boolean bool, StorageEntry host, String path)
+      implements PrimitiveDiscoveryResult {
 
     @Override
     public String toString() {
       return String.valueOf(bool);
     }
 
+    @Override
+    public Object val() {
+      return bool;
+    }
   }
 
 
-  public record ComplexFound(Map<String, Object> value, StorageEntry host) implements Some {
+  public record ComplexFound(Map<String, Object> value, StorageEntry host, String path)
+      implements Some {
 
     @Override
     public String toString() {
       return String.valueOf(value);
     }
 
+    @Override
+    public Object val() {
+      return value;
+    }
   }
 
 
-  public record ListFound(List<PropertyDiscoveryResult> value, StorageEntry host, boolean terminal)
+  public record ListFound(List<PropertyDiscoveryResult> value, StorageEntry host, boolean terminal,
+      String path)
       implements Some {
 
-    static ListFound of(final List<?> list, final StorageEntry host) {
+    static ListFound of(final List<?> list, final StorageEntry host, String path) {
       final List<PropertyDiscoveryResult> ret = new ArrayList<>(list.size());
-      for (final Object o : list) {
+      for (int i = 0; i < list.size(); i++) {
+        Object o = list.get(i);
+        final String ePath = path + "." + i;
         final var e = switch (o) {
           case null -> new NoValue();
-          case List<?> l -> ListFound.of(l, host);
-          case Map<?, ?> m -> new ComplexFound((Map<String, Object>) m, host);
-          case Boolean b -> new BooleanFound(b, host);
-          case Number n -> new NumberFound(n, host);
-          case String s -> new StringFound(s, host);
-          default -> new StringFound(String.valueOf(o), host);
+          case List<?> l -> ListFound.of(l, host, ePath);
+          case Map<?, ?> m -> new ComplexFound((Map<String, Object>) m, host, ePath);
+          case Boolean b -> new BooleanFound(b, host, ePath);
+          case Number n -> new NumberFound(n, host, ePath);
+          case String s -> new StringFound(s, host, ePath);
+          default -> new StringFound(String.valueOf(o), host, ePath);
         };
         ret.add(e);
       }
 
-      return new ListFound(ret, host, true);
+      return new ListFound(ret, host, true, path);
     }
 
-    static ListFound of(final List<PropertyDiscoveryResult> props) {
+    static ListFound of(final List<PropertyDiscoveryResult> props, String path) {
       return props.stream()
           .flatMap(it -> switch (it) {
             case ListFound list -> list.flatten().stream();
             default -> Stream.of(it);
           })
-          .collect(collectingAndThen(toList(), rs -> new ListFound(rs, null, false)));
+          .collect(collectingAndThen(toList(), rs -> new ListFound(rs, null, false, path)));
     }
 
     private List<PropertyDiscoveryResult> flatten() {
@@ -337,6 +409,15 @@ public class StorageInstanceExaminer {
       return value().stream().map(String::valueOf).collect(joining(", ", "[", "]"));
     }
 
+    @Override
+    public Object val() {
+      return value.stream()
+          .map(it -> switch (it) {
+            case None none -> null;
+            case Some some -> some.val();
+          })
+          .toList();
+    }
   }
 
 

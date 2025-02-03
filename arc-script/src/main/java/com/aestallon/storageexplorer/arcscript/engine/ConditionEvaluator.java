@@ -15,6 +15,7 @@
 
 package com.aestallon.storageexplorer.arcscript.engine;
 
+import java.util.List;
 import com.aestallon.storageexplorer.arcscript.internal.query.Assertion;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryConditionImpl;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -26,22 +27,38 @@ final class ConditionEvaluator {
   private final StorageEntry entry;
   private final StorageInstanceExaminer.ObjectEntryLookupTable cache;
   private final QueryConditionImpl.AssertionIterator iterator;
+  private final StorageInstanceExaminer.PropertyDiscoveryResult medial;
 
   ConditionEvaluator(final StorageInstanceExaminer examiner,
                      final StorageEntry entry,
                      final StorageInstanceExaminer.ObjectEntryLookupTable cache,
                      final QueryConditionImpl c) {
+    this(examiner, entry, cache, c, null);
+  }
+
+  private ConditionEvaluator(final StorageInstanceExaminer examiner,
+                             final StorageEntry entry,
+                             final StorageInstanceExaminer.ObjectEntryLookupTable cache,
+                             final QueryConditionImpl c,
+                             final StorageInstanceExaminer.PropertyDiscoveryResult medial) {
     this.examiner = examiner;
     this.entry = entry;
     this.cache = cache;
     this.iterator = (c != null)
         ? c.assertionIterator()
         : QueryConditionImpl.AssertionIterator.empty();
+    this.medial = medial;
   }
 
   private ConditionEvaluator(final ConditionEvaluator orig,
                              final QueryConditionImpl c) {
-    this(orig.examiner, orig.entry, orig.cache, c);
+    this(orig.examiner, orig.entry, orig.cache, c, orig.medial);
+  }
+
+  private ConditionEvaluator(final ConditionEvaluator orig,
+                             final QueryConditionImpl c,
+                             final StorageInstanceExaminer.PropertyDiscoveryResult medial) {
+    this(orig.examiner, orig.entry, orig.cache, c, medial);
   }
 
   boolean evaluate() {
@@ -102,7 +119,43 @@ final class ConditionEvaluator {
   }
 
   private boolean resolveValue(final Assertion assertion) {
-    final var val = examiner.discoverProperty(entry, assertion.prop());
-    return assertion.check(val);
+    final var val = (medial == null)
+        ? examiner.discoverProperty(entry, assertion.prop(), cache)
+        : examiner.discoverProperty(medial, assertion.prop(), cache);
+    if (assertion.isSingle()) {
+      return assertion.check(val);
+    }
+
+    final var listElementCondition = assertion.listElementCondition();
+    return switch (val) {
+      case StorageInstanceExaminer.ListFound list -> {
+        List<StorageInstanceExaminer.PropertyDiscoveryResult> es = list.value();
+        final boolean anyMatch = assertion.op().equals("any_match");
+        final boolean allMatch = assertion.op().equals("all_match");
+        final boolean noneMatch = assertion.op().equals("none_match");
+        if (es.isEmpty()) {
+          yield !anyMatch;
+        }
+
+        for (final StorageInstanceExaminer.PropertyDiscoveryResult e : es) {
+          final boolean match = new ConditionEvaluator(this, listElementCondition, e).evaluate();
+          if (match) {
+            if (anyMatch) {
+              yield true;
+            } else if (noneMatch) {
+              yield false;
+            }
+          } else {
+            if (allMatch) {
+              yield false;
+            }
+          }
+        }
+        
+        yield !anyMatch;
+      }
+      default -> false;
+    };
   }
+  
 }
