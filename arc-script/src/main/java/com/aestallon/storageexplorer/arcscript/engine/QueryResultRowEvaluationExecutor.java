@@ -89,15 +89,10 @@ public class QueryResultRowEvaluationExecutor extends
       case StorageInstanceExaminer.Some some -> switch (some) {
         case StorageInstanceExaminer.ComplexFound complex ->
             ArcScriptResult.DataCell.complex(complex.value());
-        case StorageInstanceExaminer.ListFound<?> list ->
+        case StorageInstanceExaminer.ListFound list ->
             ArcScriptResult.DataCell.complex(list.value());
-        case StorageInstanceExaminer.PrimitiveDiscoveryResult primitive -> switch (primitive) {
-          case StorageInstanceExaminer.StringFound s -> ArcScriptResult.DataCell.simple(s.string());
-          case StorageInstanceExaminer.BooleanFound b ->
-              ArcScriptResult.DataCell.simple(String.valueOf(b.bool()));
-          case StorageInstanceExaminer.NumberFound n ->
-              ArcScriptResult.DataCell.simple(n.number().toString());
-        };
+        case StorageInstanceExaminer.PrimitiveDiscoveryResult primitive ->
+            ArcScriptResult.DataCell.simple(primitive.toString());
       };
     };
     return Pair.of(prop, cell);
