@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.codehaus.groovy.classgen.FinalVariableAnalyzer;
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 import groovy.json.JsonBuilder;
@@ -244,30 +245,115 @@ public abstract sealed class AssertionOperation<T> permits
     }
 
     public void has_size(final int expected) {
-
+      assertion.set("has_size", expected, it -> it instanceof StorageInstanceExaminer.ListFound list
+                                                && list.value().size() == expected);
     }
 
     public void contains(Object... expected) {
+      if (expected == null) {
+        throw new IllegalArgumentException("Cannot call list contains with null value!");
+      }
 
+      assertion.set(
+          "contains",
+          Arrays.stream(expected).map(String::valueOf).collect(joining(", ", "( ", " )")),
+          listContainsCheck(expected, false));
+    }
+
+    private static PropertyPredicate listContainsCheck(Object[] expected, final boolean exact) {
+      return it -> {
+        if (!(it instanceof StorageInstanceExaminer.ListFound list)) {
+          return false;
+        }
+
+        final var es = list.value();
+        if (exact && es.size() != expected.length) {
+          return false;
+        }
+
+        for (final Object o : expected) {
+          if (es.stream().noneMatch(
+              e -> e instanceof StorageInstanceExaminer.Some some && some.val().equals(o))) {
+            return false;
+          }
+        }
+        return true;
+      };
     }
 
     public void contains_exactly(Object... expected) {
+      if (expected == null) {
+        throw new IllegalArgumentException("Cannot call list contains with null value!");
+      }
 
+      assertion.set(
+          "contains_exactly",
+          Arrays.stream(expected).map(String::valueOf).collect(joining(", ", "( ", " )")),
+          it -> {
+            if (!(it instanceof StorageInstanceExaminer.ListFound list)) {
+              return false;
+            }
+
+            final var es = list.value();
+            if (es.size() != expected.length) {
+              return false;
+            }
+
+            for (int i = 0; i < es.size(); i++) {
+              final var e = es.get(i);
+              final var o = expected[i];
+              if (!(e instanceof StorageInstanceExaminer.Some some && some.val().equals(o))) {
+                return false;
+              }
+            }
+            return true;
+          });
     }
 
     public void contains_exactly_in_any_order(Object... expected) {
+      if (expected == null) {
+        throw new IllegalArgumentException("Cannot call list contains with null value!");
+      }
 
+      assertion.set(
+          "contains_exactly_in_any_order",
+          Arrays.stream(expected).map(String::valueOf).collect(joining(", ", "( ", " )")),
+          listContainsCheck(expected, true));
     }
 
     public QueryCondition all_match(Closure closure) {
-      final var condition = new QueryConditionImpl();
-      assertion.set("all_match", condition.createClause(closure));
-      return condition;
+      return match(closure, Assertion.MatchOp.ALL);
     }
 
     public QueryCondition all_match(QueryConditionImpl condition) {
+      return match(condition, Assertion.MatchOp.ALL);
+    }
+
+    public QueryCondition any_match(Closure closure) {
+      return match(closure, Assertion.MatchOp.ANY);
+    }
+
+    public QueryCondition any_match(QueryConditionImpl condition) {
+      return match(condition, Assertion.MatchOp.ANY);
+    }
+
+    public QueryCondition none_match(Closure closure) {
+      return match(closure, Assertion.MatchOp.NONE);
+    }
+
+    public QueryCondition none_match(QueryConditionImpl condition) {
+      return match(condition, Assertion.MatchOp.NONE);
+    }
+
+    private QueryCondition match(Closure closure, Assertion.MatchOp matchOp) {
+      final var condition = new QueryConditionImpl();
+      assertion.set(matchOp, condition.createClause(closure));
+      return condition;
+    }
+
+    private QueryCondition match(QueryConditionImpl condition, Assertion.MatchOp matchOp) {
       final var c = new QueryConditionImpl().or(condition);
-      assertion.set("all_match", (QueryConditionImpl) c);
+      assertion.set(matchOp, (QueryConditionImpl) c);
       return c;
     }
 
