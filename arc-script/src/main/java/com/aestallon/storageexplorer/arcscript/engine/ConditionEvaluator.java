@@ -71,13 +71,13 @@ final class ConditionEvaluator {
     while (iterator.hasNext()) {
       final var relationNext = iterator.peekRelation();
       // because we are evaluating strictly left to right, we cannot short-circuit anywhere.
-      // E.g. with C-style precedence, a || b && c can be short-circuited after verifying !!a,
+      // E.g. with C-style precedence, a || b && c can be short-circuited after verifying `a`,
       // for the precedence implies brackets: a || b && c IS EQUIVALENT TO a || (b && c).
       // Our Smalltalk-like strict adherence to left-to-right means implicit brackets starting
       // from the left: ((a || b) && c).
-      // What _can_ we do then? We can skip evaluating operands! (this is not as cool as short-
-      // circuiting, but hey). Following the above example (a || b && c), if a then b can be
-      // skipped, reducing to (true && c)
+      // What_can we do then? We can skip evaluating operands (a.k.a poor man's short-circuiting).
+      // Following the above example (a || b && c), if a then b can be skipped, reducing to 
+      // (true && c) == c
       switch (relationNext) {
         case AND -> {
           if (state) {
@@ -121,7 +121,11 @@ final class ConditionEvaluator {
   private boolean resolveValue(final Assertion assertion) {
     final var val = (medial == null)
         ? examiner.discoverProperty(entry, assertion.prop(), cache)
-        : examiner.discoverProperty(medial, assertion.prop(), cache);
+        : (medial instanceof StorageInstanceExaminer.Some some && some.path().isEmpty())
+            // we won't do this, because discoverProperty will know how to backtrack, but this is a
+            // good middle ground for now...
+            ? examiner.discoverProperty(some.host(), assertion.prop(), cache)
+            : examiner.discoverProperty(medial, assertion.prop(), cache);
     if (assertion.isSingle()) {
       return assertion.check(val);
     }
@@ -130,9 +134,10 @@ final class ConditionEvaluator {
     return switch (val) {
       case StorageInstanceExaminer.ListFound list -> {
         List<StorageInstanceExaminer.PropertyDiscoveryResult> es = list.value();
-        final boolean anyMatch = assertion.op().equals("any_match");
-        final boolean allMatch = assertion.op().equals("all_match");
-        final boolean noneMatch = assertion.op().equals("none_match");
+        final var matchOp = assertion.matchOp();
+        final boolean anyMatch = Assertion.MatchOp.ANY == matchOp;
+        final boolean allMatch = Assertion.MatchOp.ALL == matchOp;
+        final boolean noneMatch = Assertion.MatchOp.NONE == matchOp;
         if (es.isEmpty()) {
           yield !anyMatch;
         }
@@ -151,11 +156,11 @@ final class ConditionEvaluator {
             }
           }
         }
-        
+
         yield !anyMatch;
       }
       default -> false;
     };
   }
-  
+
 }

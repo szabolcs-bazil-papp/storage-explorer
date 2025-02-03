@@ -158,7 +158,7 @@ public class StorageInstanceExaminer {
 
     private InlinePropertyDiscoverer(final StorageEntry host, final String propQuery) {
       this.host = host;
-      this.pathElements = propQuery.split("\\.");
+      this.pathElements = propQuery.isEmpty() ? new String[0] : propQuery.split("\\.");
     }
 
     private PropertyDiscoveryResult discover(final Object root, final boolean backtrack) {
@@ -473,7 +473,11 @@ public class StorageInstanceExaminer {
             switch (curr) {
               case UriProperty.Segment.Idx(int value) -> {
                 if (idx == value) {
-                  curr = segments[++matchIdx];
+                  matchIdx++;
+                  if (matchIdx == segments.length) {
+                    break LOOP;
+                  }
+                  curr = segments[matchIdx];
                 } else {
                   break LOOP;
                 }
@@ -490,7 +494,11 @@ public class StorageInstanceExaminer {
               }
               case UriProperty.Segment.Key(String value) -> {
                 if (Objects.equals(key, value)) {
-                  curr = segments[++matchIdx];
+                  matchIdx++;
+                  if (matchIdx == segments.length) {
+                    break LOOP;
+                  }
+                  curr = segments[matchIdx];
                 } else {
                   break LOOP;
                 }
