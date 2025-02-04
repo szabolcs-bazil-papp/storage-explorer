@@ -388,7 +388,7 @@ public class StorageInstanceExaminer {
 
     private List<PropertyDiscoveryResult> flatten() {
       if (terminal) {
-        return List.of(this);
+        return value();
       }
 
       return value().stream()
