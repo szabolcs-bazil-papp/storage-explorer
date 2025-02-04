@@ -17,14 +17,19 @@ package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
 
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.lang.invoke.VarHandle;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.filechooser.FileSystemView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
 import com.aestallon.storageexplorer.core.event.StorageImportEvent;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
@@ -33,6 +38,8 @@ import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.service.ArcScriptFileService;
 import com.aestallon.storageexplorer.core.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.swing.ui.commander.arcscript.export.ResultSetExporter;
+import com.aestallon.storageexplorer.swing.ui.commander.arcscript.export.ResultSetExporterFactory;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -50,6 +57,7 @@ public class ArcScriptController {
   private final RSyntaxTextAreaThemeProvider themeProvider;
   private final MonospaceFontProvider monospaceFontProvider;
   private final ArcScriptTextareaFactory arcScriptTextareaFactory;
+  private final ResultSetExporterFactory resultSetExporterFactory;
   private final List<ArcScriptView> arcScriptViews = new ArrayList<>();
 
   private ArcScriptContainerView containerView;
@@ -58,12 +66,14 @@ public class ArcScriptController {
                              final ApplicationEventPublisher applicationEventPublisher,
                              final UserConfigService userConfigService,
                              final RSyntaxTextAreaThemeProvider themeProvider,
-                             final MonospaceFontProvider monospaceFontProvider) {
+                             final MonospaceFontProvider monospaceFontProvider,
+                             ResultSetExporterFactory resultSetExporterFactory) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.applicationEventPublisher = applicationEventPublisher;
     this.userConfigService = userConfigService;
     this.themeProvider = themeProvider;
     this.monospaceFontProvider = monospaceFontProvider;
+    this.resultSetExporterFactory = resultSetExporterFactory;
 
     arcScriptTextareaFactory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
   }
@@ -320,6 +330,38 @@ public class ArcScriptController {
         yield false;
       }
     };
+  }
+
+
+  void export(ArcScriptResult.ResultSet resultSet, ResultSetExporterFactory.Target target) {
+    final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
+    fileChooser.setDialogType(JFileChooser.SAVE_DIALOG);
+    fileChooser.setDialogTitle("Export as " + target);
+
+    final int result = fileChooser.showDialog(null, "Export");
+    if (JFileChooser.APPROVE_OPTION == result) {
+      final File selectedFile = fileChooser.getSelectedFile();
+      if (selectedFile.isDirectory()) {
+        System.err.println("REEEE");
+        return;
+      }
+
+      String filePath = selectedFile.getPath();
+      final var ext = "." + target.toString().toLowerCase();
+      if (!filePath.endsWith(ext)) {
+        filePath = filePath + ext;
+      }
+
+      final var r = resultSetExporterFactory.get(target).export(resultSet, Path.of(filePath));
+      if (r instanceof ResultSetExporter.Result.Error(String msg)) {
+        JOptionPane.showMessageDialog(
+            null,
+            msg,
+            "Could not export result set to " + target,
+            JOptionPane.ERROR_MESSAGE,
+            IconProvider.ERROR);
+      }
+    }
   }
 
 }

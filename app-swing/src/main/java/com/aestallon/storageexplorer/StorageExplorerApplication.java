@@ -33,6 +33,7 @@ import com.formdev.flatlaf.FlatIntelliJLaf;
 @SpringBootApplication(
     exclude = DataSourceAutoConfiguration.class,
     scanBasePackages = {
+        "com.aestallon.storageexplorer.export",
         "com.aestallon.storageexplorer.core",
         "com.aestallon.storageexplorer.swing"
     })

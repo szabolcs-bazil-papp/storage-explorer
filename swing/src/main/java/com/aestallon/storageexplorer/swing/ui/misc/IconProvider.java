@@ -125,5 +125,8 @@ public final class IconProvider {
   public static final ImageIcon PLAY = new ImageIcon(loadIcon("play"));
   public static final ImageIcon PLUS = new ImageIcon(loadIcon("plus"));
   public static final ImageIcon DELETE = new ImageIcon(loadIcon("delete"));
+  
+  public static final ImageIcon CSV = new ImageIcon(loadIcon("csv"));
+  public static final ImageIcon JSON = new ImageIcon(loadIcon("json"));
 
 }

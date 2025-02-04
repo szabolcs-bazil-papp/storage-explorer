@@ -283,7 +283,7 @@ public class ArcScriptView extends JPanel {
         BackgroundWorkCompletedEvent.BackgroundWorkResult.OK));
     SwingUtilities.invokeLater(() -> {
       int dividerLocation = content.getDividerLocation();
-      scriptResultView = new ResultDisplay(ok, controller.eventPublisher(), storageInstance);
+      scriptResultView = new ResultDisplay(ok, storageInstance, controller);
       final var scrollPlane = new JScrollPane(
           scriptResultView.asComponent(),
           ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -336,8 +336,8 @@ public class ArcScriptView extends JPanel {
 
   private final static class ResultDisplay extends JPanel implements ScriptResultView {
     public ResultDisplay(ArcScriptResult.Ok result,
-                         ApplicationEventPublisher eventPublisher,
-                         StorageInstance storageInstance) {
+                         StorageInstance storageInstance,
+                         ArcScriptController controller) {
       setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
       setAlignmentX(LEFT_ALIGNMENT);
 
@@ -345,9 +345,9 @@ public class ArcScriptView extends JPanel {
         switch (result.elements().get(i)) {
           case ArcScriptResult.IndexingPerformed ip -> add(new IndexResultPanel(i, ip));
           case ArcScriptResult.QueryPerformed qp -> add(new QueryResultPanel(
+              controller,
               i,
               qp,
-              eventPublisher,
               storageInstance));
         }
       }
@@ -526,9 +526,9 @@ public class ArcScriptView extends JPanel {
 
 
     private static final class QueryResultPanel extends JPanel {
-      public QueryResultPanel(int idx,
+      public QueryResultPanel(ArcScriptController controller,
+                              int idx,
                               ArcScriptResult.QueryPerformed q,
-                              ApplicationEventPublisher eventPublisher,
                               StorageInstance storageInstance) {
         setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
         setAlignmentX(LEFT_ALIGNMENT);
@@ -541,6 +541,7 @@ public class ArcScriptView extends JPanel {
         label.setAlignmentX(LEFT_ALIGNMENT);
         label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
         add(label);
+
         add(createOperationResultTable(q, false));
 
         if (customRender) {
@@ -550,6 +551,8 @@ public class ArcScriptView extends JPanel {
           renderLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
           add(renderLabel);
           add(createOperationResultTable(q, true));
+
+          addExportToolbar(controller, resultSet);
         }
 
         final var tableModel = customRender
@@ -573,7 +576,7 @@ public class ArcScriptView extends JPanel {
             if (e.getClickCount() > 1 && e.getButton() == MouseEvent.BUTTON1) {
 
               final URI uri = tableModel.uriAt(row);
-              JumpToUri.jump(eventPublisher, uri, storageInstance);
+              JumpToUri.jump(controller.eventPublisher(), uri, storageInstance);
 
             } else if (e.getButton() == MouseEvent.BUTTON3) {
 
@@ -592,7 +595,7 @@ public class ArcScriptView extends JPanel {
               final String v = (o instanceof String s && s.startsWith("\"") && s.endsWith("\""))
                   ? s.substring(1, s.length() - 1)
                   : String.valueOf(o);
-              new CellPopUpMenu(eventPublisher, storageInstance, v).show(
+              new CellPopUpMenu(controller.eventPublisher(), storageInstance, v).show(
                   table,
                   eventLocation.x,
                   eventLocation.y);
@@ -605,6 +608,31 @@ public class ArcScriptView extends JPanel {
         final JScrollPane pane = new JScrollPane(table);
         pane.setAlignmentX(LEFT_ALIGNMENT);
         add(pane);
+      }
+
+      private void addExportToolbar(ArcScriptController controller,
+                                    ArcScriptResult.ResultSet resultSet) {
+        final var exportToolbar = new JToolBar(SwingConstants.HORIZONTAL);
+        exportToolbar.setAlignmentX(LEFT_ALIGNMENT);
+        exportToolbar.add(new AbstractAction(null, IconProvider.CSV) {
+
+          @Override
+          public void actionPerformed(ActionEvent e) {
+            controller.export(resultSet, ResultSetExporterFactory.Target.CSV);
+          }
+
+        }).setToolTipText("Export results to CSV...");
+        exportToolbar.add(new AbstractAction(null, IconProvider.JSON) {
+
+          @Override
+          public void actionPerformed(ActionEvent e) {
+            controller.export(resultSet, ResultSetExporterFactory.Target.JSON);
+          }
+
+        }).setToolTipText("Export results to JSON...");
+
+        exportToolbar.add(Box.createHorizontalGlue());
+        add(exportToolbar);
       }
 
       private String getQueryPerformedLabel(final int idx, final boolean customRender) {
