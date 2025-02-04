@@ -98,20 +98,22 @@ public class ArcScriptEngine {
           final ArcScriptResult.ResultSet resultSet;
           if (showColumns.isEmpty()) {
             resultSet = new ArcScriptResult.ResultSet(
-                new ArcScriptResult.ResultSetMeta(Collections.emptyList()),
+                new ArcScriptResult.ResultSetMeta(Collections.emptyList(), -1L),
                 res.stream().map(ArcScriptResult.QueryResultRow::new).toList());
           } else {
+            final long renderStart = System.nanoTime();
             final var columns = showColumns.stream()
                 .map(it -> new ArcScriptResult.ColumnDescriptor(
                     it.propertyInternal(),
                     it.displayNameInternal()))
                 .toList();
-            final var meta = new ArcScriptResult.ResultSetMeta(columns);
             final var rows = QueryResultRowEvaluationExecutor.builder(examiner, res, columns)
                 .useSemaphore(!runningOnFs)
                 .useCache(cache)
                 .build()
                 .execute();
+            final long renderEnd = System.nanoTime();
+            final var meta = new ArcScriptResult.ResultSetMeta(columns, renderEnd - renderStart);
             resultSet = new ArcScriptResult.ResultSet(meta, new ArrayList<>(rows));
           }
 

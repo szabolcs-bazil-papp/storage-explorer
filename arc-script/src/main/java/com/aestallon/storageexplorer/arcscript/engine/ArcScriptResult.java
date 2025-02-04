@@ -75,7 +75,7 @@ public sealed interface ArcScriptResult {
   record ColumnDescriptor(String prop, String title) {}
 
 
-  record ResultSetMeta(List<ColumnDescriptor> columns) {}
+  record ResultSetMeta(List<ColumnDescriptor> columns, long timeTaken) {}
 
 
   enum CellType { SIMPLE, COMPLEX }
