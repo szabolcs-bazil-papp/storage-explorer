@@ -105,7 +105,11 @@ public final class UriProperty {
     }
     
     if (b != null && !b.isEmpty()) {
-      sb.append('.').append(b);
+      if (!sb.isEmpty()) {
+        sb.append('.');
+      }
+      
+      sb.append(b);
     }
     
     return sb.toString();
