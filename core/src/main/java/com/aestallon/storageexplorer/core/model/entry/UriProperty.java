@@ -97,6 +97,19 @@ public final class UriProperty {
     }
 
   }
+  
+  public static String join(final String a, final String b) {
+    final StringBuilder sb = new StringBuilder();
+    if (a != null && !a.isEmpty()) {
+      sb.append(a);
+    }
+    
+    if (b != null && !b.isEmpty()) {
+      sb.append('.').append(b);
+    }
+    
+    return sb.toString();
+  }
 
 
   public static final String OWN = "uri";

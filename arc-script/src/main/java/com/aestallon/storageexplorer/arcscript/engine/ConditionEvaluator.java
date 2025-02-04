@@ -109,23 +109,19 @@ final class ConditionEvaluator {
   private boolean evalNext() {
     final var next = iterator.next();
     return switch (next.element()) {
-      case Assertion a -> resolveValue(a);
-      case QueryConditionImpl q -> evalNext(q);
+      case Assertion a -> evalAssertion(a);
+      case QueryConditionImpl q -> evalCondition(q);
     };
   }
 
-  private boolean evalNext(QueryConditionImpl qc) {
+  private boolean evalCondition(QueryConditionImpl qc) {
     return new ConditionEvaluator(this, qc).evaluate();
   }
 
-  private boolean resolveValue(final Assertion assertion) {
+  private boolean evalAssertion(final Assertion assertion) {
     final var val = (medial == null)
         ? examiner.discoverProperty(entry, assertion.prop(), cache)
-        : (medial instanceof StorageInstanceExaminer.Some some && some.path().isEmpty())
-            // we won't do this, because discoverProperty will know how to backtrack, but this is a
-            // good middle ground for now...
-            ? examiner.discoverProperty(some.host(), assertion.prop(), cache)
-            : examiner.discoverProperty(medial, assertion.prop(), cache);
+        : examiner.discoverProperty(medial, assertion.prop(), cache);
     if (assertion.isSingle()) {
       return assertion.check(val);
     }
@@ -139,6 +135,8 @@ final class ConditionEvaluator {
         final boolean allMatch = Assertion.MatchOp.ALL == matchOp;
         final boolean noneMatch = Assertion.MatchOp.NONE == matchOp;
         if (es.isEmpty()) {
+          // if the list is empty, both allMatch and noneMatch are vacuously satisfied, and anyMatch
+          // automatically fails: 
           yield !anyMatch;
         }
 
@@ -146,17 +144,23 @@ final class ConditionEvaluator {
           final boolean match = new ConditionEvaluator(this, listElementCondition, e).evaluate();
           if (match) {
             if (anyMatch) {
+              // anyMatch is satisfied already, short-circuit to TRUE:
               yield true;
             } else if (noneMatch) {
+              // we found one element contradicting noneMatch, short-circuit to FALSE:
               yield false;
             }
           } else {
             if (allMatch) {
+              // we found an element contradicting allMatch, short-circuit to FALSE:
               yield false;
             }
           }
         }
 
+        // if we had anyMatch and any matched, we would have short-circuited already with TRUE;
+        // if we had !anyMatch (all or none), we would have short-circuted already with FALSE if any
+        // element contradicted it:
         yield !anyMatch;
       }
       default -> false;

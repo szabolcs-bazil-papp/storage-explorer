@@ -48,12 +48,6 @@ public class StorageInstanceExaminer {
     this.discoverer = discoverer;
   }
 
-  public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
-                                                  final String propQuery) {
-    final var cache = ObjectEntryLookupTable.newInstance();
-    return discoverProperty(entry, propQuery, cache);
-  }
-
   public PropertyDiscoveryResult discoverProperty(final PropertyDiscoveryResult medial,
                                                   final String propQuery,
                                                   final ObjectEntryLookupTable cache) {
@@ -62,7 +56,9 @@ public class StorageInstanceExaminer {
         case NoValue noValue when propQuery.isEmpty() -> new NoValue();
         default -> new NotFound("No value present to continue on " + propQuery);
       };
-      case Some some -> new InlinePropertyDiscoverer(some.host(), propQuery).discover(some.val(), true /* add path!*/);
+      case Some some -> (propQuery.isEmpty())
+          ? medial
+          : discoverProperty(some.host(), UriProperty.join(some.path(), propQuery), cache);
     };
   }
 
@@ -148,7 +144,7 @@ public class StorageInstanceExaminer {
               .map(p -> discoverProperty(p.b(), q.drop(p.a()), cache))
               .collect(collectingAndThen(toList(), rs -> Optional.of(ListFound.of(rs, ""))));
         })
-        .orElseGet(() -> new InlinePropertyDiscoverer(host, propQuery).discover(sv.objectAsMap(), false));
+        .orElseGet(() -> new InlinePropertyDiscoverer(host, propQuery).discover(sv.objectAsMap()));
   }
 
   private static final class InlinePropertyDiscoverer {
@@ -161,7 +157,7 @@ public class StorageInstanceExaminer {
       this.pathElements = propQuery.isEmpty() ? new String[0] : propQuery.split("\\.");
     }
 
-    private PropertyDiscoveryResult discover(final Object root, final boolean backtrack) {
+    private PropertyDiscoveryResult discover(final Object root) {
       final List<UriProperty.Segment> segments = new ArrayList<>();
       return inObject(root, pathElements, segments);
     }
