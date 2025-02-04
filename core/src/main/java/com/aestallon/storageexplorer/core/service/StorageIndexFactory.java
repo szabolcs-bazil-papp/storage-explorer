@@ -6,8 +6,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 import javax.sql.DataSource;
-import javax.xml.validation.Schema;
-import org.checkerframework.checker.formatter.qual.ReturnsFormat;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.config.PlatformApiConfig;
 import org.smartbit4all.core.object.ObjectApi;
@@ -35,14 +33,14 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
+import com.aestallon.storageexplorer.common.util.NotImplementedException;
 import com.aestallon.storageexplorer.core.model.instance.dto.Availability;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseConnectionData;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseVendor;
 import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.common.util.NotImplementedException;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
 
 final class StorageIndexFactory {
 
