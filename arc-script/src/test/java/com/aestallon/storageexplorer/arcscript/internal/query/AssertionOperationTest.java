@@ -35,7 +35,7 @@ class AssertionOperationTest {
     assertion.str("name").is("Foo");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("Foo", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("Foo", null, null);
 
     //then
     assertThat(assertion).matches(it -> it.check(discovery), "String found: \"Foo\"");
@@ -48,7 +48,7 @@ class AssertionOperationTest {
     assertion.str("name").is("Foo");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("Baz", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("Baz", null, null);
 
     // then
     assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
@@ -74,7 +74,7 @@ class AssertionOperationTest {
     assertion.str("name").is(null);
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("Foo", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("Foo", null, null);
 
     // then
     assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
@@ -100,7 +100,7 @@ class AssertionOperationTest {
     assertion.str("age").is("9");
 
     // when
-    final var discovery = new StorageInstanceExaminer.NumberFound(9, null);
+    final var discovery = new StorageInstanceExaminer.NumberFound(9, null, null);
 
     // then
     assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
@@ -113,7 +113,7 @@ class AssertionOperationTest {
     assertion.str("name").in("Foo", "Bar", "Baz");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("Bar", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("Bar", null, null);
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
@@ -141,7 +141,7 @@ class AssertionOperationTest {
     assertion.str("name").contains("John");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("John", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("John", null, null);
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
@@ -154,7 +154,7 @@ class AssertionOperationTest {
     assertion.str("name").contains("John");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("Johnny Silverhand", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("Johnny Silverhand", null, null);
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
@@ -167,7 +167,7 @@ class AssertionOperationTest {
     assertion.str("name").contains("John");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("Silverhand", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("Silverhand", null, null);
 
     // then
     assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
@@ -195,7 +195,7 @@ class AssertionOperationTest {
     assertion.str("name").starts_with("John");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("John", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("John", null, null);
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
@@ -208,7 +208,7 @@ class AssertionOperationTest {
     assertion.str("name").starts_with("John");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("Johnny Silverhand", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("Johnny Silverhand", null, null);
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
@@ -221,7 +221,7 @@ class AssertionOperationTest {
     assertion.str("name").starts_with("John");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("BJohn", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("BJohn", null, null);
 
     // then
     assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
@@ -249,7 +249,7 @@ class AssertionOperationTest {
     assertion.str("name").ends_with("John");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("John", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("John", null, null);
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
@@ -262,7 +262,7 @@ class AssertionOperationTest {
     assertion.str("name").ends_with("John");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("Not John", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("Not John", null, null);
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
@@ -275,7 +275,7 @@ class AssertionOperationTest {
     assertion.str("name").ends_with("John");
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("Silverhand", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("Silverhand", null, null);
 
     // then
     assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
@@ -307,7 +307,7 @@ class AssertionOperationTest {
     assertion.num("age").is(69);
 
     // when
-    final var discovery = new StorageInstanceExaminer.NumberFound(69, null);
+    final var discovery = new StorageInstanceExaminer.NumberFound(69, null, null);
 
     //then
     assertThat(assertion).matches(it -> it.check(discovery), "Number found: 69");
@@ -320,7 +320,7 @@ class AssertionOperationTest {
     assertion.num("age").is(69);
 
     // when
-    final var discovery = new StorageInstanceExaminer.NumberFound(70, null);
+    final var discovery = new StorageInstanceExaminer.NumberFound(70, null, null);
 
     // then
     assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
@@ -346,7 +346,7 @@ class AssertionOperationTest {
     assertion.num("age").is(null);
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("Foo", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("Foo", null, null);
 
     // then
     assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
@@ -372,7 +372,7 @@ class AssertionOperationTest {
     assertion.num("age").is(69);
 
     // when
-    final var discovery = new StorageInstanceExaminer.StringFound("69", null);
+    final var discovery = new StorageInstanceExaminer.StringFound("69", null, null);
 
     // then
     assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
@@ -385,7 +385,7 @@ class AssertionOperationTest {
     assertion.num("age").is(69L);
 
     // when
-    final var discovery = new StorageInstanceExaminer.NumberFound(69.0d, null);
+    final var discovery = new StorageInstanceExaminer.NumberFound(69.0d, null, null);
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
@@ -398,7 +398,7 @@ class AssertionOperationTest {
     assertion.num("age").is(69.0d);
 
     // when
-    final var discovery = new StorageInstanceExaminer.NumberFound(69, null);
+    final var discovery = new StorageInstanceExaminer.NumberFound(69, null, null);
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
@@ -411,7 +411,7 @@ class AssertionOperationTest {
     assertion.num("age").is(69.0f);
 
     // when
-    final var discovery = new StorageInstanceExaminer.NumberFound(69.0d, null);
+    final var discovery = new StorageInstanceExaminer.NumberFound(69.0d, null, null);
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
