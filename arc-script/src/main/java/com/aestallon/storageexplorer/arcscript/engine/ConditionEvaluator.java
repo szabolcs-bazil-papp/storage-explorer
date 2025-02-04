@@ -159,7 +159,7 @@ final class ConditionEvaluator {
         }
 
         // if we had anyMatch and any matched, we would have short-circuited already with TRUE;
-        // if we had !anyMatch (all or none), we would have short-circuted already with FALSE if any
+        // if we had !anyMatch (all or none), we would have short-circuited already with FALSE if any
         // element contradicted it:
         yield !anyMatch;
       }
