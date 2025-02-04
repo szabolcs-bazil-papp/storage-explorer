@@ -1,6 +1,7 @@
 package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
 
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -32,13 +34,17 @@ import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkCompletedEvent;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkStartedEvent;
+import com.aestallon.storageexplorer.common.util.MsgStrings;
+import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.event.StorageReindexed;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.userconfig.service.StoredArcScript;
+import com.aestallon.storageexplorer.swing.ui.commander.arcscript.export.ResultSetExporterFactory;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
+import static java.util.stream.Collectors.joining;
 
 public class ArcScriptView extends JPanel {
 
@@ -110,22 +116,22 @@ public class ArcScriptView extends JPanel {
       }
     };
     toolbar.add(renameAction).setToolTipText("Rename script...");
-    
+
     final var deleteAction = new AbstractAction(null, IconProvider.DELETE) {
 
       @Override
       public void actionPerformed(ActionEvent e) {
         final int answer = JOptionPane.showConfirmDialog(
-            ArcScriptView.this, 
+            ArcScriptView.this,
             "Are you sure you want to delete " + storedArcScript.title() + "?",
-            "Delete " + storedArcScript.title(), 
+            "Delete " + storedArcScript.title(),
             JOptionPane.YES_NO_OPTION,
             JOptionPane.WARNING_MESSAGE);
         if (answer == JOptionPane.YES_OPTION) {
           delete();
         }
       }
-      
+
     };
     toolbar.add(deleteAction).setToolTipText("Permanently delete this script...");
 
@@ -296,7 +302,7 @@ public class ArcScriptView extends JPanel {
   void disableSave() {
     saveAction.setEnabled(false);
   }
-  
+
   private void delete() {
     controller.delete(this);
   }
@@ -364,14 +370,16 @@ public class ArcScriptView extends JPanel {
         label.setAlignmentX(LEFT_ALIGNMENT);
         label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
         add(label);
-        add(createOperationResultTable(i));
+        add(createOperationResultTable(i, false));
       }
     }
 
-    private static JScrollPane createOperationResultTable(ArcScriptResult.InstructionResult res) {
+    private static JScrollPane createOperationResultTable(ArcScriptResult.InstructionResult res,
+        /* TODO: DELETE THIS PARAM! */ final boolean render) {
       final var tableModel = switch (res) {
-        case ArcScriptResult.IndexingPerformed i -> new OperationResultTableModel(i);
-        case ArcScriptResult.QueryPerformed q -> new OperationResultTableModel(q);
+        case ArcScriptResult.IndexingPerformed i -> new IndexingOperationResultTableModel(i);
+        case ArcScriptResult.QueryPerformed q when render -> new RenderOperationResultTableModel(q);
+        case ArcScriptResult.QueryPerformed q -> new QueryOperationResultTableModel(q);
       };
 
       final var table = new JTable(tableModel);
@@ -387,28 +395,17 @@ public class ArcScriptView extends JPanel {
     }
 
 
-    private static final class OperationResultTableModel extends DefaultTableModel {
+    private static abstract class OperationResultTableModel extends DefaultTableModel {
 
       private static final String[] COLS = { "Operation performed", "Entries found", "Time taken" };
       private static final Class<?>[] COL_CLASSES = { String.class, Integer.class, String.class };
       private static final DecimalFormat MS_FORMAT = new DecimalFormat("000.0");
 
-      private final ArcScriptResult.IndexingPerformed indexingPerformed;
-      private final ArcScriptResult.QueryPerformed queryPerformed;
+      protected abstract String getOperationPerformed();
 
-      private OperationResultTableModel(ArcScriptResult.IndexingPerformed result) {
-        this(result, null);
-      }
+      protected abstract long getEntryCount();
 
-      private OperationResultTableModel(ArcScriptResult.QueryPerformed result) {
-        this(null, result);
-      }
-
-      private OperationResultTableModel(ArcScriptResult.IndexingPerformed indexingPerformed,
-                                        ArcScriptResult.QueryPerformed queryPerformed) {
-        this.indexingPerformed = indexingPerformed;
-        this.queryPerformed = queryPerformed;
-      }
+      protected abstract long getTimeTaken();
 
       @Override
       public String getColumnName(int column) {
@@ -427,36 +424,104 @@ public class ArcScriptView extends JPanel {
 
       @Override
       public Object getValueAt(int rowIndex, int columnIndex) {
-        if (indexingPerformed != null) {
-          return switch (columnIndex) {
-            case 0 -> indexingPerformed.prettyPrint();
-            case 1 -> indexingPerformed.entriesFound();
-            case 2 -> {
-              final var duration = Duration.ofNanos(indexingPerformed.timeTaken());
-              yield "%ds %sms".formatted(duration.getSeconds(),
-                  MS_FORMAT.format(duration.getNano() / 1_000_000d));
-            }
-            default -> null;
-          };
-        } else {
-          return switch (columnIndex) {
-            case 0 -> queryPerformed.prettyPrint();
-            case 1 -> queryPerformed.resultSet().size();
-            case 2 -> {
-              final var duration = Duration.ofNanos(queryPerformed.timeTaken());
-              yield "%ds %sms".formatted(duration.getSeconds(),
-                  MS_FORMAT.format(duration.getNano() / 1_000_000d));
-            }
-            default -> null;
-          };
-        }
-
+        return switch (columnIndex) {
+          case 0 -> getOperationPerformed();
+          case 1 -> getEntryCount();
+          case 2 -> {
+            final var duration = Duration.ofNanos(getTimeTaken());
+            yield "%ds %sms".formatted(duration.getSeconds(),
+                MS_FORMAT.format(duration.getNano() / 1_000_000d));
+          }
+          default -> null;
+        };
       }
 
       @Override
       public Class<?> getColumnClass(int columnIndex) {
         return COL_CLASSES[columnIndex];
       }
+    }
+
+
+    private static final class IndexingOperationResultTableModel extends OperationResultTableModel {
+      private final ArcScriptResult.IndexingPerformed indexingPerformed;
+
+      private IndexingOperationResultTableModel(
+          final ArcScriptResult.IndexingPerformed indexingPerformed) {
+        this.indexingPerformed = indexingPerformed;
+      }
+
+      @Override
+      protected String getOperationPerformed() {
+        return indexingPerformed.prettyPrint();
+      }
+
+      @Override
+      protected long getEntryCount() {
+        return indexingPerformed.entriesFound();
+      }
+
+      @Override
+      protected long getTimeTaken() {
+        return indexingPerformed.timeTaken();
+      }
+
+    }
+
+
+    private static final class QueryOperationResultTableModel extends OperationResultTableModel {
+
+      private final ArcScriptResult.QueryPerformed queryPerformed;
+
+      private QueryOperationResultTableModel(final ArcScriptResult.QueryPerformed queryPerformed) {
+        this.queryPerformed = queryPerformed;
+      }
+
+      @Override
+      protected String getOperationPerformed() {
+        return queryPerformed.prettyPrint();
+      }
+
+      @Override
+      protected long getEntryCount() {
+        return queryPerformed.resultSet().size();
+      }
+
+      @Override
+      protected long getTimeTaken() {
+        return queryPerformed.timeTaken();
+      }
+
+    }
+
+
+    private static final class RenderOperationResultTableModel extends OperationResultTableModel {
+
+      private final ArcScriptResult.QueryPerformed queryPerformed;
+
+      private RenderOperationResultTableModel(final ArcScriptResult.QueryPerformed queryPerformed) {
+        this.queryPerformed = queryPerformed;
+      }
+
+      @Override
+      protected String getOperationPerformed() {
+        return "render " + queryPerformed
+            .resultSet().meta()
+            .columns().stream()
+            .map(it -> "%s as \"%s\"".formatted(it.prop(), it.title()))
+            .collect(joining(","));
+      }
+
+      @Override
+      protected long getEntryCount() {
+        return queryPerformed.resultSet().size();
+      }
+
+      @Override
+      protected long getTimeTaken() {
+        return queryPerformed.resultSet().meta().timeTaken();
+      }
+
     }
 
 
@@ -468,17 +533,28 @@ public class ArcScriptView extends JPanel {
         setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
         setAlignmentX(LEFT_ALIGNMENT);
 
-        final var label = new JLabel((idx + 1) + ". Performed query:");
+        final var resultSet = q.resultSet();
+        final boolean customRender = !resultSet.meta().columns().isEmpty();
+
+        final var label = new JLabel(getQueryPerformedLabel(idx, customRender));
         label.putClientProperty("FlatLaf.styleClass", "h2");
         label.setAlignmentX(LEFT_ALIGNMENT);
         label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
         add(label);
-        add(createOperationResultTable(q));
+        add(createOperationResultTable(q, false));
 
-        final var resultSet = q.resultSet();
-        final var tableModel = resultSet.meta().columns().isEmpty()
-            ? new DefaultQueryResultTableModel(resultSet)
-            : new CustomisedQueryResultTableModel(resultSet);
+        if (customRender) {
+          final var renderLabel = new JLabel((idx + 1) + "/B. Retrieved columns:");
+          renderLabel.putClientProperty("FlatLaf.styleClass", "h2");
+          renderLabel.setAlignmentX(LEFT_ALIGNMENT);
+          renderLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
+          add(renderLabel);
+          add(createOperationResultTable(q, true));
+        }
+
+        final var tableModel = customRender
+            ? new CustomisedQueryResultTableModel(resultSet)
+            : new DefaultQueryResultTableModel(resultSet);
         final var table = new JTable(tableModel);
         doMagicTableColumnResizing(table);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
@@ -494,8 +570,34 @@ public class ArcScriptView extends JPanel {
               return;
             }
 
-            final URI uri = tableModel.uriAt(row);
-            JumpToUri.jump(eventPublisher, uri, storageInstance);
+            if (e.getClickCount() > 1 && e.getButton() == MouseEvent.BUTTON1) {
+
+              final URI uri = tableModel.uriAt(row);
+              JumpToUri.jump(eventPublisher, uri, storageInstance);
+
+            } else if (e.getButton() == MouseEvent.BUTTON3) {
+
+              final int col = table.columnAtPoint(eventLocation);
+              if (col < 1) { // we don't care about the first column, as it's a row number...
+                return;
+              }
+
+              final var o = tableModel.getValueAt(row, col);
+              if (o instanceof Icon) { // we don't care about icons either...
+                return;
+              }
+
+              // this is kinda idiotic, but we clip the enveloping quotes here, this doesn't handle
+              // lists and stuff:
+              final String v = (o instanceof String s && s.startsWith("\"") && s.endsWith("\""))
+                  ? s.substring(1, s.length() - 1)
+                  : String.valueOf(o);
+              new CellPopUpMenu(eventPublisher, storageInstance, v).show(
+                  table,
+                  eventLocation.x,
+                  eventLocation.y);
+
+            }
           }
 
         });
@@ -504,6 +606,60 @@ public class ArcScriptView extends JPanel {
         pane.setAlignmentX(LEFT_ALIGNMENT);
         add(pane);
       }
+
+      private String getQueryPerformedLabel(final int idx, final boolean customRender) {
+        final StringBuilder sb = new StringBuilder();
+        sb.append(idx + 1);
+        if (customRender) {
+          sb.append("/A");
+        }
+        return sb.append(". Performed query:").toString();
+      }
+
+    }
+
+
+    private static final class CellPopUpMenu extends JPopupMenu {
+
+      private final ApplicationEventPublisher eventPublisher;
+      private final StorageInstance storageInstance;
+
+      private CellPopUpMenu(ApplicationEventPublisher eventPublisher,
+                            StorageInstance storageInstance,
+                            String cellValue) {
+        super(cellValue);
+
+        this.eventPublisher = eventPublisher;
+        this.storageInstance = storageInstance;
+
+        add(title());
+        addSeparator();
+        add(copyMenuItem());
+        Uris.parse(cellValue).ifPresent(it -> add(jumpMenuItem(it)));
+      }
+
+      private JLabel title() {
+        final var item = new JLabel("<html><strong>%s</strong></html>".formatted(
+            MsgStrings.trim(getLabel(), 20)));
+        item.setHorizontalAlignment(SwingConstants.CENTER);
+        return item;
+      }
+
+      private JMenuItem copyMenuItem() {
+        final var item = new JMenuItem("Copy");
+        item.addActionListener(e -> Toolkit.getDefaultToolkit()
+            .getSystemClipboard()
+            .setContents(new StringSelection(getLabel()), null));
+        return item;
+      }
+
+      private JMenuItem jumpMenuItem(final URI uri) {
+        final var item = new JMenuItem("Jump");
+        item.addActionListener(e -> JumpToUri.jump(eventPublisher, uri, storageInstance));
+        return item;
+      }
+
+
     }
 
 
