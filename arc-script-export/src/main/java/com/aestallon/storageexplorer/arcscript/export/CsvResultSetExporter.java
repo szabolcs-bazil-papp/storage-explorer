@@ -99,9 +99,7 @@ public class CsvResultSetExporter implements ResultSetExporter {
       protected String[] row(ArcScriptResult.QueryResultRow row) {
         return Arrays.stream(props)
             .map(prop -> row.cells().get(prop))
-            .map(it -> it == null ? "" : it.value())
-            .map(s -> s == null ? "" : s)
-            .map(s -> s.startsWith("\"") && s.endsWith("\"") ? s.substring(1, s.length() - 1) : s)
+            .map(it -> it == null ? "" : it.toString())
             .toArray(String[]::new);
       }
 

@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.swing.text.DefaultEditorKit;
+import org.codehaus.groovy.classgen.ReturnAdder;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
@@ -81,18 +83,27 @@ public sealed interface ArcScriptResult {
   enum CellType { SIMPLE, COMPLEX }
 
 
-  record DataCell(CellType type, String value) {
+  record DataCell(CellType type, Object value) {
 
     static DataCell noValue() {
-      return new DataCell(CellType.SIMPLE, "");
+      return new DataCell(CellType.SIMPLE, null);
     }
 
-    static DataCell simple(String value) {
-      return new DataCell(CellType.SIMPLE, value);
+    static DataCell of(Object value) {
+      return new DataCell(CellType.COMPLEX, value);
     }
 
-    static DataCell complex(Object value) {
-      return new DataCell(CellType.COMPLEX, String.valueOf(value));
+    @Override
+    public String toString() {
+      return value == null ? "" : value.toString();
+    }
+
+    public String displayString() {
+      return switch (value) {
+        case null -> "";
+        case String s -> "\"" + s + "\"";
+        default -> value.toString();
+      };
     }
 
   }
@@ -112,7 +123,7 @@ public sealed interface ArcScriptResult {
     public int size() {
       return rows.size();
     }
-    
+
     public List<StorageEntry> entries() {
       return rows.stream().map(QueryResultRow::entry).collect(Collectors.toList());
     }

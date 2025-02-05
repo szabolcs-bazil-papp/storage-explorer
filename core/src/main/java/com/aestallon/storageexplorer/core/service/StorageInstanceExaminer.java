@@ -297,7 +297,7 @@ public class StorageInstanceExaminer {
 
     @Override
     public String toString() {
-      return "\"" + string + "\"";
+      return string;
     }
 
     @Override

@@ -86,14 +86,7 @@ public class QueryResultRowEvaluationExecutor extends
     final String prop = column.prop();
     final ArcScriptResult.DataCell cell = switch (examiner.discoverProperty(entry, prop, cache)) {
       case StorageInstanceExaminer.None none -> ArcScriptResult.DataCell.noValue();
-      case StorageInstanceExaminer.Some some -> switch (some) {
-        case StorageInstanceExaminer.ComplexFound complex ->
-            ArcScriptResult.DataCell.complex(complex.value());
-        case StorageInstanceExaminer.ListFound list ->
-            ArcScriptResult.DataCell.complex(list.value());
-        case StorageInstanceExaminer.PrimitiveDiscoveryResult primitive ->
-            ArcScriptResult.DataCell.simple(primitive.toString());
-      };
+      case StorageInstanceExaminer.Some some -> ArcScriptResult.DataCell.of(some.val());
     };
     return Pair.of(prop, cell);
   }

@@ -21,8 +21,8 @@ import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 public final class StoredArcScript {
 
   static StoredArcScript of(final StorageId storageId,
-                                   final String title,
-                                   final String script) {
+                            final String title,
+                            final String script) {
     final var it = new StoredArcScript(storageId);
     it.title(title);
     it.script(script);

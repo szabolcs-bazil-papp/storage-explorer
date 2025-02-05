@@ -767,7 +767,7 @@ public class ArcScriptView extends JPanel {
     public int getRowCount() {
       return rows.size();
     }
-
+ 
     @Override
     public int getColumnCount() {
       return columnDescriptors.size() + 1;
@@ -786,7 +786,7 @@ public class ArcScriptView extends JPanel {
         return "";
       }
 
-      return cell.value();
+      return cell.displayString();
     }
 
     @Override
