@@ -65,6 +65,10 @@ public class StorageInstanceExaminer {
   public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
                                                   final String propQuery,
                                                   final ObjectEntryLookupTable cache) {
+    if (UriProperty.OWN.equals(propQuery)) {
+      return new StringFound(entry.uri().toString(), entry, UriProperty.OWN);
+    }
+
     return switch (entry) {
       case ObjectEntry o -> {
         final var loadResult = cache.computeIfAbsent(o, ObjectEntry::tryLoad);
@@ -282,7 +286,7 @@ public class StorageInstanceExaminer {
   public sealed interface Some extends PropertyDiscoveryResult {
 
     StorageEntry host();
-    
+
     Object val();
 
     String path();
