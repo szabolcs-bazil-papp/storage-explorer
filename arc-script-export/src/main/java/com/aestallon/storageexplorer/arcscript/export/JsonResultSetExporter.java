@@ -34,12 +34,12 @@ public class JsonResultSetExporter implements ResultSetExporter {
     for (final var row : resultSet.rows()) {
       jsonArray.add(export.row(row));
     }
-    
+
     try (final var out = Files.newOutputStream(path)) {
 
       JSON.writeTo(out, jsonArray, JSONWriter.Feature.PrettyFormat);
       return new Result.Ok();
-      
+
     } catch (IOException | JSONException e) {
       return new Result.Error(e.getMessage());
     }

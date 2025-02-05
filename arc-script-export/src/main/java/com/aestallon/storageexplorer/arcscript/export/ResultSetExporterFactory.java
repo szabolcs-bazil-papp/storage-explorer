@@ -22,7 +22,7 @@ public class ResultSetExporterFactory {
 
   private final CsvResultSetExporter csvExporter;
   private final JsonResultSetExporter jsonExporter;
-  
+
   public ResultSetExporterFactory() {
     this.csvExporter = new CsvResultSetExporter();
     this.jsonExporter = new JsonResultSetExporter();

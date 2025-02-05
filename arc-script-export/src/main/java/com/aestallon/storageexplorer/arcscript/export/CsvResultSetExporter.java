@@ -55,7 +55,7 @@ public class CsvResultSetExporter implements ResultSetExporter {
     String[] headers();
 
     String[] row(final ArcScriptResult.QueryResultRow row);
-    
+
     final class Default implements CsvExporter {
 
       private static final String[] DEFAULT_HEADERS = { "URI" };
