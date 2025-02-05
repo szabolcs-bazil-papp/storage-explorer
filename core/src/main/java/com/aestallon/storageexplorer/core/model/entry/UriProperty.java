@@ -24,7 +24,7 @@ import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.util.Assert;
 import com.aestallon.storageexplorer.common.util.Uris;
 
-public final class UriProperty {
+public final class UriProperty implements Comparable<UriProperty> {
 
   public sealed interface Segment {
 
@@ -97,21 +97,21 @@ public final class UriProperty {
     }
 
   }
-  
+
   public static String join(final String a, final String b) {
     final StringBuilder sb = new StringBuilder();
     if (a != null && !a.isEmpty()) {
       sb.append(a);
     }
-    
+
     if (b != null && !b.isEmpty()) {
       if (!sb.isEmpty()) {
         sb.append('.');
       }
-      
+
       sb.append(b);
     }
-    
+
     return sb.toString();
   }
 
@@ -233,6 +233,31 @@ public final class UriProperty {
            "    uri: " + uri + "\n" +
            "    position: " + position + "\n" +
            "}";
+  }
+
+  @Override
+  public int compareTo(UriProperty o) {
+    final int min = Math.min(segments.length, o.segments.length);
+    int result = 0;
+    for (int i = 0; i < min; i++) {
+      final var thisSegment = segments[i];
+      final var thatSegment = o.segments[i];
+      result = switch (thisSegment) {
+        case Segment.Idx(int thisIdx) -> switch (thatSegment) {
+          case Segment.Idx(int thatIdx) -> thisIdx - thatIdx;
+          case Segment.Key thatKey -> -1;
+        };
+        case Segment.Key(String thisKey) -> switch (thatSegment) {
+          case Segment.Key(String thatKey) -> thisKey.compareTo(thatKey);
+          case Segment.Idx thatIdx -> 1;
+        };
+      };
+
+      if (result != 0) {
+        return result;
+      }
+    }
+    return result;
   }
 
 }

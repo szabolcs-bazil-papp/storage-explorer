@@ -133,6 +133,7 @@ public class StorageInstanceExaminer {
           final List<UriProperty> matchedListProps = host.uriProperties().stream()
               .filter(it -> !it.isStandalone())
               .filter(q::matches)
+              .sorted()
               .toList();
           if (matchedListProps.isEmpty()) {
             return Optional.empty();
@@ -463,8 +464,8 @@ public class StorageInstanceExaminer {
       int matchIdx = -1;
       UriProperty.Segment curr = segments[++matchIdx];
       LOOP:
-      for (int i = 0; i < segmentsToMatch.length; i++) {
-        switch (segmentsToMatch[i]) {
+      for (UriProperty.Segment toMatch : segmentsToMatch) {
+        switch (toMatch) {
           case UriProperty.Segment.Idx(int idx) -> {
             switch (curr) {
               case UriProperty.Segment.Idx(int value) -> {
