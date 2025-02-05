@@ -18,7 +18,6 @@ package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.lang.invoke.VarHandle;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +29,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
+import com.aestallon.storageexplorer.arcscript.export.ResultSetExporter;
+import com.aestallon.storageexplorer.arcscript.export.ResultSetExporterFactory;
 import com.aestallon.storageexplorer.core.event.StorageImportEvent;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
@@ -38,8 +39,6 @@ import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.service.ArcScriptFileService;
 import com.aestallon.storageexplorer.core.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.swing.ui.commander.arcscript.export.ResultSetExporter;
-import com.aestallon.storageexplorer.swing.ui.commander.arcscript.export.ResultSetExporterFactory;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -66,14 +65,13 @@ public class ArcScriptController {
                              final ApplicationEventPublisher applicationEventPublisher,
                              final UserConfigService userConfigService,
                              final RSyntaxTextAreaThemeProvider themeProvider,
-                             final MonospaceFontProvider monospaceFontProvider,
-                             ResultSetExporterFactory resultSetExporterFactory) {
+                             final MonospaceFontProvider monospaceFontProvider) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.applicationEventPublisher = applicationEventPublisher;
     this.userConfigService = userConfigService;
     this.themeProvider = themeProvider;
     this.monospaceFontProvider = monospaceFontProvider;
-    this.resultSetExporterFactory = resultSetExporterFactory;
+    this.resultSetExporterFactory = new ResultSetExporterFactory();
 
     arcScriptTextareaFactory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
   }

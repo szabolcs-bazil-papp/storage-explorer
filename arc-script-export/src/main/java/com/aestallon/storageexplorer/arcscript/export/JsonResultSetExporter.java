@@ -13,15 +13,12 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.export;
+package com.aestallon.storageexplorer.arcscript.export;
 
 import java.nio.file.Path;
-import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
-import com.aestallon.storageexplorer.swing.ui.commander.arcscript.export.JsonResultSetExporter;
 
-@Service
-public class JsonResultSetExporterImpl implements JsonResultSetExporter {
+public class JsonResultSetExporter implements ResultSetExporter {
   
   @Override
   public Result export(ArcScriptResult.ResultSet resultSet, Path path) {

@@ -13,30 +13,22 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.commander.arcscript.export;
+package com.aestallon.storageexplorer.arcscript.export;
 
-import org.springframework.stereotype.Service;
+import java.nio.file.Path;
+import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
 
-@Service
-public class ResultSetExporterFactory {
+public interface ResultSetExporter {
 
-  public enum Target { CSV, JSON }
+  sealed interface Result {
+
+    record Ok() implements Result {}
 
 
-  private final CsvResultSetExporter csvExporter;
-  private final JsonResultSetExporter jsonExporter;
-  
-  public ResultSetExporterFactory(CsvResultSetExporter csvExporter,
-                                  JsonResultSetExporter jsonExporter) {
-    this.csvExporter = csvExporter;
-    this.jsonExporter = jsonExporter;
+    record Error(String msg) implements Result {}
+
   }
 
-  public ResultSetExporter get(final Target target) {
-    return switch (target) {
-      case CSV -> csvExporter;
-      case JSON -> jsonExporter;
-    };
-  }
+  Result export(final ArcScriptResult.ResultSet resultSet, final Path path);
 
 }
