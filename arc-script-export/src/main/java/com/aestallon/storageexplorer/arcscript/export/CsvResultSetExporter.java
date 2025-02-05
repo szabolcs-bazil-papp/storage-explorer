@@ -46,57 +46,44 @@ public class CsvResultSetExporter implements ResultSetExporter {
     }
   }
 
-  private static abstract sealed class CsvExporter {
+  private sealed interface CsvExporter {
 
     private static CsvExporter of(ArcScriptResult.ResultSetMeta meta) {
       return (meta.columns().isEmpty()) ? new Default() : new Custom(meta);
     }
 
-    protected abstract String[] headers();
+    String[] headers();
 
-    protected abstract String[] row(final ArcScriptResult.QueryResultRow row);
-
-
-    private static final class Default extends CsvExporter {
+    String[] row(final ArcScriptResult.QueryResultRow row);
+    
+    final class Default implements CsvExporter {
 
       private static final String[] DEFAULT_HEADERS = { "URI" };
 
       @Override
-      protected String[] headers() {
+      public String[] headers() {
         return DEFAULT_HEADERS;
       }
 
       @Override
-      protected String[] row(ArcScriptResult.QueryResultRow row) {
+      public String[] row(ArcScriptResult.QueryResultRow row) {
         return new String[] { row.entry().uri().toString() };
       }
 
     }
 
 
-    private static final class Custom extends CsvExporter {
-
-      private final String[] headers;
-      private final String[] props;
+    final class Custom extends CustomExport implements CsvExporter {
 
       private Custom(ArcScriptResult.ResultSetMeta meta) {
-        final var columns = meta.columns();
-        headers = new String[columns.size()];
-        props = new String[columns.size()];
-        for (int i = 0; i < columns.size(); i++) {
-          final var col = columns.get(i);
-          headers[i] = col.title();
-          props[i] = col.prop();
-        }
+        super(meta);
       }
 
-      @Override
-      protected String[] headers() {
+      public String[] headers() {
         return headers;
       }
 
-      @Override
-      protected String[] row(ArcScriptResult.QueryResultRow row) {
+      public String[] row(ArcScriptResult.QueryResultRow row) {
         return Arrays.stream(props)
             .map(prop -> row.cells().get(prop))
             .map(it -> it == null ? "" : it.toString())
