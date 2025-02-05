@@ -33,14 +33,14 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
+import com.aestallon.storageexplorer.common.util.NotImplementedException;
 import com.aestallon.storageexplorer.core.model.instance.dto.Availability;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseConnectionData;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseVendor;
 import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.common.util.NotImplementedException;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
 
 final class StorageIndexFactory {
 
@@ -104,6 +104,9 @@ final class StorageIndexFactory {
   }
 
   StorageIndexCreationResult create(final StorageLocation storageLocation) {
+    final ClassLoader original = Thread.currentThread().getContextClassLoader();
+    final ClassLoader swap = getClass().getClassLoader();
+    Thread.currentThread().setContextClassLoader(swap);
     try {
 
       return switch (storageLocation) {
@@ -113,6 +116,8 @@ final class StorageIndexFactory {
 
     } catch (final Exception e) {
       return new StorageIndexCreationResult.Err(Availability.UNAVAILABLE, e.getMessage());
+    } finally {
+      Thread.currentThread().setContextClassLoader(original);
     }
   }
 
@@ -163,6 +168,7 @@ final class StorageIndexFactory {
       return new StorageIndexCreationResult.Err(Availability.MISCONFIGURED, "No Connection Data!");
     }
     props.putAll(connectionData.asProperties());
+    final String targetSchema = connectionData.getTargetSchema();
 
     final var ctx = new AnnotationConfigApplicationContext();
 
@@ -175,7 +181,7 @@ final class StorageIndexFactory {
     ctx.registerBean(
         "sqlDbParameter",
         SQLDBParameter.class,
-        getSqlDBParameterFactory(ctx, vendor), it -> it.setDependsOn("jdbcTemplate"));
+        getSqlDBParameterFactory(ctx, vendor, targetSchema), it -> it.setDependsOn("jdbcTemplate"));
     ctx.registerBean(
         "identifierService",
         IdentifierService.class,
@@ -199,18 +205,28 @@ final class StorageIndexFactory {
     final CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
     final JdbcTemplate jdbcTemplate = ctx.getBean(JdbcTemplate.class);
 
+    
     final var index = new RelationalDatabaseStorageIndex(
         storageId,
         objectApi,
         collectionApi,
-        jdbcTemplate);
+        jdbcTemplate,
+        targetSchema);
     return new StorageIndexCreationResult.Ok(index, ctx);
   }
 
   private Supplier<SQLDBParameter> getSqlDBParameterFactory(final ApplicationContext ctx,
-                                                            final DatabaseVendor vendor) {
+                                                            final DatabaseVendor vendor,
+                                                            final String targetSchema) {
     return switch (vendor) {
-      case ORACLE -> SQLDBParameterOracle::new;
+      case ORACLE -> () -> {
+        final var p = new SQLDBParameterOracle();
+        if (targetSchema != null && !targetSchema.isEmpty()) {
+          p.setSchema(targetSchema);
+        }
+        
+        return p;
+      };
       case H2 -> SQLDBParameterH2::new;
       case PG -> SQLDBParameterPostgres::new;
       default -> throw new NotImplementedException("Unsupported database vendor: " + vendor);
@@ -247,6 +263,11 @@ final class StorageIndexFactory {
       dataSource.setUrl(connectionData.getUrl());
       dataSource.setUsername(connectionData.getUsername());
       dataSource.setPassword(connectionData.getPassword());
+      
+      final var schema = connectionData.getTargetSchema();
+      if (schema != null && !schema.isEmpty()) {
+        dataSource.setSchema(schema);
+      }
       return dataSource;
     };
   }

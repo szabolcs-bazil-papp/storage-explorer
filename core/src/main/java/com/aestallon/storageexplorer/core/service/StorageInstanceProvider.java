@@ -15,7 +15,6 @@
 
 package com.aestallon.storageexplorer.core.service;
 
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -32,6 +31,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkCompletedEvent;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkStartedEvent;
+import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.event.StorageImportEvent;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.event.StorageReimportedEvent;
@@ -40,7 +40,6 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.common.event.msg.Msg;
 import jakarta.validation.constraints.NotNull;
 
 @Service
@@ -90,24 +89,18 @@ public class StorageInstanceProvider {
     executorService = Executors.newSingleThreadExecutor(new HighPriorityThreadFactory());
   }
 
-  public Stream<StorageIndex> provide() {
-    return storageInstancesById.values().stream().map(StorageInstance::index);
+  public Stream<StorageInstance> provide() {
+    return storageInstancesById.values().stream();
+  }
+
+  public StorageInstance get(final StorageId id) {
+    return storageInstancesById.get(id);
   }
 
   public Stream<StorageEntry> searchForUri(final String queryString) {
     return storageInstancesById.values().stream()
         .map(StorageInstance::index)
         .flatMap(it -> it.searchForUri(queryString));
-  }
-
-  @Deprecated
-  public StorageIndex indexOf(final URI uri) {
-    // TODO: don't do this, store backreference!
-    return storageInstancesById.values().stream()
-        .map(StorageInstance::index)
-        .filter(it -> it.get(uri).isPresent())
-        .findFirst()
-        .orElseThrow();
   }
 
   public StorageInstance storageInstanceOf(final StorageEntry storageEntry) {

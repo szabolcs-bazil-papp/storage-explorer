@@ -22,21 +22,19 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.common.event.msg.ErrorMsg;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
-import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkCompletedEvent;
-import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkStartedEvent;
 import com.aestallon.storageexplorer.core.event.EntryAcquired;
 import com.aestallon.storageexplorer.core.event.EntryAcquisitionFailed;
 import com.aestallon.storageexplorer.core.event.EntryDiscovered;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
-import com.aestallon.storageexplorer.graph.event.GraphRenderingRequest;
-import com.aestallon.storageexplorer.graph.event.GraphSelectionRequest;
 import com.aestallon.storageexplorer.core.event.StorageImportEvent;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.event.StorageReimportedEvent;
 import com.aestallon.storageexplorer.core.event.StorageReindexed;
 import com.aestallon.storageexplorer.core.event.TreeTouchRequest;
-import com.aestallon.storageexplorer.swing.ui.ExplorerView;
-import com.aestallon.storageexplorer.swing.ui.GraphView;
+import com.aestallon.storageexplorer.graph.event.GraphRenderingRequest;
+import com.aestallon.storageexplorer.graph.event.GraphSelectionRequest;
+import com.aestallon.storageexplorer.swing.ui.explorer.ExplorerView;
+import com.aestallon.storageexplorer.swing.ui.graph.GraphView;
 import com.aestallon.storageexplorer.swing.ui.tree.MainTreeView;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.ClickableTreeNode;
 
@@ -100,17 +98,6 @@ public class ViewController {
   @EventListener
   public void onStorageImported(StorageImportEvent e) {
     SwingUtilities.invokeLater(() -> mainTreeView.importStorage(e.storageInstance()));
-  }
-
-
-  @EventListener
-  public void onBackgroundWorkStarted(BackgroundWorkStartedEvent e) {
-    SwingUtilities.invokeLater(() -> mainTreeView.showProgressBar(e.displayName()));
-  }
-
-  @EventListener
-  public void onBackgroundWorkTerminated(BackgroundWorkCompletedEvent e) {
-    SwingUtilities.invokeLater(mainTreeView::removeProgressBar);
   }
 
   @EventListener

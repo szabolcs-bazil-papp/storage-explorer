@@ -32,18 +32,21 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
+import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
-import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.graph.event.GraphRenderingRequest;
-import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
+import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
-import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
 @Service
 public class StorageEntryInspectorViewFactory {
@@ -52,17 +55,20 @@ public class StorageEntryInspectorViewFactory {
   private final StorageInstanceProvider storageInstanceProvider;
   private final MonospaceFontProvider monospaceFontProvider;
   private final InspectorTextareaFactory textareaFactory;
+  private final RSyntaxTextAreaThemeProvider themeProvider;
   private final Map<StorageEntry, InspectorView<? extends StorageEntry>> openedInspectors;
   private final Map<StorageEntry, InspectorDialog> openedDialogs;
   private final Map<StorageEntry, List<JTextArea>> textAreas;
 
   public StorageEntryInspectorViewFactory(ApplicationEventPublisher eventPublisher,
                                           StorageInstanceProvider storageInstanceProvider,
-                                          MonospaceFontProvider monospaceFontProvider) {
+                                          MonospaceFontProvider monospaceFontProvider,
+                                          RSyntaxTextAreaThemeProvider themeProvider) {
     this.eventPublisher = eventPublisher;
     this.storageInstanceProvider = storageInstanceProvider;
     this.monospaceFontProvider = monospaceFontProvider;
-    this.textareaFactory = new InspectorTextareaFactory(this);
+    this.themeProvider = themeProvider;
+    this.textareaFactory = new InspectorTextareaFactory(this, themeProvider);
 
     openedInspectors = new ConcurrentHashMap<>();
     openedDialogs = new ConcurrentHashMap<>();
@@ -177,7 +183,19 @@ public class StorageEntryInspectorViewFactory {
     });
   }
 
-  void addJumpAction(final JTextArea component) {
+  @EventListener
+  void onLafChanged(final LafChanged lafChanged) {
+    SwingUtilities.invokeLater(() -> {
+      themeProvider.setCurrentTheme(lafChanged.laf());
+      final var font = monospaceFontProvider.getFont();
+      textAreas.values().stream().flatMap(List::stream).forEach(it -> {
+        themeProvider.applyCurrentTheme(it);
+        it.setFont(font);
+      });
+    });
+  }
+
+  void addJumpAction(final StorageId storageId, final JTextArea component) {
     final var ctrlShiftI = KeyStroke.getKeyStroke(
         KeyEvent.VK_I,
         KeyEvent.CTRL_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK);
@@ -191,25 +209,18 @@ public class StorageEntryInspectorViewFactory {
         if (selectedText == null || selectedText.isEmpty()) {
           return;
         }
-        jumpToUriBasedOnText(selectedText);
+        jumpToUriBasedOnText(storageId, selectedText);
       }
 
     });
   }
 
-  private void jumpToUriBasedOnText(String selectedText) {
-    Uris.parse(selectedText).ifPresent(this::jumpToUri);
+  private void jumpToUriBasedOnText(StorageId storageId, String selectedText) {
+    Uris.parse(selectedText).ifPresent(it -> jumpToUri(storageId, it));
   }
 
-  void jumpToUri(final URI uri) {
-    // TODO: Absolutely DO NOT DO THIS!
-    storageInstanceProvider.indexOf(uri).get(uri).ifPresentOrElse(
-        it -> eventPublisher.publishEvent(new EntryInspectionEvent(it)),
-        () -> JOptionPane.showMessageDialog(
-            null,
-            "Cannot show URI: " + uri,
-            "Unreachable URI",
-            JOptionPane.ERROR_MESSAGE));
+  void jumpToUri(final StorageId storageId, final URI uri) {
+    JumpToUri.jump(eventPublisher, uri, storageInstanceProvider, storageId);
   }
 
   void addRenderAction(final StorageEntry storageEntry, final JToolBar toolbar) {

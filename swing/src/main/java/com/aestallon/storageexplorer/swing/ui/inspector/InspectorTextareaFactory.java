@@ -24,25 +24,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.swing.ui.misc.PaneAndTextarea;
+import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
 
 public final class InspectorTextareaFactory {
 
   private static final Logger log = LoggerFactory.getLogger(InspectorTextareaFactory.class);
 
-  static final class PaneAndTextarea {
-    final JScrollPane scrollPane;
-    final JTextArea textArea;
-
-    PaneAndTextarea(JScrollPane scrollPane, JTextArea textArea) {
-      this.scrollPane = scrollPane;
-      this.textArea = textArea;
-    }
-
-  }
-
-
-  public enum Type { SIMPLE, FANCY; }
+  public enum Type { SIMPLE, FANCY }
 
   static JScrollPane textAreaContainerPane(JTextArea objectAsMapTextarea) {
     final var pane = new JScrollPane(
@@ -54,9 +44,12 @@ public final class InspectorTextareaFactory {
   }
 
   private final StorageEntryInspectorViewFactory inspectorViewFactory;
+  private final RSyntaxTextAreaThemeProvider themeProvider;
 
-  public InspectorTextareaFactory(StorageEntryInspectorViewFactory inspectorViewFactory) {
+  public InspectorTextareaFactory(StorageEntryInspectorViewFactory inspectorViewFactory,
+                                  RSyntaxTextAreaThemeProvider themeProvider) {
     this.inspectorViewFactory = inspectorViewFactory;
+    this.themeProvider = themeProvider;
   }
 
   PaneAndTextarea create(final ObjectEntry objectEntry,
@@ -83,6 +76,10 @@ public final class InspectorTextareaFactory {
   private PaneAndTextarea createFancy(final ObjectEntry objectEntry,
                                       final ObjectEntryLoadResult.SingleVersion nodeVersion) {
     final var textarea = new RSyntaxTextArea(nodeVersion.oamStr());
+    if (themeProvider.hasTheme()) {
+      themeProvider.applyCurrentTheme(textarea);
+    }
+
     textarea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
     textarea.setCodeFoldingEnabled(true);
     textarea.setWrapStyleWord(true);
@@ -90,15 +87,15 @@ public final class InspectorTextareaFactory {
     textarea.setEditable(false);
     textarea.setFont(inspectorViewFactory.monospaceFontProvider().getFont());
 
-    inspectorViewFactory.addJumpAction(textarea);
+    inspectorViewFactory.addJumpAction(objectEntry.storageId(), textarea);
     inspectorViewFactory.monospaceFontProvider().applyFontSizeChangeAction(textarea);
 
     inspectorViewFactory.submitTextArea(objectEntry, textarea);
 
     final var scrollPane = new RTextScrollPane(textarea);
-    //scrollPane.add(textarea);
     return new PaneAndTextarea(scrollPane, textarea);
   }
+
 
   private JTextArea objectAsMapTextarea(final ObjectEntry objectEntry,
                                         final ObjectEntryLoadResult.SingleVersion nodeVersion) {
@@ -109,7 +106,7 @@ public final class InspectorTextareaFactory {
     textarea.setOpaque(false);
     textarea.setFont(inspectorViewFactory.monospaceFontProvider().getFont());
 
-    inspectorViewFactory.addJumpAction(textarea);
+    inspectorViewFactory.addJumpAction(objectEntry.storageId(), textarea);
     inspectorViewFactory.monospaceFontProvider().applyFontSizeChangeAction(textarea);
 
     inspectorViewFactory.submitTextArea(objectEntry, textarea);

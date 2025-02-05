@@ -102,7 +102,7 @@ public class GraphSettingsDialog extends JFrame {
 
   private static int spinnerValue(JSpinner spinner) {
     final var value = spinner.getValue();
-    return (value instanceof Integer) ? (Integer) value : 0;
+    return (value instanceof Integer i) ? i : 0;
   }
 
   private static final class GraphTraversalLimitSpinnerModel extends SpinnerNumberModel {

@@ -16,12 +16,103 @@
 package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Objects;
 import java.util.OptionalInt;
 import org.springframework.util.Assert;
 import com.aestallon.storageexplorer.common.util.Uris;
 
-public final class UriProperty {
+public final class UriProperty implements Comparable<UriProperty> {
+
+  public sealed interface Segment {
+
+    static Segment[] parse(final String s) {
+      if (s == null || s.isEmpty()) {
+        return new Segment[0];
+      }
+
+      final String[] arr = s.split("\\.");
+      final Segment[] segments = new Segment[arr.length];
+      for (int i = 0; i < arr.length; i++) {
+        final String key = arr[i];
+        try {
+          final int value = Integer.parseInt(key);
+          segments[i] = new Idx(value);
+        } catch (NumberFormatException e) {
+          segments[i] = new Key(key);
+        }
+      }
+
+      return segments;
+    }
+
+    static String asString(final List<Segment> segments) {
+      return asString(segments.toArray(Segment[]::new));
+    }
+
+    static String asString(final Segment[] segments) {
+      return asString(segments, 0);
+    }
+
+    static String asString(final Segment[] segments, int start) {
+      Objects.requireNonNull(segments, "segments cannot be null!");
+      if (start < 0 || start > segments.length) {
+        throw new IllegalArgumentException("start index cannot be less than or equal to zero!");
+      }
+
+      if (start == segments.length) {
+        return "";
+      }
+
+      final StringBuilder sb = new StringBuilder();
+      for (int i = start; i < segments.length; i++) {
+        if (!sb.isEmpty()) {
+          sb.append('.');
+        }
+
+        sb.append(segments[i].toString());
+      }
+      return sb.toString();
+    }
+
+    record Key(String value) implements Segment {
+
+      @Override
+      public String toString() {
+        return value;
+      }
+
+    }
+
+
+    record Idx(int value) implements Segment {
+
+      @Override
+      public String toString() {
+        return String.valueOf(value);
+      }
+
+    }
+
+  }
+
+  public static String join(final String a, final String b) {
+    final StringBuilder sb = new StringBuilder();
+    if (a != null && !a.isEmpty()) {
+      sb.append(a);
+    }
+
+    if (b != null && !b.isEmpty()) {
+      if (!sb.isEmpty()) {
+        sb.append('.');
+      }
+
+      sb.append(b);
+    }
+
+    return sb.toString();
+  }
+
 
   public static final String OWN = "uri";
 
@@ -79,10 +170,13 @@ public final class UriProperty {
   public final URI uri;
   public final int position;
 
+  public final Segment[] segments;
+
   private UriProperty(String propertyName, URI uri, int position) {
     this.propertyName = propertyName;
     this.uri = uri;
     this.position = position;
+    segments = Segment.parse(propertyName);
   }
 
   public String propertyName() {
@@ -91,6 +185,10 @@ public final class UriProperty {
 
   public URI uri() {
     return uri;
+  }
+
+  public Segment[] segments() {
+    return segments;
   }
 
   public boolean isStandalone() {
@@ -118,7 +216,7 @@ public final class UriProperty {
       return false;
     UriProperty that = (UriProperty) o;
     return position == that.position && Objects.equals(propertyName, that.propertyName)
-        && Objects.equals(uri, that.uri);
+           && Objects.equals(uri, that.uri);
   }
 
   @Override
@@ -129,10 +227,35 @@ public final class UriProperty {
   @Override
   public String toString() {
     return "UriProperty {" + "\n" +
-        "    propertyName: '" + propertyName + '\'' + "\n" +
-        "    uri: " + uri + "\n" +
-        "    position: " + position + "\n" +
-        "}";
+           "    propertyName: '" + propertyName + '\'' + "\n" +
+           "    uri: " + uri + "\n" +
+           "    position: " + position + "\n" +
+           "}";
+  }
+
+  @Override
+  public int compareTo(UriProperty o) {
+    final int min = Math.min(segments.length, o.segments.length);
+    int result = 0;
+    for (int i = 0; i < min; i++) {
+      final var thisSegment = segments[i];
+      final var thatSegment = o.segments[i];
+      result = switch (thisSegment) {
+        case Segment.Idx(int thisIdx) -> switch (thatSegment) {
+          case Segment.Idx(int thatIdx) -> thisIdx - thatIdx;
+          case Segment.Key thatKey -> -1;
+        };
+        case Segment.Key(String thisKey) -> switch (thatSegment) {
+          case Segment.Key(String thatKey) -> thisKey.compareTo(thatKey);
+          case Segment.Idx thatIdx -> 1;
+        };
+      };
+
+      if (result != 0) {
+        return result;
+      }
+    }
+    return result;
   }
 
 }

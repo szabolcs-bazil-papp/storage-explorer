@@ -15,19 +15,16 @@
 
 package com.aestallon.storageexplorer.core.service;
 
-import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
-import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.groupingBy;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -37,10 +34,18 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
-import com.google.common.base.Strings;
+import org.smartbit4all.core.utility.FinalReference;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
+import com.google.common.base.Strings;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 public abstract sealed class StorageIndex
     permits FileSystemStorageIndex, RelationalDatabaseStorageIndex {
@@ -59,16 +64,42 @@ public abstract sealed class StorageIndex
     this.storageId = storageId;
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
-    this.cache = new HashMap<>();
+    this.cache = new ConcurrentHashMap<>();
   }
 
-  public void refresh(IndexingStrategy strategy) {
+  public int refresh(IndexingStrategy strategy) {
     clear();
     if (!strategy.fetchEntries()) {
-      return;
+      return 0;
     }
     ensureStorageEntryFactory();
-    cache.putAll(strategy.processEntries(fetchEntries(), storageEntryFactory::create));
+    final var res = strategy.processEntries(fetchEntries(), storageEntryFactory::create);
+    cache.putAll(res);
+    return res.size();
+  }
+
+  public int refresh(final IndexingStrategy strategy, final IndexingTarget target) {
+    if (!strategy.fetchEntries()) {
+      return 0;
+    }
+
+    ensureStorageEntryFactory();
+    final var res = strategy.processEntries(fetchEntries(target), storageEntryFactory::create);
+    // we need a bit more sophisticated work here:
+    // If entry was absent from cache -> put it in.
+    // If entry was present in the cache, and the indexing strategy was FULL -> refresh the entry 
+    // with the UriProperties found in the newly indexed one.
+    // We should emit an event for each (!) refreshed entry, so UIs may update (inspectors, graph)
+//    res.forEach((uri, entry) -> cache.compute(uri, (k, v) -> {
+//      if (v == null) {
+//        return entry;
+//      }
+//
+//      v.accept(entry);
+//      return v;
+//    }));
+    res.forEach(cache::putIfAbsent);
+    return res.size();
   }
 
   void clear() {
@@ -99,6 +130,8 @@ public abstract sealed class StorageIndex
 
   protected abstract Stream<URI> fetchEntries();
 
+  protected abstract Stream<URI> fetchEntries(IndexingTarget target);
+
   protected abstract StorageEntryFactory storageEntryFactory();
 
   protected final void ensureStorageEntryFactory() {
@@ -115,6 +148,17 @@ public abstract sealed class StorageIndex
     return Optional.ofNullable(cache.get(uri));
   }
 
+  public Set<StorageEntry> get(final IndexingTarget target) {
+    final Predicate<StorageEntry> schema = target.schemas().isEmpty()
+        ? e -> true
+        : e -> target.schemas().contains(e.uri().getScheme());
+    final Predicate<StorageEntry> type = target.types().isEmpty()
+        ? e -> true
+        : e -> e instanceof ObjectEntry o && target.types().contains(o.typeName());
+    final var p = schema.and(type);
+    return cache.values().stream().filter(p).collect(toSet());
+  }
+
   public EntryAcquisitionResult getOrCreate(final URI uri) {
     StorageEntry storageEntry = cache.get(uri);
     if (storageEntry == null) {
@@ -128,7 +172,18 @@ public abstract sealed class StorageIndex
   }
 
   public void accept(final URI uri, StorageEntry entry) {
-    cache.put(uri, entry);
+    cache.compute(uri, (k, v) -> {
+      if (v == null) {
+        prepareNewEntry(entry);
+        return entry;
+      }
+
+      v.accept(entry);
+      return v;
+    });
+  }
+
+  private void prepareNewEntry(final StorageEntry entry) {
     if (entry instanceof ObjectEntry objectEntry && !(entry instanceof ScopedEntry)) {
       // here becomes obvious that a more sophisticated cache is in dire need -> this is not
       // only a repetition but woefully slow...
@@ -159,7 +214,7 @@ public abstract sealed class StorageIndex
   }
 
   private static Pattern constructPattern(final String queryString) {
-    final String q = queryString.replaceAll("\\.\\+\\*\\-\\(\\)\\[\\]", "");
+    final String q = queryString.replaceAll("\\.\\+\\*-\\(\\)\\[]", "");
     return Arrays.stream(splitAtForwardSlash(q))
         .map(StorageIndex::examineSubsection)
         .collect(Collectors.collectingAndThen(Collectors.joining(), Pattern::compile));
@@ -196,35 +251,27 @@ public abstract sealed class StorageIndex
   public enum AcquisitionKind { NEW, PRESENT, FAIL }
 
 
-  public static final class EntryAcquisitionResult {
+  public sealed interface EntryAcquisitionResult {
 
     private static EntryAcquisitionResult ofNew(final StorageEntry entry) {
-      return new EntryAcquisitionResult(entry, AcquisitionKind.NEW);
+      return new New(entry);
     }
 
     private static EntryAcquisitionResult ofPresent(final StorageEntry entry) {
-      return new EntryAcquisitionResult(entry, AcquisitionKind.PRESENT);
+      return new Present(entry);
     }
 
     private static EntryAcquisitionResult ofFail() {
-      return new EntryAcquisitionResult(null, AcquisitionKind.FAIL);
+      return new Fail();
     }
 
-    private final StorageEntry entry;
-    private final AcquisitionKind kind;
+    record Present(StorageEntry entry) implements EntryAcquisitionResult {}
 
-    private EntryAcquisitionResult(final StorageEntry entry, final AcquisitionKind kind) {
-      this.entry = entry;
-      this.kind = kind;
-    }
 
-    public StorageEntry entry() {
-      return entry;
-    }
+    record New(StorageEntry entry) implements EntryAcquisitionResult {}
 
-    public AcquisitionKind kind() {
-      return kind;
-    }
+
+    record Fail() implements EntryAcquisitionResult {}
 
   }
 

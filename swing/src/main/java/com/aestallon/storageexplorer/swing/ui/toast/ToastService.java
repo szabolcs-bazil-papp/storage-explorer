@@ -1,5 +1,7 @@
 package com.aestallon.storageexplorer.swing.ui.toast;
 
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -67,6 +69,7 @@ public class ToastService {
     layeredPane.repaint();
 
     Timer timer = new Timer(3000, e -> removeToast(toast));
+    toast.addMouseListener(timerListener(timer));
     timer.setRepeats(false);
     timer.start();
   }
@@ -92,6 +95,31 @@ public class ToastService {
       int y = TOAST_GAP + (i * (TOAST_HEIGHT + TOAST_GAP));
       toast.setBounds(x, y, TOAST_WIDTH, TOAST_HEIGHT);
     }
+  }
+
+  private static MouseAdapter timerListener(Timer timer) {
+    return new MouseAdapter() {
+      @Override
+      public void mouseMoved(MouseEvent e) {
+        if (timer.isRunning()) {
+          timer.stop();
+        }
+      }
+
+      @Override
+      public void mouseEntered(MouseEvent e) {
+        if (timer.isRunning()) {
+          timer.stop();
+        }
+      }
+
+      @Override
+      public void mouseExited(MouseEvent e) {
+        if (!timer.isRunning()) {
+          timer.restart();
+        }
+      }
+    };
   }
 
 }

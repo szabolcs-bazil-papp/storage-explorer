@@ -1,0 +1,59 @@
+graph {
+    fill-color: #032918, #348878;
+    fill-mode: gradient-diagonal1;
+    padding: 50px;
+}
+
+node {
+    size: 15px;
+    fill-color: #96eedc;
+    text-alignment: under;
+    text-padding: 5px, 4px;
+    text-background-mode: rounded-box;
+    text-background-color: rgba(55, 71, 70, 0.13);
+    text-size: 14;
+    text-color: white;
+    size-mode: fit;
+}
+
+edge {
+    shape: line;
+    arrow-size: 12px, 6px;
+    fill-color: white;
+    text-alignment: along;
+    text-padding: 5px, 4px;
+    text-style: bold;
+    text-background-mode: rounded-box;
+    text-background-color: #3c5e5888;
+    text-color: white;
+    text-size: 12;
+    text-visibility: 0.7;
+    text-visibility-mode: under-zoom;
+}
+
+node.highlighted {
+    shadow-mode: gradient-radial;
+    shadow-width: 15px;
+    shadow-color: #ee0505, #96eedc;
+    shadow-offset: 0px;
+    z-index: 0;
+}
+
+edge.listref {
+    fill-color: #4bfd4b;
+}
+
+node.origin {
+    size: 30px;
+    fill-color: #ee0505;
+}
+
+node.originhighlighted {
+    size: 30px;
+    fill-color: #ee0505;
+    shadow-mode: gradient-radial;
+    shadow-width: 15px;
+    shadow-color: #ee0505, #96eedc;
+    shadow-offset: 0px;
+    z-index: 0;
+}

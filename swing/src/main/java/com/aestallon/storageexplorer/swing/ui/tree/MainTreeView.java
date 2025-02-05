@@ -30,6 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.common.event.msg.Msg;
+import com.aestallon.storageexplorer.common.util.Pair;
+import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -43,11 +46,11 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.common.event.msg.Msg;
-import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
+import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
+import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.tree.model.StorageTree;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.ClickableTreeNode;
@@ -55,7 +58,6 @@ import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageInstanceTre
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageListTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageMapTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageObjectTreeNode;
-import com.aestallon.storageexplorer.common.util.Pair;
 import static com.aestallon.storageexplorer.common.util.Streams.enumerationToStream;
 
 @Component
@@ -65,7 +67,6 @@ public class MainTreeView extends JPanel {
 
   private StorageTree tree;
   private JScrollPane treePanel;
-  private JProgressBar progressBar;
 
   private Map<StorageEntry, TreePath> treePathByEntry;
 
@@ -122,6 +123,10 @@ public class MainTreeView extends JPanel {
 
   public void incorporateEntryIntoTree(final StorageInstance storageInstance,
                                        final StorageEntry storageEntry) {
+    if (treePathByEntry.containsKey(storageEntry)) {
+      return;
+    }
+
     final ClickableTreeNode node;
     switch (storageEntry) {
       case ScopedEntry scopedEntry -> {
@@ -132,7 +137,8 @@ public class MainTreeView extends JPanel {
           node = null;
           eventPublisher.publishEvent(Msg.warn(
               "Cannot add orphan scoped entry to Tree!",
-              "Entry " + storageEntry + " has been indexed, but will not show on the tree until its host entry is missing."));
+              "Entry " + storageEntry
+              + " has been indexed, but will not show on the tree until its host entry is missing."));
         } else {
           final StorageEntry host = hostEntry.get();
           TreePath hostPath = treePathByEntry.get(host);
@@ -211,8 +217,8 @@ public class MainTreeView extends JPanel {
     Optional
         .ofNullable(treePathByEntry.get(storageEntry))
         .ifPresent(path -> {
-          tree.setSelectionPath(path);
-          tree.scrollPathToVisible(path);
+          selectEntryInternal(path);
+          eventPublisher.publishEvent(new BreadCrumbsChanged(path));
         });
   }
 
@@ -222,28 +228,18 @@ public class MainTreeView extends JPanel {
     propagate.set(true);
   }
 
+  public void softSelectNode(final DefaultMutableTreeNode node) {
+    final var path = new TreePath(node.getPath());
+    selectEntryInternal(path);
+  }
+
+  private void selectEntryInternal(final TreePath path) {
+    tree.setSelectionPath(path);
+    tree.scrollPathToVisible(path);
+  }
+
   public void removeStorageNodeOf(final StorageInstance storageInstance) {
     tree.removeStorage(storageInstance);
-  }
-
-  public void showProgressBar(final String displayName) {
-    if (progressBar == null) {
-      progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
-      progressBar.setPreferredSize(new Dimension(300, 20));
-    }
-    progressBar.setString(displayName);
-    progressBar.setStringPainted(true);
-    progressBar.setIndeterminate(true);
-    add(progressBar);
-    revalidate();
-  }
-
-  public void removeProgressBar() {
-    if (progressBar == null) {
-      return;
-    }
-    remove(progressBar);
-    revalidate();
   }
 
   private final class StorageIndexNodePopupMenu extends JPopupMenu {
@@ -276,7 +272,7 @@ public class MainTreeView extends JPanel {
       discard.addActionListener(e -> eventPublisher.publishEvent(
           new StorageIndexDiscardedEvent(sitn.storageInstance())));
       discard.setToolTipText("Close this storage to reclaim system resources.\n"
-          + "This storage won't be preloaded on the next startup.");
+                             + "This storage won't be preloaded on the next startup.");
       add(discard);
     }
 
@@ -290,6 +286,7 @@ public class MainTreeView extends JPanel {
             after -> {
               sitn.setUserObject(after.getName());
               tree.model().nodeChanged(sitn);
+              eventPublisher.publishEvent(new StorageInstanceRenamed(sitn.storageInstance()));
             });
         final ImportStorageDialog dialog = new ImportStorageDialog(controller);
         dialog.pack();

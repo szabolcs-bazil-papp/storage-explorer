@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.Set;
 import org.smartbit4all.api.collection.CollectionApi;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
@@ -91,6 +92,14 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
 
   public String displayName() {
     return schema + " / " + name;
+  }
+
+  @Override
+  public void accept(StorageEntry storageEntry) {
+    if (Objects.requireNonNull(storageEntry) instanceof MapEntry that && that.valid) {
+      uriProperties = that.uriProperties();
+      valid = true;
+    }
   }
 
   @Override

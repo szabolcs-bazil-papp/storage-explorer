@@ -88,7 +88,6 @@ public class UserConfigService {
       log.error(
           "Could not read user configuration from [ {} ], falling back to default values!",
           settingsFile);
-      log.error(e.getMessage(), e);
       return fallback.get();
     }
   }
@@ -164,6 +163,10 @@ public class UserConfigService {
     eventPublisher.publishEvent(new GraphConfigChanged(
         graphSettings.getGraphTraversalInboundLimit(),
         graphSettings.getGraphTraversalOutboundLimit()));
+  }
+  
+  public ArcScriptFileService arcScriptFileService() {
+    return new ArcScriptFileService(Path.of(settingsFolder));
   }
 
 }

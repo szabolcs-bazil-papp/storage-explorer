@@ -13,10 +13,9 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui;
+package com.aestallon.storageexplorer.swing.ui.graph;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -49,16 +48,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import com.aestallon.storageexplorer.graph.service.GraphRenderingService;
+import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.event.GraphConfigChanged;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
+import com.aestallon.storageexplorer.graph.service.GraphRenderingService;
 import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
+import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.GraphStylingProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
 @Component
 public class GraphView extends JPanel {
@@ -69,6 +70,7 @@ public class GraphView extends JPanel {
   private Graph graph;
   private Viewer viewer;
   private ViewPanel panel;
+  private JPanel overlay;
   private SpriteManager sprites;
   private KeyListener screenshotListener;
   private StorageEntry origin;
@@ -78,30 +80,18 @@ public class GraphView extends JPanel {
   private final StorageInstanceProvider storageInstanceProvider;
   private final ApplicationEventPublisher eventPublisher;
   private final UserConfigService userConfigService;
+  private final LafService lafService;
 
   public GraphView(StorageInstanceProvider storageInstanceProvider,
-                   ApplicationEventPublisher eventPublisher, UserConfigService userConfigService) {
+                   ApplicationEventPublisher eventPublisher,
+                   UserConfigService userConfigService, LafService lafService) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
+    this.lafService = lafService;
 
-    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+    setLayout(new OverlayLayout(this));
     setMinimumSize(new Dimension(500, 500));
-
-    initToolbar();
-  }
-
-  private void initToolbar() {
-    final var toolbar = new JToolBar();
-    toolbar.add(Box.createHorizontalGlue());
-    toolbar.add(new AbstractAction(null, IconProvider.CLOSE) {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        eventPublisher.publishEvent(new ViewController.GraphViewCloseRequest());
-      }
-    });
-    toolbar.setPreferredSize(new Dimension(500, 40));
-    add(toolbar);
   }
 
   public void init(StorageEntry storageEntry) {
@@ -110,6 +100,9 @@ public class GraphView extends JPanel {
     }
     if (panel != null) {
       remove(panel);
+    }
+    if (overlay != null) {
+      remove(overlay);
     }
     if (graph != null) {
       graph.clear();
@@ -129,7 +122,10 @@ public class GraphView extends JPanel {
     graph = new MultiGraph("fs");
     sprites = new SpriteManager(graph);
 
-    graph.setAttribute("ui.stylesheet", GraphStylingProvider.LIGHT);
+    graph.setAttribute("ui.stylesheet", switch (lafService.getLaf()) {
+      case DARK -> GraphStylingProvider.DARK;
+      case LIGHT -> GraphStylingProvider.LIGHT;
+    });
     graph.setAttribute("ui.antialias");
     graph.setAttribute("ui.quality");
 
@@ -145,10 +141,33 @@ public class GraphView extends JPanel {
 
     screenshotListener = new ScreenshotListener();
     panel.addKeyListener(screenshotListener);
+
+    overlay = overlay();
+    add(overlay);
     add(panel);
     setVisible(true);
     revalidate();
     CompletableFuture.runAsync(() -> graphRenderingService.render(graph, storageEntry));
+  }
+
+  private JPanel overlay() {
+    final var overlay = new JPanel();
+    overlay.setOpaque(false);
+    overlay.setLayout(new BoxLayout(overlay, BoxLayout.Y_AXIS));
+
+    final var closeBtn = new JButton(IconProvider.CLOSE);
+    closeBtn.addActionListener(
+        e -> eventPublisher.publishEvent(new ViewController.GraphViewCloseRequest()));
+    closeBtn.setAlignmentY(TOP_ALIGNMENT);
+    closeBtn.setAlignmentX(RIGHT_ALIGNMENT);
+
+    final var box = Box.createHorizontalBox();
+    box.setOpaque(false);
+    box.add(Box.createGlue());
+    box.add(closeBtn);
+
+    overlay.add(box);
+    return overlay;
   }
 
   public void discard() {
@@ -157,6 +176,12 @@ public class GraphView extends JPanel {
       remove(panel);
       panel = null;
     }
+
+    if (overlay != null) {
+      remove(overlay);
+      overlay = null;
+    }
+
     viewer = null;
     sprites = null;
     if (graph != null) {
@@ -206,6 +231,7 @@ public class GraphView extends JPanel {
 
     private int x = -1;
     private int y = -1;
+
     @Override
     public void mouseDragged(MouseEvent event) {
       if (SwingUtilities.isLeftMouseButton(event)) {
@@ -334,5 +360,17 @@ public class GraphView extends JPanel {
 
       init(origin);
     });
+  }
+
+  @EventListener
+  public void onLafChanged(final LafChanged event) {
+    if (graph == null) {
+      return;
+    }
+
+    SwingUtilities.invokeLater(() -> graph.setAttribute("ui.stylesheet", switch (event.laf()) {
+      case DARK -> GraphStylingProvider.DARK;
+      case LIGHT -> GraphStylingProvider.LIGHT;
+    }));
   }
 }

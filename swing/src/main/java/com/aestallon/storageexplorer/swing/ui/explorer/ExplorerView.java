@@ -13,12 +13,13 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui;
+package com.aestallon.storageexplorer.swing.ui.explorer;
 
 import java.awt.*;
 import java.util.EnumSet;
 import javax.swing.*;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.swing.ui.graph.GraphView;
 
 @Component
 public class ExplorerView extends JPanel {

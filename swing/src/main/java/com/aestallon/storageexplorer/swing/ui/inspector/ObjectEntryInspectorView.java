@@ -145,12 +145,12 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
       @Override
       public void actionPerformed(ActionEvent e) {
-        final var sd = new FindDialog((Frame) null, searchListener((RTextArea) pane.textArea));
+        final var sd = new FindDialog((Frame) null, searchListener((RTextArea) pane.textArea()));
         sd.setVisible(true);
       }
     });
 
-    box2.add(pane.scrollPane);
+    box2.add(pane.scrollPane());
     box2.add(Box.createHorizontalGlue());
 
     container.add(toolbar);

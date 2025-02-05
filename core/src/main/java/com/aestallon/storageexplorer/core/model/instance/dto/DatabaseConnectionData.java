@@ -11,7 +11,8 @@ import jakarta.validation.constraints.*;
 @JsonPropertyOrder({
     DatabaseConnectionData.URL,
     DatabaseConnectionData.USERNAME,
-    DatabaseConnectionData.PASSWORD
+    DatabaseConnectionData.PASSWORD,
+    DatabaseConnectionData.TARGET_SCHEMA
 })
 @JsonTypeName("DatabaseConnectionData")
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen")
@@ -24,7 +25,10 @@ public class DatabaseConnectionData {
 
   public static final String PASSWORD = "password";
   private String password;
-
+  
+  public static final String TARGET_SCHEMA = "targetSchema";
+  private String targetSchema;
+  
   public DatabaseConnectionData() {
   }
 
@@ -93,6 +97,25 @@ public class DatabaseConnectionData {
   }
 
 
+  public DatabaseConnectionData targetSchema(String targetSchema) {
+
+    this.targetSchema = targetSchema;
+    return this;
+  }
+
+  @JsonProperty(TARGET_SCHEMA)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public String getTargetSchema() {
+    return targetSchema;
+  }
+
+
+  @JsonProperty(TARGET_SCHEMA)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setTargetSchema(String targetSchema) {
+    this.targetSchema = targetSchema;
+  }
+  
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -104,7 +127,8 @@ public class DatabaseConnectionData {
     DatabaseConnectionData databaseConnectionData = (DatabaseConnectionData) o;
     return Objects.equals(this.url, databaseConnectionData.url) &&
         Objects.equals(this.username, databaseConnectionData.username) &&
-        Objects.equals(this.password, databaseConnectionData.password);
+        Objects.equals(this.password, databaseConnectionData.password) &&
+           Objects.equals(this.targetSchema, databaseConnectionData.targetSchema);
   }
 
   @Override
@@ -119,6 +143,7 @@ public class DatabaseConnectionData {
     sb.append("    url: ").append(toIndentedString(url)).append("\n");
     sb.append("    username: ").append(toIndentedString(username)).append("\n");
     sb.append("    password: ").append(toIndentedString(password)).append("\n");
+    sb.append("    targetSchema: ").append(toIndentedString(targetSchema)).append("\n");
     sb.append("}");
     return sb.toString();
   }

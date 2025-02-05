@@ -45,7 +45,7 @@ public class ToastView {
   JPanel getMainPanel() {
     return mainPanel;
   }
-  
+
   JButton getCloseButton() {
     return button1;
   }
@@ -104,5 +104,4 @@ public class ToastView {
 
   /** @noinspection ALL */
   public JComponent $$$getRootComponent$$$() {return mainPanel;}
-
 }

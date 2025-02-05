@@ -3,6 +3,7 @@ package com.aestallon.storageexplorer.core.model.entry;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +61,14 @@ public final class SequenceEntry implements StorageEntry {
 
   public String name() {
     return name;
+  }
+
+  @Override
+  public void accept(StorageEntry storageEntry) {
+    if (Objects.requireNonNull(storageEntry) instanceof SequenceEntry that && that.valid) {
+      current = that.current;
+      valid = true;
+    }
   }
 
   @Override

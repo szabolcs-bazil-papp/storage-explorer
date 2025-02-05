@@ -27,23 +27,13 @@ public sealed interface StorageEntry permits
     ScopedObjectEntry {
 
   static String typeNameOf(StorageEntry storageEntry) {
-    if (storageEntry == null) {
-      return StringConstant.NULL.toUpperCase();
-    }
-
-    if (storageEntry instanceof ListEntry) {
-      return "List";
-    }
-
-    if (storageEntry instanceof MapEntry) {
-      return "Map";
-    }
-
-    if (storageEntry instanceof ObjectEntry) {
-      return ((ObjectEntry) storageEntry).typeName();
-    }
-
-    return "Unknown type";
+    return switch (storageEntry) {
+      case null -> StringConstant.NULL.toUpperCase();
+      case ListEntry l -> "List";
+      case MapEntry m -> "Map";
+      case SequenceEntry s -> "Sequence";
+      case ObjectEntry o -> o.typeName();
+    };
   }
 
   StorageId storageId();
@@ -55,6 +45,8 @@ public sealed interface StorageEntry permits
   void refresh();
 
   boolean valid();
+  
+  void accept(StorageEntry storageEntry);
 
   default boolean references(StorageEntry that) {
     return uriProperties().stream()

@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui;
+package com.aestallon.storageexplorer.swing.ui.graph;
 
 import javax.swing.*;
 import org.graphstream.graph.Graph;

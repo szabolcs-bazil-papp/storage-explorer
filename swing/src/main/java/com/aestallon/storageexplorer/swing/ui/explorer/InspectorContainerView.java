@@ -13,13 +13,10 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui;
+package com.aestallon.storageexplorer.swing.ui.explorer;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -30,6 +27,7 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.inspector.InspectorView;
 import com.aestallon.storageexplorer.swing.ui.inspector.StorageEntryInspectorViewFactory;
+import com.aestallon.storageexplorer.swing.ui.misc.CloseTabButton;
 
 @Component
 public class InspectorContainerView extends JTabbedPane {
@@ -102,71 +100,36 @@ public class InspectorContainerView extends JTabbedPane {
       }
     };
     tab.add(label);
-    tab.add(new CloseTabButton(tab));
-    setTabComponentAt(index, tab);
-  }
+    tab.add(new CloseTabButton(e -> {
+      int idx = InspectorContainerView.this.indexOfTabComponent(tab);
+      if (idx < 0) {
+        return;
+      }
 
-  private final class CloseTabButton extends JButton {
-    public CloseTabButton(final JPanel tab) {
-      int size = 17;
-      setPreferredSize(new Dimension(size, size));
+      final var inspector = inspectorViewAt(idx);
+      if (inspector == null) {
+        return;
+      }
 
-      setToolTipText("Close this tab. Alt + Click to close all tabs but this.");
-      setContentAreaFilled(false);
-      setBorderPainted(false);
-
-      addMouseListener(CLOSE_BUTTON_ROLLOVER_LISTENER);
-      setRolloverEnabled(true);
-
-      addActionListener(e -> {
-        int idx = InspectorContainerView.this.indexOfTabComponent(tab);
-        if (idx < 0) {
-          return;
-        }
-
-        final var inspector = inspectorViewAt(idx);
-        if (inspector == null) {
-          return;
-        }
-
-        final int alt = ActionEvent.ALT_MASK;
-        if ((e.getModifiers() & alt) == alt) {
-          final int tabCount = getTabCount();
-          if (idx < tabCount - 1) {
-            for (int i = 0; i < tabCount - 1 - idx; i++) {
-              final var inspectorToClose = inspectorViewAt(idx + 1);
-              discardInspector(inspectorToClose);
-            }
-          }
-          for (int i = 0; i < idx; i++) {
-            final var inspectorToClose = inspectorViewAt(0);
+      final int alt = ActionEvent.ALT_MASK;
+      if ((e.getModifiers() & alt) == alt) {
+        final int tabCount = getTabCount();
+        if (idx < tabCount - 1) {
+          for (int i = 0; i < tabCount - 1 - idx; i++) {
+            final var inspectorToClose = inspectorViewAt(idx + 1);
             discardInspector(inspectorToClose);
-
           }
-        } else {
-          discardInspector(inspector);
         }
-      });
-    }
+        for (int i = 0; i < idx; i++) {
+          final var inspectorToClose = inspectorViewAt(0);
+          discardInspector(inspectorToClose);
 
-    @Override
-    protected void paintComponent(Graphics g) {
-      super.paintComponent(g);
-      Graphics2D g2 = (Graphics2D) g.create();
-      //shift the image for pressed buttons
-      if (getModel().isPressed()) {
-        g2.translate(1, 1);
+        }
+      } else {
+        discardInspector(inspector);
       }
-      g2.setStroke(new BasicStroke(2));
-      g2.setColor(Color.BLACK);
-      if (getModel().isRollover()) {
-        g2.setColor(Color.MAGENTA);
-      }
-      int delta = 6;
-      g2.drawLine(delta, delta, getWidth() - delta - 1, getHeight() - delta - 1);
-      g2.drawLine(getWidth() - delta - 1, delta, delta, getHeight() - delta - 1);
-      g2.dispose();
-    }
+    }));
+    setTabComponentAt(index, tab);
   }
 
   private void discardInspector(final InspectorView<? extends StorageEntry> inspectorToClose) {
@@ -177,22 +140,5 @@ public class InspectorContainerView extends JTabbedPane {
   private InspectorView<?> inspectorViewAt(final int idx) {
     return (InspectorView<? extends StorageEntry>) getComponentAt(idx);
   }
-
-
-  private static final MouseListener CLOSE_BUTTON_ROLLOVER_LISTENER = new MouseAdapter() {
-    public void mouseEntered(MouseEvent e) {
-      final var component = e.getComponent();
-      if (component instanceof AbstractButton button) {
-        button.setBorderPainted(true);
-      }
-    }
-
-    public void mouseExited(MouseEvent e) {
-      final var component = e.getComponent();
-      if (component instanceof AbstractButton button) {
-        button.setBorderPainted(false);
-      }
-    }
-  };
 
 }
