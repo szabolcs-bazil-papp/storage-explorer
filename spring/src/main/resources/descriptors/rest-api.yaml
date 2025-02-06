@@ -71,6 +71,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EntryLoadResult"
+  /eval:
+    post:
+      operationId: eval
+      summary: Evaluates ArcScript against the storage overseen by the application
+      description: |
+        ...
+      tags: [ Explorer ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArcScriptEvalRequest'
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArcScriptEvalResponse'
 
 components:
   schemas:
@@ -198,3 +218,33 @@ components:
           items:
             $ref: '#/components/schemas/EntryVersionDto'
       required: [ versions ]
+    
+    ArcScriptEvalRequest:
+      type: object
+      properties:
+        script:
+          type: string
+      required: [ script ]
+    ArcScriptEvalError:
+      type: object
+      properties:
+        msg:
+          type: string
+        line:
+          type: integer
+          format: int32
+        col:
+          type: integer
+          format: int32
+      required: [ msg, line, col ]
+    ArcScriptEvalResponse:
+      type: object
+      properties:
+        resultSet:
+          type: array
+          items:
+            type: object
+        err:
+          $ref: '#/components/schemas/ArcScriptEvalError'
+      required: [ resultSet ]
+      
