@@ -44,7 +44,13 @@ public final class Uris {
   }
 
   public static URI latest(URI uri) {
-    return ObjectStorageImpl.getUriWithoutVersion(uri);
+    final String uriString = uri.toString();
+    final int dotIdx = uriString.lastIndexOf('.');
+    if (dotIdx > -1) {
+      return URI.create(uriString.substring(0, dotIdx));
+    }
+
+    return uri;
   }
 
   public static Optional<URI> parse(Object o) {
