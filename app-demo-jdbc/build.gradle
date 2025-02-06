@@ -1,0 +1,13 @@
+plugins {
+    id 'buildlogic.java-library-conventions'
+    id 'org.springframework.boot' version '3.3.3'
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    //implementation 'org.springframework.session:spring-session-jdbc'
+    
+    implementation project(':jdbc')
+}
