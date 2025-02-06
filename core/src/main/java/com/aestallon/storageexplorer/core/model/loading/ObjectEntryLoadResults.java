@@ -1,13 +1,16 @@
 package com.aestallon.storageexplorer.core.model.loading;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.LongStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.core.object.ObjectHistoryIterator;
+import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.aestallon.storageexplorer.common.util.Uris;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import static java.util.stream.Collectors.toCollection;
 
 public final class ObjectEntryLoadResults {
 
@@ -21,27 +24,26 @@ public final class ObjectEntryLoadResults {
 
   public static ObjectEntryLoadResult.SingleVersion singleVersion(final ObjectNode node,
                                                                   final ObjectMapper objectMapper) {
-    final var objectAsMap = node.getObjectAsMap();
-    String oasStr = "Error processing Object-as-Map into text!";
-    try {
-      oasStr = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectAsMap);
-    } catch (JsonProcessingException e) {
-      log.error(e.getMessage(), e);
-    }
-    return new ObjectEntryLoadResult.SingleVersion(
-        ObjectEntryMeta.of(node.getData()),
-        objectAsMap,
-        oasStr);
+    return new ObjectEntryLoadResult.SingleVersion.Eager(node, objectMapper);
   }
-
-  public static ObjectEntryLoadResult.MultiVersion multiVersion(
-      final ObjectHistoryIterator historyIterator,
-      final ObjectMapper objectMapper) {
-    final List<ObjectEntryLoadResult.SingleVersion> versions = new ArrayList<>();
-    while (historyIterator.hasNext()) {
-      final var node = historyIterator.next();
-      versions.add(singleVersion(node, objectMapper));
-    }
+  
+  public static ObjectEntryLoadResult.SingleVersion singleVersion(final URI versionedUri,
+                                                                  final ObjectApi objectApi,
+                                                                  final ObjectMapper objectMapper) {
+    return new ObjectEntryLoadResult.SingleVersion.Lazy(versionedUri, objectApi, objectMapper);
+  }
+  
+  public static ObjectEntryLoadResult.MultiVersion multiVersion(final ObjectNode node,
+                                                                final ObjectApi objectApi,
+                                                                final ObjectMapper objectMapper) {
+    final URI objectUri = node.getObjectUri();
+    long vn = Uris.getVersion(objectUri);
+    final var head = singleVersion(node, objectMapper);
+    final List<ObjectEntryLoadResult.SingleVersion> versions =  LongStream.range(0, vn)
+        .mapToObj(i -> Uris.atVersion(objectUri, i))
+        .map(it -> new ObjectEntryLoadResult.SingleVersion.Lazy(it, objectApi, objectMapper))
+        .collect(toCollection(ArrayList::new));
+    versions.add(head);
     return new ObjectEntryLoadResult.MultiVersion(versions);
   }
 

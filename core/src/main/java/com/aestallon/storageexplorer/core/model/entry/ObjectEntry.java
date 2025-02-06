@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
 import org.smartbit4all.core.utility.StringConstant;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitterReturnValueHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.aestallon.storageexplorer.common.util.IO;
@@ -39,12 +40,23 @@ import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResults;
+import com.sun.source.tree.ReturnTree;
 import static java.util.stream.Collectors.toSet;
 
 public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntry {
 
+  public sealed interface Versioning {
+
+    record Single() implements Versioning {}
+
+
+    record Multi(long head) implements Versioning {}
+
+  }
+
+
   private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
-  
+
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final StorageId id;
@@ -56,8 +68,8 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   private final Set<ScopedEntry> scopedEntries = new HashSet<>();
 
   private boolean valid = false;
+  private Versioning versioning;
   private Set<UriProperty> uriProperties;
-  private String displayName;
 
   ObjectEntry(StorageId id, final Path path, final URI uri, final ObjectApi objectApi) {
     this.id = id;
@@ -104,12 +116,12 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   @Override
   public boolean references(StorageEntry that) {
     return StorageEntry.super.references(that)
-        || ((that instanceof ScopedEntry) && scopedEntries.contains(that));
+           || ((that instanceof ScopedEntry) && scopedEntries.contains(that));
   }
 
   @Override
   public void refresh() {
-    log.info("Individual refresh on node: {}", uri);
+    log.warn("Individual refresh on node: {}", uri);
     final var objectNode = load();
     refresh(objectNode);
   }
@@ -117,12 +129,10 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   public void refresh(final ObjectNode objectNode) {
     if (objectNode == null) {
       uriProperties = new HashSet<>();
-      displayName = "ERROR LOADING";
       return;
     }
 
     uriProperties = initUriProperties(objectNode);
-    displayName = initDisplayName(objectNode);
     valid = true;
   }
 
@@ -137,31 +147,31 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
         .collect(toSet());
   }
 
-  private String initDisplayName(final ObjectNode objectNode) {
-    final Object name = objectNode.getValue("name");
+  public String getDisplayName(final ObjectEntryLoadResult.SingleVersion version) {
+    final var oam = version.objectAsMap();
+    final var heuristicName = getHeuristicName(oam);
+    return heuristicName.isEmpty() ? typeName : typeName + " (" + heuristicName + ")";
+  }
+
+  private static String getHeuristicName(Map<String, Object> oam) {
+    final var name = oam.get("name");
     if (name != null) {
       return String.valueOf(name);
     }
 
-    Object dataName = null;
-    try {
-      dataName = objectNode.getValue("data", "name");
-    } catch (final Exception e) {
-      log.debug(e.getMessage(), e);
-    }
-
-    if (dataName != null) {
-      return String.valueOf(dataName);
-    }
-
-    return StringConstant.EMPTY;
+    return switch (oam.get("data")) {
+      case Map<?, ?> m -> switch (m.get("name")) {
+        case String s -> s;
+        case null, default -> "";
+      };
+      case null, default -> "";
+    };
   }
 
   @Override
   public void accept(StorageEntry storageEntry) {
     if (Objects.requireNonNull(storageEntry) instanceof ObjectEntry that && that.valid) {
       uriProperties = that.uriProperties;
-      displayName = that.displayName;
       valid = true;
     }
   }
@@ -178,7 +188,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     return path;
   }
 
-  public ObjectNode load() {
+  private ObjectNode load() {
     if (Uris.isSingleVersion(uri) && path != null) {
       // We have to do this...
       return tryDeserialise().map(it -> objectApi.create(null, it)).orElse(null);
@@ -212,15 +222,24 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   public ObjectEntryLoadResult tryLoad() {
     try {
+
+      final ObjectEntryLoadResult ret;
+      final var node = load();
       if (Uris.isSingleVersion(uri)) {
-        final var node = load();
-        return (node != null)
+        ret = (node != null)
             ? ObjectEntryLoadResults.singleVersion(node, OBJECT_MAPPER)
             : ObjectEntryLoadResults.err("Failed to retrieve single version object entry!");
       } else {
-        final var historyIterator = objectApi.objectHistory(uri);
-        return ObjectEntryLoadResults.multiVersion(historyIterator, OBJECT_MAPPER);
+        ret = (node != null)
+            ? ObjectEntryLoadResults.multiVersion(node, objectApi, OBJECT_MAPPER)
+            : ObjectEntryLoadResults.err("Failed to retrieve multi version object entry!");
       }
+
+      if (!valid && node != null) {
+        refresh(node);
+      }
+
+      return ret;
     } catch (Throwable t) {
       final String msg = String.format("Could not load Object Entry [ %s ] : %s",
           uri,
@@ -232,14 +251,6 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     }
   }
 
-  public ObjectNode load(final long version) {
-    if (Uris.isSingleVersion(uri)) {
-      return load();
-    }
-
-    return objectApi.load(Uris.atVersion(uri, version));
-  }
-  
   @Override
   public boolean valid() {
     return valid;
@@ -263,13 +274,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   @Override
   public String toString() {
-    if (!valid) {
-      refresh();
-    }
-
-    return (displayName.isEmpty())
-        ? typeName
-        : typeName + " (" + displayName + ")";
+    return typeName;
   }
 
 }
