@@ -15,12 +15,8 @@
 
 package com.aestallon.storageexplorer.spring.rest.model;
 
-import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.ArrayList;
-import java.util.List;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -28,52 +24,89 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.annotation.Generated;
 
 /**
- * EntryAcquisitionRequest
+ * ArcScriptEvalError
  */
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.8.0")
-public class EntryAcquisitionRequest {
+public class ArcScriptEvalError {
 
-  @Valid
-  private List<URI> uris = new ArrayList<>();
+  private String msg;
 
-  public EntryAcquisitionRequest() {
+  private Integer line;
+
+  private Integer col;
+
+  public ArcScriptEvalError() {
     super();
   }
 
   /**
    * Constructor with only required parameters
    */
-  public EntryAcquisitionRequest(List<URI> uris) {
-    this.uris = uris;
+  public ArcScriptEvalError(String msg, Integer line, Integer col) {
+    this.msg = msg;
+    this.line = line;
+    this.col = col;
   }
 
-  public EntryAcquisitionRequest uris(List<URI> uris) {
-    this.uris = uris;
-    return this;
-  }
-
-  public EntryAcquisitionRequest addUrisItem(URI urisItem) {
-    if (this.uris == null) {
-      this.uris = new ArrayList<>();
-    }
-    this.uris.add(urisItem);
+  public ArcScriptEvalError msg(String msg) {
+    this.msg = msg;
     return this;
   }
 
   /**
-   * Get uris
-   * @return uris
+   * Get msg
+   * @return msg
    */
-  @NotNull @Valid 
-  @Schema(name = "uris", requiredMode = Schema.RequiredMode.REQUIRED)
-  @JsonProperty("uris")
-  public List<URI> getUris() {
-    return uris;
+  @NotNull 
+  @Schema(name = "msg", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("msg")
+  public String getMsg() {
+    return msg;
   }
 
-  public void setUris(List<URI> uris) {
-    this.uris = uris;
+  public void setMsg(String msg) {
+    this.msg = msg;
+  }
+
+  public ArcScriptEvalError line(Integer line) {
+    this.line = line;
+    return this;
+  }
+
+  /**
+   * Get line
+   * @return line
+   */
+  @NotNull 
+  @Schema(name = "line", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("line")
+  public Integer getLine() {
+    return line;
+  }
+
+  public void setLine(Integer line) {
+    this.line = line;
+  }
+
+  public ArcScriptEvalError col(Integer col) {
+    this.col = col;
+    return this;
+  }
+
+  /**
+   * Get col
+   * @return col
+   */
+  @NotNull 
+  @Schema(name = "col", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("col")
+  public Integer getCol() {
+    return col;
+  }
+
+  public void setCol(Integer col) {
+    this.col = col;
   }
 
   @Override
@@ -84,20 +117,24 @@ public class EntryAcquisitionRequest {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    EntryAcquisitionRequest entryAcquisitionRequest = (EntryAcquisitionRequest) o;
-    return Objects.equals(this.uris, entryAcquisitionRequest.uris);
+    ArcScriptEvalError arcScriptEvalError = (ArcScriptEvalError) o;
+    return Objects.equals(this.msg, arcScriptEvalError.msg) &&
+        Objects.equals(this.line, arcScriptEvalError.line) &&
+        Objects.equals(this.col, arcScriptEvalError.col);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(uris);
+    return Objects.hash(msg, line, col);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class EntryAcquisitionRequest {\n");
-    sb.append("    uris: ").append(toIndentedString(uris)).append("\n");
+    sb.append("class ArcScriptEvalError {\n");
+    sb.append("    msg: ").append(toIndentedString(msg)).append("\n");
+    sb.append("    line: ").append(toIndentedString(line)).append("\n");
+    sb.append("    col: ").append(toIndentedString(col)).append("\n");
     sb.append("}");
     return sb.toString();
   }

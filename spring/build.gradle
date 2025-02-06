@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
   api project(':core')
+  api project(':arc-script')
 
   compileOnly 'org.smartbit4all.platform:api'
   compileOnly 'org.springframework.boot:spring-boot-starter-web'

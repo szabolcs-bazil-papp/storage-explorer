@@ -12,4 +12,6 @@ include 'common'
 include 'app-demo'
 include 'arc-script'
 include 'arc-script-export'
+include 'jdbc'
+include 'app-demo-jdbc'
 

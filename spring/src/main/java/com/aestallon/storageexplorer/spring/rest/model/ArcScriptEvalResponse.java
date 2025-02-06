@@ -20,47 +20,81 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 
 import jakarta.annotation.Generated;
 
 /**
- * EntryAcquisitionResult
+ * ArcScriptEvalResponse
  */
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.8.0")
-public class EntryAcquisitionResult {
+public class ArcScriptEvalResponse {
 
   @Valid
-  private List<@Valid StorageEntryDto> entries = new ArrayList<>();
+  private List<Object> resultSet = new ArrayList<>();
 
-  public EntryAcquisitionResult entries(List<@Valid StorageEntryDto> entries) {
-    this.entries = entries;
+  private ArcScriptEvalError err;
+
+  public ArcScriptEvalResponse() {
+    super();
+  }
+
+  /**
+   * Constructor with only required parameters
+   */
+  public ArcScriptEvalResponse(List<Object> resultSet) {
+    this.resultSet = resultSet;
+  }
+
+  public ArcScriptEvalResponse resultSet(List<Object> resultSet) {
+    this.resultSet = resultSet;
     return this;
   }
 
-  public EntryAcquisitionResult addEntriesItem(StorageEntryDto entriesItem) {
-    if (this.entries == null) {
-      this.entries = new ArrayList<>();
+  public ArcScriptEvalResponse addResultSetItem(Object resultSetItem) {
+    if (this.resultSet == null) {
+      this.resultSet = new ArrayList<>();
     }
-    this.entries.add(entriesItem);
+    this.resultSet.add(resultSetItem);
     return this;
   }
 
   /**
-   * Get entries
-   * @return entries
+   * Get resultSet
+   * @return resultSet
    */
-  @Valid 
-  @Schema(name = "entries", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("entries")
-  public List<@Valid StorageEntryDto> getEntries() {
-    return entries;
+  @NotNull 
+  @Schema(name = "resultSet", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("resultSet")
+  public List<Object> getResultSet() {
+    return resultSet;
   }
 
-  public void setEntries(List<@Valid StorageEntryDto> entries) {
-    this.entries = entries;
+  public void setResultSet(List<Object> resultSet) {
+    this.resultSet = resultSet;
+  }
+
+  public ArcScriptEvalResponse err(ArcScriptEvalError err) {
+    this.err = err;
+    return this;
+  }
+
+  /**
+   * Get err
+   * @return err
+   */
+  @Valid 
+  @Schema(name = "err", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("err")
+  public ArcScriptEvalError getErr() {
+    return err;
+  }
+
+  public void setErr(ArcScriptEvalError err) {
+    this.err = err;
   }
 
   @Override
@@ -71,20 +105,22 @@ public class EntryAcquisitionResult {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    EntryAcquisitionResult entryAcquisitionResult = (EntryAcquisitionResult) o;
-    return Objects.equals(this.entries, entryAcquisitionResult.entries);
+    ArcScriptEvalResponse arcScriptEvalResponse = (ArcScriptEvalResponse) o;
+    return Objects.equals(this.resultSet, arcScriptEvalResponse.resultSet) &&
+        Objects.equals(this.err, arcScriptEvalResponse.err);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(entries);
+    return Objects.hash(resultSet, err);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class EntryAcquisitionResult {\n");
-    sb.append("    entries: ").append(toIndentedString(entries)).append("\n");
+    sb.append("class ArcScriptEvalResponse {\n");
+    sb.append("    resultSet: ").append(toIndentedString(resultSet)).append("\n");
+    sb.append("    err: ").append(toIndentedString(err)).append("\n");
     sb.append("}");
     return sb.toString();
   }

@@ -17,50 +17,50 @@ package com.aestallon.storageexplorer.spring.rest.model;
 
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.ArrayList;
-import java.util.List;
-import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 
 import jakarta.annotation.Generated;
 
 /**
- * EntryAcquisitionResult
+ * ArcScriptEvalRequest
  */
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.8.0")
-public class EntryAcquisitionResult {
+public class ArcScriptEvalRequest {
 
-  @Valid
-  private List<@Valid StorageEntryDto> entries = new ArrayList<>();
+  private String script;
 
-  public EntryAcquisitionResult entries(List<@Valid StorageEntryDto> entries) {
-    this.entries = entries;
-    return this;
+  public ArcScriptEvalRequest() {
+    super();
   }
 
-  public EntryAcquisitionResult addEntriesItem(StorageEntryDto entriesItem) {
-    if (this.entries == null) {
-      this.entries = new ArrayList<>();
-    }
-    this.entries.add(entriesItem);
+  /**
+   * Constructor with only required parameters
+   */
+  public ArcScriptEvalRequest(String script) {
+    this.script = script;
+  }
+
+  public ArcScriptEvalRequest script(String script) {
+    this.script = script;
     return this;
   }
 
   /**
-   * Get entries
-   * @return entries
+   * Get script
+   * @return script
    */
-  @Valid 
-  @Schema(name = "entries", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("entries")
-  public List<@Valid StorageEntryDto> getEntries() {
-    return entries;
+  @NotNull 
+  @Schema(name = "script", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("script")
+  public String getScript() {
+    return script;
   }
 
-  public void setEntries(List<@Valid StorageEntryDto> entries) {
-    this.entries = entries;
+  public void setScript(String script) {
+    this.script = script;
   }
 
   @Override
@@ -71,20 +71,20 @@ public class EntryAcquisitionResult {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    EntryAcquisitionResult entryAcquisitionResult = (EntryAcquisitionResult) o;
-    return Objects.equals(this.entries, entryAcquisitionResult.entries);
+    ArcScriptEvalRequest arcScriptEvalRequest = (ArcScriptEvalRequest) o;
+    return Objects.equals(this.script, arcScriptEvalRequest.script);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(entries);
+    return Objects.hash(script);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class EntryAcquisitionResult {\n");
-    sb.append("    entries: ").append(toIndentedString(entries)).append("\n");
+    sb.append("class ArcScriptEvalRequest {\n");
+    sb.append("    script: ").append(toIndentedString(script)).append("\n");
     sb.append("}");
     return sb.toString();
   }

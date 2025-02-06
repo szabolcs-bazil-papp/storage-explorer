@@ -19,7 +19,8 @@ jar {
   from(
     project(':common').sourceSets.main.output,
     project(':core').sourceSets.main.output,
-    project(':spring').sourceSets.main.output
+    project(':spring').sourceSets.main.output,
+    project(':arc-script').sourceSets.main.output // FIXME: Put ArcScript in separate lib!
   )
 }
 

@@ -1,7 +1,13 @@
 package com.aestallon.storageexplorer.spring.rest.impl;
 
+import java.util.Collections;
+import java.util.List;
+import org.codehaus.groovy.classgen.ReturnAdder;
 import org.springframework.http.ResponseEntity;
 import com.aestallon.storageexplorer.spring.rest.api.ExplorerApiDelegate;
+import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalError;
+import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalRequest;
+import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalResponse;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionRequest;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionResult;
 import com.aestallon.storageexplorer.spring.rest.model.EntryLoadRequest;
@@ -35,4 +41,14 @@ public class ExplorerApiDelegateImpl implements ExplorerApiDelegate {
     return ResponseEntity.ok(storageIndexService.load(entryLoadRequest));
   }
 
+  @Override
+  public ResponseEntity<ArcScriptEvalResponse> eval(ArcScriptEvalRequest arcScriptEvalRequest)
+      throws Exception {
+    return switch (storageIndexService.evalArcScript(arcScriptEvalRequest.getScript())) {
+      case StorageIndexService.ArcScriptQueryEvalResult.Ok(List<Object> resultSet) ->
+          ResponseEntity.ok(new ArcScriptEvalResponse(resultSet));
+      case StorageIndexService.ArcScriptQueryEvalResult.Err(ArcScriptEvalError err) ->
+          ResponseEntity.badRequest().body(new ArcScriptEvalResponse().err(err));
+    };
+  }
 }

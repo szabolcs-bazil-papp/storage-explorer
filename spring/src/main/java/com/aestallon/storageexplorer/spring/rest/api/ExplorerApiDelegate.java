@@ -1,5 +1,22 @@
+/*
+ * Copyright (C) 2025 Szabolcs Bazil Papp
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with this program.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package com.aestallon.storageexplorer.spring.rest.api;
 
+import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalRequest;
+import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalResponse;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionRequest;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionResult;
 import com.aestallon.storageexplorer.spring.rest.model.EntryLoadRequest;
@@ -22,6 +39,28 @@ public interface ExplorerApiDelegate {
 
     default Optional<NativeWebRequest> getRequest() {
         return Optional.empty();
+    }
+
+    /**
+     * POST /eval : Evaluates ArcScript against the storage overseen by the application
+     * ... 
+     *
+     * @param arcScriptEvalRequest  (required)
+     * @return Ok (status code 200)
+     * @see ExplorerApi#eval
+     */
+    default ResponseEntity<ArcScriptEvalResponse> eval(ArcScriptEvalRequest arcScriptEvalRequest) throws Exception {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"err\" : { \"msg\" : \"msg\", \"col\" : 6, \"line\" : 0 }, \"resultSet\" : [ \"{}\", \"{}\" ] }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
     }
 
     /**
@@ -80,7 +119,7 @@ public interface ExplorerApiDelegate {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"versions\" : [ { \"meta\" : { \"createdAt\" : \"createdAt\", \"lastModifiedAt\" : 6, \"qualifiedName\" : \"qualifiedName\", \"storageSchema\" : \"storageSchema\", \"uri\" : \"https://openapi-generator.tech\", \"versionNr\" : 0 }, \"objectAsMap\" : { \"key\" : \"{}\" } }, { \"meta\" : { \"createdAt\" : \"createdAt\", \"lastModifiedAt\" : 6, \"qualifiedName\" : \"qualifiedName\", \"storageSchema\" : \"storageSchema\", \"uri\" : \"https://openapi-generator.tech\", \"versionNr\" : 0 }, \"objectAsMap\" : { \"key\" : \"{}\" } } ], \"type\" : \"FAILED\" }";
+                    String exampleString = "{ \"entry\" : { \"schema\" : \"schema\", \"seqVal\" : 0, \"references\" : [ { \"pos\" : 6, \"propName\" : \"propName\", \"uri\" : \"https://openapi-generator.tech\" }, { \"pos\" : 6, \"propName\" : \"propName\", \"uri\" : \"https://openapi-generator.tech\" } ], \"name\" : \"name\", \"typeName\" : \"typeName\", \"scopeHost\" : \"https://openapi-generator.tech\", \"type\" : \"LIST\", \"uri\" : \"https://openapi-generator.tech\" }, \"versions\" : [ { \"meta\" : { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"lastModifiedAt\" : 6, \"qualifiedName\" : \"qualifiedName\", \"storageSchema\" : \"storageSchema\", \"uri\" : \"https://openapi-generator.tech\", \"versionNr\" : 0 }, \"objectAsMap\" : { \"key\" : \"{}\" } }, { \"meta\" : { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"lastModifiedAt\" : 6, \"qualifiedName\" : \"qualifiedName\", \"storageSchema\" : \"storageSchema\", \"uri\" : \"https://openapi-generator.tech\", \"versionNr\" : 0 }, \"objectAsMap\" : { \"key\" : \"{}\" } } ], \"type\" : \"FAILED\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

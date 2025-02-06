@@ -3,8 +3,35 @@ package com.aestallon.storageexplorer.spring.service;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
+import com.aestallon.storageexplorer.arcscript.api.Arc;
+import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
+import com.aestallon.storageexplorer.core.model.entry.ListEntry;
+import com.aestallon.storageexplorer.core.model.entry.MapEntry;
+import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
+import com.aestallon.storageexplorer.core.model.entry.ScopedListEntry;
+import com.aestallon.storageexplorer.core.model.entry.ScopedMapEntry;
+import com.aestallon.storageexplorer.core.model.entry.ScopedObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.entry.UriProperty;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.model.instance.dto.Availability;
+import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
+import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
+import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.core.service.FileSystemStorageIndex;
+import com.aestallon.storageexplorer.core.service.IndexingStrategy;
+import com.aestallon.storageexplorer.core.service.RelationalDatabaseStorageIndex;
+import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalError;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionRequest;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionResult;
 import com.aestallon.storageexplorer.spring.rest.model.EntryLoadRequest;
@@ -17,19 +44,6 @@ import com.aestallon.storageexplorer.spring.rest.model.StorageEntryDto;
 import com.aestallon.storageexplorer.spring.rest.model.StorageEntryType;
 import com.aestallon.storageexplorer.spring.rest.model.StorageIndexDto;
 import com.aestallon.storageexplorer.spring.util.IndexingMethod;
-import com.aestallon.storageexplorer.core.model.entry.ListEntry;
-import com.aestallon.storageexplorer.core.model.entry.MapEntry;
-import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
-import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
-import com.aestallon.storageexplorer.core.model.entry.ScopedListEntry;
-import com.aestallon.storageexplorer.core.model.entry.ScopedMapEntry;
-import com.aestallon.storageexplorer.core.model.entry.ScopedObjectEntry;
-import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
-import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
-import com.aestallon.storageexplorer.core.model.entry.UriProperty;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.service.IndexingStrategy;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 
@@ -154,7 +168,7 @@ public class StorageIndexService {
     if (entry == null) {
       return new EntryLoadResult().type(EntryLoadResultType.FAILED);
     }
-    
+
     final StorageEntryDto entryDto;
     final List<EntryVersionDto> versions;
     final EntryLoadResultType loadResultType;
@@ -210,6 +224,119 @@ public class StorageIndexService {
             .createdAt(meta.createdAt())
             .lastModifiedAt(meta.lastModified()))
         .objectAsMap(sv.objectAsMap());
+  }
+
+  public sealed interface ArcScriptQueryEvalResult {
+
+    record Ok(List<Object> resultSet) implements ArcScriptQueryEvalResult {}
+
+
+    record Err(ArcScriptEvalError err) implements ArcScriptQueryEvalResult {}
+
+  }
+
+  public ArcScriptQueryEvalResult evalArcScript(final String script) {
+    final StorageIndex index = indexProvider.provide();
+
+    final StorageInstanceDto temp = new StorageInstanceDto();
+    switch (index) {
+      case RelationalDatabaseStorageIndex rdsi -> temp
+          .db(new SqlStorageLocation())
+          .type(StorageInstanceType.DB);
+      case FileSystemStorageIndex fssi -> temp
+          .fs(new FsStorageLocation())
+          .type(StorageInstanceType.FS);
+    }
+
+    final StorageInstance storageInstance = StorageInstance.fromDto(temp
+        .indexingStrategy(IndexingStrategyType.ON_DEMAND)
+        .availability(Availability.AVAILABLE));
+    storageInstance.setIndex(index);
+
+    return switch (Arc.evaluate(script, storageInstance)) {
+      case ArcScriptResult.CompilationError cErr ->
+          new ArcScriptQueryEvalResult.Err(new ArcScriptEvalError()
+              .msg(cErr.msg())
+              .line(cErr.line())
+              .col(cErr.col()));
+      case ArcScriptResult.ImpermissibleInstruction iErr ->
+          new ArcScriptQueryEvalResult.Err(new ArcScriptEvalError().msg(iErr.msg()));
+      case ArcScriptResult.UnknownError uErr ->
+          new ArcScriptQueryEvalResult.Err(new ArcScriptEvalError().msg(uErr.msg()));
+      case ArcScriptResult.Ok(List<ArcScriptResult.InstructionResult> results) -> results.stream()
+          .filter(it -> it instanceof ArcScriptResult.QueryPerformed)
+          .map(ArcScriptResult.QueryPerformed.class::cast)
+          .findFirst()
+          .map(ArcScriptResult.QueryPerformed::resultSet)
+          .map(this::unwrapResultSet)
+          .map(ArcScriptQueryEvalResult.Ok::new)
+          .orElseGet(() -> new ArcScriptQueryEvalResult.Ok(new ArrayList<>()));
+    };
+  }
+
+  private List<Object> unwrapResultSet(final ArcScriptResult.ResultSet resultSet) {
+    final var rowCreator = RowCreator.newInstance(resultSet.meta());
+    final var ret = new ArrayList<>();
+    for (final var row : resultSet.rows()) {
+      ret.add(rowCreator.getRow(row));
+    }
+    return ret;
+  }
+
+  private sealed interface RowCreator {
+
+    static RowCreator newInstance(ArcScriptResult.ResultSetMeta meta) {
+      return (meta.columns().isEmpty())
+          ? new Default()
+          : new Custom(meta);
+    }
+    
+    Map<String, Object> getRow(ArcScriptResult.QueryResultRow row);
+
+
+    final class Custom implements RowCreator {
+
+      private final String[] headers;
+      private final String[] props;
+
+      private Custom(ArcScriptResult.ResultSetMeta meta) {
+        final var columns = meta.columns();
+        headers = new String[columns.size()];
+        props = new String[columns.size()];
+        for (int i = 0; i < columns.size(); i++) {
+          final var col = columns.get(i);
+          headers[i] = col.title();
+          props[i] = col.prop();
+        }
+      }
+
+      @Override
+      public Map<String, Object> getRow(ArcScriptResult.QueryResultRow row) {
+        final Map<String, Object> ret = new LinkedHashMap<>();
+        final var cells = row.cells();
+        for (int i = 0; i < props.length; i++) {
+          final var prop = props[i];
+          final var header = headers[i];
+
+          final var cell = cells.get(prop);
+          if (cell != null) {
+            ret.put(header, cell.value());
+          }
+        }
+        return ret;
+      }
+
+    }
+
+
+    final class Default implements RowCreator {
+
+      @Override
+      public Map<String, Object> getRow(ArcScriptResult.QueryResultRow row) {
+        return Map.of("uri", row.entry().uri().toString());
+      }
+
+    }
   }
 
 }
