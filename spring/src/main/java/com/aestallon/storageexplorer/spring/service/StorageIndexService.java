@@ -25,6 +25,7 @@ import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.FileSystemStorageIndex;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
@@ -239,13 +240,18 @@ public class StorageIndexService {
 
     final StorageInstanceDto temp = new StorageInstanceDto();
     switch (index) {
-      case RelationalDatabaseStorageIndex rdsi -> temp.setDb(new SqlStorageLocation());
-      case FileSystemStorageIndex fssi -> temp.setFs(new FsStorageLocation());
+      case RelationalDatabaseStorageIndex rdsi -> temp
+          .db(new SqlStorageLocation())
+          .type(StorageInstanceType.DB);
+      case FileSystemStorageIndex fssi -> temp
+          .fs(new FsStorageLocation())
+          .type(StorageInstanceType.FS);
     }
 
     final StorageInstance storageInstance = StorageInstance.fromDto(temp
         .indexingStrategy(IndexingStrategyType.ON_DEMAND)
         .availability(Availability.AVAILABLE));
+    storageInstance.setIndex(index);
 
     return switch (Arc.evaluate(script, storageInstance)) {
       case ArcScriptResult.CompilationError cErr ->
