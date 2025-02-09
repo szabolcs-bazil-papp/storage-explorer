@@ -26,12 +26,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.common.util.Attributes;
 import com.aestallon.storageexplorer.common.util.Pair;
-import com.aestallon.storageexplorer.graph.service.internal.IncomingEdgeDiscoveryService;
-import com.aestallon.storageexplorer.graph.service.internal.NodeAdditionService;
-import com.aestallon.storageexplorer.graph.service.internal.OutgoingEdgeDiscoveryService;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.graph.service.internal.IncomingEdgeDiscoveryService;
+import com.aestallon.storageexplorer.graph.service.internal.NodeAdditionService;
+import com.aestallon.storageexplorer.graph.service.internal.OutgoingEdgeDiscoveryService;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
@@ -48,7 +48,8 @@ public final class GraphRenderingService {
   private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
   private final NodeAdditionService nodeAdditionService;
 
-  public GraphRenderingService(StorageInstance storageInstance, int inboundLimit, int outboundLimit) {
+  public GraphRenderingService(StorageInstance storageInstance, int inboundLimit,
+                               int outboundLimit) {
     this.storageInstance = storageInstance;
     this.inboundLimit = inboundLimit;
     this.outboundLimit = outboundLimit;
@@ -89,7 +90,7 @@ public final class GraphRenderingService {
       log.info("OUTGOING REFERENCES: [ {} ]", refs);
       refs.forEach(
           (from, tos) -> tos.forEach(it -> nodeAdditionService.add(graph, from, it.a(), it.b())));
-      
+
       final Set<StorageEntry> candidates = refs.values().stream()
           .flatMap(Set::stream)
           .map(Pair::a)
@@ -112,21 +113,19 @@ public final class GraphRenderingService {
     int c = 0;
     do {
       log.info("INCOMING REFERENCES: [ {} ]", referrers);
-      referrers.values().stream()
+      Set<StorageEntry> candidates = referrers.values().stream()
           .flatMap(Set::stream)
-          .distinct()
-          .forEach(it -> outgoingEdgeDiscoveryService
-              .findConnectionsWithExistingNodes(graph, it)
-              .forEach(target -> nodeAdditionService.add(graph, it, target.a(), target.b())));
-      referrers = referrers.values().stream()
-          .flatMap(Set::stream)
-          .distinct()
-          .collect(toMap(
-              Function.identity(),
-              it -> incomingEdgeDiscoveryService
-                  .execute(graph, it)
-                  .filter(r -> NodeAdditionService.edgeMissing(graph, r, it))
-                  .collect(toSet())));
+          .collect(toSet());
+      storageInstance.validate(candidates);
+      candidates.forEach(it -> outgoingEdgeDiscoveryService
+          .findConnectionsWithExistingNodes(graph, it)
+          .forEach(target -> nodeAdditionService.add(graph, it, target.a(), target.b())));
+      referrers = candidates.stream().collect(toMap(
+          Function.identity(),
+          it -> incomingEdgeDiscoveryService
+              .execute(graph, it)
+              .filter(r -> NodeAdditionService.edgeMissing(graph, r, it))
+              .collect(toSet())));
     } while ((++c < inboundLimit || inboundLimit < 1) && hasValues(referrers));
   }
 

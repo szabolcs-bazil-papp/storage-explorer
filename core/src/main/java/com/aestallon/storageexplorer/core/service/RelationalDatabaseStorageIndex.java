@@ -2,17 +2,16 @@ package com.aestallon.storageexplorer.core.service;
 
 import java.net.URI;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.springframework.jdbc.core.JdbcTemplate;
-import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
-import com.google.common.base.Strings;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
+import com.google.common.base.Strings;
 import static java.util.stream.Collectors.joining;
 
 public final class RelationalDatabaseStorageIndex extends StorageIndex {
@@ -21,6 +20,7 @@ public final class RelationalDatabaseStorageIndex extends StorageIndex {
 
   private final JdbcTemplate db;
   private final String targetSchema;
+  private final ObjectEntryLoadingService loader;
 
   public RelationalDatabaseStorageIndex(
       StorageId storageId,
@@ -31,6 +31,12 @@ public final class RelationalDatabaseStorageIndex extends StorageIndex {
     super(storageId, objectApi, collectionApi);
     this.db = db;
     this.targetSchema = targetSchema;
+    this.loader = new ObjectEntryLoadingService.RelationalDatabase(this);
+  }
+
+  @Override
+  public ObjectEntryLoadingService loader() {
+    return loader;
   }
 
   @Override
@@ -108,7 +114,7 @@ public final class RelationalDatabaseStorageIndex extends StorageIndex {
 
   @Override
   protected StorageEntryFactory storageEntryFactory() {
-    return StorageEntryFactory.builder(storageId, objectApi, collectionApi)
+    return StorageEntryFactory.builder(this, objectApi, collectionApi)
         .build();
   }
 

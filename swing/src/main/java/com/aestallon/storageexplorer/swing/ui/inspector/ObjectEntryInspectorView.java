@@ -86,78 +86,105 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     this.objectEntry = objectEntry;
     this.factory = factory;
 
-    final var result = objectEntry.tryLoad();
+    final var result = objectEntry.tryLoad().get();
     switch (result) {
       case ObjectEntryLoadResult.Err err -> setUpLoadingErrorDisplay(err);
       case ObjectEntryLoadResult.SingleVersion sv -> setUpObjectNodeDisplay(sv);
       case ObjectEntryLoadResult.MultiVersion mv -> setUpObjectNodeDisplay(mv);
     }
+    addChangeListener(change -> {
+      final int selectedIndex = getSelectedIndex();
+      if (selectedIndex >= 0) {
+        VersionPane versionPane = (VersionPane) getComponentAt(selectedIndex);
+        versionPane.initialise();
+      }
+    });
   }
 
   private void setUpObjectNodeDisplay(ObjectEntryLoadResult.MultiVersion multiVersion) {
     final var versions = multiVersion.versions();
     for (int i = 0; i < versions.size(); i++) {
-      addTab(String.format("%02d", i), versionPane(versions.get(i)));
+      addTab(String.format("%02d", i), new VersionPane(versions.get(i)));
     }
+
     setSelectedIndex(versions.size() - 1);
   }
 
   private void setUpObjectNodeDisplay(
       ObjectEntryLoadResult.SingleVersion singleVersion) {
-    addTab("SINGLE", versionPane(singleVersion));
+    addTab("SINGLE", new VersionPane(singleVersion));
     setSelectedIndex(0);
   }
 
-  private Component versionPane(final ObjectEntryLoadResult.SingleVersion objectNode) {
-    final var container = new JPanel();
-    container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
-    container.setBorder(new EmptyBorder(5, 5, 5, 5));
+  private final class VersionPane extends JPanel {
 
-    final var toolbar = new JToolBar(JToolBar.TOP);
-    toolbar.setOrientation(SwingConstants.HORIZONTAL);
-    toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
-    factory.addRenderAction(objectEntry, toolbar);
-    toolbar.add(openInSystemExplorerAction);
-    toolbar.add(Box.createHorizontalGlue());
+    private final ObjectEntryLoadResult.SingleVersion version;
+    private boolean initialised = false;
 
-    Box box = new Box(BoxLayout.X_AXIS);
-    final var label = new JLabel(objectEntry.toString());
-    label.setFont(UIManager.getFont("h3.font"));
-    label.setAlignmentX(Component.LEFT_ALIGNMENT);
-    box.add(label);
-    box.add(Box.createHorizontalGlue());
+    private VersionPane(final ObjectEntryLoadResult.SingleVersion version) {
+      this.version = version;
 
-    Box box1 = new Box(BoxLayout.X_AXIS);
-    final var creationLabel = new JLabel("Created at:");
-    creationLabel.setFont(UIManager.getFont("h4.font"));
-    creationLabel.setBorder(new EmptyBorder(0, 0, 0, 5));
-    label.setAlignmentX(Component.LEFT_ALIGNMENT);
+      setLayout(new BoxLayout(VersionPane.this, BoxLayout.Y_AXIS));
+      setBorder(new EmptyBorder(5, 5, 5, 5));
 
-    final var creationValue = new JLabel(getNodeCreationValue(objectNode));
-    creationValue.setFont(UIManager.getFont("h4.font"));
-    creationValue.setAlignmentX(Component.LEFT_ALIGNMENT);
-    box1.add(creationLabel);
-    box1.add(creationValue);
-    box1.add(Box.createHorizontalGlue());
-
-    Box box2 = new Box(BoxLayout.X_AXIS);
-    final var pane = factory.textareaFactory().create(objectEntry, objectNode);
-    toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
-      @Override
-      public void actionPerformed(ActionEvent e) {
-        final var sd = new FindDialog((Frame) null, searchListener((RTextArea) pane.textArea()));
-        sd.setVisible(true);
+      if (version instanceof ObjectEntryLoadResult.SingleVersion.Eager) {
+        initialise();
       }
-    });
+    }
 
-    box2.add(pane.scrollPane());
-    box2.add(Box.createHorizontalGlue());
+    private void initialise() {
+      if (initialised) {
+        return;
+      }
 
-    container.add(toolbar);
-    container.add(box);
-    container.add(box1);
-    container.add(box2);
-    return container;
+      final var toolbar = new JToolBar(JToolBar.TOP);
+      toolbar.setOrientation(SwingConstants.HORIZONTAL);
+      toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
+      factory.addRenderAction(objectEntry, toolbar);
+      toolbar.add(openInSystemExplorerAction);
+      toolbar.add(Box.createHorizontalGlue());
+
+      Box box = new Box(BoxLayout.X_AXIS);
+      final var label = new JLabel(objectEntry.getDisplayName(version));
+      label.setFont(UIManager.getFont("h3.font"));
+      label.setAlignmentX(Component.LEFT_ALIGNMENT);
+      box.add(label);
+      box.add(Box.createHorizontalGlue());
+
+      Box box1 = new Box(BoxLayout.X_AXIS);
+      final var creationLabel = new JLabel("Created at:");
+      creationLabel.setFont(UIManager.getFont("h4.font"));
+      creationLabel.setBorder(new EmptyBorder(0, 0, 0, 5));
+      label.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+      final var creationValue = new JLabel(getNodeCreationValue(version));
+      creationValue.setFont(UIManager.getFont("h4.font"));
+      creationValue.setAlignmentX(Component.LEFT_ALIGNMENT);
+      box1.add(creationLabel);
+      box1.add(creationValue);
+      box1.add(Box.createHorizontalGlue());
+
+      Box box2 = new Box(BoxLayout.X_AXIS);
+      final var pane = factory.textareaFactory().create(objectEntry, version);
+      toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+          final var sd = new FindDialog((Frame) null, searchListener((RTextArea) pane.textArea()));
+          sd.setVisible(true);
+        }
+      });
+
+      box2.add(pane.scrollPane());
+      box2.add(Box.createHorizontalGlue());
+
+      add(toolbar);
+      add(box);
+      add(box1);
+      add(box2);
+
+      initialised = true;
+    }
+
   }
 
   private String getNodeCreationValue(
@@ -233,7 +260,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
           case REPLACE_ALL:
             result = SearchEngine.replaceAll(textArea, context);
             JOptionPane.showMessageDialog(null, result.getCount() +
-                " occurrences replaced.");
+                                                " occurrences replaced.");
             break;
         }
       }

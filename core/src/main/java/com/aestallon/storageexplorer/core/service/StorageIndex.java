@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
-import org.smartbit4all.core.utility.FinalReference;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -65,6 +64,10 @@ public abstract sealed class StorageIndex
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
     this.cache = new ConcurrentHashMap<>();
+  }
+  
+  public final StorageId id() {
+    return storageId;
   }
 
   public int refresh(IndexingStrategy strategy) {
@@ -106,6 +109,7 @@ public abstract sealed class StorageIndex
     cache.clear();
   }
 
+  @Deprecated
   public void revalidate(final Collection<? extends StorageEntry> entries) {
     final List<ObjectEntry> needRevalidation = entries.stream()
         .filter(ObjectEntry.class::isInstance)
@@ -115,17 +119,16 @@ public abstract sealed class StorageIndex
         .toList();
     final List<ObjectNode> nodes = needRevalidation.stream()
         .map(StorageEntry::uri)
-        .map(objectApi::getLatestUri)
         .collect(collectingAndThen(toList(), objectApi::loadBatch));
-    if (entries.size() != nodes.size()) {
-      log.debug("Batch loading resulted in {} entries and {} nodes", entries.size(), nodes.size());
+    if (needRevalidation.size() != nodes.size()) {
+      log.warn("Batch loading resulted in {} entries and {} nodes", entries.size(), nodes.size());
       if (log.isTraceEnabled()) {
         log.trace("Batch loading:\nEntries were: {}\nNodes became: {}", entries, nodes);
       }
       return;
     }
 
-    IntStream.range(0, entries.size()).forEach(i -> needRevalidation.get(i).refresh(nodes.get(i)));
+    IntStream.range(0, nodes.size()).forEach(i -> needRevalidation.get(i).refresh(nodes.get(i)));
   }
 
   protected abstract Stream<URI> fetchEntries();
@@ -133,6 +136,8 @@ public abstract sealed class StorageIndex
   protected abstract Stream<URI> fetchEntries(IndexingTarget target);
 
   protected abstract StorageEntryFactory storageEntryFactory();
+  
+  public abstract ObjectEntryLoadingService loader();
 
   protected final void ensureStorageEntryFactory() {
     if (storageEntryFactory == null) {

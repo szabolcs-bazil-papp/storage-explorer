@@ -19,7 +19,6 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
-import java.util.Comparator;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -103,7 +102,8 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     private StorageCollectionTableModel(StorageEntry storageEntry) {
       this.storageEntry = storageEntry;
       uris = storageEntry.uriProperties().stream()
-          .sorted(Comparator.comparing(UriProperty::propertyName)).collect(toList());
+          .sorted()
+          .collect(toList());
     }
 
     @Override
@@ -126,9 +126,10 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
       return columnIndex == 0
-          ? (storageEntry instanceof ListEntry)
-          ? Integer.parseInt(uris.get(rowIndex).propertyName())
-          : uris.get(rowIndex).propertyName()
+          ? switch (uris.get(rowIndex).segments[0]) {
+        case UriProperty.Segment.Key(String s) -> s;
+        case UriProperty.Segment.Idx(int value) -> value;
+      }
           : uris.get(rowIndex).uri();
     }
 

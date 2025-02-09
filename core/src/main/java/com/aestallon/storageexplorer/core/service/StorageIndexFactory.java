@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2025 Szabolcs Bazil Papp
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with this program.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package com.aestallon.storageexplorer.core.service;
 
 import java.nio.file.Path;
@@ -32,7 +47,6 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import com.aestallon.storageexplorer.common.util.NotImplementedException;
 import com.aestallon.storageexplorer.core.model.instance.dto.Availability;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseConnectionData;
@@ -41,12 +55,14 @@ import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 final class StorageIndexFactory {
 
   static abstract sealed class StorageIndexCreationResult permits
-      StorageIndexCreationResult.Ok,
-      StorageIndexCreationResult.Err {
+      StorageIndexFactory.StorageIndexCreationResult.Ok,
+      StorageIndexFactory.StorageIndexCreationResult.Err {
 
     protected final Availability availability;
 
@@ -205,7 +221,7 @@ final class StorageIndexFactory {
     final CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
     final JdbcTemplate jdbcTemplate = ctx.getBean(JdbcTemplate.class);
 
-    
+
     final var index = new RelationalDatabaseStorageIndex(
         storageId,
         objectApi,
@@ -224,7 +240,7 @@ final class StorageIndexFactory {
         if (targetSchema != null && !targetSchema.isEmpty()) {
           p.setSchema(targetSchema);
         }
-        
+
         return p;
       };
       case H2 -> SQLDBParameterH2::new;
@@ -258,17 +274,18 @@ final class StorageIndexFactory {
   private Supplier<DataSource> getDataSourceFactory(final DatabaseVendor vendor,
                                                     final DatabaseConnectionData connectionData) {
     return () -> {
-      final var dataSource = new DriverManagerDataSource();
-      dataSource.setDriverClassName(vendor.driverClassName());
-      dataSource.setUrl(connectionData.getUrl());
-      dataSource.setUsername(connectionData.getUsername());
-      dataSource.setPassword(connectionData.getPassword());
-      
+      final HikariConfig config = new HikariConfig();
+      config.setReadOnly(true);
+      config.setDriverClassName(vendor.driverClassName());
+      config.setJdbcUrl(connectionData.getUrl());
+      config.setUsername(connectionData.getUsername());
+      config.setPassword(connectionData.getPassword());
+
       final var schema = connectionData.getTargetSchema();
       if (schema != null && !schema.isEmpty()) {
-        dataSource.setSchema(schema);
+        config.setSchema(schema);
       }
-      return dataSource;
+      return new HikariDataSource(config);
     };
   }
 
