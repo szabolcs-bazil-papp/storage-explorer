@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -13,44 +13,48 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.common.util;
+package com.aestallon.storageexplorer.core.util;
 
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.smartbit4all.core.utility.StringConstant;
+import com.aestallon.storageexplorer.common.util.Pair;
+import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 
 public final class ObjectMaps {
 
   private ObjectMaps() {}
 
-  public static Map<String, Object> flatten(Map<String, Object> m) {
+  public static Stream<Pair<UriProperty.Segment[], Object>> flatten(Map<String, Object> m) {
     return m.entrySet().stream()
         .map(Pair::of)
-        .flatMap(ObjectMaps::flattenToPrimitivePair)
-        .collect(Pair.toMap());
+        .map(Pair.onA(s -> new UriProperty.Segment[] { UriProperty.Segment.key(s) }))
+        .flatMap(ObjectMaps::flattenToPrimitivePair);
   }
 
-  private static Stream<Pair<String, Object>> flattenToPrimitivePair(Pair<String, Object> e) {
-    final String property = e.a();
+  private static Stream<Pair<UriProperty.Segment[], Object>> flattenToPrimitivePair(
+      final Pair<UriProperty.Segment[], Object> e) {
+    final UriProperty.Segment[] property = e.a();
     final Object value = e.b();
 
     if (value instanceof Map<?, ?>) {
-      @SuppressWarnings({"unchecked"})
+      @SuppressWarnings({ "unchecked" })
       final Map<String, Object> m = (Map<String, Object>) value;
       return m.entrySet().stream()
           .map(Pair::of)
-          .map(Pair.onA(it -> property + StringConstant.DOT + it))
+          .map(Pair.onA(it -> UriProperty.Segment.join(property, UriProperty.Segment.key(it))))
           .flatMap(ObjectMaps::flattenToPrimitivePair);
     }
 
     if (value instanceof List<?>) {
-      @SuppressWarnings({"unchecked"})
+      @SuppressWarnings({ "unchecked" })
       final List<Object> l = (List<Object>) value;
       return IntStream.range(0, l.size())
-          .mapToObj(i -> Pair.of(property + StringConstant.DOT + i, l.get(i)))
+          .mapToObj(i -> Pair.of(
+              UriProperty.Segment.join(property, UriProperty.Segment.idx(i)),
+              l.get(i)))
           .flatMap(ObjectMaps::flattenToPrimitivePair);
     }
 

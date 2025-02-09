@@ -86,7 +86,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     this.objectEntry = objectEntry;
     this.factory = factory;
 
-    final var result = objectEntry.tryLoad();
+    final var result = objectEntry.tryLoad().get();
     switch (result) {
       case ObjectEntryLoadResult.Err err -> setUpLoadingErrorDisplay(err);
       case ObjectEntryLoadResult.SingleVersion sv -> setUpObjectNodeDisplay(sv);

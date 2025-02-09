@@ -88,7 +88,7 @@ public class ArcScriptEngine {
           final var runningOnFs = StorageInstanceType.FS == storageInstance.type();
           final var cache = StorageInstanceExaminer.ObjectEntryLookupTable.newInstance();
           final var res = ConditionEvaluationExecutor.builder(examiner, entries, condition, limit)
-              .useSemaphore(!runningOnFs)
+              //.useSemaphore(!runningOnFs)
               .useCache(cache)
               .build()
               .execute();
@@ -108,7 +108,7 @@ public class ArcScriptEngine {
                     it.displayNameInternal()))
                 .toList();
             final var rows = QueryResultRowEvaluationExecutor.builder(examiner, res, columns)
-                .useSemaphore(!runningOnFs)
+                //.useSemaphore(!runningOnFs)
                 .useCache(cache)
                 .build()
                 .execute();

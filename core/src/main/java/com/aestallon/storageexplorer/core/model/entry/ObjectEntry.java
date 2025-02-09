@@ -15,32 +15,24 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectNode;
-import org.smartbit4all.core.utility.StringConstant;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitterReturnValueHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
-import com.aestallon.storageexplorer.common.util.IO;
-import com.aestallon.storageexplorer.common.util.ObjectMaps;
+import com.aestallon.storageexplorer.core.util.ObjectMaps;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResults;
-import com.sun.source.tree.ReturnTree;
+import com.aestallon.storageexplorer.core.service.StorageIndex;
 import static java.util.stream.Collectors.toSet;
 
 public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntry {
@@ -57,25 +49,25 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
+  private final WeakReference<StorageIndex> storageIndex;
   private final StorageId id;
   private final Path path;
   private final URI uri;
-  private final ObjectApi objectApi;
   private final String typeName;
   private final String uuid;
   private final Set<ScopedEntry> scopedEntries = new HashSet<>();
 
-  private boolean valid = false;
+  private /*volatile*/ boolean valid = false;
   private Versioning versioning;
   private Set<UriProperty> uriProperties;
 
-  ObjectEntry(StorageId id, final Path path, final URI uri, final ObjectApi objectApi) {
-    this.id = id;
+  ObjectEntry(final StorageIndex storageIndex,
+              final Path path,
+              final URI uri) {
+    this.storageIndex = new WeakReference<>(storageIndex);
+    this.id = storageIndex.id();
     this.path = path;
     this.uri = uri;
-    this.objectApi = objectApi;
     this.typeName = Uris.getTypeName(uri);
     this.uuid = Uris.getUuid(uri);
   }
@@ -106,8 +98,8 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
     final var uriProperties = new HashSet<>(this.uriProperties);
     scopedEntries.stream()
-        .map(e -> UriProperty.standalone(
-            (e instanceof ObjectEntry o) ? o.uuid : e.uri().toString(),
+        .map(e -> UriProperty.of(new UriProperty.Segment[] { UriProperty.Segment.key(
+                (e instanceof ObjectEntry o) ? o.uuid : e.uri().toString()) },
             e.uri()))
         .forEach(uriProperties::add);
     return uriProperties;
@@ -121,9 +113,8 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   @Override
   public void refresh() {
-    log.warn("Individual refresh on node: {}", uri);
-    final var objectNode = load();
-    refresh(objectNode);
+    log.warn("!!!!!!!!!! INDIVIDUAL REFRESH ON NODE !!!!!!!!!!: {}", uri);
+    Objects.requireNonNull(storageIndex.get()).loader().load(this, true);
   }
 
   public void refresh(final ObjectNode objectNode) {
@@ -132,18 +123,18 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
       return;
     }
 
-    uriProperties = initUriProperties(objectNode);
-    valid = true;
+    // synchronized (this) {
+      uriProperties = initUriProperties(objectNode);
+      valid = true;
+    // }
   }
 
   private Set<UriProperty> initUriProperties(final ObjectNode objectNode) {
     return ObjectMaps.flatten(objectNode.getObjectAsMap())
-        .entrySet().stream()
-        .filter(it -> !UriProperty.OWN.equals(it.getKey()))
-        .map(Pair::of)
+        .filter(it -> !UriProperty.Segment.isOwnUri(it.a()))
         .map(Pair.onB(Uris::parse))
         .flatMap(Pair.streamOnB())
-        .map(it -> UriProperty.parse(it.a(), it.b()))
+        .map(it -> UriProperty.of(it.a(), it.b()))
         .collect(toSet());
   }
 
@@ -188,67 +179,13 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     return path;
   }
 
-  private ObjectNode load() {
-    if (Uris.isSingleVersion(uri) && path != null) {
-      // We have to do this...
-      return tryDeserialise().map(it -> objectApi.create(null, it)).orElse(null);
-    }
-    try {
-      return objectApi.loadLatest(uri);
-    } catch (final Exception e) {
-      log.error(e.getMessage(), e);
-      return null;
-    }
+
+  public ObjectEntryLoadRequest tryLoad() {
+    return Objects.requireNonNull(storageIndex.get()).loader().load(this);
   }
-
-  private Optional<Map<?, ?>> tryDeserialise() {
-    final String rawContent = IO.read(path);
-    if (Strings.isNullOrEmpty(rawContent)) {
-      log.error("Empty content found during deserialisation attempt of [ {} ]", uri);
-      return Optional.empty();
-    }
-
-    try {
-      final Map<?, ?> res = objectApi
-          .getDefaultSerializer()
-          .fromString(rawContent, LinkedHashMap.class);
-      return Optional.of(res);
-    } catch (IOException e) {
-      log.error("Error during deserialisation attempt of [ {} ]", uri);
-      log.error(e.getMessage(), e);
-      return Optional.empty();
-    }
-  }
-
-  public ObjectEntryLoadResult tryLoad() {
-    try {
-
-      final ObjectEntryLoadResult ret;
-      final var node = load();
-      if (Uris.isSingleVersion(uri)) {
-        ret = (node != null)
-            ? ObjectEntryLoadResults.singleVersion(node, OBJECT_MAPPER)
-            : ObjectEntryLoadResults.err("Failed to retrieve single version object entry!");
-      } else {
-        ret = (node != null)
-            ? ObjectEntryLoadResults.multiVersion(node, objectApi, OBJECT_MAPPER)
-            : ObjectEntryLoadResults.err("Failed to retrieve multi version object entry!");
-      }
-
-      if (!valid && node != null) {
-        refresh(node);
-      }
-
-      return ret;
-    } catch (Throwable t) {
-      final String msg = String.format("Could not load Object Entry [ %s ] : %s",
-          uri,
-          t.getMessage());
-      log.error(msg);
-      log.error(t.getMessage(), t);
-
-      return ObjectEntryLoadResults.err(msg);
-    }
+  
+  public ObjectEntryLoadRequest tryLoadHead() {
+    return Objects.requireNonNull(storageIndex.get()).loader().load(this, true);
   }
 
   @Override

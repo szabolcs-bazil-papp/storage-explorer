@@ -15,6 +15,7 @@ import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import static com.aestallon.storageexplorer.common.util.Streams.reverse;
 import static java.util.stream.Collectors.collectingAndThen;
@@ -29,14 +30,14 @@ public class StorageInstanceExaminer {
       return new ObjectEntryLookupTable();
     }
 
-    private final ConcurrentHashMap<ObjectEntry, ObjectEntryLoadResult> inner;
+    private final ConcurrentHashMap<ObjectEntry, ObjectEntryLoadRequest> inner;
 
     private ObjectEntryLookupTable() {
       inner = new ConcurrentHashMap<>();
     }
 
-    private ObjectEntryLoadResult computeIfAbsent(final ObjectEntry objectEntry,
-                                                  final Function<? super ObjectEntry, ? extends ObjectEntryLoadResult> f) {
+    private ObjectEntryLoadRequest computeIfAbsent(final ObjectEntry objectEntry,
+                                                   final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f) {
       return inner.computeIfAbsent(objectEntry, f);
     }
   }
@@ -51,27 +52,45 @@ public class StorageInstanceExaminer {
   public PropertyDiscoveryResult discoverProperty(final PropertyDiscoveryResult medial,
                                                   final String propQuery,
                                                   final ObjectEntryLookupTable cache) {
+    return discoverProperty(medial, new PropQuery(propQuery), cache);
+  }
+
+  private PropertyDiscoveryResult discoverProperty(final PropertyDiscoveryResult medial,
+                                                   final PropQuery propQuery,
+                                                   final ObjectEntryLookupTable cache) {
     return switch (medial) {
       case None none -> switch (none) {
-        case NoValue noValue when propQuery.isEmpty() -> new NoValue();
+        case NoValue ignored when propQuery.isEmpty() -> new NoValue();
         default -> new NotFound("No value present to continue on " + propQuery);
       };
       case Some some -> (propQuery.isEmpty())
           ? medial
-          : discoverProperty(some.host(), UriProperty.join(some.path(), propQuery), cache);
+          : discoverProperty(
+              some.host(),
+              PropQuery.join(new PropQuery(some.path()), propQuery),
+              cache);
     };
   }
 
   public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
                                                   final String propQuery,
                                                   final ObjectEntryLookupTable cache) {
-    if (UriProperty.OWN.equals(propQuery)) {
+    return discoverProperty(entry, new PropQuery(propQuery), cache);
+  }
+
+  public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
+                                                  final PropQuery propQuery,
+                                                  final ObjectEntryLookupTable cache) {
+    if (propQuery.isOwnUri()) {
       return new StringFound(entry.uri().toString(), entry, UriProperty.OWN);
     }
 
     return switch (entry) {
       case ObjectEntry o -> {
-        final var loadResult = cache.computeIfAbsent(o, ObjectEntry::tryLoad);
+        // for now, we invoke ObjectEntry::tryLoadHead (because really only ArcScript uses this
+        // method) -> allow passing some configuration to decide this and other nuances of the
+        // behaviour:
+        final var loadResult = cache.computeIfAbsent(o, ObjectEntry::tryLoadHead).get();
         yield switch (loadResult) {
           case ObjectEntryLoadResult.Err err -> new NotFound(err.msg());
           case ObjectEntryLoadResult.SingleVersion sv -> inVersion(sv, entry, propQuery, cache);
@@ -89,7 +108,7 @@ public class StorageInstanceExaminer {
 
   private PropertyDiscoveryResult inVersion(final ObjectEntryLoadResult.SingleVersion sv,
                                             final StorageEntry host,
-                                            final String propQuery,
+                                            final PropQuery propQuery,
                                             final ObjectEntryLookupTable cache) {
     /*
      * How propQueries work and how to interpret them
@@ -117,26 +136,15 @@ public class StorageInstanceExaminer {
      *
      */
     return host.uriProperties().stream()
-        .filter(it -> propQuery.startsWith(it.propertyName()))
+        .filter(propQuery::startsWith)
         .findFirst()
         .map(it -> discoverer.apply(it.uri())
-            .map(e -> {
-              final int propertyNameLength = it.propertyName().length();
-              final int queryLength = propQuery.length();
-              if (queryLength == propertyNameLength) {
-                // we are looking for the referenced entry:
-                return discoverProperty(e, "", cache);
-              }
-
-              // exclude the trailing dot:
-              return discoverProperty(e, propQuery.substring(propertyNameLength + 1), cache);
-            })
+            .map(e -> discoverProperty(e, propQuery.drop(it.length()), cache))
             .orElseGet(() -> new NotFound(it.uri() + " is unreachable!")))
         .or(() -> {
-          final PropQuery q = new PropQuery(propQuery);
           final List<UriProperty> matchedListProps = host.uriProperties().stream()
               .filter(it -> !it.isStandalone())
-              .filter(q::matches)
+              .filter(propQuery::matches)
               .sorted()
               .toList();
           if (matchedListProps.isEmpty()) {
@@ -146,7 +154,7 @@ public class StorageInstanceExaminer {
           return matchedListProps.stream()
               .map(it -> Pair.of(it, discoverer.apply(it.uri())))
               .flatMap(Pair.streamOnB())
-              .map(p -> discoverProperty(p.b(), q.drop(p.a()), cache))
+              .map(p -> discoverProperty(p.b(), propQuery.drop(p.a()), cache))
               .collect(collectingAndThen(toList(), rs -> Optional.of(ListFound.of(rs, ""))));
         })
         .orElseGet(() -> new InlinePropertyDiscoverer(host, propQuery).discover(sv.objectAsMap()));
@@ -155,11 +163,11 @@ public class StorageInstanceExaminer {
   private static final class InlinePropertyDiscoverer {
 
     private final StorageEntry host;
-    private final String[] pathElements;
+    private final UriProperty.Segment[] pathElements;
 
-    private InlinePropertyDiscoverer(final StorageEntry host, final String propQuery) {
+    private InlinePropertyDiscoverer(final StorageEntry host, final PropQuery propQuery) {
       this.host = host;
-      this.pathElements = propQuery.isEmpty() ? new String[0] : propQuery.split("\\.");
+      this.pathElements = propQuery.segments;
     }
 
     private PropertyDiscoveryResult discover(final Object root) {
@@ -169,7 +177,7 @@ public class StorageInstanceExaminer {
 
     @SuppressWarnings({ "unchecked" })
     private PropertyDiscoveryResult inObject(final Object o,
-                                             final String[] es,
+                                             final UriProperty.Segment[] es,
                                              final List<UriProperty.Segment> segments) {
       final boolean terminal = es.length == 0;
       return switch (o) {
@@ -198,52 +206,53 @@ public class StorageInstanceExaminer {
     }
 
     private PropertyDiscoveryResult inObjectMap(final Map<String, Object> map,
-                                                final String[] es,
+                                                final UriProperty.Segment[] es,
                                                 final List<UriProperty.Segment> segments) {
       if (es == null || es.length == 0) {
         return new NoValue();
       }
 
-      segments.add(new UriProperty.Segment.Key(es[0]));
-      return inObject(map.get(es[0]), restOf(es), segments);
+      segments.add(es[0]);
+      return inObject(map.get(es[0].toString()), restOf(es), segments);
     }
 
     private PropertyDiscoveryResult inObjectList(final List<Object> list,
-                                                 final String[] es,
+                                                 final UriProperty.Segment[] es,
                                                  final List<UriProperty.Segment> segments) {
-      try {
-        final var idx = Integer.parseInt(es[0]);
-        if (idx < 0) {
-          return new NotFound("Index value [ %d ] is not a valid index number.".formatted(idx));
+      return switch (es[0]) {
+        case UriProperty.Segment.Key ignored -> {
+          // not a numeric, we multicast:
+          final List<PropertyDiscoveryResult> ret = new ArrayList<>();
+          for (int i = 0; i < list.size(); i++) {
+            final Object o = list.get(i);
+            final var segmentsI = new ArrayList<>(segments);
+            segmentsI.add(new UriProperty.Segment.Idx(i));
+            final PropertyDiscoveryResult res = inObject(o, es /* !!! */, segmentsI);
+            ret.add(res);
+          }
+          yield ListFound.of(ret, UriProperty.Segment.asString(segments));
         }
+        case UriProperty.Segment.Idx idx -> {
+          if (idx.value() < 0) {
+            yield new NotFound("Index value [ %d ] is not a valid index number.".formatted(idx));
+          }
 
-        if (idx >= list.size()) {
-          return new NoValue();
-        }
+          if (idx.value() >= list.size()) {
+            yield new NoValue();
+          }
 
-        segments.add(new UriProperty.Segment.Idx(idx));
-        return inObject(list.get(idx), restOf(es), segments);
-      } catch (NumberFormatException e) {
-        // not a numeric, we multicast:
-        final List<PropertyDiscoveryResult> ret = new ArrayList<>();
-        for (int i = 0; i < list.size(); i++) {
-          final Object o = list.get(i);
-          final var segmentsI = new ArrayList<>(segments);
-          segmentsI.add(new UriProperty.Segment.Idx(i));
-          final PropertyDiscoveryResult res = inObject(o, es /* !!! */, segmentsI);
-          ret.add(res);
+          segments.add(idx);
+          yield inObject(list.get(idx.value()), restOf(es), segments);
         }
-        return ListFound.of(ret, UriProperty.Segment.asString(segments));
-      }
+      };
     }
-
   }
 
 
-  private static NotFound earlyTermination(final String[] es, final Object val) {
+  private static NotFound earlyTermination(final UriProperty.Segment[] es, final Object val) {
     return new NotFound(
         "Property query specified had remaining elements [ %s ] but terminated early on [ key: %s ][ value: %s ]".formatted(
-            String.join(".", es),
+            UriProperty.Segment.asString(es),
             es[0],
             val));
   }
@@ -358,7 +367,8 @@ public class StorageInstanceExaminer {
   }
 
 
-  public record ListFound(List<PropertyDiscoveryResult> value, StorageEntry host, boolean terminal,
+  public record ListFound(List<PropertyDiscoveryResult> value, StorageEntry host,
+      boolean terminal,
       String path)
       implements Some {
 
@@ -424,16 +434,67 @@ public class StorageInstanceExaminer {
 
   private static final class PropQuery {
 
+    private static PropQuery join(PropQuery left, PropQuery right) {
+      final var leftSegments = left.segments;
+      final var rightSegments = right.segments;
+      final var arr = new UriProperty.Segment[leftSegments.length + rightSegments.length];
+      System.arraycopy(leftSegments, 0, arr, 0, leftSegments.length);
+      System.arraycopy(rightSegments, 0, arr, leftSegments.length, rightSegments.length);
+      return new PropQuery(arr);
+    }
+
     private final UriProperty.Segment[] segments;
     private final UriProperty.Segment.Key[] keysRequested;
     private final Map<UriProperty, Integer> matchIndices = new HashMap<>();
 
     PropQuery(final String str) {
-      segments = UriProperty.Segment.parse(str);
+      this(UriProperty.Segment.parse(str));
+    }
+
+    private PropQuery(UriProperty.Segment[] segments) {
+      this.segments = segments;
       keysRequested = Arrays.stream(segments)
           .filter(UriProperty.Segment.Key.class::isInstance)
           .map(UriProperty.Segment.Key.class::cast)
           .toArray(UriProperty.Segment.Key[]::new);
+    }
+
+    boolean startsWith(final UriProperty uriProperty) {
+      if (segments.length < uriProperty.segments.length) {
+        return false;
+      }
+
+      for (int i = 0; i < uriProperty.segments.length; i++) {
+        if (!uriProperty.segments[i].equals(segments[i])) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    boolean isEmpty() {
+      return segments.length == 0;
+    }
+
+    boolean isOwnUri() {
+      return UriProperty.Segment.isOwnUri(segments);
+    }
+
+    PropQuery drop(final int length) {
+      if (length < 0) {
+        throw new IllegalArgumentException("length < 0");
+      }
+
+      if (length == 0) {
+        return this;
+      }
+
+      if (length >= segments.length) {
+        return new PropQuery(new UriProperty.Segment[0]);
+      }
+
+      return new PropQuery(Arrays.copyOfRange(segments, length, segments.length));
     }
 
     String drop(final UriProperty uriProperty) {

@@ -20,13 +20,17 @@ import java.nio.file.Path;
 import org.smartbit4all.core.object.ObjectApi;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.service.StorageIndex;
 
 public final class ScopedObjectEntry extends ObjectEntry implements StorageEntry, ScopedEntry {
 
   private final URI scopeUri;
 
-  ScopedObjectEntry(StorageId id, Path path, URI uri, ObjectApi objectApi, URI scopeUri) {
-    super(id, path, uri, objectApi);
+  ScopedObjectEntry(final StorageIndex storageIndex, 
+                    final Path path, 
+                    final URI uri,
+                    final URI scopeUri) {
+    super(storageIndex, path, uri);
     this.scopeUri = scopeUri;
   }
 

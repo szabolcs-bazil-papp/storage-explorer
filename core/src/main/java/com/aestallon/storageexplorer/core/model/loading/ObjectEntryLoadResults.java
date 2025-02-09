@@ -26,23 +26,27 @@ public final class ObjectEntryLoadResults {
                                                                   final ObjectMapper objectMapper) {
     return new ObjectEntryLoadResult.SingleVersion.Eager(node, objectMapper);
   }
-  
+
   public static ObjectEntryLoadResult.SingleVersion singleVersion(final URI versionedUri,
                                                                   final ObjectApi objectApi,
                                                                   final ObjectMapper objectMapper) {
     return new ObjectEntryLoadResult.SingleVersion.Lazy(versionedUri, objectApi, objectMapper);
   }
-  
+
   public static ObjectEntryLoadResult.MultiVersion multiVersion(final ObjectNode node,
                                                                 final ObjectApi objectApi,
-                                                                final ObjectMapper objectMapper) {
+                                                                final ObjectMapper objectMapper,
+                                                                final long versionLimit) {
     final URI objectUri = node.getObjectUri();
     long vn = Uris.getVersion(objectUri);
     final var head = singleVersion(node, objectMapper);
-    final List<ObjectEntryLoadResult.SingleVersion> versions =  LongStream.range(0, vn)
-        .mapToObj(i -> Uris.atVersion(objectUri, i))
-        .map(it -> new ObjectEntryLoadResult.SingleVersion.Lazy(it, objectApi, objectMapper))
-        .collect(toCollection(ArrayList::new));
+    final List<ObjectEntryLoadResult.SingleVersion> versions = (versionLimit < 2)
+        ? new ArrayList<>()
+        : LongStream
+            .range(0, Math.min(versionLimit, vn - 1))
+            .mapToObj(i -> Uris.atVersion(objectUri, i))
+            .map(it -> new ObjectEntryLoadResult.SingleVersion.Lazy(it, objectApi, objectMapper))
+            .collect(toCollection(ArrayList::new));
     versions.add(head);
     return new ObjectEntryLoadResult.MultiVersion(versions);
   }

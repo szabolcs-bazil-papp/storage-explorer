@@ -136,6 +136,10 @@ public sealed interface ObjectEntryLoadResult permits
     public boolean isOk() {
       return true;
     }
+    
+    public SingleVersion head() {
+      return versions.getLast();
+    }
 
   }
 }

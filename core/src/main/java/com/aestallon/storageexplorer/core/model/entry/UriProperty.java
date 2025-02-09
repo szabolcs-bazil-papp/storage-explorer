@@ -16,11 +16,11 @@
 package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.OptionalInt;
 import org.springframework.util.Assert;
-import com.aestallon.storageexplorer.common.util.Uris;
 
 public final class UriProperty implements Comparable<UriProperty> {
 
@@ -44,6 +44,21 @@ public final class UriProperty implements Comparable<UriProperty> {
       }
 
       return segments;
+    }
+
+    static Segment[] join(final Segment[] segments, Segment segment) {
+      final Segment[] result = new Segment[segments.length + 1];
+      System.arraycopy(segments, 0, result, 0, segments.length);
+      result[segments.length] = segment;
+      return result;
+    }
+
+    static Segment key(final String s) {
+      return new Key(s);
+    }
+
+    static Segment idx(final int i) {
+      return new Idx(i);
     }
 
     static String asString(final List<Segment> segments) {
@@ -74,6 +89,11 @@ public final class UriProperty implements Comparable<UriProperty> {
       }
       return sb.toString();
     }
+    
+    static boolean isOwnUri(Segment[] segments) {
+      return segments.length == 1 && segments[0] instanceof Key(String s) && OWN.equals(s);
+    }
+
 
     record Key(String value) implements Segment {
 
@@ -96,91 +116,33 @@ public final class UriProperty implements Comparable<UriProperty> {
 
   }
 
-  public static String join(final String a, final String b) {
-    final StringBuilder sb = new StringBuilder();
-    if (a != null && !a.isEmpty()) {
-      sb.append(a);
-    }
-
-    if (b != null && !b.isEmpty()) {
-      if (!sb.isEmpty()) {
-        sb.append('.');
-      }
-
-      sb.append(b);
-    }
-
-    return sb.toString();
-  }
-
 
   public static final String OWN = "uri";
 
-  public static UriProperty standalone(String propertyName, URI uri) {
-    Assert.notNull(propertyName, "java.lang.String propertyName must not be null!");
-    Assert.notNull(uri, "java.net.URI uri must not be null!");
+  public static UriProperty of(final Segment[] segments, final URI uri) {
+    Assert.notNull(segments, "segments cannot be null!");
+    Assert.notNull(uri, "uri cannot be null!");
 
-    return new UriProperty(propertyName, Uris.latest(uri), -1);
+    return new UriProperty(segments, uri);
   }
 
-  public static UriProperty listElement(String propertyName, URI uri, int idx) {
-    Assert.notNull(propertyName, "java.lang.String propertyName must not be null!");
-    Assert.notNull(uri, "java.net.URI uri must not be null!");
-    if (idx < 0) {
-      throw new IllegalArgumentException("idx [ " + idx + " ] must not be negative!");
-    }
-
-    return new UriProperty(propertyName, Uris.latest(uri), idx);
-  }
-
-  public static UriProperty parse(String propertyName, URI uri) {
-    Assert.notNull(propertyName, "java.lang.String propertyName must not be null!");
-    Assert.notNull(uri, "java.net.URI uri must not be null!");
-
-    String[] pathElements = propertyName.split("\\.");
-    final OptionalInt idx = findLastInt(pathElements);
-
-    return (idx.isPresent())
-        ? listElement(propertyName, uri, idx.getAsInt())
-        : standalone(propertyName, uri);
-  }
-
-  private static OptionalInt findLastInt(String[] arr) {
+  private static OptionalInt findLastInt(Segment[] arr) {
     for (int i = arr.length - 1; i >= 0; i--) {
-      try {
-        int value = Integer.parseInt(arr[i]);
+      if (arr[i] instanceof Segment.Idx(int value)) {
         return OptionalInt.of(value);
-      } catch (NumberFormatException e) {
-        // ignored
       }
     }
     return OptionalInt.empty();
   }
 
-  private static boolean isInt(String s) {
-    try {
-      Integer.parseInt(s);
-      return true;
-    } catch (NumberFormatException e) {
-      return false;
-    }
-  }
-
-  public final String propertyName;
+  public final Segment[] segments;
   public final URI uri;
   public final int position;
 
-  public final Segment[] segments;
-
-  private UriProperty(String propertyName, URI uri, int position) {
-    this.propertyName = propertyName;
+  private UriProperty(Segment[] segments, URI uri) {
+    this.segments = segments;
     this.uri = uri;
-    this.position = position;
-    segments = Segment.parse(propertyName);
-  }
-
-  public String propertyName() {
-    return propertyName;
+    this.position = findLastInt(segments).orElse(-1);
   }
 
   public URI uri() {
@@ -191,20 +153,27 @@ public final class UriProperty implements Comparable<UriProperty> {
     return segments;
   }
 
+  public int length() {
+    return segments.length;
+  }
+
   public boolean isStandalone() {
     return position < 0;
   }
 
   public String label() {
     if (isStandalone()) {
-      return propertyName;
+      return toString();
     }
 
-    final String[] pathElements = propertyName.split("\\.");
-    final String prefix =
-        (isInt(pathElements[pathElements.length - 1]) && propertyName.lastIndexOf('.') > 0)
-            ? propertyName.substring(0, propertyName.lastIndexOf('.'))
-            : propertyName;
+    final String prefix;
+    if (segments[segments.length - 1] instanceof Segment.Idx lastSegment) {
+      final Segment[] temp = new Segment[segments.length - 1];
+      System.arraycopy(segments, 0, temp, 0, segments.length - 1);
+      prefix = Segment.asString(temp);
+    } else {
+      prefix = Segment.asString(segments);
+    }
     return prefix + " (" + position + ")";
   }
 
@@ -215,22 +184,17 @@ public final class UriProperty implements Comparable<UriProperty> {
     if (o == null || getClass() != o.getClass())
       return false;
     UriProperty that = (UriProperty) o;
-    return position == that.position && Objects.equals(propertyName, that.propertyName)
-           && Objects.equals(uri, that.uri);
+    return Arrays.equals(segments, that.segments) && Objects.equals(uri, that.uri);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(propertyName, uri, position);
+    return Objects.hash(Arrays.hashCode(segments), uri);
   }
 
   @Override
   public String toString() {
-    return "UriProperty {" + "\n" +
-           "    propertyName: '" + propertyName + '\'' + "\n" +
-           "    uri: " + uri + "\n" +
-           "    position: " + position + "\n" +
-           "}";
+    return Segment.asString(segments) + " --> " + uri + " (" + position + ")";
   }
 
   @Override

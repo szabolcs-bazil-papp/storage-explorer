@@ -10,9 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
-import com.google.common.base.Strings;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.google.common.base.Strings;
 
 public final class StorageEntryFactory {
 
@@ -24,10 +25,10 @@ public final class StorageEntryFactory {
   public static final String STORED_SEQ_MARKER = "/storedSeq";
 
 
-  public static Builder builder(final StorageId storageId,
+  public static Builder builder(final StorageIndex storageIndex,
                                 final ObjectApi objectApi,
                                 final CollectionApi collectionApi) {
-    return new Builder(storageId, objectApi, collectionApi);
+    return new Builder(storageIndex, objectApi, collectionApi);
   }
 
   private static Optional<URI> scopeUri(final String uriString, final String probe) {
@@ -45,13 +46,15 @@ public final class StorageEntryFactory {
     return (idx > 0) ? OptionalInt.of(idx) : OptionalInt.empty();
   }
 
+  private final StorageIndex storageIndex;
   private final StorageId id;
   private final ObjectApi objectApi;
   private final CollectionApi collectionApi;
   private final Path pathToStorage;
 
   private StorageEntryFactory(final Builder builder) {
-    this.id = builder.storageId;
+    this.storageIndex = builder.storageIndex;
+    id = storageIndex.id();
     this.objectApi = builder.objectApi;
     this.collectionApi = builder.collectionApi;
     this.pathToStorage = builder.pathToStorage;
@@ -76,13 +79,13 @@ public final class StorageEntryFactory {
 
       } else if (uriString.contains(STORED_REF_MARKER)) {
         return scopeUri(uriString, STORED_REF_MARKER)
-            .map(scope -> new ScopedObjectEntry(id, path, latestUri, objectApi, scope));
+            .map(scope -> new ScopedObjectEntry(storageIndex, path, latestUri, scope));
 
       } else if (uriString.contains(STORED_SEQ_MARKER)) {
         return Optional.of(new SequenceEntry(id, path, latestUri, collectionApi));
 
       } else {
-        return Optional.of(new ObjectEntry(id, path, latestUri, objectApi));
+        return Optional.of(new ObjectEntry(storageIndex, path, latestUri));
 
       }
 
@@ -97,14 +100,14 @@ public final class StorageEntryFactory {
 
 
   public static final class Builder {
-    private final StorageId storageId;
+    private final StorageIndex storageIndex;
     private final ObjectApi objectApi;
     private final CollectionApi collectionApi;
 
     private Path pathToStorage;
 
-    private Builder(StorageId storageId, ObjectApi objectApi, CollectionApi collectionApi) {
-      this.storageId = Objects.requireNonNull(storageId, "StorageId must not be null!");
+    private Builder(StorageIndex storageIndex, ObjectApi objectApi, CollectionApi collectionApi) {
+      this.storageIndex = Objects.requireNonNull(storageIndex, "StorageId must not be null!");
       this.objectApi = Objects.requireNonNull(objectApi, "ObjectApi must not be null!");
       this.collectionApi = Objects.requireNonNull(collectionApi, "CollectionApi must not be null!");
     }

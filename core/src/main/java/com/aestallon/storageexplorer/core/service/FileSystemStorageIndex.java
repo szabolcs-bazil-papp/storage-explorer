@@ -33,6 +33,7 @@ public final class FileSystemStorageIndex extends StorageIndex {
   private static final Logger log = LoggerFactory.getLogger(FileSystemStorageIndex.class);
 
   private final Path pathToStorage;
+  private final ObjectEntryLoadingService objectEntryLoadingService;
 
   public FileSystemStorageIndex(
       StorageId storageId,
@@ -41,6 +42,12 @@ public final class FileSystemStorageIndex extends StorageIndex {
       Path pathToStorage) {
     super(storageId, objectApi, collectionApi);
     this.pathToStorage = pathToStorage;
+    this.objectEntryLoadingService = new ObjectEntryLoadingService.FileSystem(this);
+  }
+
+  @Override
+  public ObjectEntryLoadingService loader() {
+    return objectEntryLoadingService;
   }
 
   @Override
@@ -55,47 +62,9 @@ public final class FileSystemStorageIndex extends StorageIndex {
 
   @Override
   protected StorageEntryFactory storageEntryFactory() {
-    return StorageEntryFactory.builder(storageId, objectApi, collectionApi)
+    return StorageEntryFactory.builder(this, objectApi, collectionApi)
         .pathToStorage(pathToStorage)
         .build();
-  }
-  // -----------------------------------------------------------------------------------------------
-  // File system watching stuff. Copied here for later removal. All StorageIndices shall start and
-  // stop watching for changes in the future by index.watcher().start(); and index.watcher().stop();
-
-  private StorageWatchService watchService;
-
-  void startFileSystemWatcher() {
-    if (watchService != null) {
-      return;
-    }
-
-    StorageWatchService.builder(pathToStorage)
-        .onModified(it -> {
-          final URI uri = IO.pathToUri(pathToStorage.relativize(it));
-          final StorageEntry storageEntry = cache.get(uri);
-          if (storageEntry != null) {
-            storageEntry.refresh();
-          }
-        })
-        .onCreated(it -> {
-          final URI uri = IO.pathToUri(pathToStorage.relativize(it));
-          storageEntryFactory.create(uri).ifPresent(e -> cache.put(uri, e));
-        })
-        .build()
-        .ifPresent(it -> {
-          watchService = it;
-          watchService.start();
-        });
-  }
-
-  void stopFileSystemWatcher() {
-    if (watchService == null) {
-      return;
-    }
-
-    watchService.stop();
-    watchService = null;
   }
 
 }

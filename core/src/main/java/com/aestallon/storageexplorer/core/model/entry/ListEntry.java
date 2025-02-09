@@ -21,8 +21,8 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import org.smartbit4all.api.collection.CollectionApi;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 
 public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
 
@@ -82,7 +82,9 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
     final var list = collectionApi.list(schema, name).uris();
     final var uriProperties = new HashSet<UriProperty>();
     for (int i = 0; i < list.size(); i++) {
-      uriProperties.add(UriProperty.listElement(String.valueOf(i), list.get(i), i));
+      uriProperties.add(
+          UriProperty.of(new UriProperty.Segment[] { UriProperty.Segment.idx(i) },
+              list.get(i)));
     }
 
     this.uriProperties = uriProperties;

@@ -50,8 +50,9 @@ public class OutgoingEdgeDiscoveryService {
   private Stream<Pair<StorageEntry, Set<UriProperty>>> findConnectionsSatisfying(Graph graph,
                                                                                  StorageEntry storageEntry,
                                                                                  GraphContainmentPredicate condition) {
+    // we can safely call StorageEntry::uriProperties here, because it is guaranteed to be either a
+    // valid ObjectEntry or non-object -> we avoid every non-managed load possible
     return storageEntry.uriProperties().stream()
-        // TODO: here we should "batch create" the missing URIs
         .map(it -> Pair.of(storageInstance.discover(it.uri), it))
         .flatMap(Pair.streamOnA())
         .filter(it -> condition.test(graph, it.a()))

@@ -80,7 +80,9 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   @Override
   public void refresh() {
     this.uriProperties = collectionApi.map(schema, name).uris().entrySet().stream()
-        .map(e -> UriProperty.standalone(e.getKey(), e.getValue()))
+        .map(e -> UriProperty.of(
+            new UriProperty.Segment[] { UriProperty.Segment.key(e.getKey()) },
+            e.getValue()))
         .collect(toSet());
     valid = true;
   }
