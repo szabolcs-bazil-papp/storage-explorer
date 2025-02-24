@@ -194,7 +194,7 @@ public final class UriProperty implements Comparable<UriProperty> {
 
   @Override
   public String toString() {
-    return Segment.asString(segments) + " --> " + uri + " (" + position + ")";
+    return Segment.asString(segments);
   }
 
   @Override
