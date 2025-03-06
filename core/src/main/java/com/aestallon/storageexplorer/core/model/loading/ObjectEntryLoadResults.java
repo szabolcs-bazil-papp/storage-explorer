@@ -43,7 +43,7 @@ public final class ObjectEntryLoadResults {
     final List<ObjectEntryLoadResult.SingleVersion> versions = (versionLimit < 2)
         ? new ArrayList<>()
         : LongStream
-            .range(0, Math.min(versionLimit, vn - 1))
+            .range(0, Math.min(versionLimit, vn))
             .mapToObj(i -> Uris.atVersion(objectUri, i))
             .map(it -> new ObjectEntryLoadResult.SingleVersion.Lazy(it, objectApi, objectMapper))
             .collect(toCollection(ArrayList::new));
