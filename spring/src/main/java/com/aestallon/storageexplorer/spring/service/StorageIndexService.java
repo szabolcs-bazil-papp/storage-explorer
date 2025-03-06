@@ -127,7 +127,7 @@ public class StorageIndexService {
   private List<Reference> uriPropertiesToReferences(final Collection<UriProperty> uriProperties) {
     return uriProperties.stream()
         .map(it -> new Reference()
-            .propName(it.propertyName())
+            .propName(it.toString())
             .uri(it.uri())
             .pos(it.position < 0 ? null : it.position))
         .toList();
@@ -190,7 +190,7 @@ public class StorageIndexService {
       }
       case ObjectEntry o -> {
         entryDto = convertObjectEntry(true, o);
-        final var loadResult = o.tryLoad();
+        final var loadResult = o.tryLoad().get();
         switch (loadResult) {
           case ObjectEntryLoadResult.Err err -> {
             return new EntryLoadResult().type(EntryLoadResultType.FAILED);
