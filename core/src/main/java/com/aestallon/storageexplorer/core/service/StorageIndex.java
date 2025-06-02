@@ -111,24 +111,11 @@ public abstract sealed class StorageIndex
 
   @Deprecated
   public void revalidate(final Collection<? extends StorageEntry> entries) {
-    final List<ObjectEntry> needRevalidation = entries.stream()
+    entries.stream()
         .filter(ObjectEntry.class::isInstance)
         .map(ObjectEntry.class::cast)
         .filter(it -> !it.valid())
-        .distinct()
-        .toList();
-    final List<ObjectNode> nodes = needRevalidation.stream()
-        .map(StorageEntry::uri)
-        .collect(collectingAndThen(toList(), objectApi::loadBatch));
-    if (needRevalidation.size() != nodes.size()) {
-      log.warn("Batch loading resulted in {} entries and {} nodes", entries.size(), nodes.size());
-      if (log.isTraceEnabled()) {
-        log.trace("Batch loading:\nEntries were: {}\nNodes became: {}", entries, nodes);
-      }
-      return;
-    }
-
-    IntStream.range(0, nodes.size()).forEach(i -> needRevalidation.get(i).refresh(nodes.get(i)));
+        .forEach(ObjectEntry::refresh);
   }
 
   protected abstract Stream<URI> fetchEntries();
