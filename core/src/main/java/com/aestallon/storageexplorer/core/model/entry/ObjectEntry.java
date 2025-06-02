@@ -18,6 +18,7 @@ package com.aestallon.storageexplorer.core.model.entry;
 import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -96,6 +97,10 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
       refresh();
     }
 
+    if (uriProperties == null) {
+      log.warn("!!!!!!!!!! NULL URI PROPERTIES FOR {} !!!!!!!!!!", uri);
+      return Collections.emptySet();
+    }
     final var uriProperties = new HashSet<>(this.uriProperties);
     scopedEntries.stream()
         .map(e -> UriProperty.of(new UriProperty.Segment[] { UriProperty.Segment.key(

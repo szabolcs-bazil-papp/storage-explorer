@@ -13,8 +13,13 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.common.util.Pair;
 import static java.util.stream.Collectors.groupingBy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public interface IndexingStrategy {
+
+  Logger log = LoggerFactory.getLogger(IndexingStrategy.class);
+
 
   @FunctionalInterface
   interface StorageEntryCreator extends Function<URI, Optional<? extends StorageEntry>> {}
@@ -110,9 +115,9 @@ public interface IndexingStrategy {
     @Override
     public Map<URI, StorageEntry> processEntries(Stream<URI> uris, StorageEntryCreator creator) {
       final var map = super.processEntries(uris, creator);
-      map.values().stream()
-          .parallel()
-          .forEach(StorageEntry::refresh);
+      log.info("Indexing strategy FULL: {} entries indexed", map.size());
+      log.info("Refreshing {} entries...", map.size());
+      map.values().forEach(StorageEntry::refresh);
       return map;
     }
 
