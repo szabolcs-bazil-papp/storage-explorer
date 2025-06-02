@@ -18,23 +18,25 @@ package com.aestallon.storageexplorer.core.model.entry;
 import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toSet;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
-import com.aestallon.storageexplorer.core.util.ObjectMaps;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
-import static java.util.stream.Collectors.toSet;
+import com.aestallon.storageexplorer.core.util.ObjectMaps;
 
 public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntry {
 
@@ -58,9 +60,9 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   private final String uuid;
   private final Set<ScopedEntry> scopedEntries = new HashSet<>();
 
-  private /*volatile*/ boolean valid = false;
+  private volatile boolean valid = false;
   private Versioning versioning;
-  private Set<UriProperty> uriProperties;
+  private volatile Set<UriProperty> uriProperties;
 
   ObjectEntry(final StorageIndex storageIndex,
               final Path path,
@@ -113,29 +115,49 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   @Override
   public boolean references(StorageEntry that) {
     return StorageEntry.super.references(that)
-           || ((that instanceof ScopedEntry) && scopedEntries.contains(that));
+        || ((that instanceof ScopedEntry) && scopedEntries.contains(that));
   }
 
   @Override
   public void refresh() {
+    if (valid) {
+      return;
+    }
+    
     log.warn("!!!!!!!!!! INDIVIDUAL REFRESH ON NODE !!!!!!!!!!: {}", uri);
+    //log.warn("{}", Arrays.stream(Thread.currentThread().getStackTrace())
+    //    .map(StackTraceElement::toString)
+    //    .collect(joining(System.lineSeparator())));
     Objects.requireNonNull(storageIndex.get()).loader().load(this, true);
   }
 
   public void refresh(final ObjectNode objectNode) {
-    if (objectNode == null) {
+    refresh(objectNode != null ? objectNode.getObjectAsMap() : null);
+  }
+
+  public void refresh(final Map<String, Object> objectAsMap) {
+    if (valid) {
+      // TODO: Switch to versioning examination instead of this idiotic boolean
+      return;
+    }
+
+    if (objectAsMap == null) {
       uriProperties = new HashSet<>();
       return;
     }
 
-    // synchronized (this) {
-      uriProperties = initUriProperties(objectNode);
+    synchronized (this) {
+      if (valid) {
+        return;
+      }
+      
+      uriProperties = initUriProperties(objectAsMap);
       valid = true;
-    // }
+    }
   }
 
-  private Set<UriProperty> initUriProperties(final ObjectNode objectNode) {
-    return ObjectMaps.flatten(objectNode.getObjectAsMap())
+  private Set<UriProperty> initUriProperties(final Map<String, Object> objectAsMap) {
+    return ObjectMaps.flatten(objectAsMap)
         .filter(it -> !UriProperty.Segment.isOwnUri(it.a()))
         .map(Pair.onB(Uris::parse))
         .flatMap(Pair.streamOnB())
@@ -188,7 +210,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   public ObjectEntryLoadRequest tryLoad() {
     return Objects.requireNonNull(storageIndex.get()).loader().load(this);
   }
-  
+
   public ObjectEntryLoadRequest tryLoadHead() {
     return Objects.requireNonNull(storageIndex.get()).loader().load(this, true);
   }
@@ -201,10 +223,12 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   @Override
   public boolean equals(Object o) {
-    if (this == o)
+    if (this == o) {
       return true;
-    if (o == null || getClass() != o.getClass())
+    }
+    if (o == null || getClass() != o.getClass()) {
       return false;
+    }
     ObjectEntry that = (ObjectEntry) o;
     return Uris.equalIgnoringVersion(uri, that.uri);
   }

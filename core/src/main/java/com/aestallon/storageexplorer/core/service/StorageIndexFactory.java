@@ -47,6 +47,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import com.aestallon.storageexplorer.common.util.NotImplementedException;
 import com.aestallon.storageexplorer.core.model.instance.dto.Availability;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseConnectionData;
@@ -285,6 +286,7 @@ final class StorageIndexFactory {
       if (schema != null && !schema.isEmpty()) {
         config.setSchema(schema);
       }
+
       return new HikariDataSource(config);
     };
   }

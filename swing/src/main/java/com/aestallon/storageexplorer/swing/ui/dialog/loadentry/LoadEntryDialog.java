@@ -186,5 +186,6 @@ public class LoadEntryDialog extends JDialog {
   }
 
   /** @noinspection ALL */
-  public JComponent $$$getRootComponent$$$() {return contentPane;}
+  public JComponent $$$getRootComponent$$$() { return contentPane; }
+
 }

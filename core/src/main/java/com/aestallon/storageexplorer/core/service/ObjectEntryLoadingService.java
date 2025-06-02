@@ -44,15 +44,15 @@ import com.google.common.base.Strings;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 
-public sealed abstract class ObjectEntryLoadingService {
+public sealed abstract class ObjectEntryLoadingService<T extends StorageIndex> {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntryLoadingService.class);
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-  protected final StorageIndex storageIndex;
+  protected final T storageIndex;
 
-  protected ObjectEntryLoadingService(final StorageIndex storageIndex) {
+  protected ObjectEntryLoadingService(final T storageIndex) {
     this.storageIndex = storageIndex;
   }
 
@@ -95,9 +95,40 @@ public sealed abstract class ObjectEntryLoadingService {
     }
   }
 
+  protected final ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry,
+                                                  final ObjectEntryLoadResult headLoadResult,
+                                                  final boolean headVersionOnly) {
+    if (headLoadResult.isErr()) {
+      return headLoadResult;
+    }
+
+    final ObjectEntryLoadResult.SingleVersion head = switch (headLoadResult) {
+      case ObjectEntryLoadResult.SingleVersion sv -> sv;
+      case ObjectEntryLoadResult.MultiVersion mv -> mv.head();
+      default -> throw new AssertionError("Unexpected head load result " + headLoadResult);
+    };
+    if (!objectEntry.valid()) {
+      objectEntry.refresh(head.objectAsMap());
+    }
+
+    if (headLoadResult instanceof ObjectEntryLoadResult.SingleVersion sv) {
+      return sv;
+    }
+
+    if (headVersionOnly) {
+      return headLoadResult;
+    }
+
+    return ObjectEntryLoadResults.multiVersion(
+        head,
+        storageIndex.objectApi,
+        OBJECT_MAPPER,
+        Long.MAX_VALUE);
+  }
 
 
-  static final class FileSystem extends ObjectEntryLoadingService {
+
+  static final class FileSystem extends ObjectEntryLoadingService<FileSystemStorageIndex> {
 
     FileSystem(FileSystemStorageIndex storageIndex) {
       super(storageIndex);
@@ -168,7 +199,8 @@ public sealed abstract class ObjectEntryLoadingService {
   }
 
 
-  static final class RelationalDatabase extends ObjectEntryLoadingService {
+  static final class RelationalDatabase
+      extends ObjectEntryLoadingService<RelationalDatabaseStorageIndex> {
 
     private record LoadingTask(ObjectEntry objectEntry, boolean headVersionOnly) {}
 
@@ -233,19 +265,19 @@ public sealed abstract class ObjectEntryLoadingService {
       }
 
       if (!batch.isEmpty()) {
-        final List<ObjectNode> nodes = batch.stream()
+        final List<ObjectEntryLoadResult> results = batch.stream()
             .map(LoadingTask::objectEntry)
             .map(ObjectEntry::uri)
-            .collect(collectingAndThen(toList(), storageIndex.objectApi::loadBatch));
+            .collect(collectingAndThen(toList(), storageIndex::loadBatch));
         // instead of logging here, we should emit an event, and display this on the UI...
-        log.info("Batch loaded [ {} ] | Remaining queue size [ {} ]", nodes.size(), queue.size());
-        for (int i = 0; i < nodes.size(); i++) {
+        log.info("Batch loaded [ {} ] | Remaining queue size [ {} ]", results.size(), queue.size());
+        for (int i = 0; i < results.size(); i++) {
           final LoadingTask task = batch.get(i);
           final ObjectEntry e = task.objectEntry();
           final boolean headVersionOnly = task.headVersionOnly();
-          final ObjectNode n = nodes.get(i);
+          final ObjectEntryLoadResult loadResult = results.get(i);
           executor.submit(() -> {
-            final ObjectEntryLoadResult r = loadInner(e, n, headVersionOnly);
+            final ObjectEntryLoadResult r = loadInner(e, loadResult, headVersionOnly);
             final CompletableFuture<ObjectEntryLoadResult> f = pendingRequests.remove(task);
             if (f != null) {
               f.complete(r);

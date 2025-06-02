@@ -15,6 +15,7 @@
 
 package com.aestallon.storageexplorer.core.service;
 
+import java.io.Console;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -154,6 +155,7 @@ public abstract sealed class StorageIndex
   public EntryAcquisitionResult getOrCreate(final URI uri) {
     StorageEntry storageEntry = cache.get(uri);
     if (storageEntry == null) {
+      log.debug("Cache miss for {}", uri);
       ensureStorageEntryFactory();
       return storageEntryFactory.create(uri)
           .map(EntryAcquisitionResult::ofNew)

@@ -19,6 +19,7 @@ import java.util.Set;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryConditionImpl;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.util.AbstractEntryEvaluationExecutor;
 
 public final class ConditionEvaluationExecutor
     extends AbstractEntryEvaluationExecutor<StorageEntry, ConditionEvaluationExecutor> {
@@ -39,12 +40,12 @@ public final class ConditionEvaluationExecutor
     }
 
     @Override
-    Builder self() {
+    public Builder self() {
       return this;
     }
 
     @Override
-    ConditionEvaluationExecutor build() {
+    public ConditionEvaluationExecutor build() {
       return new ConditionEvaluationExecutor(this);
     }
   }

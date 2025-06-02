@@ -22,6 +22,7 @@ import java.util.Set;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.util.AbstractEntryEvaluationExecutor;
 
 public class QueryResultRowEvaluationExecutor extends
     AbstractEntryEvaluationExecutor<ArcScriptResult.QueryResultRow, QueryResultRowEvaluationExecutor> {
@@ -39,12 +40,12 @@ public class QueryResultRowEvaluationExecutor extends
     }
 
     @Override
-    Builder self() {
+    public Builder self() {
       return this;
     }
 
     @Override
-    QueryResultRowEvaluationExecutor build() {
+    public QueryResultRowEvaluationExecutor build() {
       return new QueryResultRowEvaluationExecutor(this);
     }
   }

@@ -40,6 +40,24 @@ public final class ObjectEntryLoadResults {
     final URI objectUri = node.getObjectUri();
     long vn = Uris.getVersion(objectUri);
     final var head = singleVersion(node, objectMapper);
+    return createLazyVersions(objectApi, objectMapper, versionLimit, objectUri, vn, head);
+  }
+
+  public static ObjectEntryLoadResult.MultiVersion multiVersion(
+      final ObjectEntryLoadResult.SingleVersion singleVersion,
+      final ObjectApi objectApi,
+      final ObjectMapper objectMapper,
+      final long versionLimit) {
+    final URI objectUri = singleVersion.meta().uri();
+    long vn = singleVersion.meta().versionNr();
+    return createLazyVersions(objectApi, objectMapper, versionLimit, objectUri, vn, singleVersion);
+  }
+
+  private static ObjectEntryLoadResult.MultiVersion createLazyVersions(final ObjectApi objectApi,
+                                                                       final ObjectMapper objectMapper,
+                                                                       final long versionLimit,
+                                                                       final URI objectUri, long vn,
+                                                                       final ObjectEntryLoadResult.SingleVersion head) {
     final List<ObjectEntryLoadResult.SingleVersion> versions = (versionLimit < 2)
         ? new ArrayList<>()
         : LongStream

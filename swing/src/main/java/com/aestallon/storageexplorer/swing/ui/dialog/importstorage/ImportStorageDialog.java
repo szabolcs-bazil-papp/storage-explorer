@@ -212,7 +212,7 @@ public class ImportStorageDialog extends JDialog {
     } else {
       f = new File(textFieldFsRootDir.getText());
     }
-    
+
     final var fileChooser = new JFileChooser(f, FileSystemView.getFileSystemView());
     fileChooser.setDialogType(JFileChooser.OPEN_DIALOG);
     fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -578,5 +578,6 @@ public class ImportStorageDialog extends JDialog {
   }
 
   /** @noinspection ALL */
-  public JComponent $$$getRootComponent$$$() {return contentPane;}
+  public JComponent $$$getRootComponent$$$() { return contentPane; }
+
 }

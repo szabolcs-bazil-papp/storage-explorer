@@ -103,5 +103,6 @@ public class ToastView {
   }
 
   /** @noinspection ALL */
-  public JComponent $$$getRootComponent$$$() {return mainPanel;}
+  public JComponent $$$getRootComponent$$$() { return mainPanel; }
+
 }

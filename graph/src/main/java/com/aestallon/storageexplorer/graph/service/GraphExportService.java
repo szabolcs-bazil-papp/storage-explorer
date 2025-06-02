@@ -38,7 +38,7 @@ public class GraphExportService {
     final Graph<StorageEntry, UriProperty> graph = new DirectedPseudograph<>(UriProperty.class);
     instance.entities().forEach(graph::addVertex);
     instance.entities().forEach(it -> it.uriProperties()
-        .forEach(uriProp -> instance.discover(uriProp.uri()).ifPresent(t -> {
+        .forEach(uriProp -> instance.index().get(uriProp.uri()).ifPresent(t -> {
           if (!graph.containsVertex(t)) {
             graph.addVertex(t);
           }
