@@ -59,12 +59,9 @@ public class StorageInstanceExaminer {
                                                    final PropQuery propQuery,
                                                    final ObjectEntryLookupTable cache) {
     return switch (medial) {
-      case None none -> switch (none) {
-        case NoValue ignored when propQuery.isEmpty() -> new NoValue();
-        default -> new NotFound("No value present to continue on " + propQuery);
-      };
+      case None none -> none;
       case Some some -> (propQuery.isEmpty())
-          ? medial
+          ? some
           : discoverProperty(
               some.host(),
               PropQuery.join(new PropQuery(some.path()), propQuery),
@@ -78,9 +75,9 @@ public class StorageInstanceExaminer {
     return discoverProperty(entry, new PropQuery(propQuery), cache);
   }
 
-  public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
-                                                  final PropQuery propQuery,
-                                                  final ObjectEntryLookupTable cache) {
+  private PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
+                                                   final PropQuery propQuery,
+                                                   final ObjectEntryLookupTable cache) {
     if (propQuery.isOwnUri()) {
       return new StringFound(entry.uri().toString(), entry, UriProperty.OWN);
     }
@@ -92,9 +89,9 @@ public class StorageInstanceExaminer {
         // behaviour:
         final var loadResult = cache.computeIfAbsent(o, ObjectEntry::tryLoadHead).get();
         yield switch (loadResult) {
-          case ObjectEntryLoadResult.Err err -> new NotFound(err.msg());
+          case ObjectEntryLoadResult.Err(String msg) -> new NotFound(msg);
           case ObjectEntryLoadResult.SingleVersion sv -> inVersion(sv, entry, propQuery, cache);
-          case ObjectEntryLoadResult.MultiVersion mv -> mv.versions().stream()
+          case ObjectEntryLoadResult.MultiVersion(var versions) -> versions.stream()
               .collect(reverse())
               .map(sv -> inVersion(sv, entry, propQuery, cache))
               .filter(it -> !(it instanceof NotFound))
@@ -233,7 +230,7 @@ public class StorageInstanceExaminer {
         }
         case UriProperty.Segment.Idx idx -> {
           if (idx.value() < 0) {
-            yield new NotFound("Index value [ %d ] is not a valid index number.".formatted(idx));
+            yield new NotFound("Index value [ %d ] is not a valid index number.".formatted(idx.value()));
           }
 
           if (idx.value() >= list.size()) {
@@ -567,44 +564,44 @@ public class StorageInstanceExaminer {
 
       return match;
     }
-    
+
     Cursor cursor() {
       return Cursor.newInstance(this);
     }
-    
+
     private static final class Cursor {
-      
+
       private static Cursor newInstance(final PropQuery propQuery) {
         return new Cursor(propQuery.segments);
       }
-      
+
       private final UriProperty.Segment[] segments;
-      private int cursor;
+      private int ptr;
 
       private Cursor(final UriProperty.Segment[] segments) {
         this.segments = segments;
-        cursor = 0;
+        ptr = 0;
       }
-      
+
       boolean terminal() {
-        return cursor >= segments.length;
+        return ptr >= segments.length;
       }
 
       UriProperty.Segment next() {
-        return segments[cursor++];
+        return segments[ptr++];
       }
-      
+
       boolean hasNext() {
         return !terminal();
       }
-      
+
       UriProperty.Segment peek() {
-        return segments[cursor];
+        return segments[ptr];
       }
 
       @Override
       public String toString() {
-        return UriProperty.Segment.asString(segments, cursor);
+        return UriProperty.Segment.asString(segments, ptr);
       }
     }
   }

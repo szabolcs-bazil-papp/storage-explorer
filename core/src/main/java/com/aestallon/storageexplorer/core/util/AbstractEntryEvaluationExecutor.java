@@ -15,17 +15,15 @@
 
 package com.aestallon.storageexplorer.core.util;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -34,7 +32,8 @@ import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends AbstractEntryEvaluationExecutor<RESULT, EXECUTOR>> {
 
   private static final Logger log = LoggerFactory.getLogger(AbstractEntryEvaluationExecutor.class);
-  
+
+
   public abstract static class Builder<E extends AbstractEntryEvaluationExecutor<?, E>, BUILDER extends Builder<E, BUILDER>> {
 
     protected final StorageInstanceExaminer examiner;
@@ -97,12 +96,13 @@ public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends A
 
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
       final var semaphore = useSemaphore ? new Semaphore(5) : null;
-      final List<Future<?>> futures = new ArrayList<>();
+      final var counter = new AtomicInteger(0);
       for (final StorageEntry entry : entries) {
-        futures.add(executor.submit(() -> {
+        executor.submit(() -> {
           if (doNotExecute()) {
             // this is our guard condition: if upon execution start the work is no longer required,
             // we can return immediately:
+            counter.incrementAndGet();
             return;
           }
 
@@ -127,18 +127,19 @@ public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends A
             if (semaphore != null) {
               semaphore.release();
             }
+            counter.incrementAndGet();
           }
-        }));
+        });
       }
 
-      for (final Future<?> future : futures) {
-        future.get();
+      int count = 0;
+      while ((count = counter.get()) < entries.size()) {
+        // do nothing
+        log.debug("Awaiting termination of executor... ( {} / {}", count, entries.size());
       }
-    } catch (InterruptedException e) {
+    } catch (Exception e) {
       log.warn(e.getMessage(), e);
       Thread.currentThread().interrupt();
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(e);
     }
 
     // there is no sense of ordering, because we are doing everything concurrently, in a

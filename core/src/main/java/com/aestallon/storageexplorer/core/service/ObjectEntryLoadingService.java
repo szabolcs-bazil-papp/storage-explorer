@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.core.service;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,10 +42,12 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResults;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 
-public sealed abstract class ObjectEntryLoadingService<T extends StorageIndex> {
+public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>> {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntryLoadingService.class);
 
@@ -129,7 +132,7 @@ public sealed abstract class ObjectEntryLoadingService<T extends StorageIndex> {
 
 
   static final class FileSystem extends ObjectEntryLoadingService<FileSystemStorageIndex> {
-
+    
     FileSystem(FileSystemStorageIndex storageIndex) {
       super(storageIndex);
     }
@@ -144,8 +147,8 @@ public sealed abstract class ObjectEntryLoadingService<T extends StorageIndex> {
 
     private ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry,
                                             final boolean headVersionOnly) {
-      final var node = loadObjectNode(objectEntry);
-      return loadInner(objectEntry, node, headVersionOnly);
+        final var node = loadObjectNode(objectEntry);
+        return loadInner(objectEntry, node, headVersionOnly);
     }
 
     private ObjectNode loadObjectNode(ObjectEntry entry) {

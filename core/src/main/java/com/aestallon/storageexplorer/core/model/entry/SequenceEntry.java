@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.collection.StoredSequence;
 import org.smartbit4all.core.utility.StringConstant;
+import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 
 public final class SequenceEntry implements StorageEntry {
@@ -104,6 +105,20 @@ public final class SequenceEntry implements StorageEntry {
 
   public String displayName() {
     return schema + " / " + name;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SequenceEntry that = (SequenceEntry) o;
+    return Uris.equalIgnoringVersion(uri, that.uri);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(uri);
   }
 
   @Override

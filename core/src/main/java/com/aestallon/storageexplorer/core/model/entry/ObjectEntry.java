@@ -24,6 +24,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 import javax.annotation.Nullable;
@@ -60,9 +62,10 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   private final String uuid;
   private final Set<ScopedEntry> scopedEntries = new HashSet<>();
 
-  private volatile boolean valid = false;
+  private final Lock refreshLock = new ReentrantLock(true);
+  private boolean valid = false;
   private Versioning versioning;
-  private volatile Set<UriProperty> uriProperties;
+  private Set<UriProperty> uriProperties;
 
   ObjectEntry(final StorageIndex storageIndex,
               final Path path,
@@ -123,12 +126,18 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     if (valid) {
       return;
     }
-    
-    log.warn("!!!!!!!!!! INDIVIDUAL REFRESH ON NODE !!!!!!!!!!: {}", uri);
-    //log.warn("{}", Arrays.stream(Thread.currentThread().getStackTrace())
-    //    .map(StackTraceElement::toString)
-    //    .collect(joining(System.lineSeparator())));
-    Objects.requireNonNull(storageIndex.get()).loader().load(this, true);
+
+    refreshLock.lock();
+    try {
+      if (valid) {
+        return;
+      }
+
+      log.warn("node refresh: {}", uri);
+      Objects.requireNonNull(storageIndex.get()).loader().load(this, true);
+    } finally {
+      refreshLock.unlock();
+    }
   }
 
   public void refresh(final ObjectNode objectNode) {
@@ -146,14 +155,14 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
       return;
     }
 
-    synchronized (this) {
-      if (valid) {
-        return;
-      }
-      
-      uriProperties = initUriProperties(objectAsMap);
-      valid = true;
-    }
+    //synchronized (this) {
+    //if (valid) {
+    //  return;
+    //}
+
+    uriProperties = initUriProperties(objectAsMap);
+    valid = true;
+    //}
   }
 
   private Set<UriProperty> initUriProperties(final Map<String, Object> objectAsMap) {
@@ -188,9 +197,16 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   @Override
   public void accept(StorageEntry storageEntry) {
-    if (Objects.requireNonNull(storageEntry) instanceof ObjectEntry that && that.valid) {
-      uriProperties = that.uriProperties;
-      valid = true;
+    refreshLock.lock();
+    try {
+
+      if (Objects.requireNonNull(storageEntry) instanceof ObjectEntry that && that.valid) {
+        uriProperties = that.uriProperties;
+        valid = true;
+      }
+
+    } finally {
+      refreshLock.unlock();
     }
   }
 

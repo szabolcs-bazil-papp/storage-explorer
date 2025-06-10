@@ -28,12 +28,12 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 
-public final class FileSystemStorageIndex extends StorageIndex {
+public final class FileSystemStorageIndex extends StorageIndex<FileSystemStorageIndex> {
 
   private static final Logger log = LoggerFactory.getLogger(FileSystemStorageIndex.class);
 
   private final Path pathToStorage;
-  private final ObjectEntryLoadingService objectEntryLoadingService;
+  private final ObjectEntryLoadingService<FileSystemStorageIndex> objectEntryLoadingService;
 
   public FileSystemStorageIndex(
       StorageId storageId,
@@ -46,7 +46,7 @@ public final class FileSystemStorageIndex extends StorageIndex {
   }
 
   @Override
-  public ObjectEntryLoadingService loader() {
+  public ObjectEntryLoadingService<FileSystemStorageIndex> loader() {
     return objectEntryLoadingService;
   }
 

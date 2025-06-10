@@ -15,7 +15,6 @@
 
 package com.aestallon.storageexplorer.core.service;
 
-import java.io.Console;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,13 +27,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toSet;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
-import org.smartbit4all.core.object.ObjectNode;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -42,12 +41,8 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.google.common.base.Strings;
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
-public abstract sealed class StorageIndex
+public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     permits FileSystemStorageIndex, RelationalDatabaseStorageIndex {
 
   private static final Logger log = LoggerFactory.getLogger(StorageIndex.class);
@@ -125,7 +120,7 @@ public abstract sealed class StorageIndex
 
   protected abstract StorageEntryFactory storageEntryFactory();
   
-  public abstract ObjectEntryLoadingService loader();
+  public abstract ObjectEntryLoadingService<T> loader();
 
   protected final void ensureStorageEntryFactory() {
     if (storageEntryFactory == null) {

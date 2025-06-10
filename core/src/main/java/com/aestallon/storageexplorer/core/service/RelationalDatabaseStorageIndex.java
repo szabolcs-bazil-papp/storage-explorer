@@ -29,7 +29,8 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryMeta;
 import com.google.common.base.Strings;
 
-public final class RelationalDatabaseStorageIndex extends StorageIndex {
+public final class RelationalDatabaseStorageIndex
+    extends StorageIndex<RelationalDatabaseStorageIndex> {
 
   private static final Logger log = LoggerFactory.getLogger(RelationalDatabaseStorageIndex.class);
 
@@ -67,7 +68,7 @@ public final class RelationalDatabaseStorageIndex extends StorageIndex {
   }
 
   @Override
-  public ObjectEntryLoadingService loader() {
+  public ObjectEntryLoadingService<RelationalDatabaseStorageIndex> loader() {
     return loader;
   }
 

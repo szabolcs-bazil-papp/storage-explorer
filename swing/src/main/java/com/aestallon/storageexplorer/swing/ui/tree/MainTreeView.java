@@ -57,6 +57,7 @@ import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryControll
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.StorageInstanceStatComponent;
 import com.aestallon.storageexplorer.swing.ui.tree.model.StorageTree;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.ClickableTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageInstanceTreeNode;
@@ -143,7 +144,7 @@ public class MainTreeView extends JPanel {
           eventPublisher.publishEvent(Msg.warn(
               "Cannot add orphan scoped entry to Tree!",
               "Entry " + storageEntry
-              + " has been indexed, but will not show on the tree until its host entry is missing."));
+                  + " has been indexed, but will not show on the tree until its host entry is missing."));
         } else {
           final StorageEntry host = hostEntry.get();
           TreePath hostPath = treePathByEntry.get(host);
@@ -277,11 +278,13 @@ public class MainTreeView extends JPanel {
       discard.addActionListener(e -> eventPublisher.publishEvent(
           new StorageIndexDiscardedEvent(sitn.storageInstance())));
       discard.setToolTipText("Close this storage to reclaim system resources.\n"
-                             + "This storage won't be preloaded on the next startup.");
+          + "This storage won't be preloaded on the next startup.");
       add(discard);
 
       final var export = createExportMenuItem(sitn);
       add(export);
+      final var stats = createStatsMenuItem(sitn);
+      add(stats);
     }
 
     private JMenuItem createExportMenuItem(StorageInstanceTreeNode sitn) {
@@ -332,6 +335,22 @@ public class MainTreeView extends JPanel {
       });
       edit.setToolTipText("Edit the Storage Instance's name and connection settings.");
       return edit;
+    }
+
+    private JMenuItem createStatsMenuItem(StorageInstanceTreeNode sitn) {
+      final var stats = new JMenuItem("Statistics");
+      stats.addActionListener(e -> {
+        final JDialog dialog = new JDialog();
+        dialog.setTitle("Statistics");
+        dialog.setModal(true);
+        dialog.setLocationRelativeTo(MainTreeView.this);
+        dialog.getContentPane()
+            .add(new StorageInstanceStatComponent(sitn.storageInstance()).asComponent());
+        dialog.pack();
+        dialog.setVisible(true);
+      });
+      stats.setToolTipText("Prints basic statistics about the storage instance.");
+      return stats;
     }
   }
 

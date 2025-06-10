@@ -26,6 +26,7 @@ import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.google.errorprone.annotations.Var;
 
 public final class StorageInstance {
 
@@ -99,11 +100,11 @@ public final class StorageInstance {
     this.indexingStrategy = IndexingStrategy.of(type);
   }
 
-  public StorageIndex index() {
+  public StorageIndex<?> index() {
     return index;
   }
 
-  public void setIndex(final StorageIndex index) {
+  public void setIndex(final StorageIndex<?> index) {
     this.index = index;
   }
 
@@ -197,6 +198,18 @@ public final class StorageInstance {
         index.accept(uri, entry);
         publishEvent(new EntryDiscovered(this, entry));
         yield Optional.of(entry);
+      }
+    };
+  }
+  
+  public Optional<StorageEntry> softDiscover(final URI uri) {
+    return switch (index.getOrCreate(uri)) {
+      case StorageIndex.EntryAcquisitionResult.Fail f -> Optional.empty();
+      case StorageIndex.EntryAcquisitionResult.Present(StorageEntry e) -> Optional.of(e);
+      case StorageIndex.EntryAcquisitionResult.New(StorageEntry e) -> {
+        log.debug("New entry: {}", e.uri());
+        index.accept(uri, e);
+        yield Optional.of(e);
       }
     };
   }
