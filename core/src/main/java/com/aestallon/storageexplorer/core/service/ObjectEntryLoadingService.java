@@ -37,6 +37,7 @@ import org.smartbit4all.core.object.ObjectNode;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import com.aestallon.storageexplorer.common.util.IO;
 import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
@@ -258,6 +259,8 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
       final var timeoutMillisMax = params.timeoutMillisMax;
       final var timeoutMillisMin = params.timeoutMillisMin;
 
+      storageIndex.publishEvent(new LoadingQueueSize(queue.size()));
+      
       final List<LoadingTask> batch = new ArrayList<>(batchSize);
       final var t = queue.poll(timeoutMillis.get(), TimeUnit.MILLISECONDS);
       if (t != null) {
@@ -273,8 +276,6 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
             .map(LoadingTask::objectEntry)
             .map(ObjectEntry::uri)
             .collect(collectingAndThen(toList(), storageIndex::loadBatch));
-        // instead of logging here, we should emit an event, and display this on the UI...
-        log.info("Batch loaded [ {} ] | Remaining queue size [ {} ]", results.size(), queue.size());
         for (int i = 0; i < results.size(); i++) {
           final LoadingTask task = batch.get(i);
           final ObjectEntry e = task.objectEntry();

@@ -4,9 +4,11 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Path2D;
+import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -24,6 +26,7 @@ public class AppContentView extends JPanel {
   private final JSplitPane content;
   private final JToolBar toolBar;
   private final BreadCrumbs breadCrumbs;
+  private final LoadingQueueLabel loadingQueueLabel;
   private JProgressBar progressBar;
   private HiddenPaneSize hiddenPaneSize;
 
@@ -48,6 +51,7 @@ public class AppContentView extends JPanel {
 
     /* Toolbar stuff */
     breadCrumbs = new BreadCrumbs();
+    loadingQueueLabel = new LoadingQueueLabel(0L);
     toolBar = initToolBar();
     add(toolBar);
 
@@ -60,6 +64,7 @@ public class AppContentView extends JPanel {
     tb.add(breadCrumbs);
     tb.addSeparator();
     tb.add(Box.createGlue());
+    tb.add(loadingQueueLabel);
     return tb;
   }
 
@@ -126,10 +131,37 @@ public class AppContentView extends JPanel {
   public CommanderView commanderView() {
     return commanderView;
   }
+  
+  public void setLoadingQueueSize(final long size) {
+    loadingQueueLabel.setNumber(size);
+  }
 
   @EventListener
   public void onBreadCrumbsChanged(final BreadCrumbsChanged e) {
     breadCrumbs.set(e.path().getPath());
+  }
+  
+  private static final class LoadingQueueLabel extends JLabel {
+    public LoadingQueueLabel(long number) {
+      setNumber(number);
+      setOpaque(true);
+      setHorizontalAlignment(SwingConstants.CENTER);
+      setFont(getFont().deriveFont(Font.BOLD));
+      setToolTipText("The number of entries waiting to be loaded. The application may become temporarily unresponsive if this number is greater than 0.");
+      setBorder(new EmptyBorder(2, 15, 2, 15));
+    }
+
+    public void setNumber(long number) {
+      setText(String.valueOf(number));
+
+      if (number < 1000) {
+        setBackground(new Color(205, 250, 167));
+      } else if (number < 5000) {
+        setBackground(new Color(255, 209, 120));
+      } else {
+        setBackground(new Color(244, 121, 113));
+      }
+    }
   }
 
 

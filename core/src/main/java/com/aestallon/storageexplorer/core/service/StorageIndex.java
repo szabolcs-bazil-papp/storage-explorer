@@ -34,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
+import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -52,6 +53,7 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   protected final CollectionApi collectionApi;
   protected final Map<URI, StorageEntry> cache;
   protected StorageEntryFactory storageEntryFactory;
+  protected ApplicationEventPublisher eventPublisher;
 
   protected StorageIndex(StorageId storageId,
                          ObjectApi objectApi,
@@ -112,6 +114,16 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
         .map(ObjectEntry.class::cast)
         .filter(it -> !it.valid())
         .forEach(ObjectEntry::refresh);
+  }
+  
+  public void setEventPublisher(final ApplicationEventPublisher eventPublisher) {
+    this.eventPublisher = eventPublisher;
+  }
+  
+  protected <EVENT> void publishEvent(final EVENT e) {
+    if (eventPublisher != null) {
+      eventPublisher.publishEvent(e);
+    }
   }
 
   protected abstract Stream<URI> fetchEntries();

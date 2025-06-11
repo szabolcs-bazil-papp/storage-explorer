@@ -43,7 +43,7 @@ public final class StorageInstance {
   private StorageLocation location;
   private IndexingStrategy indexingStrategy;
 
-  private StorageIndex index;
+  private StorageIndex<?> index;
   private ApplicationEventPublisher eventPublisher;
 
   private StorageInstance(final StorageId id) {
@@ -106,6 +106,7 @@ public final class StorageInstance {
 
   public void setIndex(final StorageIndex<?> index) {
     this.index = index;
+    this.index.setEventPublisher(eventPublisher);
   }
 
   public void refreshIndex() {
