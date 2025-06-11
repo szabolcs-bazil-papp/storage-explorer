@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -41,6 +40,7 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
+import com.aestallon.storageexplorer.core.service.cache.StorageIndexCache;
 import com.google.common.base.Strings;
 
 public abstract sealed class StorageIndex<T extends StorageIndex<T>>
@@ -51,7 +51,8 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   protected final StorageId storageId;
   protected final ObjectApi objectApi;
   protected final CollectionApi collectionApi;
-  protected final Map<URI, StorageEntry> cache;
+  
+  protected StorageIndexCache cache;
   protected StorageEntryFactory storageEntryFactory;
   protected ApplicationEventPublisher eventPublisher;
 
@@ -61,9 +62,9 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     this.storageId = storageId;
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
-    this.cache = new ConcurrentHashMap<>();
+    // TODO: pass as ctor param
   }
-  
+
   public final StorageId id() {
     return storageId;
   }
@@ -73,7 +74,6 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     if (!strategy.fetchEntries()) {
       return 0;
     }
-    ensureStorageEntryFactory();
     final var res = strategy.processEntries(fetchEntries(), storageEntryFactory::create);
     cache.putAll(res);
     return res.size();
@@ -84,22 +84,21 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
       return 0;
     }
 
-    ensureStorageEntryFactory();
     final var res = strategy.processEntries(fetchEntries(target), storageEntryFactory::create);
     // we need a bit more sophisticated work here:
     // If entry was absent from cache -> put it in.
     // If entry was present in the cache, and the indexing strategy was FULL -> refresh the entry 
     // with the UriProperties found in the newly indexed one.
     // We should emit an event for each (!) refreshed entry, so UIs may update (inspectors, graph)
-//    res.forEach((uri, entry) -> cache.compute(uri, (k, v) -> {
-//      if (v == null) {
-//        return entry;
-//      }
-//
-//      v.accept(entry);
-//      return v;
-//    }));
-    res.forEach(cache::putIfAbsent);
+    //    res.forEach((uri, entry) -> cache.compute(uri, (k, v) -> {
+    //      if (v == null) {
+    //        return entry;
+    //      }
+    //
+    //      v.accept(entry);
+    //      return v;
+    //    }));
+    res.forEach(cache::merge);
     return res.size();
   }
 
@@ -107,7 +106,7 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     cache.clear();
   }
 
-  @Deprecated
+  @Deprecated(forRemoval = true, since = "0.3.0")
   public void revalidate(final Collection<? extends StorageEntry> entries) {
     entries.stream()
         .filter(ObjectEntry.class::isInstance)
@@ -115,11 +114,11 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
         .filter(it -> !it.valid())
         .forEach(ObjectEntry::refresh);
   }
-  
+
   public void setEventPublisher(final ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
   }
-  
+
   protected <EVENT> void publishEvent(final EVENT e) {
     if (eventPublisher != null) {
       eventPublisher.publishEvent(e);
@@ -129,23 +128,20 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   protected abstract Stream<URI> fetchEntries();
 
   protected abstract Stream<URI> fetchEntries(IndexingTarget target);
-
-  protected abstract StorageEntryFactory storageEntryFactory();
   
-  public abstract ObjectEntryLoadingService<T> loader();
-
-  protected final void ensureStorageEntryFactory() {
-    if (storageEntryFactory == null) {
-      this.storageEntryFactory = storageEntryFactory();
-    }
+  public final void notifyRefresh(StorageEntry storageEntry) {
+    cache.put(storageEntry.uri(), storageEntry);
   }
 
+
+  public abstract ObjectEntryLoadingService<T> loader();
+
   public Stream<StorageEntry> entities() {
-    return cache.values().stream();
+    return cache.stream();
   }
 
   public Optional<StorageEntry> get(final URI uri) {
-    return Optional.ofNullable(cache.get(uri));
+    return cache.get(uri);
   }
 
   public Set<StorageEntry> get(final IndexingTarget target) {
@@ -156,20 +152,19 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
         ? e -> true
         : e -> e instanceof ObjectEntry o && target.types().contains(o.typeName());
     final var p = schema.and(type);
-    return cache.values().stream().filter(p).collect(toSet());
+    return cache.stream().filter(p).collect(toSet());
   }
 
   public EntryAcquisitionResult getOrCreate(final URI uri) {
-    StorageEntry storageEntry = cache.get(uri);
-    if (storageEntry == null) {
-      log.debug("Cache miss for {}", uri);
-      ensureStorageEntryFactory();
-      return storageEntryFactory.create(uri)
-          .map(EntryAcquisitionResult::ofNew)
-          .orElseGet(EntryAcquisitionResult::ofFail);
-    }
-
-    return EntryAcquisitionResult.ofPresent(storageEntry);
+    return cache
+        .get(uri)
+        .map(EntryAcquisitionResult::ofPresent)
+        .orElseGet(() -> {
+          log.debug("Cache miss for {}", uri);
+          return storageEntryFactory.create(uri)
+              .map(EntryAcquisitionResult::ofNew)
+              .orElseGet(EntryAcquisitionResult::ofFail);
+        });
   }
 
   public void accept(final URI uri, StorageEntry entry) {
@@ -188,9 +183,8 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     if (entry instanceof ObjectEntry objectEntry && !(entry instanceof ScopedEntry)) {
       // here becomes obvious that a more sophisticated cache is in dire need -> this is not
       // only a repetition but woefully slow...
-      final Map<String, List<ScopedEntry>> knownScopedEntries = cache.values().stream()
-          .filter(ScopedEntry.class::isInstance)
-          .map(ScopedEntry.class::cast)
+      final Map<String, List<ScopedEntry>> knownScopedEntries = cache
+          .scopedEntries()
           .collect(groupingBy(e -> e.scope().getPath()));
       knownScopedEntries
           .getOrDefault(objectEntry.uri().getPath(), new ArrayList<>())
@@ -198,9 +192,7 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     }
 
     if (entry instanceof ScopedEntry scopedEntry) {
-      cache.values().stream()
-          .filter(ObjectEntry.class::isInstance)
-          .map(ObjectEntry.class::cast)
+      cache.objectEntries()
           .filter(it -> it.uri().getPath().equals(scopedEntry.scope().getPath()))
           .forEach(it -> it.addScopedEntry(scopedEntry));
     }
@@ -211,11 +203,12 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
       return Stream.empty();
     }
     final var p = constructPattern(queryString);
-    return cache.values().stream().filter(it -> p.matcher(it.uri().toString()).find());
+    return cache.stream().filter(it -> p.matcher(it.uri().toString()).find());
   }
+  
 
   private static Pattern constructPattern(final String queryString) {
-    final String q = queryString.replaceAll("\\.\\+\\*-\\(\\)\\[]", "");
+    final String q = queryString.replaceAll("[\\.\\+\\*\\-\\(\\)\\[\\]]", "");
     return Arrays.stream(splitAtForwardSlash(q))
         .map(StorageIndex::examineSubsection)
         .collect(Collectors.collectingAndThen(Collectors.joining(), Pattern::compile));

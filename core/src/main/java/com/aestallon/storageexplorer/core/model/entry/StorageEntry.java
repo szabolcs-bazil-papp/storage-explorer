@@ -16,10 +16,11 @@
 package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.Set;
 import org.smartbit4all.core.utility.StringConstant;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 
 public sealed interface StorageEntry permits
     ListEntry, MapEntry, ObjectEntry,
@@ -52,6 +53,12 @@ public sealed interface StorageEntry permits
     return uriProperties().stream()
         .map(it -> it.uri)
         .anyMatch(Uris.equalsIgnoringVersion(that.uri()));
+  }
+  
+  void setUriProperties(Set<UriProperty> uriProperties);
+  
+  default Set<UriProperty> uriPropertiesStrict() {
+    return valid() ? uriProperties() : Collections.emptySet();
   }
 
 }

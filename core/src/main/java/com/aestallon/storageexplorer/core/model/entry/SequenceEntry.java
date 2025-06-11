@@ -108,6 +108,11 @@ public final class SequenceEntry implements StorageEntry {
   }
 
   @Override
+  public void setUriProperties(Set<UriProperty> uriProperties) {
+    // NO OP
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass()) {
       return false;

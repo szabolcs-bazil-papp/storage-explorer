@@ -25,19 +25,23 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.aestallon.storageexplorer.core.userconfig.event.GraphConfigChanged;
 import com.aestallon.storageexplorer.core.userconfig.model.GraphSettings;
 import com.aestallon.storageexplorer.core.userconfig.model.StorageLocationSettings;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class UserConfigService {
 
   private static final Logger log = LoggerFactory.getLogger(UserConfigService.class);
+  
+  public static final String SETTINGS_FOLDER = System.getProperty("java.io.tmpdir")
+      + FileSystems.getDefault().getSeparator()
+      + "storage-explorer";
+  
   public static final String STORAGE_SETTINGS = "storage.settings";
 
   private static boolean createSettingsDirectory(Path path) {
@@ -59,9 +63,7 @@ public class UserConfigService {
   private final AtomicReference<StorageLocationSettings> storageLocationSettings;
 
   public UserConfigService(ApplicationEventPublisher eventPublisher, ObjectMapper objectMapper) {
-    this.settingsFolder = System.getProperty("java.io.tmpdir")
-        + FileSystems.getDefault().getSeparator()
-        + "storage-explorer";
+    this.settingsFolder = SETTINGS_FOLDER;
     this.eventPublisher = eventPublisher;
     this.objectMapper = objectMapper;
     graphSettings = new AtomicReference<>(readSettingsAt(

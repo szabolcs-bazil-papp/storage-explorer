@@ -19,12 +19,12 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Set;
-import org.smartbit4all.api.collection.CollectionApi;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.common.util.Uris;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.toSet;
+import org.smartbit4all.api.collection.CollectionApi;
+import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 
 public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
 
@@ -124,6 +124,12 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
     } finally {
       refreshLock.unlock();
     }
+  }
+
+  @Override
+  public void setUriProperties(Set<UriProperty> uriProperties) {
+    this.uriProperties = uriProperties;
+    this.valid = true;
   }
 
   @Override

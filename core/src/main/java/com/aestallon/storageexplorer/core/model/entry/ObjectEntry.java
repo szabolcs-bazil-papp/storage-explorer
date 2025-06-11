@@ -154,6 +154,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
     uriProperties = initUriProperties(objectAsMap);
     valid = true;
+    storageIndex.get().notifyRefresh(this);
   }
 
   private Set<UriProperty> initUriProperties(final Map<String, Object> objectAsMap) {
@@ -227,6 +228,11 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     return valid;
   }
 
+  @Override
+  public void setUriProperties(Set<UriProperty> uriProperties) {
+    this.uriProperties = uriProperties;
+    this.valid = true;
+  }
 
   @Override
   public boolean equals(Object o) {

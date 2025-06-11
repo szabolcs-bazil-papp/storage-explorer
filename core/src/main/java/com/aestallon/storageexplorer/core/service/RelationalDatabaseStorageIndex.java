@@ -24,6 +24,7 @@ import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResults;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryMeta;
+import com.aestallon.storageexplorer.core.service.cache.StorageIndexCache;
 import com.google.common.base.Strings;
 
 public final class RelationalDatabaseStorageIndex
@@ -61,6 +62,8 @@ public final class RelationalDatabaseStorageIndex
     this.db = db;
     this.targetSchema = targetSchema;
     this.loader = new ObjectEntryLoadingService.RelationalDatabase(this);
+    this.storageEntryFactory = StorageEntryFactory.builder(this, objectApi, collectionApi).build();
+    this.cache = StorageIndexCache.persistent(storageId, storageEntryFactory);
   }
 
   @Override
@@ -140,12 +143,6 @@ public final class RelationalDatabaseStorageIndex
         "' OR CLASSNAME LIKE '%",
         "CLASSNAME LIKE '%",
         "'"));
-  }
-
-  @Override
-  protected StorageEntryFactory storageEntryFactory() {
-    return StorageEntryFactory.builder(this, objectApi, collectionApi)
-        .build();
   }
 
   private sealed interface LoadResult {

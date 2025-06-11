@@ -115,6 +115,12 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
   }
 
   @Override
+  public void setUriProperties(Set<UriProperty> uriProperties) {
+    this.uriProperties = uriProperties;
+    this.valid = true;
+  }
+  
+  @Override
   public void accept(StorageEntry storageEntry) {
     refreshLock.lock();
     try {
