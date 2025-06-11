@@ -18,7 +18,6 @@ package com.aestallon.storageexplorer.core.model.entry;
 import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -26,7 +25,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
@@ -118,7 +116,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   @Override
   public boolean references(StorageEntry that) {
     return StorageEntry.super.references(that)
-        || ((that instanceof ScopedEntry) && scopedEntries.contains(that));
+        || ((that instanceof ScopedEntry se) && scopedEntries.contains(se));
   }
 
   @Override
@@ -133,6 +131,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
         return;
       }
 
+      // TODO: maybe explicitly get() here? The whole entrance to the critical section is awful...
       Objects.requireNonNull(storageIndex.get()).loader().load(this, true);
     } finally {
       refreshLock.unlock();
@@ -145,7 +144,6 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   public void refresh(final Map<String, Object> objectAsMap) {
     if (valid) {
-      // TODO: Switch to versioning examination instead of this idiotic boolean
       return;
     }
 
@@ -154,14 +152,8 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
       return;
     }
 
-    //synchronized (this) {
-    //if (valid) {
-    //  return;
-    //}
-
     uriProperties = initUriProperties(objectAsMap);
     valid = true;
-    //}
   }
 
   private Set<UriProperty> initUriProperties(final Map<String, Object> objectAsMap) {
