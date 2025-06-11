@@ -93,6 +93,7 @@ public class StorageInstanceExaminer {
           case ObjectEntryLoadResult.SingleVersion sv -> inVersion(sv, entry, propQuery, cache);
           case ObjectEntryLoadResult.MultiVersion(var versions) -> versions.stream()
               .collect(reverse())
+              .limit(1L)
               .map(sv -> inVersion(sv, entry, propQuery, cache))
               .filter(it -> !(it instanceof NotFound))
               .findFirst()

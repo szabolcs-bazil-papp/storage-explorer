@@ -2,34 +2,27 @@ package com.aestallon.storageexplorer.core.service;
 
 import java.io.IOException;
 import java.net.URI;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Types;
 import java.time.OffsetDateTime;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.binarydata.BinaryData;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResults;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryMeta;
 import com.google.common.base.Strings;
 
@@ -85,7 +78,7 @@ public final class RelationalDatabaseStorageIndex
     return db
         .sql(buildQuery(target))
         .query((r, i) -> r.getString("URI"))
-        .stream()
+        .list().stream()
         .filter(it -> !Strings.isNullOrEmpty(it))
         .map(URI::create);
   }
@@ -165,16 +158,15 @@ public final class RelationalDatabaseStorageIndex
     record Ok(URI uri, ObjectEntryLoadResult result) implements LoadResult {}
 
   }
-  
+
   List<ObjectEntryLoadResult> loadBatch(final List<URI> uris) {
     if (uris.isEmpty()) {
       return Collections.emptyList();
     }
-    final TransactionTemplate tx = new TransactionTemplate();
     final Map<URI, ObjectEntryLoadResult> resultsByUri = db
         .sql(QUERY_IN)
         .param("uris", uris.stream().map(URI::toString).toList())
-        
+
         .query((r, c) -> {
           try {
             return parseResultSet(r);
@@ -201,7 +193,7 @@ public final class RelationalDatabaseStorageIndex
     final String uriStr = r.getString("URI");
     final URI uri = URI.create(uriStr);
     final boolean single = Boolean.TRUE.toString().equals(r.getString("SV"));
-    final long version = single ? r.getLong("VN") : -1L;
+    final long version = !single ? r.getLong("VN") : -1L;
     final var versionTimestamp = r.getObject("VD", OffsetDateTime.class);
     Map<String, Object> objectAsMap;
     try (final var in = r.getBlob("OAM").getBinaryStream()) {
@@ -225,7 +217,11 @@ public final class RelationalDatabaseStorageIndex
         ? new LoadResult.Ok(uri, singleVersion)
         : new LoadResult.Ok(
             uri,
-            new ObjectEntryLoadResult.MultiVersion(Collections.singletonList(singleVersion)));
+            ObjectEntryLoadResults.multiVersion(
+                singleVersion,
+                objectApi,
+                ObjectEntryLoadingService.OBJECT_MAPPER,
+                version));
   }
 
 }

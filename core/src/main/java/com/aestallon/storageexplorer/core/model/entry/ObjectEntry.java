@@ -54,7 +54,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
 
-  private final WeakReference<StorageIndex> storageIndex;
+  private final WeakReference<StorageIndex<?>> storageIndex;
   private final StorageId id;
   private final Path path;
   private final URI uri;
@@ -67,7 +67,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   private Versioning versioning;
   private Set<UriProperty> uriProperties;
 
-  ObjectEntry(final StorageIndex storageIndex,
+  ObjectEntry(final StorageIndex<?> storageIndex,
               final Path path,
               final URI uri) {
     this.storageIndex = new WeakReference<>(storageIndex);
