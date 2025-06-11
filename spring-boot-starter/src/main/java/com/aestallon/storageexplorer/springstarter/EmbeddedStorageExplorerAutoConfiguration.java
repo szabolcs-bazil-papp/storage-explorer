@@ -15,6 +15,7 @@ import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoC
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import com.aestallon.storageexplorer.spring.rest.api.ExplorerApiController;
 import com.aestallon.storageexplorer.spring.rest.api.ExplorerApiDelegate;
 import com.aestallon.storageexplorer.spring.rest.impl.ExplorerApiDelegateImpl;
@@ -68,12 +69,18 @@ public class EmbeddedStorageExplorerAutoConfiguration {
   static class RelationalDatabaseConfiguration {
 
     @Bean
+    @ConditionalOnBean({ JdbcClient.class })
+    public JdbcClient jdbcClient(JdbcTemplate jdbcTemplate) {
+      return JdbcClient.create(jdbcTemplate);
+    }
+    
+    @Bean
     @ConditionalOnMissingBean(StorageIndexProvider.class)
     public StorageIndexProvider relationalDatabaseStorageIndexProvider(
         ObjectApi objectApi,
         CollectionApi collectionApi,
-        JdbcTemplate jdbcTemplate) {
-      return new RelationalDatabaseStorageIndexProvider(objectApi, collectionApi, jdbcTemplate);
+        JdbcClient jdbcClient) {
+      return new RelationalDatabaseStorageIndexProvider(objectApi, collectionApi, jdbcClient);
     }
 
     @Bean

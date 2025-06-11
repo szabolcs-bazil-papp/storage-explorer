@@ -22,6 +22,10 @@ import org.smartbit4all.api.binarydata.BinaryData;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
@@ -34,8 +38,7 @@ public final class RelationalDatabaseStorageIndex
 
   private static final Logger log = LoggerFactory.getLogger(RelationalDatabaseStorageIndex.class);
 
-  private static final int BATCH_SIZE = 20;
-  private static final String BATCH_QUERY = """
+  private static final String QUERY_IN = """
       SELECT e.URI            AS "URI",
              v.VERSION        AS "VN",
              e.SINGLEVERSION  AS "SV",
@@ -44,14 +47,14 @@ public final class RelationalDatabaseStorageIndex
         FROM OBJECT_ENTRY   e
         JOIN OBJECT_VERSION v
           ON v.ENTRY_ID = e.ID
-       WHERE v.VERSION  = (SELECT MAX(VERSION)
-                              FROM OBJECT_VERSION
-                             WHERE ENTRY_ID = v.ENTRY_ID)
-         AND "URI" IN (%s)""".formatted(IntStream.range(0, BATCH_SIZE)
-      .mapToObj(i -> "?")
-      .collect(joining(", ")));
+       WHERE v.VERSION  = (SELECT MAX(v_inner.VERSION)
+                             FROM OBJECT_VERSION v_inner
+                            WHERE v_inner.ENTRY_ID = v.ENTRY_ID)
+         AND e.CLASSNAME <> 'org_smartbit4all_api_binarydata_BinaryDataObject'
+         AND e.SCHEME <> 'tabledatacontents'
+         AND e.URI IN (:uris)""";
 
-  private final JdbcTemplate db;
+  final JdbcClient db;
   private final String targetSchema;
   private final ObjectEntryLoadingService<RelationalDatabaseStorageIndex> loader;
 
@@ -59,7 +62,7 @@ public final class RelationalDatabaseStorageIndex
       StorageId storageId,
       ObjectApi objectApi,
       CollectionApi collectionApi,
-      JdbcTemplate db,
+      JdbcClient db,
       String targetSchema) {
     super(storageId, objectApi, collectionApi);
     this.db = db;
@@ -80,7 +83,8 @@ public final class RelationalDatabaseStorageIndex
   @Override
   protected Stream<URI> fetchEntries(IndexingTarget target) {
     return db
-        .query(buildQuery(target), (r, i) -> r.getString("URI"))
+        .sql(buildQuery(target))
+        .query((r, i) -> r.getString("URI"))
         .stream()
         .filter(it -> !Strings.isNullOrEmpty(it))
         .map(URI::create);
@@ -161,41 +165,28 @@ public final class RelationalDatabaseStorageIndex
     record Ok(URI uri, ObjectEntryLoadResult result) implements LoadResult {}
 
   }
-
+  
   List<ObjectEntryLoadResult> loadBatch(final List<URI> uris) {
     if (uris.isEmpty()) {
       return Collections.emptyList();
     }
-    Map<URI, ObjectEntryLoadResult> resultsByUri = new HashMap<>();
-    for (int i = 0; i < uris.size() / BATCH_SIZE + 1; i++) {
-      final int fro = i * BATCH_SIZE;
-      final int to = Math.min(fro + BATCH_SIZE, uris.size());
-      final var batchResult = db.queryForStream(
-              con -> {
-                final PreparedStatement pStmt = con.prepareStatement(BATCH_QUERY);
-                int idx = 1;
-                for (int j = fro; j < to; j++) {
-                  pStmt.setString(idx++, uris.get(j).toString());
-                }
-
-                while (idx <= BATCH_SIZE) {
-                  pStmt.setNull(idx++, Types.VARCHAR);
-                }
-                return pStmt;
-              },
-              (r, c) -> {
-                try {
-                  return parseResultSet(r);
-                } catch (final Exception e) {
-                  log.error(e.getMessage(), e);
-                  return LoadResult.Err.ERR;
-                }
-              })
-          .filter(LoadResult.Ok.class::isInstance)
-          .map(LoadResult.Ok.class::cast)
-          .collect(toMap(LoadResult.Ok::uri, LoadResult.Ok::result));
-      resultsByUri.putAll(batchResult);
-    }
+    final TransactionTemplate tx = new TransactionTemplate();
+    final Map<URI, ObjectEntryLoadResult> resultsByUri = db
+        .sql(QUERY_IN)
+        .param("uris", uris.stream().map(URI::toString).toList())
+        
+        .query((r, c) -> {
+          try {
+            return parseResultSet(r);
+          } catch (final Exception e) {
+            log.error(e.getMessage(), e);
+            return LoadResult.Err.ERR;
+          }
+        })
+        .list().stream()
+        .filter(LoadResult.Ok.class::isInstance)
+        .map(LoadResult.Ok.class::cast)
+        .collect(toMap(LoadResult.Ok::uri, LoadResult.Ok::result));
     return uris.stream()
         .map(it -> {
           final ObjectEntryLoadResult res = resultsByUri.get(it);

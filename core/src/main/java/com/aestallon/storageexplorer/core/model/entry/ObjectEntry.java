@@ -133,7 +133,6 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
         return;
       }
 
-      log.warn("node refresh: {}", uri);
       Objects.requireNonNull(storageIndex.get()).loader().load(this, true);
     } finally {
       refreshLock.unlock();

@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
+import org.springframework.jdbc.datasource.DataSourceUtils;
 import com.aestallon.storageexplorer.common.util.IO;
 import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -197,7 +198,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
       int timeoutMillisMax) {
 
     public static final RelationalDatabaseLoadingServiceParameters DEFAULT =
-        new RelationalDatabaseLoadingServiceParameters(500, 20, 2_000);
+        new RelationalDatabaseLoadingServiceParameters(150, 20, 2_000);
 
   }
 
@@ -228,7 +229,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
 
     private Thread startWorker() {
       return Thread.ofPlatform().name("Batch Loader").start(() -> {
-        while (true) {
+        while (!Thread.currentThread().isInterrupted()) {
           try {
             processBatch();
           } catch (final InterruptedException e) {

@@ -86,7 +86,7 @@ public class StorageInstanceStatComponent {
       }
 
       private double validPercent() {
-        return (total == 0L) ? 0L : (valid * 100d) / total();
+        return (total == 0L) ? 0L : ((double) valid) / total();
       }
 
       private String validPercentString() {
@@ -144,7 +144,7 @@ public class StorageInstanceStatComponent {
           case 1 -> total;
           case 2 -> valid;
           case 3 -> total - valid;
-          case 4 -> total == 0L ? "0" : SchemaRow.PERCENT_FORMAT.format((valid * 100d) / total);
+          case 4 -> total == 0L ? "0" : SchemaRow.PERCENT_FORMAT.format(((double) valid) / total);
           default -> null;
         };
         default -> switch (column) {

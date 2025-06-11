@@ -4,6 +4,7 @@ import java.util.UUID;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import com.aestallon.storageexplorer.spring.service.StorageIndexProvider;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.RelationalDatabaseStorageIndex;
@@ -14,19 +15,19 @@ public class RelationalDatabaseStorageIndexProvider implements StorageIndexProvi
 
   private final ObjectApi objectApi;
   private final CollectionApi collectionApi;
-  private final JdbcTemplate jdbcTemplate;
+  private final JdbcClient jdbcClient;
 
   public RelationalDatabaseStorageIndexProvider(final ObjectApi objectApi,
                                                 final CollectionApi collectionApi,
-                                                final JdbcTemplate jdbcTemplate) {
+                                                final JdbcClient jdbcClient) {
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
-    this.jdbcTemplate = jdbcTemplate;
+    this.jdbcClient = jdbcClient;
   }
 
 
   @Override
   public StorageIndex provide() {
-    return new RelationalDatabaseStorageIndex(id, objectApi, collectionApi, jdbcTemplate, null);
+    return new RelationalDatabaseStorageIndex(id, objectApi, collectionApi, jdbcClient, null);
   }
 }
