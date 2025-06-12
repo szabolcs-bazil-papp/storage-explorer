@@ -22,15 +22,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.fury.Fury;
+import org.apache.fury.ThreadSafeFury;
+import org.apache.fury.config.Language;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -47,12 +51,43 @@ import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.google.common.base.Strings;
 
 public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
 
   private static final Logger log =
       LoggerFactory.getLogger(StorageIndexCacheCaffeineSqliteImpl.class);
+
+
+  public record UriProps(Set<UriProperty> uriProperties, Set<UriProperty> scopedEntries) {
+
+    static UriProps of(final StorageEntry storageEntry) {
+      if (storageEntry.valid()) {
+        return new UriProps(storageEntry.uriProperties(), Collections.emptySet());
+      } else {
+        final Set<UriProperty> uriProperties = new HashSet<>(storageEntry.uriPropertiesStrict());
+        final Set<UriProperty> scopedEntries = (storageEntry instanceof ObjectEntry o)
+            ? o.scopedEntriesAsUriProperties()
+            : Collections.emptySet();
+        return new UriProps(uriProperties, scopedEntries);
+      }
+    }
+
+    StorageEntry toStorageEntry(final URI uri, final StorageEntryFactory factory) {
+      return factory.create(uri)
+          .map(it -> {
+            it.setUriProperties(uriProperties());
+            if (it instanceof ObjectEntry o && !scopedEntries.isEmpty()) {
+              scopedEntries.stream().map(UriProperty::uri)
+                  .flatMap(u -> factory.create(u).stream())
+                  .filter(ScopedEntry.class::isInstance)
+                  .map(ScopedEntry.class::cast)
+                  .forEach(o::addScopedEntry);
+            }
+            return it;
+          })
+          .orElseThrow(() -> new IllegalStateException("Cannot restore " + uri));
+    }
+  }
 
   private static void initSqliteCacheDirectory(final String dbFolderStr) {
     final Path dbFolder = Path.of(dbFolderStr);
@@ -65,9 +100,27 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
     }
   }
 
+
+  private static ThreadSafeFury fury() {
+    final ThreadSafeFury fury = Fury.builder()
+        .withCodegen(true)
+        .withLanguage(Language.JAVA)
+        .buildThreadSafeFury();
+    fury.register(UriProperty.Segment.class);
+    fury.register(UriProperty.Segment.Idx.class);
+    fury.register(UriProperty.Segment.Key.class);
+    fury.register(URI.class);
+    fury.register(UriProperty.class);
+    fury.register(UriProps.class);
+    return fury;
+  }
+
+  private static final ThreadSafeFury FURY = fury();
+
   private final StorageEntryFactory storageEntryFactory;
   private final JdbcClient sqlite;
   private final LoadingCache<URI, StorageEntry> inner;
+  private final ReentrantLock writeLock = new ReentrantLock(false);
 
   StorageIndexCacheCaffeineSqliteImpl(final StorageId storageId,
                                       final StorageEntryFactory storageEntryFactory) {
@@ -89,7 +142,7 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
 
     this.inner = Caffeine.newBuilder()
         .expireAfterAccess(30L, TimeUnit.SECONDS)
-        .maximumSize(1_000L)
+        .maximumSize(10_000L)
         .build(this::load);
   }
 
@@ -101,7 +154,7 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
                 schema varchar(100) not null,
                 typename varchar(100) not null,
                 scoped int not null default 0,
-                content text
+                content blob
             )""")
         .update();
   }
@@ -115,57 +168,41 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
   }
 
   private StorageEntry parse(final ResultSet r, final URI uri) throws SQLException {
-    StorageEntry storageEntry = storageEntryFactory.create(uri).orElseThrow();
-    final var uriPropsStr = r.getString(1);
-    if (!Strings.isNullOrEmpty(uriPropsStr)) {
-      storageEntry.setUriProperties(parseUriProperties(uriPropsStr));
-    }
-    return storageEntry;
-  }
-
-  private Set<UriProperty> parseUriProperties(final String s) {
-    return Arrays.stream(s.split("\\|"))
-        .map(es -> es.split(";"))
-        .map(keyVal -> {
-          final String key = keyVal[0];
-          final String es[] = key.split("\\.");
-          final UriProperty.Segment[] segments = Arrays.stream(es)
-              .map(e -> (UriProperty.Segment) (e.chars().allMatch(Character::isDigit)
-                  ? new UriProperty.Segment.Idx(Integer.parseInt(e))
-                  : new UriProperty.Segment.Key(e)))
-              .toArray(UriProperty.Segment[]::new);
-          final String value = keyVal[1];
-          final URI uri = URI.create(value);
-          return UriProperty.of(segments, uri);
-        })
-        .collect(Collectors.toSet());
-  }
-
-  private String stringifyUriProperties(final Set<UriProperty> uriProperties) {
-    return uriProperties.stream()
-        .map(it -> UriProperty.Segment.asString(it.segments()) + ";" + it.uri().toString())
-        .collect(Collectors.joining("|"));
+    final var bytes = r.getBytes(1);
+    final UriProps uriProps = FURY.deserializeJavaObject(bytes, UriProps.class);
+    return uriProps.toStorageEntry(uri, storageEntryFactory);
   }
 
   private void save(final StorageEntry storageEntry) {
-    final String typename = switch (storageEntry) {
-      case ObjectEntry o -> o.typeName();
-      case ListEntry l -> "st_l";
-      case MapEntry m -> "st_m";
-      case SequenceEntry s -> "st_s";
-    };
-    final int scoped = storageEntry instanceof ScopedEntry ? 1 : 0;
-    sqlite
-        .sql("""
-            insert or replace into storage_entry (uri, schema, typename, scoped, content)
-            values (:uri, :schema, :typename, :scoped, :content)""")
-        .params(Map.of(
-            "uri", storageEntry.uri().toString(),
-            "schema", storageEntry.uri().getScheme(),
-            "typename", typename,
-            "scoped", scoped,
-            "content", stringifyUriProperties(storageEntry.uriPropertiesStrict())))
-        .update();
+    writeLock.lock();
+    try {
+
+      final String typename = switch (storageEntry) {
+        case ObjectEntry o -> o.typeName();
+        case ListEntry l -> "st_l";
+        case MapEntry m -> "st_m";
+        case SequenceEntry s -> "st_s";
+      };
+      final int scoped = storageEntry instanceof ScopedEntry ? 1 : 0;
+      final UriProps uriProps = UriProps.of(storageEntry);
+      final byte[] bytes = FURY.serializeJavaObject(uriProps);
+      sqlite
+          .sql("""
+              insert or replace into storage_entry (uri, schema, typename, scoped, content)
+              values (:uri, :schema, :typename, :scoped, :content)""")
+          .params(Map.of(
+              "uri", storageEntry.uri().toString(),
+              "schema", storageEntry.uri().getScheme(),
+              "typename", typename,
+              "scoped", scoped,
+              "content", bytes))
+          .update();
+
+    } catch (Exception e) {
+      log.error("Error saving storage entry! {}", storageEntry.uri(), e);
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
