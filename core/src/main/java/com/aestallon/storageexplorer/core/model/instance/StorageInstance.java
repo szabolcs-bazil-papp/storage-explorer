@@ -10,10 +10,10 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.utility.StringConstant;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.Assert;
-import org.w3c.dom.events.EventTarget;
 import com.aestallon.storageexplorer.core.event.EntryAcquired;
 import com.aestallon.storageexplorer.core.event.EntryAcquisitionFailed;
 import com.aestallon.storageexplorer.core.event.EntryDiscovered;
+import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.Availability;
 import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
@@ -23,10 +23,10 @@ import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
-import com.google.errorprone.annotations.Var;
 
 public final class StorageInstance {
 
@@ -140,15 +140,20 @@ public final class StorageInstance {
         publishEvent(new EntryAcquisitionFailed(this, uri));
         yield Optional.empty();
       }
-      case StorageIndex.EntryAcquisitionResult.Present p -> Optional.of(p.entry());
-      case StorageIndex.EntryAcquisitionResult.New n -> {
-        final var entry = n.entry();
+      case StorageIndex.EntryAcquisitionResult.Present(StorageEntry e) -> Optional.of(e);
+      case StorageIndex.EntryAcquisitionResult.New(StorageEntry entry) -> {
         try {
           // we must refresh the requested entry right away:
           // - the programme requested acquisition for future load anyway
           // - there is literally no other way to validate if a given URI is present in a Storage
           //   apart from attempting to load it...
-          entry.refresh();
+          if (entry instanceof ObjectEntry o
+              && o.tryLoad().get() instanceof ObjectEntryLoadResult.Err) {
+            publishEvent(new EntryAcquisitionFailed(this, uri));
+            yield Optional.empty();
+          } else {
+            entry.refresh();
+          }
         } catch (final Exception e) {
           log.error(e.getMessage(), e);
           publishEvent(new EntryAcquisitionFailed(this, uri));
@@ -192,17 +197,16 @@ public final class StorageInstance {
         publishEvent(new EntryAcquisitionFailed(this, uri));
         yield Optional.empty();
       }
-      case StorageIndex.EntryAcquisitionResult.Present p -> Optional.of(p.entry());
-      case StorageIndex.EntryAcquisitionResult.New n -> {
-        final var entry = n.entry();
+      case StorageIndex.EntryAcquisitionResult.Present(StorageEntry e) -> Optional.of(e);
+      case StorageIndex.EntryAcquisitionResult.New(StorageEntry e) -> {
         // discovery is expected to be programmatic -> we trust the URI is valid.
-        index.accept(uri, entry);
-        publishEvent(new EntryDiscovered(this, entry));
-        yield Optional.of(entry);
+        index.accept(uri, e);
+        publishEvent(new EntryDiscovered(this, e));
+        yield Optional.of(e);
       }
     };
   }
-  
+
   public Optional<StorageEntry> softDiscover(final URI uri) {
     return switch (index.getOrCreate(uri)) {
       case StorageIndex.EntryAcquisitionResult.Fail f -> Optional.empty();
@@ -243,8 +247,8 @@ public final class StorageInstance {
         .type(location instanceof FsStorageLocation
             ? StorageInstanceType.FS
             : StorageInstanceType.DB)
-        .fs(location instanceof FsStorageLocation ? (FsStorageLocation) location : null)
-        .db(location instanceof SqlStorageLocation ? (SqlStorageLocation) location : null);
+        .fs(location instanceof FsStorageLocation fs ? fs : null)
+        .db(location instanceof SqlStorageLocation sql ? sql : null);
   }
 
   public void setEventPublisher(final ApplicationEventPublisher eventPublisher) {
@@ -257,8 +261,9 @@ public final class StorageInstance {
 
   @Override
   public boolean equals(Object o) {
-    if (o == null || getClass() != o.getClass())
+    if (o == null || getClass() != o.getClass()) {
       return false;
+    }
     StorageInstance that = (StorageInstance) o;
     return Objects.equals(id, that.id);
   }

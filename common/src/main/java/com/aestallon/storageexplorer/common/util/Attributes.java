@@ -20,8 +20,12 @@ public final class Attributes {
   private Attributes() {}
 
   public static final String LABEL = "ui.label";
+  
+  public static final String WEIGHT = "sb4.weight";
 
   public static final String STYLE_CLASS = "ui.class";
+  
+  public static final String INLINE_STYLE = "ui.style";
 
   public static final String SELECTED = "ui.selected";
 

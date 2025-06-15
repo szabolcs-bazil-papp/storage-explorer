@@ -20,17 +20,6 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 
 public class GraphExportService {
 
-  private static String stringToColour(String input) {
-    int hash = input.hashCode();
-
-    int r = (hash & 0xFF0000) >> 16;
-    int g = (hash & 0x00FF00) >> 8;
-    int b = hash & 0x0000FF;
-
-    // Format as GEXF color string (RRGGBB in hex)
-    return String.format("%02X%02X%02XFF", r, g, b);
-  }
-  
   public boolean export(final StorageInstance instance, final Path target) throws IOException {
 
     final Graph<StorageEntry, UriProperty> graph = new DirectedPseudograph<>(UriProperty.class);
@@ -58,14 +47,23 @@ public class GraphExportService {
     exporter.setVertexAttributeProvider(it -> {
       Map<String, Attribute> map = new LinkedHashMap<>();
       map.put("label", DefaultAttribute.createAttribute(it.toString()));
-      final var colour = stringToColour(it.toString());
-      map.put("color", DefaultAttribute.createAttribute(colour));
-      map.put("viz:color", DefaultAttribute.createAttribute(colour));
+      
+      final var typeColour = NodeColour.ofType(it);
+      map.put("color", DefaultAttribute.createAttribute(typeColour));
+      map.put("viz:color", DefaultAttribute.createAttribute(typeColour));
+      
+      final var schemaColour = NodeColour.ofSchema(it);
+      map.put("viz:schemacolor", DefaultAttribute.createAttribute(schemaColour));
+      
+      final var size = it.uriPropertiesStrict().size();
+      map.put("size", DefaultAttribute.createAttribute(size));
+      
       return map;
     });
     exporter.setEdgeAttributeProvider(it -> {
       Map<String, Attribute> map = new LinkedHashMap<>();
       map.put("label", DefaultAttribute.createAttribute(it.toString()));
+      map.put("standalone",  DefaultAttribute.createAttribute(it.isStandalone()));
       return map;
     });
     exporter.registerAttribute("viz:color", GEXFExporter.AttributeCategory.NODE, GEXFAttributeType.STRING);

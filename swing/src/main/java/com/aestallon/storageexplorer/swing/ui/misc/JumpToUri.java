@@ -1,6 +1,7 @@
 package com.aestallon.storageexplorer.swing.ui.misc;
 
 import java.net.URI;
+import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.common.util.Uris;
@@ -24,13 +25,15 @@ public final class JumpToUri {
   public static void jump(ApplicationEventPublisher eventPublisher,
                           URI uri,
                           StorageInstance storageInstance) {
-    storageInstance.acquire(Uris.latest(uri)).ifPresentOrElse(
-        it -> eventPublisher.publishEvent(new EntryAcquired(storageInstance, it)),
-        () -> JOptionPane.showMessageDialog(
-            null,
-            "Cannot show URI: " + uri,
-            "Unreachable URI",
-            JOptionPane.ERROR_MESSAGE));
+    CompletableFuture.runAsync(() -> storageInstance
+        .acquire(Uris.latest(uri))
+        .ifPresentOrElse(
+            it -> eventPublisher.publishEvent(new EntryAcquired(storageInstance, it)),
+            () -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
+                null,
+                "Cannot show URI: " + uri,
+                "Unreachable URI",
+                JOptionPane.ERROR_MESSAGE))));
   }
 
 }

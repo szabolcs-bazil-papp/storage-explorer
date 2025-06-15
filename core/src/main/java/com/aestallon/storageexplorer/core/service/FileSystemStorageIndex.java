@@ -45,7 +45,7 @@ public final class FileSystemStorageIndex extends StorageIndex<FileSystemStorage
     this.storageEntryFactory = StorageEntryFactory.builder(this, objectApi, collectionApi)
         .pathToStorage(pathToStorage)
         .build();
-    this.cache = StorageIndexCache.persistent(storageId, storageEntryFactory);
+    this.cache = StorageIndexCache.inMemory();
   }
 
   @Override

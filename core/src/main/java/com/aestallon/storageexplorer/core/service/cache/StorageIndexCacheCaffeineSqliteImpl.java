@@ -28,8 +28,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 import org.apache.fury.Fury;
@@ -89,6 +92,78 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
     }
   }
 
+
+  private static final class SqliteWriter {
+
+    private final ExecutorService executor;
+    private final LinkedBlockingQueue<StorageEntry> queue;
+    private final JdbcClient sqlite;
+    private final Future<?> future;
+
+    private SqliteWriter(final JdbcClient sqlite) {
+      this.sqlite = sqlite;
+      this.executor = Executors.newSingleThreadExecutor();
+      this.queue = new LinkedBlockingQueue<>();
+      this.future = executor.submit(() -> {
+        while (!Thread.currentThread().isInterrupted()) {
+          try {
+
+            final StorageEntry storageEntry = queue.poll(5L, TimeUnit.SECONDS);
+            if (storageEntry != null) {
+              saveInternal(storageEntry);
+            }
+
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.info("SqliteWriter is interrupted");
+            return;
+          }
+        }
+
+      });
+    }
+    
+    private void save(final StorageEntry storageEntry) {
+      queue.offer(storageEntry);
+    }
+
+    private void saveInternal(final StorageEntry storageEntry) {
+      try {
+
+        final String typename = switch (storageEntry) {
+          case ObjectEntry o -> o.typeName();
+          case ListEntry l -> "st_l";
+          case MapEntry m -> "st_m";
+          case SequenceEntry s -> "st_s";
+        };
+        final int scoped = storageEntry instanceof ScopedEntry ? 1 : 0;
+        final UriProps uriProps = UriProps.of(storageEntry);
+        final byte[] bytes = FURY.serializeJavaObject(uriProps);
+        sqlite
+            .sql("""
+                insert or replace into storage_entry (uri, schema, typename, scoped, content)
+                values (:uri, :schema, :typename, :scoped, :content)""")
+            .params(Map.of(
+                "uri", storageEntry.uri().toString(),
+                "schema", storageEntry.uri().getScheme(),
+                "typename", typename,
+                "scoped", scoped,
+                "content", bytes))
+            .update();
+
+      } catch (Exception e) {
+        log.error("Error saving storage entry! {}", storageEntry.uri(), e);
+      }
+    }
+    
+    private void abort() {
+      future.cancel(true);
+      executor.shutdownNow();
+    }
+  }
+  
+  
+
   private static void initSqliteCacheDirectory(final String dbFolderStr) {
     final Path dbFolder = Path.of(dbFolderStr);
     if (!Files.exists(dbFolder)) {
@@ -120,7 +195,7 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
   private final StorageEntryFactory storageEntryFactory;
   private final JdbcClient sqlite;
   private final LoadingCache<URI, StorageEntry> inner;
-  private final ReentrantLock writeLock = new ReentrantLock(false);
+  private final SqliteWriter writer;
 
   StorageIndexCacheCaffeineSqliteImpl(final StorageId storageId,
                                       final StorageEntryFactory storageEntryFactory) {
@@ -139,6 +214,7 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
     dataSource.setUrl("jdbc:sqlite:" + dbFileStr);
     this.sqlite = JdbcClient.create(dataSource);
     initSqlite();
+    this.writer = new SqliteWriter(sqlite);
 
     this.inner = Caffeine.newBuilder()
         .expireAfterAccess(30L, TimeUnit.SECONDS)
@@ -173,54 +249,24 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
     return uriProps.toStorageEntry(uri, storageEntryFactory);
   }
 
-  private void save(final StorageEntry storageEntry) {
-    writeLock.lock();
-    try {
 
-      final String typename = switch (storageEntry) {
-        case ObjectEntry o -> o.typeName();
-        case ListEntry l -> "st_l";
-        case MapEntry m -> "st_m";
-        case SequenceEntry s -> "st_s";
-      };
-      final int scoped = storageEntry instanceof ScopedEntry ? 1 : 0;
-      final UriProps uriProps = UriProps.of(storageEntry);
-      final byte[] bytes = FURY.serializeJavaObject(uriProps);
-      sqlite
-          .sql("""
-              insert or replace into storage_entry (uri, schema, typename, scoped, content)
-              values (:uri, :schema, :typename, :scoped, :content)""")
-          .params(Map.of(
-              "uri", storageEntry.uri().toString(),
-              "schema", storageEntry.uri().getScheme(),
-              "typename", typename,
-              "scoped", scoped,
-              "content", bytes))
-          .update();
-
-    } catch (Exception e) {
-      log.error("Error saving storage entry! {}", storageEntry.uri(), e);
-    } finally {
-      writeLock.unlock();
-    }
-  }
 
   @Override
   public void put(URI uri, StorageEntry storageEntry) {
     inner.put(uri, storageEntry);
-    save(storageEntry);
+    writer.save(storageEntry);
   }
 
   @Override
   public void putAll(Map<URI, StorageEntry> storageEntries) {
     inner.putAll(storageEntries);
-    storageEntries.values().forEach(this::save);
+    storageEntries.values().forEach(writer::save);
   }
 
   @Override
   public void merge(URI uri, StorageEntry storageEntry) {
     inner.get(uri, k -> {
-      save(storageEntry);
+      writer.save(storageEntry);
       return storageEntry;
     });
   }
@@ -230,15 +276,15 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
                               BiFunction<? super URI, ? super StorageEntry, ? extends StorageEntry> f) {
     var e = inner.get(uri);
     e = f.apply(uri, e);
-    save(e);
+    writer.save(e);
     inner.put(uri, e);
     return e;
   }
 
   @Override
   public void clear() {
-    sqlite.sql("truncate table storage_entry").update();
     inner.invalidateAll();
+    sqlite.sql("delete from storage_entry where true").update();
   }
 
   @Override

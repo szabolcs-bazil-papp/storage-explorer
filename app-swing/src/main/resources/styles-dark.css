@@ -5,28 +5,28 @@ graph {
 }
 
 node {
-    size: 15px;
+    size: 10px;
     fill-color: #96eedc;
     text-alignment: under;
     text-padding: 5px, 4px;
     text-background-mode: rounded-box;
-    text-background-color: rgba(55, 71, 70, 0.13);
-    text-size: 14;
+    text-background-color: #3c5e5888;
+    text-size: 8;
     text-color: white;
     size-mode: fit;
 }
 
 edge {
     shape: line;
-    arrow-size: 12px, 6px;
+    arrow-size: 6px, 3px;
     fill-color: white;
     text-alignment: along;
-    text-padding: 5px, 4px;
+    text-padding: 3px, 2px;
     text-style: bold;
     text-background-mode: rounded-box;
     text-background-color: #3c5e5888;
     text-color: white;
-    text-size: 12;
+    text-size: 6;
     text-visibility: 0.7;
     text-visibility-mode: under-zoom;
 }
