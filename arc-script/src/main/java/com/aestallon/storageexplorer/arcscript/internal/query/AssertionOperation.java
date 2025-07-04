@@ -17,19 +17,15 @@ package com.aestallon.storageexplorer.arcscript.internal.query;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import org.codehaus.groovy.classgen.FinalVariableAnalyzer;
+import static java.util.stream.Collectors.joining;
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 import groovy.json.JsonBuilder;
 import groovy.lang.Closure;
-import static java.util.stream.Collectors.joining;
 
 public abstract sealed class AssertionOperation<T> permits
     AssertionOperation.AssertionOperationStr,
@@ -193,10 +189,10 @@ public abstract sealed class AssertionOperation<T> permits
           }
 
           final var actual = complex.value();
-          final Set<String> union = new HashSet<>(expected.keySet());
-          union.addAll(actual.keySet());
+          final Set<String> overlap = new HashSet<>(expected.keySet());
+          overlap.retainAll(actual.keySet());
 
-          return union.stream().anyMatch(k -> Objects.equals(actual.get(k), expected.get(k)));
+          return overlap.stream().anyMatch(k -> Objects.equals(actual.get(k), expected.get(k)));
         };
       } else {
         p = it -> false;

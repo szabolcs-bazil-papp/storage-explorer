@@ -10,4 +10,8 @@ dependencies {
 
   compileOnly 'org.smartbit4all.platform:sql'
   compileOnly 'org.springframework.boot:spring-boot-starter-jdbc'
+
+  implementation 'org.xerial:sqlite-jdbc:3.50.1.0'
+  implementation 'com.github.ben-manes.caffeine:caffeine:3.2.1'
+  implementation 'org.apache.fury:fury-core:0.10.3'
 }

@@ -273,6 +273,11 @@ public class ArcScriptController {
               }
             };
             loadBtn.addActionListener(loadActionListener);
+          } else {
+            loadBtn.setEnabled(false);
+            if (loadActionListener != null) {
+              loadBtn.removeActionListener(loadActionListener);
+            }
           }
         }
       }

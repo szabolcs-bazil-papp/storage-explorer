@@ -48,13 +48,11 @@ public final class ObjectMaps {
           .flatMap(ObjectMaps::flattenToPrimitivePair);
     }
 
-    if (value instanceof List<?>) {
-      @SuppressWarnings({ "unchecked" })
-      final List<Object> l = (List<Object>) value;
+    if (value instanceof List<?> l) {
       return IntStream.range(0, l.size())
           .mapToObj(i -> Pair.of(
               UriProperty.Segment.join(property, UriProperty.Segment.idx(i)),
-              l.get(i)))
+                  (Object) l.get(i)))
           .flatMap(ObjectMaps::flattenToPrimitivePair);
     }
 

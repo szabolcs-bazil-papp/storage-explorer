@@ -18,16 +18,17 @@ package com.aestallon.storageexplorer.graph.service.internal;
 import java.net.URI;
 import java.util.Map;
 import java.util.Set;
+import static java.util.stream.Collectors.joining;
 import org.graphstream.graph.Edge;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.common.util.Attributes;
+import com.aestallon.storageexplorer.common.util.MsgStrings;
+import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
-import com.aestallon.storageexplorer.common.util.Attributes;
-import com.aestallon.storageexplorer.common.util.Uris;
-import static java.util.stream.Collectors.joining;
 
 public class NodeAdditionService {
 
@@ -84,10 +85,14 @@ public class NodeAdditionService {
         true);
     edge.setAttribute(
         Attributes.LABEL,
-        on.stream().map(UriProperty::label).collect(joining(" | ")));
+        MsgStrings.trim(
+            on.stream().map(UriProperty::label).collect(joining(" | ")),
+            15));
+    edge.setAttribute(Attributes.WEIGHT, on.size());
     if (on.stream().noneMatch(UriProperty::isStandalone)) {
       edge.setAttribute(Attributes.STYLE_CLASS, "listref");
     }
+    edge.setAttribute(Attributes.INLINE_STYLE, "size: %dpx;", on.size() * 2);
   }
 
   private Node getOrAddNode(Graph graph, StorageEntry storageEntry) {

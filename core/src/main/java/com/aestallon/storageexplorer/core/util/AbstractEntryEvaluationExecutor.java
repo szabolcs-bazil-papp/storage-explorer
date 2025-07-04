@@ -13,25 +13,28 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.arcscript.engine;
+package com.aestallon.storageexplorer.core.util;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 
-abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends AbstractEntryEvaluationExecutor<RESULT, EXECUTOR>> {
+public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends AbstractEntryEvaluationExecutor<RESULT, EXECUTOR>> {
 
-  abstract static class Builder<E extends AbstractEntryEvaluationExecutor<?, E>, BUILDER extends Builder<E, BUILDER>> {
+  private static final Logger log = LoggerFactory.getLogger(AbstractEntryEvaluationExecutor.class);
+
+
+  public abstract static class Builder<E extends AbstractEntryEvaluationExecutor<?, E>, BUILDER extends Builder<E, BUILDER>> {
 
     protected final StorageInstanceExaminer examiner;
     protected final Set<StorageEntry> entries;
@@ -40,27 +43,27 @@ abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends Abstract
 
     protected Builder(final StorageInstanceExaminer examiner,
                       final Set<StorageEntry> entries) {
-      this.examiner = Objects.requireNonNull(examiner, "StorageInstanceExaminer cannot be null!");
+      this.examiner = examiner;
       this.entries = entries == null
           ? Collections.emptySet()
           : Collections.unmodifiableSet(entries);
     }
 
-    BUILDER useSemaphore(boolean useSemaphore) {
+    public final BUILDER useSemaphore(boolean useSemaphore) {
       this.useSemaphore = useSemaphore;
       return self();
     }
 
-    BUILDER useCache(StorageInstanceExaminer.ObjectEntryLookupTable cache) {
+    public final BUILDER useCache(StorageInstanceExaminer.ObjectEntryLookupTable cache) {
       this.cache = Objects.requireNonNull(
           cache,
           "Explicitly provided ObjectEntryLookupTable cannot be null!");
       return self();
     }
 
-    abstract BUILDER self();
+    protected abstract BUILDER self();
 
-    abstract E build();
+    public abstract E build();
 
   }
 
@@ -86,19 +89,20 @@ abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends Abstract
 
   protected abstract void work(final StorageEntry entry);
 
-  final Set<RESULT> execute() {
+  public final Set<RESULT> execute() {
     if (shortCircuit()) {
       return Collections.emptySet();
     }
 
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
       final var semaphore = useSemaphore ? new Semaphore(5) : null;
-      final List<Future<?>> futures = new ArrayList<>();
+      final var counter = new AtomicInteger(0);
       for (final StorageEntry entry : entries) {
-        futures.add(executor.submit(() -> {
+        executor.submit(() -> {
           if (doNotExecute()) {
             // this is our guard condition: if upon execution start the work is no longer required,
             // we can return immediately:
+            counter.incrementAndGet();
             return;
           }
 
@@ -114,22 +118,28 @@ abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends Abstract
             }
 
             work(entry);
-
+          } catch (final InterruptedException e) {
+            log.warn(e.getMessage(), e);
+            Thread.currentThread().interrupt();
           } catch (final Exception e) {
-            System.err.println(e.getMessage());
+            log.error(e.getMessage(), e);
           } finally {
             if (semaphore != null) {
               semaphore.release();
             }
+            counter.incrementAndGet();
           }
-        }));
+        });
       }
 
-      for (final Future<?> future : futures) {
-        future.get();
+      int count = 0;
+      while ((count = counter.get()) < entries.size()) {
+        // do nothing
+        log.debug("Awaiting termination of executor... ( {} / {}", count, entries.size());
       }
-    } catch (InterruptedException | ExecutionException e) {
-      throw new IllegalStateException(e);
+    } catch (Exception e) {
+      log.warn(e.getMessage(), e);
+      Thread.currentThread().interrupt();
     }
 
     // there is no sense of ordering, because we are doing everything concurrently, in a

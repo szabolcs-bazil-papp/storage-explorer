@@ -47,6 +47,8 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import com.aestallon.storageexplorer.common.util.NotImplementedException;
 import com.aestallon.storageexplorer.core.model.instance.dto.Availability;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseConnectionData;
@@ -211,6 +213,11 @@ final class StorageIndexFactory {
           return storage;
         },
         it -> it.setDependsOn("objectDefinitionApi", "jdbcTemplate"));
+    ctx.registerBean(
+        "jdbcClient", 
+        JdbcClient.class,
+        () -> JdbcClient.create(ctx.getBean(JdbcTemplate.class)),
+        it -> it.setDependsOn("jdbcTemplate"));
 
     final ConfigurableEnvironment env = ctx.getEnvironment();
     env.getPropertySources().addFirst(new MapPropertySource("default", props));
@@ -219,14 +226,14 @@ final class StorageIndexFactory {
 
     final ObjectApi objectApi = ctx.getBean(ObjectApi.class);
     final CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
-    final JdbcTemplate jdbcTemplate = ctx.getBean(JdbcTemplate.class);
+    final JdbcClient jdbcClient = ctx.getBean(JdbcClient.class);
 
 
     final var index = new RelationalDatabaseStorageIndex(
         storageId,
         objectApi,
         collectionApi,
-        jdbcTemplate,
+        jdbcClient,
         targetSchema);
     return new StorageIndexCreationResult.Ok(index, ctx);
   }
@@ -280,11 +287,18 @@ final class StorageIndexFactory {
       config.setJdbcUrl(connectionData.getUrl());
       config.setUsername(connectionData.getUsername());
       config.setPassword(connectionData.getPassword());
+      config.setMaximumPoolSize(20);
+      config.setMinimumIdle(5);
+      config.setConnectionTimeout(30_000L);
+      config.setIdleTimeout(600_000L);
+      config.setMaxLifetime(1_800_000L);
+      config.setLeakDetectionThreshold(5_000L);
 
       final var schema = connectionData.getTargetSchema();
       if (schema != null && !schema.isEmpty()) {
         config.setSchema(schema);
       }
+
       return new HikariDataSource(config);
     };
   }

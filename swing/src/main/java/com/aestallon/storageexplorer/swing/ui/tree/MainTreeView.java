@@ -18,12 +18,16 @@ package com.aestallon.storageexplorer.swing.ui.tree;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import javax.swing.*;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import org.slf4j.Logger;
@@ -46,12 +50,14 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.graph.service.GraphExportService;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.StorageInstanceStatComponent;
 import com.aestallon.storageexplorer.swing.ui.tree.model.StorageTree;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.ClickableTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageInstanceTreeNode;
@@ -138,7 +144,7 @@ public class MainTreeView extends JPanel {
           eventPublisher.publishEvent(Msg.warn(
               "Cannot add orphan scoped entry to Tree!",
               "Entry " + storageEntry
-              + " has been indexed, but will not show on the tree until its host entry is missing."));
+                  + " has been indexed, but will not show on the tree until its host entry is missing."));
         } else {
           final StorageEntry host = hostEntry.get();
           TreePath hostPath = treePathByEntry.get(host);
@@ -272,8 +278,42 @@ public class MainTreeView extends JPanel {
       discard.addActionListener(e -> eventPublisher.publishEvent(
           new StorageIndexDiscardedEvent(sitn.storageInstance())));
       discard.setToolTipText("Close this storage to reclaim system resources.\n"
-                             + "This storage won't be preloaded on the next startup.");
+          + "This storage won't be preloaded on the next startup.");
       add(discard);
+
+      final var export = createExportMenuItem(sitn);
+      add(export);
+      final var stats = createStatsMenuItem(sitn);
+      add(stats);
+    }
+
+    private JMenuItem createExportMenuItem(StorageInstanceTreeNode sitn) {
+      final var export = new JMenuItem("Export", IconProvider.GRAPH);
+      export.addActionListener(e -> {
+        final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
+        fileChooser.setDialogType(JFileChooser.SAVE_DIALOG);
+        fileChooser.setDialogTitle("Save export");
+
+        final int result = fileChooser.showDialog(this, "Export");
+        if (JFileChooser.APPROVE_OPTION == result) {
+          final File f = fileChooser.getSelectedFile();
+          final Path target;
+          if (!f.getName().endsWith(".gexf")) {
+            String absolutePath = f.getAbsolutePath();
+            target = Path.of(absolutePath + ".gexf");
+          } else {
+            target = f.toPath();
+          }
+
+          try {
+            new GraphExportService().export(sitn.storageInstance(), target);
+          } catch (IOException ex) {
+            eventPublisher.publishEvent(Msg.err("Graph Export Failed", ex.getMessage()));
+          }
+        }
+      });
+      export.setToolTipText("Export the storage as a GEXF file.");
+      return export;
     }
 
     private JMenuItem createEditMenuItem(StorageInstanceTreeNode sitn) {
@@ -295,6 +335,22 @@ public class MainTreeView extends JPanel {
       });
       edit.setToolTipText("Edit the Storage Instance's name and connection settings.");
       return edit;
+    }
+
+    private JMenuItem createStatsMenuItem(StorageInstanceTreeNode sitn) {
+      final var stats = new JMenuItem("Statistics");
+      stats.addActionListener(e -> {
+        final JDialog dialog = new JDialog();
+        dialog.setTitle("Statistics");
+        dialog.setModal(true);
+        dialog.setLocationRelativeTo(MainTreeView.this);
+        dialog.getContentPane()
+            .add(new StorageInstanceStatComponent(sitn.storageInstance()).asComponent());
+        dialog.pack();
+        dialog.setVisible(true);
+      });
+      stats.setToolTipText("Prints basic statistics about the storage instance.");
+      return stats;
     }
   }
 

@@ -59,12 +59,9 @@ public class StorageInstanceExaminer {
                                                    final PropQuery propQuery,
                                                    final ObjectEntryLookupTable cache) {
     return switch (medial) {
-      case None none -> switch (none) {
-        case NoValue ignored when propQuery.isEmpty() -> new NoValue();
-        default -> new NotFound("No value present to continue on " + propQuery);
-      };
+      case None none -> none;
       case Some some -> (propQuery.isEmpty())
-          ? medial
+          ? some
           : discoverProperty(
               some.host(),
               PropQuery.join(new PropQuery(some.path()), propQuery),
@@ -78,9 +75,9 @@ public class StorageInstanceExaminer {
     return discoverProperty(entry, new PropQuery(propQuery), cache);
   }
 
-  public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
-                                                  final PropQuery propQuery,
-                                                  final ObjectEntryLookupTable cache) {
+  private PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
+                                                   final PropQuery propQuery,
+                                                   final ObjectEntryLookupTable cache) {
     if (propQuery.isOwnUri()) {
       return new StringFound(entry.uri().toString(), entry, UriProperty.OWN);
     }
@@ -92,10 +89,11 @@ public class StorageInstanceExaminer {
         // behaviour:
         final var loadResult = cache.computeIfAbsent(o, ObjectEntry::tryLoadHead).get();
         yield switch (loadResult) {
-          case ObjectEntryLoadResult.Err err -> new NotFound(err.msg());
+          case ObjectEntryLoadResult.Err(String msg) -> new NotFound(msg);
           case ObjectEntryLoadResult.SingleVersion sv -> inVersion(sv, entry, propQuery, cache);
-          case ObjectEntryLoadResult.MultiVersion mv -> mv.versions().stream()
+          case ObjectEntryLoadResult.MultiVersion(var versions) -> versions.stream()
               .collect(reverse())
+              .limit(1L)
               .map(sv -> inVersion(sv, entry, propQuery, cache))
               .filter(it -> !(it instanceof NotFound))
               .findFirst()
@@ -163,63 +161,61 @@ public class StorageInstanceExaminer {
   private static final class InlinePropertyDiscoverer {
 
     private final StorageEntry host;
-    private final UriProperty.Segment[] pathElements;
+    private final PropQuery.Cursor cursor;
 
     private InlinePropertyDiscoverer(final StorageEntry host, final PropQuery propQuery) {
       this.host = host;
-      this.pathElements = propQuery.segments;
+      this.cursor = propQuery.cursor();
     }
 
     private PropertyDiscoveryResult discover(final Object root) {
       final List<UriProperty.Segment> segments = new ArrayList<>();
-      return inObject(root, pathElements, segments);
+      return inObject(root, segments);
     }
 
     @SuppressWarnings({ "unchecked" })
     private PropertyDiscoveryResult inObject(final Object o,
-                                             final UriProperty.Segment[] es,
                                              final List<UriProperty.Segment> segments) {
-      final boolean terminal = es.length == 0;
+      final boolean terminal = cursor.terminal();
       return switch (o) {
         case null -> new NoValue();
         case List<?> l -> terminal
             ? ListFound.of(l, host, UriProperty.Segment.asString(segments))
-            : inObjectList((List<Object>) l, es, segments);
+            : inObjectList((List<Object>) l, segments);
         case Map<?, ?> m -> terminal
             ? new ComplexFound((Map<String, Object>) m, host,
             UriProperty.Segment.asString(segments))
-            : inObjectMap((Map<String, Object>) m, es, segments);
+            : inObjectMap((Map<String, Object>) m, segments);
         case Boolean b -> terminal
             ? new BooleanFound(b, host, UriProperty.Segment.asString(segments))
-            : earlyTermination(es, b);
+            : earlyTermination(b);
         case Number n -> terminal
             ? new NumberFound(n, host, UriProperty.Segment.asString(segments))
-            : earlyTermination(es, n);
+            : earlyTermination(n);
         case String s -> terminal
             ? new StringFound(s, host, UriProperty.Segment.asString(segments))
-            : earlyTermination(es, s);
+            : earlyTermination(s);
         // FIXME: maybe we need more sophisticated type recognition?
         default -> terminal
             ? new StringFound(String.valueOf(o), host, UriProperty.Segment.asString(segments))
-            : earlyTermination(es, o);
+            : earlyTermination(o);
       };
     }
 
     private PropertyDiscoveryResult inObjectMap(final Map<String, Object> map,
-                                                final UriProperty.Segment[] es,
                                                 final List<UriProperty.Segment> segments) {
-      if (es == null || es.length == 0) {
+      if (cursor.terminal()) {
         return new NoValue();
       }
 
-      segments.add(es[0]);
-      return inObject(map.get(es[0].toString()), restOf(es), segments);
+      final var segment = cursor.next();
+      segments.add(segment);
+      return inObject(map.get(segment.toString()), segments);
     }
 
     private PropertyDiscoveryResult inObjectList(final List<Object> list,
-                                                 final UriProperty.Segment[] es,
                                                  final List<UriProperty.Segment> segments) {
-      return switch (es[0]) {
+      return switch (cursor.peek()) {
         case UriProperty.Segment.Key ignored -> {
           // not a numeric, we multicast:
           final List<PropertyDiscoveryResult> ret = new ArrayList<>();
@@ -227,14 +223,15 @@ public class StorageInstanceExaminer {
             final Object o = list.get(i);
             final var segmentsI = new ArrayList<>(segments);
             segmentsI.add(new UriProperty.Segment.Idx(i));
-            final PropertyDiscoveryResult res = inObject(o, es /* !!! */, segmentsI);
+            // We do not increment the cursor here!!!
+            final PropertyDiscoveryResult res = inObject(o, segmentsI);
             ret.add(res);
           }
           yield ListFound.of(ret, UriProperty.Segment.asString(segments));
         }
         case UriProperty.Segment.Idx idx -> {
           if (idx.value() < 0) {
-            yield new NotFound("Index value [ %d ] is not a valid index number.".formatted(idx));
+            yield new NotFound("Index value [ %d ] is not a valid index number.".formatted(idx.value()));
           }
 
           if (idx.value() >= list.size()) {
@@ -242,27 +239,19 @@ public class StorageInstanceExaminer {
           }
 
           segments.add(idx);
-          yield inObject(list.get(idx.value()), restOf(es), segments);
+          cursor.next();
+          yield inObject(list.get(idx.value()), segments);
         }
       };
     }
-  }
 
-
-  private static NotFound earlyTermination(final UriProperty.Segment[] es, final Object val) {
-    return new NotFound(
-        "Property query specified had remaining elements [ %s ] but terminated early on [ key: %s ][ value: %s ]".formatted(
-            UriProperty.Segment.asString(es),
-            es[0],
-            val));
-  }
-
-  private static <E> E[] restOf(final E[] es) {
-    if (es == null || es.length == 0) {
-      throw new IllegalArgumentException("Elements cannot be null or empty!");
+    private NotFound earlyTermination(final Object val) {
+      return new NotFound(
+          "Property query specified had remaining elements [ %s ] but terminated early on [ key: %s ][ value: %s ]".formatted(
+              cursor.toString(),
+              cursor.peek(),
+              val));
     }
-
-    return Arrays.copyOfRange(es, 1, es.length);
   }
 
 
@@ -575,6 +564,46 @@ public class StorageInstanceExaminer {
       }
 
       return match;
+    }
+
+    Cursor cursor() {
+      return Cursor.newInstance(this);
+    }
+
+    private static final class Cursor {
+
+      private static Cursor newInstance(final PropQuery propQuery) {
+        return new Cursor(propQuery.segments);
+      }
+
+      private final UriProperty.Segment[] segments;
+      private int ptr;
+
+      private Cursor(final UriProperty.Segment[] segments) {
+        this.segments = segments;
+        ptr = 0;
+      }
+
+      boolean terminal() {
+        return ptr >= segments.length;
+      }
+
+      UriProperty.Segment next() {
+        return segments[ptr++];
+      }
+
+      boolean hasNext() {
+        return !terminal();
+      }
+
+      UriProperty.Segment peek() {
+        return segments[ptr];
+      }
+
+      @Override
+      public String toString() {
+        return UriProperty.Segment.asString(segments, ptr);
+      }
     }
   }
 

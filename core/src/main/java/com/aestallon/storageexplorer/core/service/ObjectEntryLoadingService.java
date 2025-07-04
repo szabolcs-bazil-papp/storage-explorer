@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.core.service;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,26 +34,30 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
+import org.springframework.jdbc.datasource.DataSourceUtils;
 import com.aestallon.storageexplorer.common.util.IO;
 import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResults;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 
-public sealed abstract class ObjectEntryLoadingService {
+public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>> {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntryLoadingService.class);
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-  protected final StorageIndex storageIndex;
+  protected final T storageIndex;
 
-  protected ObjectEntryLoadingService(final StorageIndex storageIndex) {
+  protected ObjectEntryLoadingService(final T storageIndex) {
     this.storageIndex = storageIndex;
   }
 
@@ -95,10 +100,41 @@ public sealed abstract class ObjectEntryLoadingService {
     }
   }
 
+  protected final ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry,
+                                                  final ObjectEntryLoadResult headLoadResult,
+                                                  final boolean headVersionOnly) {
+    if (headLoadResult.isErr()) {
+      return headLoadResult;
+    }
+
+    final ObjectEntryLoadResult.SingleVersion head = switch (headLoadResult) {
+      case ObjectEntryLoadResult.SingleVersion sv -> sv;
+      case ObjectEntryLoadResult.MultiVersion mv -> mv.head();
+      default -> throw new AssertionError("Unexpected head load result " + headLoadResult);
+    };
+    if (!objectEntry.valid()) {
+      objectEntry.refresh(head.objectAsMap());
+    }
+
+    if (headLoadResult instanceof ObjectEntryLoadResult.SingleVersion sv) {
+      return sv;
+    }
+
+    if (headVersionOnly) {
+      return headLoadResult;
+    }
+
+    return ObjectEntryLoadResults.multiVersion(
+        head,
+        storageIndex.objectApi,
+        OBJECT_MAPPER,
+        Long.MAX_VALUE);
+  }
 
 
-  static final class FileSystem extends ObjectEntryLoadingService {
 
+  static final class FileSystem extends ObjectEntryLoadingService<FileSystemStorageIndex> {
+    
     FileSystem(FileSystemStorageIndex storageIndex) {
       super(storageIndex);
     }
@@ -113,8 +149,8 @@ public sealed abstract class ObjectEntryLoadingService {
 
     private ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry,
                                             final boolean headVersionOnly) {
-      final var node = loadObjectNode(objectEntry);
-      return loadInner(objectEntry, node, headVersionOnly);
+        final var node = loadObjectNode(objectEntry);
+        return loadInner(objectEntry, node, headVersionOnly);
     }
 
     private ObjectNode loadObjectNode(ObjectEntry entry) {
@@ -163,12 +199,13 @@ public sealed abstract class ObjectEntryLoadingService {
       int timeoutMillisMax) {
 
     public static final RelationalDatabaseLoadingServiceParameters DEFAULT =
-        new RelationalDatabaseLoadingServiceParameters(500, 20, 2_000);
+        new RelationalDatabaseLoadingServiceParameters(150, 20, 2_000);
 
   }
 
 
-  static final class RelationalDatabase extends ObjectEntryLoadingService {
+  static final class RelationalDatabase
+      extends ObjectEntryLoadingService<RelationalDatabaseStorageIndex> {
 
     private record LoadingTask(ObjectEntry objectEntry, boolean headVersionOnly) {}
 
@@ -193,7 +230,7 @@ public sealed abstract class ObjectEntryLoadingService {
 
     private Thread startWorker() {
       return Thread.ofPlatform().name("Batch Loader").start(() -> {
-        while (true) {
+        while (!Thread.currentThread().isInterrupted()) {
           try {
             processBatch();
           } catch (final InterruptedException e) {
@@ -222,6 +259,8 @@ public sealed abstract class ObjectEntryLoadingService {
       final var timeoutMillisMax = params.timeoutMillisMax;
       final var timeoutMillisMin = params.timeoutMillisMin;
 
+      storageIndex.publishEvent(new LoadingQueueSize(queue.size()));
+      
       final List<LoadingTask> batch = new ArrayList<>(batchSize);
       final var t = queue.poll(timeoutMillis.get(), TimeUnit.MILLISECONDS);
       if (t != null) {
@@ -233,19 +272,17 @@ public sealed abstract class ObjectEntryLoadingService {
       }
 
       if (!batch.isEmpty()) {
-        final List<ObjectNode> nodes = batch.stream()
+        final List<ObjectEntryLoadResult> results = batch.stream()
             .map(LoadingTask::objectEntry)
             .map(ObjectEntry::uri)
-            .collect(collectingAndThen(toList(), storageIndex.objectApi::loadBatch));
-        // instead of logging here, we should emit an event, and display this on the UI...
-        log.info("Batch loaded [ {} ] | Remaining queue size [ {} ]", nodes.size(), queue.size());
-        for (int i = 0; i < nodes.size(); i++) {
+            .collect(collectingAndThen(toList(), storageIndex::loadBatch));
+        for (int i = 0; i < results.size(); i++) {
           final LoadingTask task = batch.get(i);
           final ObjectEntry e = task.objectEntry();
           final boolean headVersionOnly = task.headVersionOnly();
-          final ObjectNode n = nodes.get(i);
+          final ObjectEntryLoadResult loadResult = results.get(i);
           executor.submit(() -> {
-            final ObjectEntryLoadResult r = loadInner(e, n, headVersionOnly);
+            final ObjectEntryLoadResult r = loadInner(e, loadResult, headVersionOnly);
             final CompletableFuture<ObjectEntryLoadResult> f = pendingRequests.remove(task);
             if (f != null) {
               f.complete(r);

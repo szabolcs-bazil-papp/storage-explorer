@@ -25,7 +25,7 @@ public final class StorageEntryFactory {
   public static final String STORED_SEQ_MARKER = "/storedSeq";
 
 
-  public static Builder builder(final StorageIndex storageIndex,
+  public static Builder builder(final StorageIndex<?> storageIndex,
                                 final ObjectApi objectApi,
                                 final CollectionApi collectionApi) {
     return new Builder(storageIndex, objectApi, collectionApi);
@@ -46,7 +46,7 @@ public final class StorageEntryFactory {
     return (idx > 0) ? OptionalInt.of(idx) : OptionalInt.empty();
   }
 
-  private final StorageIndex storageIndex;
+  private final StorageIndex<?> storageIndex;
   private final StorageId id;
   private final ObjectApi objectApi;
   private final CollectionApi collectionApi;
@@ -100,13 +100,13 @@ public final class StorageEntryFactory {
 
 
   public static final class Builder {
-    private final StorageIndex storageIndex;
+    private final StorageIndex<?> storageIndex;
     private final ObjectApi objectApi;
     private final CollectionApi collectionApi;
 
     private Path pathToStorage;
 
-    private Builder(StorageIndex storageIndex, ObjectApi objectApi, CollectionApi collectionApi) {
+    private Builder(StorageIndex<?> storageIndex, ObjectApi objectApi, CollectionApi collectionApi) {
       this.storageIndex = Objects.requireNonNull(storageIndex, "StorageId must not be null!");
       this.objectApi = Objects.requireNonNull(objectApi, "ObjectApi must not be null!");
       this.collectionApi = Objects.requireNonNull(collectionApi, "CollectionApi must not be null!");

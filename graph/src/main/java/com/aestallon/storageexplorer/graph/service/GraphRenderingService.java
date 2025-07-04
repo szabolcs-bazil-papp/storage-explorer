@@ -20,6 +20,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.slf4j.Logger;
@@ -32,9 +35,6 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.graph.service.internal.IncomingEdgeDiscoveryService;
 import com.aestallon.storageexplorer.graph.service.internal.NodeAdditionService;
 import com.aestallon.storageexplorer.graph.service.internal.OutgoingEdgeDiscoveryService;
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 
 public final class GraphRenderingService {
 
@@ -75,6 +75,13 @@ public final class GraphRenderingService {
     if (inboundLimit != 0) {
       renderIncomingReferences(graph, storageEntry);
     }
+    
+    graph.nodes()
+        .forEach(node -> {
+          node.setAttribute(Attributes.INLINE_STYLE, "size: %dpx; fill-color:#%s;".formatted(
+              10 + node.getOutDegree() * 5,
+              NodeColour.ofString(node.getAttribute(Attributes.TYPE_NAME, String.class))));
+        });
   }
 
   public StorageInstance storageInstance() {

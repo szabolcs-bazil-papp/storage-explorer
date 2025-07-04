@@ -48,6 +48,10 @@ public class LoadEntryController extends AbstractDialogController<String> {
     if (!input.contains(":/")) {
       return false;
     }
+    
+    if (input.endsWith(".") || input.endsWith(".v")) {
+      return false;
+    }
 
     // must contain a stored collection identifier or a timestamp segment:
     if (!containsStoredCollectionIdentifier(input) && !containsTimestampPattern(input)) {

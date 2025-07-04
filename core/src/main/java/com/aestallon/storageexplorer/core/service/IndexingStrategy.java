@@ -2,9 +2,11 @@ package com.aestallon.storageexplorer.core.service;
 
 import java.net.URI;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -12,9 +14,15 @@ import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.common.util.Pair;
+import com.aestallon.storageexplorer.core.util.AbstractEntryEvaluationExecutor;
 import static java.util.stream.Collectors.groupingBy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public interface IndexingStrategy {
+
+  Logger log = LoggerFactory.getLogger(IndexingStrategy.class);
+
 
   @FunctionalInterface
   interface StorageEntryCreator extends Function<URI, Optional<? extends StorageEntry>> {}
@@ -110,12 +118,53 @@ public interface IndexingStrategy {
     @Override
     public Map<URI, StorageEntry> processEntries(Stream<URI> uris, StorageEntryCreator creator) {
       final var map = super.processEntries(uris, creator);
-      map.values().stream()
-          .parallel()
-          .forEach(StorageEntry::refresh);
+      log.info("Indexing strategy FULL: {} entries indexed", map.size());
+      log.info("Refreshing {} entries...", map.size());
+      new EntryProcessor.Builder(null, new HashSet<>(map.values())).build().execute();
       return map;
     }
 
+  }
+  
+  final class EntryProcessor extends AbstractEntryEvaluationExecutor<Void, EntryProcessor> {
+
+    static final class Builder extends AbstractEntryEvaluationExecutor.Builder<EntryProcessor, Builder> {
+
+      Builder(StorageInstanceExaminer examiner,
+              Set<StorageEntry> entries) {
+        super(examiner, entries);
+      }
+
+      @Override
+      protected Builder self() {
+        return this;
+      }
+
+      @Override
+      public EntryProcessor build() {
+        return new EntryProcessor(this);
+      }
+    }
+    
+    
+    private EntryProcessor(Builder builder) {
+      super(builder);
+    }
+
+    @Override
+    protected boolean shortCircuit() {
+      return false;
+    }
+
+    @Override
+    protected boolean doNotExecute() {
+      return false;
+    }
+
+    @Override
+    protected void work(StorageEntry entry) {
+      entry.refresh();
+    }
   }
 
 }

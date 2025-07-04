@@ -5,6 +5,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkCompletedEvent;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkStartedEvent;
+import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
 import com.aestallon.storageexplorer.swing.ui.AppContentView;
 
 @Service
@@ -24,6 +25,11 @@ public class BackgroundWorkController {
   @EventListener
   public void onCompleted(final BackgroundWorkCompletedEvent event) {
     SwingUtilities.invokeLater(appContentView::removeProgressBar);
+  }
+  
+  @EventListener
+  public void onLoadingQueueSizeChanged(final LoadingQueueSize event) {
+    SwingUtilities.invokeLater(() -> appContentView.setLoadingQueueSize(event.size()));
   }
   
 }

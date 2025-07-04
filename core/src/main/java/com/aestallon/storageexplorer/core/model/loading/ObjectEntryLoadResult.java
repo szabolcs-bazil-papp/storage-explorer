@@ -29,9 +29,9 @@ public sealed interface ObjectEntryLoadResult permits
 
 
   /*
-   * The previous implementation was a disgrace: we eagerly loaded every object version AND we
+   * The previous implementation was a disgrace: we eagerly loaded every object version, AND we
    * serialised it back to have a nice oamStr ready to go. This was horribly inefficient
-   * (flame-graph revealed we spend most of the time deserializing and re-serializing entry versions
+   * (flame-graph revealed we spend most of the time deserialising and re-serialising entry versions
    * which we probably will never need...). Thus, we load every non-head object version lazily,
    * on-demand - at least if we are running on FS storage...
    */
@@ -49,9 +49,11 @@ public sealed interface ObjectEntryLoadResult permits
       private final Map<String, Object> objectAsMap;
       private final Supplier<String> oamSupplier;
 
-      Eager(final ObjectNode node, final ObjectMapper objectMapper) {
-        meta = ObjectEntryMeta.of(node.getData());
-        objectAsMap = node.getObjectAsMap();
+      public Eager(final ObjectEntryMeta meta,
+            final Map<String, Object> objectAsMap,
+            final ObjectMapper objectMapper) {
+        this.meta = meta;
+        this.objectAsMap = objectAsMap;
         oamSupplier = () -> {
           try {
             return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectAsMap);
@@ -59,6 +61,10 @@ public sealed interface ObjectEntryLoadResult permits
             return "ERROR SERIALIZING OBJECT-AS-MAP!";
           }
         };
+      }
+
+      Eager(final ObjectNode node, final ObjectMapper objectMapper) {
+        this(ObjectEntryMeta.of(node.getData()), node.getObjectAsMap(), objectMapper);
       }
 
       @Override
@@ -136,7 +142,7 @@ public sealed interface ObjectEntryLoadResult permits
     public boolean isOk() {
       return true;
     }
-    
+
     public SingleVersion head() {
       return versions.getLast();
     }

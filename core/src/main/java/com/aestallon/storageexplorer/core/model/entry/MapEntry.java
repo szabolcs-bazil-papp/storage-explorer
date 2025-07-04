@@ -19,10 +19,12 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Set;
-import org.smartbit4all.api.collection.CollectionApi;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.common.util.Uris;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.toSet;
+import org.smartbit4all.api.collection.CollectionApi;
+import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 
 public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
 
@@ -33,6 +35,7 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   private final String schema;
   private final String name;
 
+  private final Lock refreshLock = new ReentrantLock(true);
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
@@ -79,12 +82,23 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
 
   @Override
   public void refresh() {
-    this.uriProperties = collectionApi.map(schema, name).uris().entrySet().stream()
-        .map(e -> UriProperty.of(
-            new UriProperty.Segment[] { UriProperty.Segment.key(e.getKey()) },
-            e.getValue()))
-        .collect(toSet());
-    valid = true;
+    if (valid) {
+      return;
+    }
+
+    refreshLock.lock();
+    try {
+
+      this.uriProperties = collectionApi.map(schema, name).uris().entrySet().stream()
+          .map(e -> UriProperty.of(
+              new UriProperty.Segment[] { UriProperty.Segment.key(e.getKey()) },
+              e.getValue()))
+          .collect(toSet());
+      valid = true;
+
+    } finally {
+      refreshLock.unlock();
+    }
   }
 
   @Override
@@ -98,18 +112,34 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
 
   @Override
   public void accept(StorageEntry storageEntry) {
-    if (Objects.requireNonNull(storageEntry) instanceof MapEntry that && that.valid) {
-      uriProperties = that.uriProperties();
-      valid = true;
+    refreshLock.lock();
+    
+    try {
+
+      if (Objects.requireNonNull(storageEntry) instanceof MapEntry that && that.valid) {
+        uriProperties = that.uriProperties();
+        valid = true;
+      }
+      
+    } finally {
+      refreshLock.unlock();
     }
   }
 
   @Override
+  public void setUriProperties(Set<UriProperty> uriProperties) {
+    this.uriProperties = uriProperties;
+    this.valid = true;
+  }
+
+  @Override
   public boolean equals(Object o) {
-    if (this == o)
+    if (this == o) {
       return true;
-    if (o == null || getClass() != o.getClass())
+    }
+    if (o == null || getClass() != o.getClass()) {
       return false;
+    }
     MapEntry mapEntry = (MapEntry) o;
     return Uris.equalIgnoringVersion(uri, mapEntry.uri);
   }

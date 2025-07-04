@@ -22,18 +22,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
-import com.aestallon.storageexplorer.common.util.IO;
-import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
+import com.aestallon.storageexplorer.core.service.cache.StorageIndexCache;
 
-public final class FileSystemStorageIndex extends StorageIndex {
+public final class FileSystemStorageIndex extends StorageIndex<FileSystemStorageIndex> {
 
   private static final Logger log = LoggerFactory.getLogger(FileSystemStorageIndex.class);
 
   private final Path pathToStorage;
-  private final ObjectEntryLoadingService objectEntryLoadingService;
+  private final ObjectEntryLoadingService<FileSystemStorageIndex> objectEntryLoadingService;
 
   public FileSystemStorageIndex(
       StorageId storageId,
@@ -43,10 +42,14 @@ public final class FileSystemStorageIndex extends StorageIndex {
     super(storageId, objectApi, collectionApi);
     this.pathToStorage = pathToStorage;
     this.objectEntryLoadingService = new ObjectEntryLoadingService.FileSystem(this);
+    this.storageEntryFactory = StorageEntryFactory.builder(this, objectApi, collectionApi)
+        .pathToStorage(pathToStorage)
+        .build();
+    this.cache = StorageIndexCache.inMemory();
   }
 
   @Override
-  public ObjectEntryLoadingService loader() {
+  public ObjectEntryLoadingService<FileSystemStorageIndex> loader() {
     return objectEntryLoadingService;
   }
 
@@ -58,13 +61,6 @@ public final class FileSystemStorageIndex extends StorageIndex {
   @Override
   protected Stream<URI> fetchEntries(IndexingTarget target) {
     return FileSystemStorageWalker.of(pathToStorage).walk(target);
-  }
-
-  @Override
-  protected StorageEntryFactory storageEntryFactory() {
-    return StorageEntryFactory.builder(this, objectApi, collectionApi)
-        .pathToStorage(pathToStorage)
-        .build();
   }
 
 }

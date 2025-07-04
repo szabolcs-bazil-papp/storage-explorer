@@ -118,12 +118,12 @@ public class StorageEntryInspectorViewFactory {
     }
 
     final InspectorView<? extends StorageEntry> inspector;
-    if (storageEntry instanceof ObjectEntry) {
-      inspector = new ObjectEntryInspectorView((ObjectEntry) storageEntry, this);
+    if (storageEntry instanceof ObjectEntry o) {
+      inspector = new ObjectEntryInspectorView(o, this);
     } else if (storageEntry instanceof ListEntry || storageEntry instanceof MapEntry) {
       inspector = new CollectionEntryInspectorView(storageEntry, this);
-    } else if (storageEntry instanceof SequenceEntry) {
-      inspector = new SequenceEntryInspectorView((SequenceEntry) storageEntry);
+    } else if (storageEntry instanceof SequenceEntry s) {
+      inspector = new SequenceEntryInspectorView(s);
     } else {
       throw new AssertionError(storageEntry + " is not interpreted - TYPE ERROR!");
     }
