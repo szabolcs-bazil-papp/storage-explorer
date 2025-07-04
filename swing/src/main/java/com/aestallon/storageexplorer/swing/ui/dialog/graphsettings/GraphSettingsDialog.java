@@ -68,7 +68,7 @@ public class GraphSettingsDialog extends JDialog {
     comboBoxNodeColouring.getModel().setSelectedItem(initialModel.getNodeColouring().getValue());
     discoverNodesOnTheCheckBox.getModel().setSelected(initialModel.getAggressiveDiscovery());
 
-
+    setTitle("Graph Settings");
     setContentPane(contentPane);
     setModal(true);
     getRootPane().setDefaultButton(buttonOK);
@@ -287,7 +287,7 @@ public class GraphSettingsDialog extends JDialog {
     nodeDiscoveryHelp.setEditable(false);
     nodeDiscoveryHelp.setEnabled(false);
     nodeDiscoveryHelp.setText(
-        "All graphs rendered from an origin node. The outbound limit defines how many iterations should the renderer do the ......");
+        "Additional information available on the individual widget tooltips.");
     panelNodeDiscovery.add(nodeDiscoveryHelp,
         new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
             GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,

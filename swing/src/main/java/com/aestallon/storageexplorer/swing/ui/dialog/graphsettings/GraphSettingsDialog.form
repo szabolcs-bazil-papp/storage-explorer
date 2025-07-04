@@ -198,7 +198,7 @@
                 <properties>
                   <editable value="false"/>
                   <enabled value="false"/>
-                  <text value="All graphs rendered from an origin node. The outbound limit defines how many iterations should the renderer do the ......" noi18n="true"/>
+                  <text value="Additional information available on the individual widget tooltips." noi18n="true"/>
                 </properties>
               </component>
             </children>
