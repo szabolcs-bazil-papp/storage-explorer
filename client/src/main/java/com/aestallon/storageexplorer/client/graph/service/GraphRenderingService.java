@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.client.graph.service.internal.IncomingEdgeDiscoveryService;
 import com.aestallon.storageexplorer.client.graph.service.internal.NodeAdditionService;
 import com.aestallon.storageexplorer.client.graph.service.internal.OutgoingEdgeDiscoveryService;
+import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.aestallon.storageexplorer.common.util.Attributes;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -41,27 +42,19 @@ public final class GraphRenderingService {
   private static final Logger log = LoggerFactory.getLogger(GraphRenderingService.class);
 
   private final StorageInstance storageInstance;
-  private int inboundLimit;
-  private int outboundLimit;
+  private final GraphSettings settings;
 
   private final IncomingEdgeDiscoveryService incomingEdgeDiscoveryService;
   private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
   private final NodeAdditionService nodeAdditionService;
 
-  public GraphRenderingService(StorageInstance storageInstance, int inboundLimit,
-                               int outboundLimit) {
+  public GraphRenderingService(StorageInstance storageInstance, GraphSettings settings) {
     this.storageInstance = storageInstance;
-    this.inboundLimit = inboundLimit;
-    this.outboundLimit = outboundLimit;
+    this.settings = settings;
 
     incomingEdgeDiscoveryService = new IncomingEdgeDiscoveryService(storageInstance);
     outgoingEdgeDiscoveryService = new OutgoingEdgeDiscoveryService(storageInstance);
     nodeAdditionService = new NodeAdditionService();
-  }
-
-  public void setLimits(final int inboundLimit, final int outboundLimit) {
-    this.inboundLimit = inboundLimit;
-    this.outboundLimit = outboundLimit;
   }
 
   public void render(Graph graph, StorageEntry storageEntry) {
@@ -69,10 +62,10 @@ public final class GraphRenderingService {
       nodeAdditionService.addOrigin(graph, storageEntry);
     }
 
-    if (outboundLimit != 0) {
+    if (settings.getGraphTraversalOutboundLimit() != 0) {
       renderOutgoingReferences(graph, storageEntry);
     }
-    if (inboundLimit != 0) {
+    if (settings.getGraphTraversalInboundLimit() != 0) {
       renderIncomingReferences(graph, storageEntry);
     }
     
@@ -89,6 +82,7 @@ public final class GraphRenderingService {
   }
 
   private void renderOutgoingReferences(Graph graph, StorageEntry storageEntry) {
+    final var limit = settings.getGraphTraversalOutboundLimit();
     Map<StorageEntry, Set<Pair<StorageEntry, Set<UriProperty>>>> refs = outgoingEdgeDiscoveryService
         .execute(graph, storageEntry)
         .collect(collectingAndThen(toSet(), s -> Map.of(storageEntry, s)));
@@ -109,10 +103,11 @@ public final class GraphRenderingService {
               it -> outgoingEdgeDiscoveryService
                   .execute(graph, it)
                   .collect(toSet())));
-    } while ((++c < outboundLimit || outboundLimit < 0) && hasValues(refs));
+    } while ((++c < limit || limit < 0) && hasValues(refs));
   }
 
   private void renderIncomingReferences(Graph graph, StorageEntry storageEntry) {
+    final var limit = settings.getGraphTraversalInboundLimit();
     Map<StorageEntry, Set<StorageEntry>> referrers = Map.of(
         storageEntry,
         incomingEdgeDiscoveryService.execute(graph, storageEntry).
@@ -133,7 +128,7 @@ public final class GraphRenderingService {
               .execute(graph, it)
               .filter(r -> NodeAdditionService.edgeMissing(graph, r, it))
               .collect(toSet())));
-    } while ((++c < inboundLimit || inboundLimit < 1) && hasValues(referrers));
+    } while ((++c < limit || limit < 1) && hasValues(referrers));
   }
 
   private static boolean hasValues(Map<?, ? extends Set<?>> m) {

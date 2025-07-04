@@ -16,13 +16,13 @@
 package com.aestallon.storageexplorer.swing.ui.dialog.graphsettings;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.Arrays;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
@@ -52,18 +52,30 @@ public class GraphSettingsDialog extends JDialog {
   private JPanel panelRendering;
   private JTextPane nodeDiscoveryHelp;
 
-  public GraphSettingsDialog() {
+  private final GraphSettingsController controller;
+
+  public GraphSettingsDialog(GraphSettingsController controller) {
+    this.controller = controller;
+
+    final var initialModel = controller.initialModel();
+    spinnerInbound.getModel().setValue(initialModel.getGraphTraversalInboundLimit());
+    spinnerOutboundLimit.getModel().setValue(initialModel.getGraphTraversalOutboundLimit());
+    blacklistSchema.setText(String.join(", ", initialModel.getBlacklistedSchemas()));
+    blacklistType.setText(String.join(", ", initialModel.getBlacklistedTypes()));
+    whitelistSchema.setText(String.join(", ", initialModel.getWhitelistedSchemas()));
+    whiteListType.setText(String.join(", ", initialModel.getWhitelistedTypes()));
+    comboBoxNodeSizing.getModel().setSelectedItem(initialModel.getNodeSizing().getValue());
+    comboBoxNodeColouring.getModel().setSelectedItem(initialModel.getNodeColouring().getValue());
+    discoverNodesOnTheCheckBox.getModel().setSelected(initialModel.getAggressiveDiscovery());
+
+
     setContentPane(contentPane);
     setModal(true);
     getRootPane().setDefaultButton(buttonOK);
 
-    buttonOK.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) { onOK(); }
-    });
+    buttonOK.addActionListener(e -> onOK());
 
-    buttonCancel.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) { onCancel(); }
-    });
+    buttonCancel.addActionListener(e -> onCancel());
 
     // call onCancel() when cross is clicked
     setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -74,16 +86,31 @@ public class GraphSettingsDialog extends JDialog {
     });
 
     // call onCancel() on ESCAPE
-    contentPane.registerKeyboardAction(new ActionListener() {
-                                         public void actionPerformed(ActionEvent e) {
-                                           onCancel();
-                                         }
-                                       }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+    contentPane.registerKeyboardAction(
+        e -> onCancel(),
+        KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
         JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
   }
 
   private void onOK() {
-    // add your code here
+    // TODO: Validate!
+    final var model = new GraphSettings()
+        .graphTraversalInboundLimit((Integer) spinnerInbound.getModel().getValue())
+        .graphTraversalOutboundLimit((Integer) spinnerOutboundLimit.getModel().getValue())
+        .blacklistedSchemas(
+            Arrays.stream(blacklistSchema.getText().split(",")).map(String::trim).toList())
+        .blacklistedTypes(
+            Arrays.stream(blacklistType.getText().split(",")).map(String::trim).toList())
+        .whitelistedSchemas(
+            Arrays.stream(whitelistSchema.getText().split(",")).map(String::trim).toList())
+        .whitelistedTypes(
+            Arrays.stream(whiteListType.getText().split(",")).map(String::trim).toList())
+        .nodeSizing(GraphSettings.NodeSizing.fromValue(
+            comboBoxNodeSizing.getModel().getSelectedItem().toString()))
+        .nodeColouring(GraphSettings.NodeColouring.fromValue(
+            comboBoxNodeColouring.getModel().getSelectedItem().toString()))
+        .aggressiveDiscovery(discoverNodesOnTheCheckBox.getModel().isSelected());
+    controller.finish(model);
     dispose();
   }
 
@@ -93,7 +120,7 @@ public class GraphSettingsDialog extends JDialog {
   }
 
   public static void main(String[] args) {
-    GraphSettingsDialog dialog = new GraphSettingsDialog();
+    GraphSettingsDialog dialog = new GraphSettingsDialog(GraphSettingsController.dummy());
     dialog.pack();
     dialog.setVisible(true);
     System.exit(0);

@@ -15,14 +15,11 @@
 
 package com.aestallon.storageexplorer.client.userconfig.event;
 
-public record GraphConfigChanged(int newInboundLimit, int newOutboundLimit) {
+public record GraphConfigChanged() {
 
   @Override
   public String toString() {
-    return "GraphConfigChanged{" +
-        "newInboundLimit=" + newInboundLimit +
-        ", newOutboundLimit=" + newOutboundLimit +
-        '}';
+    return "Graph Config Changed Event";
   }
 
 }

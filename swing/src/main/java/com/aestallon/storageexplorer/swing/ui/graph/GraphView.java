@@ -67,20 +67,20 @@ public class GraphView extends JPanel {
   private static final Logger log = LoggerFactory.getLogger(GraphView.class);
   public static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm");
 
-  private Graph graph;
-  private Viewer viewer;
+  private transient Graph graph;
+  private transient Viewer viewer;
   private ViewPanel panel;
   private JPanel overlay;
-  private SpriteManager sprites;
-  private KeyListener screenshotListener;
-  private StorageEntry origin;
-  private StorageEntry currentHighlight;
-  private GraphRenderingService graphRenderingService;
+  private transient @SuppressWarnings("unused") SpriteManager sprites;
+  private transient KeyListener screenshotListener;
+  private transient StorageEntry origin;
+  private transient StorageEntry currentHighlight;
+  private transient GraphRenderingService graphRenderingService;
 
-  private final StorageInstanceProvider storageInstanceProvider;
-  private final ApplicationEventPublisher eventPublisher;
-  private final UserConfigService userConfigService;
-  private final LafService lafService;
+  private final transient StorageInstanceProvider storageInstanceProvider;
+  private final transient ApplicationEventPublisher eventPublisher;
+  private final transient UserConfigService userConfigService;
+  private final transient LafService lafService;
 
   public GraphView(StorageInstanceProvider storageInstanceProvider,
                    ApplicationEventPublisher eventPublisher,
@@ -109,14 +109,8 @@ public class GraphView extends JPanel {
     }
 
     final StorageInstance storageInstance = storageInstanceProvider.storageInstanceOf(storageEntry);
-    if (graphRenderingService == null || !storageInstance.equals(
-        graphRenderingService.storageInstance())) {
-      final var userConfig = userConfigService.graphSettings();
-      graphRenderingService = new GraphRenderingService(
-          storageInstance,
-          userConfig.getGraphTraversalInboundLimit(),
-          userConfig.getGraphTraversalOutboundLimit());
-    }
+    final var userConfig = userConfigService.graphSettings();
+    graphRenderingService = new GraphRenderingService(storageInstance, userConfig);
     origin = storageEntry;
 
     graph = new MultiGraph("fs");
@@ -151,9 +145,9 @@ public class GraphView extends JPanel {
   }
 
   private JPanel overlay() {
-    final var overlay = new JPanel();
-    overlay.setOpaque(false);
-    overlay.setLayout(new BoxLayout(overlay, BoxLayout.Y_AXIS));
+    final var overlayPanel = new JPanel();
+    overlayPanel.setOpaque(false);
+    overlayPanel.setLayout(new BoxLayout(overlayPanel, BoxLayout.Y_AXIS));
 
     final var closeBtn = new JButton(IconProvider.CLOSE);
     closeBtn.addActionListener(
@@ -166,8 +160,8 @@ public class GraphView extends JPanel {
     box.add(Box.createGlue());
     box.add(closeBtn);
 
-    overlay.add(box);
-    return overlay;
+    overlayPanel.add(box);
+    return overlayPanel;
   }
 
   public void discard() {
@@ -191,8 +185,6 @@ public class GraphView extends JPanel {
     currentHighlight = null;
     origin = null;
     screenshotListener = null;
-    // TODO: Maybe not needed?
-    graphRenderingService = null;
   }
 
   public boolean displayingStorageAt(final StorageInstance storageInstance) {
@@ -206,11 +198,6 @@ public class GraphView extends JPanel {
 
     graphRenderingService.changeHighlight(graph, currentHighlight, storageEntry);
     currentHighlight = storageEntry;
-  }
-
-  private void showNodePopup(final StorageEntry entry, final int x, final int y) {
-    final var popup = new NodePopupMenu(entry, graph, graphRenderingService);
-    popup.show(GraphView.this, x, y);
   }
 
   private final class GraphViewMouseManager
@@ -283,6 +270,11 @@ public class GraphView extends JPanel {
       }
     }
 
+    private void showNodePopup(final StorageEntry entry, final int x, final int y) {
+      final var popup = new NodePopupMenu(entry, graph, graphRenderingService);
+      popup.show(GraphView.this, x, y);
+    }
+
     private Optional<StorageEntry> getStorageEntry(MouseEvent e) {
       final GraphicElement node = view.findGraphicElementAt(getManagedTypes(), e.getX(), e.getY());
       if (node == null) {
@@ -313,11 +305,11 @@ public class GraphView extends JPanel {
 
     @Override
     public void mouseWheelMoved(MouseWheelEvent e) {
-      Camera camera = view.getCamera();
+      final Camera camera = view.getCamera();
       final double viewPercent = camera.getViewPercent();
       final double delta = (double) e.getWheelRotation() / 100;
       final double newZoom = viewPercent + delta;
-      camera.setViewPercent(Math.min(Math.max(0.01d, newZoom), 1));
+      camera.setViewPercent(Math.clamp(0.01d, newZoom, 1));
     }
   }
 
@@ -325,7 +317,7 @@ public class GraphView extends JPanel {
   private final class ScreenshotListener implements KeyListener {
 
     @Override
-    public void keyTyped(KeyEvent e) {}
+    public void keyTyped(KeyEvent e) { /* NO OP */ }
 
     @Override
     public void keyPressed(KeyEvent e) {
@@ -341,7 +333,7 @@ public class GraphView extends JPanel {
     }
 
     @Override
-    public void keyReleased(KeyEvent e) {}
+    public void keyReleased(KeyEvent e) { /* NO OP */}
 
   }
 
@@ -353,7 +345,6 @@ public class GraphView extends JPanel {
         return;
       }
 
-      graphRenderingService.setLimits(e.newInboundLimit(), e.newOutboundLimit());
       if (origin == null) {
         return;
       }

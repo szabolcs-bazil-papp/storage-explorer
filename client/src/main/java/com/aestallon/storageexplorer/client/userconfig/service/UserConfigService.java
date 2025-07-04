@@ -162,9 +162,7 @@ public class UserConfigService {
 
     this.graphSettings.set(graphSettings);
     writeSettingsTo("graph.settings", graphSettings);
-    eventPublisher.publishEvent(new GraphConfigChanged(
-        graphSettings.getGraphTraversalInboundLimit(),
-        graphSettings.getGraphTraversalOutboundLimit()));
+    eventPublisher.publishEvent(new GraphConfigChanged());
   }
   
   public ArcScriptFileService arcScriptFileService() {
