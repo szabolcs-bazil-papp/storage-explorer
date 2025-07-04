@@ -102,7 +102,7 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     return res.size();
   }
 
-  void clear() {
+  public void clear() {
     cache.clear();
   }
 

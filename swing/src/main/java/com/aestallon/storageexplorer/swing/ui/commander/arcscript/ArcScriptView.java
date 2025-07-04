@@ -13,13 +13,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import static java.util.stream.Collectors.joining;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellRenderer;
-import javax.swing.table.TableColumn;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.parser.AbstractParser;
@@ -31,7 +30,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
-import com.aestallon.storageexplorer.arcscript.export.ResultSetExporterFactory;
+import com.aestallon.storageexplorer.client.asexport.ResultSetExporterFactory;
+import com.aestallon.storageexplorer.client.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkCompletedEvent;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkStartedEvent;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
@@ -39,12 +39,10 @@ import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.event.StorageReindexed;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
-import com.aestallon.storageexplorer.core.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.TableDisplayMagic;
-import static java.util.stream.Collectors.joining;
 
 public class ArcScriptView extends JPanel {
 

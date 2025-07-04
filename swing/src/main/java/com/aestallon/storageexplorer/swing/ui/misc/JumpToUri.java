@@ -4,11 +4,11 @@ import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
+import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.event.EntryAcquired;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
 
 public final class JumpToUri {
 
