@@ -70,6 +70,7 @@ public class GraphSettingsDialog extends JDialog {
     discoverNodesOnTheCheckBox.getModel().setSelected(initialModel.getAggressiveDiscovery());
 
     setTitle("Graph Settings");
+    setPreferredSize(new Dimension(700, 700));
     setContentPane(contentPane);
     setModal(true);
     getRootPane().setDefaultButton(buttonOK);
@@ -110,10 +111,10 @@ public class GraphSettingsDialog extends JDialog {
     controller.finish(model);
     dispose();
   }
-  
+
   private java.util.List<String> toCommaSeparatedList(JTextComponent c) {
     return Arrays.stream(c.getText()
-        .split(","))
+            .split(","))
         .map(String::trim)
         .filter(it -> !it.isBlank())
         .toList();
@@ -197,25 +198,26 @@ public class GraphSettingsDialog extends JDialog {
     labelBlacklistSchema = new JLabel();
     labelBlacklistSchema.setText("Schemae");
     panelBlacklist.add(labelBlacklistSchema,
-        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
-            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
-            false));
+        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     blacklistSchema = new JTextArea();
+    blacklistSchema.setLineWrap(true);
     blacklistSchema.setWrapStyleWord(true);
     panelBlacklist.add(blacklistSchema,
         new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_WANT_GROW, null,
             new Dimension(150, 50), null, 0, false));
     labelBlacklistType = new JLabel();
     labelBlacklistType.setText("Types");
     panelBlacklist.add(labelBlacklistType,
-        new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
-            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
-            false));
+        new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     blacklistType = new JTextArea();
+    blacklistType.setLineWrap(true);
+    blacklistType.setWrapStyleWord(true);
     panelBlacklist.add(blacklistType,
         new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_WANT_GROW, null,
             new Dimension(150, 50), null, 0, false));
     panelWhitelists = new JPanel();
     panelWhitelists.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
@@ -230,24 +232,25 @@ public class GraphSettingsDialog extends JDialog {
     labelWhitelistSchema = new JLabel();
     labelWhitelistSchema.setText("Schemae");
     panelWhitelists.add(labelWhitelistSchema,
-        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
-            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
-            false));
+        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     whitelistSchema = new JTextArea();
+    whitelistSchema.setLineWrap(true);
     panelWhitelists.add(whitelistSchema,
         new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_WANT_GROW, null,
             new Dimension(150, 50), null, 0, false));
     final JLabel label1 = new JLabel();
     label1.setText("Types");
     panelWhitelists.add(label1,
-        new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
-            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
-            false));
+        new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     whiteListType = new JTextArea();
+    whiteListType.setLineWrap(true);
+    whiteListType.setWrapStyleWord(true);
     panelWhitelists.add(whiteListType,
         new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_WANT_GROW, null,
             new Dimension(150, 50), null, 0, false));
     panelNodeDiscovery = new JPanel();
     panelNodeDiscovery.setLayout(new GridLayoutManager(4, 2, new Insets(0, 0, 0, 0), -1, -1));

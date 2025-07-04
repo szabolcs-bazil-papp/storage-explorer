@@ -309,7 +309,7 @@ public class GraphView extends JPanel {
       final double viewPercent = camera.getViewPercent();
       final double delta = (double) e.getWheelRotation() / 100;
       final double newZoom = viewPercent + delta;
-      camera.setViewPercent(Math.clamp(0.01d, newZoom, 1));
+      camera.setViewPercent(Math.clamp(newZoom, 0.01d, 1));
     }
   }
 

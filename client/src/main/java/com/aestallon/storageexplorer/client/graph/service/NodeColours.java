@@ -19,20 +19,22 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
-public class NodeColour {
-  
+public final class NodeColours {
+
   private static final Map<String, String> COLOURS = new ConcurrentHashMap<>();
-  
+
+  private NodeColours() {}
+
   public static String ofType(final StorageEntry entry) {
-    return COLOURS.computeIfAbsent(entry.toString(), NodeColour::stringToColour);
+    return COLOURS.computeIfAbsent(entry.toString(), NodeColours::stringToColour);
   }
-  
+
   public static String ofSchema(final StorageEntry entry) {
-    return COLOURS.computeIfAbsent(entry.uri().getScheme(), NodeColour::stringToColour);
+    return COLOURS.computeIfAbsent(entry.uri().getScheme(), NodeColours::stringToColour);
   }
-  
+
   public static String ofString(final String string) {
-    return COLOURS.computeIfAbsent(string, NodeColour::stringToColour);
+    return COLOURS.computeIfAbsent(string, NodeColours::stringToColour);
   }
 
   private static String stringToColour(String input) {

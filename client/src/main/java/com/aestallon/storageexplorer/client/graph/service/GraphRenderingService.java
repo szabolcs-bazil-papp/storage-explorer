@@ -27,6 +27,7 @@ import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.client.graph.service.internal.AttributeMap;
 import com.aestallon.storageexplorer.client.graph.service.internal.IncomingEdgeDiscoveryService;
 import com.aestallon.storageexplorer.client.graph.service.internal.NodeAdditionService;
 import com.aestallon.storageexplorer.client.graph.service.internal.OutgoingEdgeDiscoveryService;
@@ -47,14 +48,16 @@ public final class GraphRenderingService {
   private final IncomingEdgeDiscoveryService incomingEdgeDiscoveryService;
   private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
   private final NodeAdditionService nodeAdditionService;
+  private final AttributeMap attributeMap;
 
   public GraphRenderingService(StorageInstance storageInstance, GraphSettings settings) {
     this.storageInstance = storageInstance;
     this.settings = settings;
 
+    attributeMap = new AttributeMap();
     incomingEdgeDiscoveryService = new IncomingEdgeDiscoveryService(storageInstance, settings);
     outgoingEdgeDiscoveryService = new OutgoingEdgeDiscoveryService(storageInstance, settings);
-    nodeAdditionService = new NodeAdditionService();
+    nodeAdditionService = new NodeAdditionService(attributeMap);
   }
 
   public void render(Graph graph, StorageEntry storageEntry) {
@@ -68,13 +71,13 @@ public final class GraphRenderingService {
     if (settings.getGraphTraversalInboundLimit() != 0) {
       renderIncomingReferences(graph, storageEntry);
     }
-    
+
     graph.nodes()
-        .forEach(node -> {
-          node.setAttribute(Attributes.INLINE_STYLE, "size: %dpx; fill-color:#%s;".formatted(
-              10 + node.getOutDegree() * 5,
-              NodeColour.ofString(node.getAttribute(Attributes.TYPE_NAME, String.class))));
-        });
+        .forEach(node -> node.setAttribute(
+            Attributes.INLINE_STYLE,
+            "size: %dpx; fill-color:#%s;".formatted(
+                10 + node.getOutDegree() * 3,
+                NodeColours.ofString(attributeMap.get(node, Attributes.TYPE_NAME)))));
   }
 
   public StorageInstance storageInstance() {
@@ -149,8 +152,7 @@ public final class GraphRenderingService {
       Object attribute = fromNode.getAttribute(Attributes.STYLE_CLASS);
       boolean addOrigin = attribute != null && String.valueOf(attribute).contains("origin");
       fromNode.removeAttribute(Attributes.STYLE_CLASS);
-      if (addOrigin)
-        fromNode.setAttribute(Attributes.STYLE_CLASS, "origin");
+      if (addOrigin) { fromNode.setAttribute(Attributes.STYLE_CLASS, "origin"); }
     }
 
     final Node toNode = NodeAdditionService.getNode(graph, to);

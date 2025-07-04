@@ -48,11 +48,11 @@ public class GraphExportService {
       Map<String, Attribute> map = new LinkedHashMap<>();
       map.put("label", DefaultAttribute.createAttribute(it.toString()));
       
-      final var typeColour = NodeColour.ofType(it);
+      final var typeColour = NodeColours.ofType(it);
       map.put("color", DefaultAttribute.createAttribute(typeColour));
       map.put("viz:color", DefaultAttribute.createAttribute(typeColour));
       
-      final var schemaColour = NodeColour.ofSchema(it);
+      final var schemaColour = NodeColours.ofSchema(it);
       map.put("viz:schemacolor", DefaultAttribute.createAttribute(schemaColour));
       
       final var size = it.uriPropertiesStrict().size();

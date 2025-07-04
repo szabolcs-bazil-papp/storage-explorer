@@ -16,7 +16,6 @@
 package com.aestallon.storageexplorer.client.graph.service.internal;
 
 import java.net.URI;
-import java.util.Map;
 import java.util.Set;
 import static java.util.stream.Collectors.joining;
 import org.graphstream.graph.Edge;
@@ -66,8 +65,12 @@ public class NodeAdditionService {
     return graph.getNode(stringKey(uri)) != null;
   }
 
+  
+  private final AttributeMap attributeMap;
 
-  public NodeAdditionService() {}
+  public NodeAdditionService(AttributeMap attributeMap) {
+    this.attributeMap = attributeMap;
+  }
 
   public void add(Graph graph, StorageEntry from, StorageEntry to, Set<UriProperty> on) {
     if (!edgeMissing(graph, from, to)) {
@@ -88,11 +91,13 @@ public class NodeAdditionService {
         MsgStrings.trim(
             on.stream().map(UriProperty::label).collect(joining(" | ")),
             15));
-    edge.setAttribute(Attributes.WEIGHT, on.size());
+    attributeMap.set(edge, Attributes.WEIGHT, String.valueOf(on.size()));
     if (on.stream().noneMatch(UriProperty::isStandalone)) {
       edge.setAttribute(Attributes.STYLE_CLASS, "listref");
     }
-    edge.setAttribute(Attributes.INLINE_STYLE, "size: %dpx;", on.size() * 2);
+    edge.setAttribute(
+        Attributes.INLINE_STYLE, 
+        "size: %dpx;".formatted((int) Math.ceil(((double) on.size()) / 2)));
   }
 
   private Node getOrAddNode(Graph graph, StorageEntry storageEntry) {
@@ -106,10 +111,8 @@ public class NodeAdditionService {
   Node add(Graph graph, StorageEntry storageEntry) {
     final var strKey = stringKey(storageEntry.uri());
     final Node graphNode = graph.addNode(strKey);
-    graphNode.setAttributes(Map.of(
-        Attributes.LABEL, storageEntry.toString(),
-        Attributes.TYPE_NAME, StorageEntry.typeNameOf(storageEntry),
-        Attributes.STORAGE_ENTRY, storageEntry));
+    graphNode.setAttribute(Attributes.LABEL, storageEntry.toString());
+    attributeMap.set(graphNode, Attributes.TYPE_NAME, StorageEntry.typeNameOf(storageEntry));
     return graphNode;
   }
 
