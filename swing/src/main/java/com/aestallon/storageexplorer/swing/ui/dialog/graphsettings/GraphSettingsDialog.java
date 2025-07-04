@@ -22,6 +22,7 @@ import java.awt.event.WindowEvent;
 import java.util.Arrays;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.text.JTextComponent;
 import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
@@ -97,14 +98,10 @@ public class GraphSettingsDialog extends JDialog {
     final var model = new GraphSettings()
         .graphTraversalInboundLimit((Integer) spinnerInbound.getModel().getValue())
         .graphTraversalOutboundLimit((Integer) spinnerOutboundLimit.getModel().getValue())
-        .blacklistedSchemas(
-            Arrays.stream(blacklistSchema.getText().split(",")).map(String::trim).toList())
-        .blacklistedTypes(
-            Arrays.stream(blacklistType.getText().split(",")).map(String::trim).toList())
-        .whitelistedSchemas(
-            Arrays.stream(whitelistSchema.getText().split(",")).map(String::trim).toList())
-        .whitelistedTypes(
-            Arrays.stream(whiteListType.getText().split(",")).map(String::trim).toList())
+        .blacklistedSchemas(toCommaSeparatedList(blacklistSchema))
+        .blacklistedTypes(toCommaSeparatedList(blacklistType))
+        .whitelistedSchemas(toCommaSeparatedList(whitelistSchema))
+        .whitelistedTypes(toCommaSeparatedList(whiteListType))
         .nodeSizing(GraphSettings.NodeSizing.fromValue(
             comboBoxNodeSizing.getModel().getSelectedItem().toString()))
         .nodeColouring(GraphSettings.NodeColouring.fromValue(
@@ -112,6 +109,14 @@ public class GraphSettingsDialog extends JDialog {
         .aggressiveDiscovery(discoverNodesOnTheCheckBox.getModel().isSelected());
     controller.finish(model);
     dispose();
+  }
+  
+  private java.util.List<String> toCommaSeparatedList(JTextComponent c) {
+    return Arrays.stream(c.getText()
+        .split(","))
+        .map(String::trim)
+        .filter(it -> !it.isBlank())
+        .toList();
   }
 
   private void onCancel() {

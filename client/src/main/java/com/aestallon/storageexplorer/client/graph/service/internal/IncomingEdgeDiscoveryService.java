@@ -17,19 +17,24 @@ package com.aestallon.storageexplorer.client.graph.service.internal;
 
 import java.util.stream.Stream;
 import org.graphstream.graph.Graph;
+import com.aestallon.storageexplorer.client.graph.GraphContainmentPredicate;
+import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 
 public class IncomingEdgeDiscoveryService {
 
   private final StorageInstance storageInstance;
+  private final GraphContainmentPredicate inclusionCriterion;
 
-  public IncomingEdgeDiscoveryService(StorageInstance storageInstance) {
+  public IncomingEdgeDiscoveryService(StorageInstance storageInstance, GraphSettings settings) {
     this.storageInstance = storageInstance;
+    this.inclusionCriterion = GraphContainmentPredicate.whiteListBlackListPredicate(settings);
   }
 
   public Stream<StorageEntry> execute(Graph graph, StorageEntry storageEntry) {
     return storageInstance.entities()
+        .filter(it -> inclusionCriterion.test(graph, it))
         .filter(it -> it.references(storageEntry))
         .filter(it -> NodeAdditionService.edgeMissing(graph, it, storageEntry));
   }

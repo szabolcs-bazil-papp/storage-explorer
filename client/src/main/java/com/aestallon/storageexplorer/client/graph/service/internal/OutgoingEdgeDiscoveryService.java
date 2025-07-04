@@ -22,6 +22,7 @@ import static java.util.stream.Collectors.toSet;
 import java.util.stream.Stream;
 import org.graphstream.graph.Graph;
 import com.aestallon.storageexplorer.client.graph.GraphContainmentPredicate;
+import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
@@ -29,17 +30,18 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 
 public class OutgoingEdgeDiscoveryService {
 
-  private static final GraphContainmentPredicate ANY_CONNECTION = (g, se) -> true;
 
   private final StorageInstance storageInstance;
+  private final GraphContainmentPredicate inclusionCriterion;
 
-  public OutgoingEdgeDiscoveryService(StorageInstance storageInstance) {
+  public OutgoingEdgeDiscoveryService(StorageInstance storageInstance, GraphSettings settings) {
     this.storageInstance = storageInstance;
+    this.inclusionCriterion = GraphContainmentPredicate.whiteListBlackListPredicate(settings);
   }
 
   public Stream<Pair<StorageEntry, Set<UriProperty>>> execute(Graph graph,
                                                               StorageEntry storageEntry) {
-    return findConnectionsSatisfying(graph, storageEntry, ANY_CONNECTION);
+    return findConnectionsSatisfying(graph, storageEntry, inclusionCriterion);
   }
 
   public Stream<Pair<StorageEntry, Set<UriProperty>>> findConnectionsWithExistingNodes(Graph graph,

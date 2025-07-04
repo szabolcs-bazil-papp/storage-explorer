@@ -15,9 +15,47 @@
 
 package com.aestallon.storageexplorer.client.graph;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 import org.graphstream.graph.Graph;
+import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
 @FunctionalInterface
-public interface GraphContainmentPredicate extends BiPredicate<Graph, StorageEntry> {}
+public interface GraphContainmentPredicate extends BiPredicate<Graph, StorageEntry> {
+  
+  static GraphContainmentPredicate whiteListBlackListPredicate(GraphSettings settings) {
+    final var ps = new ArrayList<Predicate<StorageEntry>>(4);
+    if (!settings.getBlacklistedSchemas().isEmpty()) {
+      final var bs = new HashSet<>(settings.getBlacklistedSchemas());
+      ps.add(it -> !bs.contains(it.uri().getScheme()));
+    }
+    
+    if (!settings.getBlacklistedTypes().isEmpty()) {
+      final var bt = new HashSet<>(settings.getBlacklistedTypes());
+      ps.add(it -> !bt.contains(StorageEntry.typeNameOf(it)));
+    }
+    
+    if (!settings.getWhitelistedSchemas().isEmpty()) {
+      final var ws = new HashSet<>(settings.getWhitelistedSchemas());
+      ps.add(it -> ws.contains(it.uri().getScheme()));
+    }
+    
+    if (!settings.getWhitelistedTypes().isEmpty()) {
+      final var wt = new HashSet<>(settings.getWhitelistedTypes());
+      ps.add(it -> wt.contains(StorageEntry.typeNameOf(it)));
+    }
+    
+    return (g, e) -> {
+      for (final var p : ps) {
+        if (!p.test(e)) {
+          return false;
+        }
+      }
+      return true;
+    };
+  }
+  
+}

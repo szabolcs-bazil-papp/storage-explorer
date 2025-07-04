@@ -52,8 +52,8 @@ public final class GraphRenderingService {
     this.storageInstance = storageInstance;
     this.settings = settings;
 
-    incomingEdgeDiscoveryService = new IncomingEdgeDiscoveryService(storageInstance);
-    outgoingEdgeDiscoveryService = new OutgoingEdgeDiscoveryService(storageInstance);
+    incomingEdgeDiscoveryService = new IncomingEdgeDiscoveryService(storageInstance, settings);
+    outgoingEdgeDiscoveryService = new OutgoingEdgeDiscoveryService(storageInstance, settings);
     nodeAdditionService = new NodeAdditionService();
   }
 
