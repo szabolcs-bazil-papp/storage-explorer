@@ -10,17 +10,17 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
 import com.aestallon.storageexplorer.common.util.Pair;
+import static com.aestallon.storageexplorer.common.util.Streams.reverse;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import static com.aestallon.storageexplorer.common.util.Streams.reverse;
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
 
 public class StorageInstanceExaminer {
 
@@ -84,16 +84,13 @@ public class StorageInstanceExaminer {
 
     return switch (entry) {
       case ObjectEntry o -> {
-        // for now, we invoke ObjectEntry::tryLoadHead (because really only ArcScript uses this
-        // method) -> allow passing some configuration to decide this and other nuances of the
-        // behaviour:
-        final var loadResult = cache.computeIfAbsent(o, ObjectEntry::tryLoadHead).get();
+        final var loadResult = cache.computeIfAbsent(o, ObjectEntry::tryLoad).get();
         yield switch (loadResult) {
           case ObjectEntryLoadResult.Err(String msg) -> new NotFound(msg);
           case ObjectEntryLoadResult.SingleVersion sv -> inVersion(sv, entry, propQuery, cache);
           case ObjectEntryLoadResult.MultiVersion(var versions) -> versions.stream()
               .collect(reverse())
-              .limit(1L)
+              .limit(1L) // TODO: hardcoded for now
               .map(sv -> inVersion(sv, entry, propQuery, cache))
               .filter(it -> !(it instanceof NotFound))
               .findFirst()

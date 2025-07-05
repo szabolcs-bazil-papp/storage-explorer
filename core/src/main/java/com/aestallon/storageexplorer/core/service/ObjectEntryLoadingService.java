@@ -16,7 +16,6 @@
 package com.aestallon.storageexplorer.core.service;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,10 +30,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.toList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
-import org.springframework.jdbc.datasource.DataSourceUtils;
 import com.aestallon.storageexplorer.common.util.IO;
 import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
@@ -44,10 +44,6 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResults;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toList;
 
 public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>> {
 
@@ -61,16 +57,10 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
     this.storageIndex = storageIndex;
   }
 
-  public ObjectEntryLoadRequest load(final ObjectEntry objectEntry) {
-    return load(objectEntry, false);
-  }
-
-  public abstract ObjectEntryLoadRequest load(final ObjectEntry objectEntry,
-                                              final boolean headVersionOnly);
+  public abstract ObjectEntryLoadRequest load(final ObjectEntry objectEntry);
 
   protected final ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry,
-                                                  final ObjectNode node,
-                                                  final boolean headVersionOnly) {
+                                                  final ObjectNode node) {
     try {
       final ObjectEntryLoadResult ret;
       if (!objectEntry.valid() && node != null) {
@@ -82,9 +72,12 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
             ? ObjectEntryLoadResults.singleVersion(node, OBJECT_MAPPER)
             : ObjectEntryLoadResults.err("Failed to retrieve single version object entry!");
       } else {
-        final long v = headVersionOnly ? 1L : Long.MAX_VALUE;
         ret = (node != null)
-            ? ObjectEntryLoadResults.multiVersion(node, storageIndex.objectApi, OBJECT_MAPPER, v)
+            ? ObjectEntryLoadResults.multiVersion(
+            node,
+            storageIndex.objectApi,
+            OBJECT_MAPPER,
+            Long.MAX_VALUE)
             : ObjectEntryLoadResults.err("Failed to retrieve multi version object entry!");
       }
 
@@ -101,8 +94,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
   }
 
   protected final ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry,
-                                                  final ObjectEntryLoadResult headLoadResult,
-                                                  final boolean headVersionOnly) {
+                                                  final ObjectEntryLoadResult headLoadResult) {
     if (headLoadResult.isErr()) {
       return headLoadResult;
     }
@@ -113,15 +105,15 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
       default -> throw new AssertionError("Unexpected head load result " + headLoadResult);
     };
     if (!objectEntry.valid()) {
-      objectEntry.refresh(head.objectAsMap());
+      objectEntry.refresh(
+          head.objectAsMap(),
+          headLoadResult instanceof ObjectEntryLoadResult.MultiVersion(var versions)
+              ? versions.size()
+              : 0L);
     }
 
     if (headLoadResult instanceof ObjectEntryLoadResult.SingleVersion sv) {
       return sv;
-    }
-
-    if (headVersionOnly) {
-      return headLoadResult;
     }
 
     return ObjectEntryLoadResults.multiVersion(
@@ -134,23 +126,19 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
 
 
   static final class FileSystem extends ObjectEntryLoadingService<FileSystemStorageIndex> {
-    
+
     FileSystem(FileSystemStorageIndex storageIndex) {
       super(storageIndex);
     }
 
     @Override
-    public ObjectEntryLoadRequest load(ObjectEntry objectEntry,
-                                       boolean headVersionOnly) {
-      return new ObjectEntryLoadRequest.FileSystemObjectEntryLoadRequest(loadInner(
-          objectEntry,
-          headVersionOnly));
+    public ObjectEntryLoadRequest load(ObjectEntry objectEntry) {
+      return new ObjectEntryLoadRequest.FileSystemObjectEntryLoadRequest(loadInner(objectEntry));
     }
 
-    private ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry,
-                                            final boolean headVersionOnly) {
-        final var node = loadObjectNode(objectEntry);
-        return loadInner(objectEntry, node, headVersionOnly);
+    private ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry) {
+      final var node = loadObjectNode(objectEntry);
+      return loadInner(objectEntry, node);
     }
 
     private ObjectNode loadObjectNode(ObjectEntry entry) {
@@ -207,7 +195,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
   static final class RelationalDatabase
       extends ObjectEntryLoadingService<RelationalDatabaseStorageIndex> {
 
-    private record LoadingTask(ObjectEntry objectEntry, boolean headVersionOnly) {}
+    private record LoadingTask(ObjectEntry objectEntry) {}
 
 
     private final Map<LoadingTask, CompletableFuture<ObjectEntryLoadResult>> pendingRequests;
@@ -242,10 +230,9 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
     }
 
     @Override
-    public ObjectEntryLoadRequest load(final ObjectEntry objectEntry,
-                                       final boolean headVersionOnly) {
+    public ObjectEntryLoadRequest load(final ObjectEntry objectEntry) {
       final var f = pendingRequests.computeIfAbsent(
-          new LoadingTask(objectEntry, headVersionOnly),
+          new LoadingTask(objectEntry),
           k -> {
             queue.add(k);
             return new CompletableFuture<>();
@@ -260,7 +247,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
       final var timeoutMillisMin = params.timeoutMillisMin;
 
       storageIndex.publishEvent(new LoadingQueueSize(queue.size()));
-      
+
       final List<LoadingTask> batch = new ArrayList<>(batchSize);
       final var t = queue.poll(timeoutMillis.get(), TimeUnit.MILLISECONDS);
       if (t != null) {
@@ -279,10 +266,9 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
         for (int i = 0; i < results.size(); i++) {
           final LoadingTask task = batch.get(i);
           final ObjectEntry e = task.objectEntry();
-          final boolean headVersionOnly = task.headVersionOnly();
           final ObjectEntryLoadResult loadResult = results.get(i);
           executor.submit(() -> {
-            final ObjectEntryLoadResult r = loadInner(e, loadResult, headVersionOnly);
+            final ObjectEntryLoadResult r = loadInner(e, loadResult);
             final CompletableFuture<ObjectEntryLoadResult> f = pendingRequests.remove(task);
             if (f != null) {
               f.complete(r);

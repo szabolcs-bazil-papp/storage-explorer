@@ -333,7 +333,7 @@ public class GraphView extends JPanel {
     }
 
     @Override
-    public void keyReleased(KeyEvent e) { /* NO OP */}
+    public void keyReleased(KeyEvent e) { /* NO OP */ }
 
   }
 

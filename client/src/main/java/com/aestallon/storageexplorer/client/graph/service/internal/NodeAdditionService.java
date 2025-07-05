@@ -92,12 +92,6 @@ public class NodeAdditionService {
             on.stream().map(UriProperty::label).collect(joining(" | ")),
             15));
     attributeMap.set(edge, Attributes.WEIGHT, String.valueOf(on.size()));
-    if (on.stream().noneMatch(UriProperty::isStandalone)) {
-      edge.setAttribute(Attributes.STYLE_CLASS, "listref");
-    }
-    edge.setAttribute(
-        Attributes.INLINE_STYLE, 
-        "size: %dpx;".formatted((int) Math.ceil(((double) on.size()) / 2)));
   }
 
   private Node getOrAddNode(Graph graph, StorageEntry storageEntry) {

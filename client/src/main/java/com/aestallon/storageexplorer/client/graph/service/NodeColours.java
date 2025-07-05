@@ -38,13 +38,12 @@ public final class NodeColours {
   }
 
   private static String stringToColour(String input) {
-    int hash = input.hashCode();
+    final int hash = input.hashCode();
 
-    int r = (hash & 0xFF0000) >> 16;
-    int g = (hash & 0x00FF00) >> 8;
-    int b = hash & 0x0000FF;
+    final int r = (hash & 0xFF0000) >> 16;
+    final int g = (hash & 0x00FF00) >> 8;
+    final int b = hash & 0x0000FF;
 
-    // Format as GEXF color string (RRGGBB in hex)
     return String.format("%02X%02X%02XFF", r, g, b);
   }
 }
