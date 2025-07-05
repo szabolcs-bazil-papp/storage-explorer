@@ -52,6 +52,7 @@ public class GraphSettingsDialog extends JDialog {
   private JComboBox comboBoxNodeColouring;
   private JPanel panelRendering;
   private JTextPane nodeDiscoveryHelp;
+  private JButton buttonAccept;
 
   private final GraphSettingsController controller;
 
@@ -75,8 +76,8 @@ public class GraphSettingsDialog extends JDialog {
     setModal(true);
     getRootPane().setDefaultButton(buttonOK);
 
+    buttonAccept.addActionListener(e -> onAccept());
     buttonOK.addActionListener(e -> onOK());
-
     buttonCancel.addActionListener(e -> onCancel());
 
     // call onCancel() when cross is clicked
@@ -94,7 +95,7 @@ public class GraphSettingsDialog extends JDialog {
         JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
   }
 
-  private void onOK() {
+  private void onAccept() {
     // TODO: Validate!
     final var model = new GraphSettings()
         .graphTraversalInboundLimit((Integer) spinnerInbound.getModel().getValue())
@@ -109,6 +110,10 @@ public class GraphSettingsDialog extends JDialog {
             comboBoxNodeColouring.getModel().getSelectedItem().toString()))
         .aggressiveDiscovery(discoverNodesOnTheCheckBox.getModel().isSelected());
     controller.finish(model);
+  }
+
+  private void onOK() {
+    onAccept();
     dispose();
   }
 
@@ -159,7 +164,7 @@ public class GraphSettingsDialog extends JDialog {
         GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null,
         0, false));
     final JPanel panel2 = new JPanel();
-    panel2.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1, true, false));
+    panel2.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
     panel1.add(panel2,
         new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
@@ -167,13 +172,19 @@ public class GraphSettingsDialog extends JDialog {
             null, 0, false));
     buttonOK = new JButton();
     buttonOK.setText("OK");
-    panel2.add(buttonOK, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER,
+    panel2.add(buttonOK, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER,
         GridConstraints.FILL_HORIZONTAL,
         GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
         GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     buttonCancel = new JButton();
     buttonCancel.setText("Cancel");
-    panel2.add(buttonCancel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER,
+    panel2.add(buttonCancel, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER,
+        GridConstraints.FILL_HORIZONTAL,
+        GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+        GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    buttonAccept = new JButton();
+    buttonAccept.setText("Apply");
+    panel2.add(buttonAccept, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER,
         GridConstraints.FILL_HORIZONTAL,
         GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
         GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
