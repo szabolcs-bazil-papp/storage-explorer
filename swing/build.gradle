@@ -7,10 +7,7 @@ plugins {
 dependencies {
   implementation 'org.springframework:spring-core'
   implementation 'org.springframework:spring-context'
-  implementation project(':arc-script')
-  implementation project(':arc-script-export')
-  implementation project(':core')
-  implementation project(':graph')
+  implementation project(':client')
   implementation project(':common')
   implementation 'org.graphstream:gs-ui-swing:2.0'
 

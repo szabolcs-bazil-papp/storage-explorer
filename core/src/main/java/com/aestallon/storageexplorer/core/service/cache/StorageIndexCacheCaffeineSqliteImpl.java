@@ -51,7 +51,6 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 
@@ -201,7 +200,7 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
                                       final StorageEntryFactory storageEntryFactory) {
     this.storageEntryFactory = storageEntryFactory;
 
-    final String dbFolderStr = UserConfigService.SETTINGS_FOLDER
+    final String dbFolderStr = "."
                                + FileSystems.getDefault().getSeparator()
                                + "sqlite-cache";
     initSqliteCacheDirectory(dbFolderStr);

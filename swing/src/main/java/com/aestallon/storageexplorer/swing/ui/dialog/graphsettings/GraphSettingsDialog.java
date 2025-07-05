@@ -16,13 +16,14 @@
 package com.aestallon.storageexplorer.swing.ui.dialog.graphsettings;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.Arrays;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.text.JTextComponent;
+import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
@@ -51,19 +52,33 @@ public class GraphSettingsDialog extends JDialog {
   private JComboBox comboBoxNodeColouring;
   private JPanel panelRendering;
   private JTextPane nodeDiscoveryHelp;
+  private JButton buttonAccept;
 
-  public GraphSettingsDialog() {
+  private final GraphSettingsController controller;
+
+  public GraphSettingsDialog(GraphSettingsController controller) {
+    this.controller = controller;
+
+    final var initialModel = controller.initialModel();
+    spinnerInbound.getModel().setValue(initialModel.getGraphTraversalInboundLimit());
+    spinnerOutboundLimit.getModel().setValue(initialModel.getGraphTraversalOutboundLimit());
+    blacklistSchema.setText(String.join(", ", initialModel.getBlacklistedSchemas()));
+    blacklistType.setText(String.join(", ", initialModel.getBlacklistedTypes()));
+    whitelistSchema.setText(String.join(", ", initialModel.getWhitelistedSchemas()));
+    whiteListType.setText(String.join(", ", initialModel.getWhitelistedTypes()));
+    comboBoxNodeSizing.getModel().setSelectedItem(initialModel.getNodeSizing().getValue());
+    comboBoxNodeColouring.getModel().setSelectedItem(initialModel.getNodeColouring().getValue());
+    discoverNodesOnTheCheckBox.getModel().setSelected(initialModel.getAggressiveDiscovery());
+
+    setTitle("Graph Settings");
+    setPreferredSize(new Dimension(700, 700));
     setContentPane(contentPane);
     setModal(true);
     getRootPane().setDefaultButton(buttonOK);
 
-    buttonOK.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) { onOK(); }
-    });
-
-    buttonCancel.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) { onCancel(); }
-    });
+    buttonAccept.addActionListener(e -> onAccept());
+    buttonOK.addActionListener(e -> onOK());
+    buttonCancel.addActionListener(e -> onCancel());
 
     // call onCancel() when cross is clicked
     setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -74,17 +89,40 @@ public class GraphSettingsDialog extends JDialog {
     });
 
     // call onCancel() on ESCAPE
-    contentPane.registerKeyboardAction(new ActionListener() {
-                                         public void actionPerformed(ActionEvent e) {
-                                           onCancel();
-                                         }
-                                       }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+    contentPane.registerKeyboardAction(
+        e -> onCancel(),
+        KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
         JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
   }
 
+  private void onAccept() {
+    // TODO: Validate!
+    final var model = new GraphSettings()
+        .graphTraversalInboundLimit((Integer) spinnerInbound.getModel().getValue())
+        .graphTraversalOutboundLimit((Integer) spinnerOutboundLimit.getModel().getValue())
+        .blacklistedSchemas(toCommaSeparatedList(blacklistSchema))
+        .blacklistedTypes(toCommaSeparatedList(blacklistType))
+        .whitelistedSchemas(toCommaSeparatedList(whitelistSchema))
+        .whitelistedTypes(toCommaSeparatedList(whiteListType))
+        .nodeSizing(GraphSettings.NodeSizing.fromValue(
+            comboBoxNodeSizing.getModel().getSelectedItem().toString()))
+        .nodeColouring(GraphSettings.NodeColouring.fromValue(
+            comboBoxNodeColouring.getModel().getSelectedItem().toString()))
+        .aggressiveDiscovery(discoverNodesOnTheCheckBox.getModel().isSelected());
+    controller.finish(model);
+  }
+
   private void onOK() {
-    // add your code here
+    onAccept();
     dispose();
+  }
+
+  private java.util.List<String> toCommaSeparatedList(JTextComponent c) {
+    return Arrays.stream(c.getText()
+            .split(","))
+        .map(String::trim)
+        .filter(it -> !it.isBlank())
+        .toList();
   }
 
   private void onCancel() {
@@ -93,7 +131,7 @@ public class GraphSettingsDialog extends JDialog {
   }
 
   public static void main(String[] args) {
-    GraphSettingsDialog dialog = new GraphSettingsDialog();
+    GraphSettingsDialog dialog = new GraphSettingsDialog(GraphSettingsController.dummy());
     dialog.pack();
     dialog.setVisible(true);
     System.exit(0);
@@ -126,7 +164,7 @@ public class GraphSettingsDialog extends JDialog {
         GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null,
         0, false));
     final JPanel panel2 = new JPanel();
-    panel2.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1, true, false));
+    panel2.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
     panel1.add(panel2,
         new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
@@ -134,13 +172,19 @@ public class GraphSettingsDialog extends JDialog {
             null, 0, false));
     buttonOK = new JButton();
     buttonOK.setText("OK");
-    panel2.add(buttonOK, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER,
+    panel2.add(buttonOK, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER,
         GridConstraints.FILL_HORIZONTAL,
         GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
         GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     buttonCancel = new JButton();
     buttonCancel.setText("Cancel");
-    panel2.add(buttonCancel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER,
+    panel2.add(buttonCancel, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER,
+        GridConstraints.FILL_HORIZONTAL,
+        GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+        GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    buttonAccept = new JButton();
+    buttonAccept.setText("Apply");
+    panel2.add(buttonAccept, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER,
         GridConstraints.FILL_HORIZONTAL,
         GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
         GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -165,25 +209,26 @@ public class GraphSettingsDialog extends JDialog {
     labelBlacklistSchema = new JLabel();
     labelBlacklistSchema.setText("Schemae");
     panelBlacklist.add(labelBlacklistSchema,
-        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
-            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
-            false));
+        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     blacklistSchema = new JTextArea();
+    blacklistSchema.setLineWrap(true);
     blacklistSchema.setWrapStyleWord(true);
     panelBlacklist.add(blacklistSchema,
         new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_WANT_GROW, null,
             new Dimension(150, 50), null, 0, false));
     labelBlacklistType = new JLabel();
     labelBlacklistType.setText("Types");
     panelBlacklist.add(labelBlacklistType,
-        new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
-            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
-            false));
+        new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     blacklistType = new JTextArea();
+    blacklistType.setLineWrap(true);
+    blacklistType.setWrapStyleWord(true);
     panelBlacklist.add(blacklistType,
         new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_WANT_GROW, null,
             new Dimension(150, 50), null, 0, false));
     panelWhitelists = new JPanel();
     panelWhitelists.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
@@ -198,24 +243,25 @@ public class GraphSettingsDialog extends JDialog {
     labelWhitelistSchema = new JLabel();
     labelWhitelistSchema.setText("Schemae");
     panelWhitelists.add(labelWhitelistSchema,
-        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
-            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
-            false));
+        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     whitelistSchema = new JTextArea();
+    whitelistSchema.setLineWrap(true);
     panelWhitelists.add(whitelistSchema,
         new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_WANT_GROW, null,
             new Dimension(150, 50), null, 0, false));
     final JLabel label1 = new JLabel();
     label1.setText("Types");
     panelWhitelists.add(label1,
-        new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
-            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
-            false));
+        new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, 1,
+            GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     whiteListType = new JTextArea();
+    whiteListType.setLineWrap(true);
+    whiteListType.setWrapStyleWord(true);
     panelWhitelists.add(whiteListType,
         new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-            GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,
+            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_WANT_GROW, null,
             new Dimension(150, 50), null, 0, false));
     panelNodeDiscovery = new JPanel();
     panelNodeDiscovery.setLayout(new GridLayoutManager(4, 2, new Insets(0, 0, 0, 0), -1, -1));
@@ -260,7 +306,7 @@ public class GraphSettingsDialog extends JDialog {
     nodeDiscoveryHelp.setEditable(false);
     nodeDiscoveryHelp.setEnabled(false);
     nodeDiscoveryHelp.setText(
-        "All graphs rendered from an origin node. The outbound limit defines how many iterations should the renderer do the ......");
+        "Additional information available on the individual widget tooltips.");
     panelNodeDiscovery.add(nodeDiscoveryHelp,
         new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
             GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null,

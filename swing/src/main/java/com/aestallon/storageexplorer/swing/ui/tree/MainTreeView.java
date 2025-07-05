@@ -34,8 +34,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.graph.service.GraphExportService;
+import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.common.util.Pair;
+import static com.aestallon.storageexplorer.common.util.Streams.enumerationToStream;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
@@ -48,9 +52,6 @@ import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
-import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
-import com.aestallon.storageexplorer.core.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.graph.service.GraphExportService;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
@@ -64,7 +65,6 @@ import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageInstanceTre
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageListTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageMapTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageObjectTreeNode;
-import static com.aestallon.storageexplorer.common.util.Streams.enumerationToStream;
 
 @Component
 public class MainTreeView extends JPanel {

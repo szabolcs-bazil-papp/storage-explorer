@@ -108,7 +108,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     ret.addAll(scopedEntriesAsUriProperties());
     return ret;
   }
-  
+
   public Set<UriProperty> scopedEntriesAsUriProperties() {
     return scopedEntries.stream()
         .map(e -> UriProperty.of(new UriProperty.Segment[] { UriProperty.Segment.key(
@@ -120,7 +120,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   @Override
   public boolean references(StorageEntry that) {
     return StorageEntry.super.references(that)
-        || ((that instanceof ScopedEntry se) && scopedEntries.contains(se));
+           || ((that instanceof ScopedEntry se) && scopedEntries.contains(se));
   }
 
   @Override
@@ -136,17 +136,23 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
       }
 
       // TODO: maybe explicitly get() here? The whole entrance to the critical section is awful...
-      Objects.requireNonNull(storageIndex.get()).loader().load(this, true);
+      Objects.requireNonNull(storageIndex.get()).loader().load(this);
     } finally {
       refreshLock.unlock();
     }
   }
 
   public void refresh(final ObjectNode objectNode) {
-    refresh(objectNode != null ? objectNode.getObjectAsMap() : null);
+    if (objectNode == null) {
+      refresh(null, 0L);
+    } else {
+      final Long versionNr = objectNode.getVersionNr();
+      final long version = versionNr == null ? 0L : versionNr;
+      refresh(objectNode.getObjectAsMap(), version);
+    }
   }
 
-  public void refresh(final Map<String, Object> objectAsMap) {
+  public void refresh(final Map<String, Object> objectAsMap, final long version) {
     if (valid) {
       return;
     }
@@ -158,6 +164,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
     uriProperties = initUriProperties(objectAsMap);
     valid = true;
+    versioning = version < 0 ? new Versioning.Single() : new Versioning.Multi(version);
     storageIndex.get().notifyRefresh(this);
   }
 
@@ -214,6 +221,16 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     return typeName;
   }
 
+  public Versioning versioning() {
+    if (versioning == null) {
+      return uri.toString().endsWith("-s")
+          ? new Versioning.Single()
+          : new Versioning.Multi(0L);
+    }
+
+    return versioning;
+  }
+
   public @Nullable Path path() {
     return path;
   }
@@ -221,10 +238,6 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   public ObjectEntryLoadRequest tryLoad() {
     return Objects.requireNonNull(storageIndex.get()).loader().load(this);
-  }
-
-  public ObjectEntryLoadRequest tryLoadHead() {
-    return Objects.requireNonNull(storageIndex.get()).loader().load(this, true);
   }
 
   @Override

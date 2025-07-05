@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-  implementation project(':core')
+  implementation project(':client')
   implementation project(':swing')
   implementation 'org.springframework.boot:spring-boot-starter'
   implementation 'org.smartbit4all.platform:api'

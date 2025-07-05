@@ -17,9 +17,9 @@ node {
 }
 
 edge {
-    shape: cubic-curve;
+    shape: line;
     arrow-size: 6px, 3px;
-    fill-color: black;
+    fill-color: #00000059;
     text-alignment: along;
     text-padding: 3px, 2px;
     text-style: bold;
@@ -40,7 +40,7 @@ node.highlighted {
 }
 
 edge.listref {
-    fill-color: #006e00;
+    fill-color: #006e0059;
 }
 
 node.origin {

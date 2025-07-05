@@ -1,0 +1,22 @@
+plugins {
+  id 'buildlogic.java-library-conventions'
+}
+
+dependencies {
+  compileOnly 'org.smartbit4all.platform:api'
+  implementation project(':common')
+  compileOnly 'org.springframework.boot:spring-boot-starter-web'
+  compileOnly 'jakarta.validation:jakarta.validation-api:3.0.2'
+
+  compileOnly 'org.smartbit4all.platform:sql'
+  compileOnly 'org.springframework.boot:spring-boot-starter-jdbc'
+  
+  api project(':core')
+  api project(':arc-script')
+
+  implementation 'com.opencsv:opencsv:5.5'
+  implementation 'com.alibaba:fastjson:2.0.31'
+  api 'org.graphstream:gs-core:2.0'
+  implementation 'org.jgrapht:jgrapht-core:1.5.2'
+  implementation 'org.jgrapht:jgrapht-io:1.5.2'
+}

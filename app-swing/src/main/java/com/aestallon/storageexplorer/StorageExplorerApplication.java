@@ -23,7 +23,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
-import com.aestallon.storageexplorer.core.service.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.WelcomePopup;
@@ -34,6 +34,7 @@ import com.formdev.flatlaf.FlatIntelliJLaf;
     exclude = DataSourceAutoConfiguration.class,
     scanBasePackages = {
         "com.aestallon.storageexplorer.core",
+        "com.aestallon.storageexplorer.client",
         "com.aestallon.storageexplorer.swing"
     })
 public class StorageExplorerApplication {
