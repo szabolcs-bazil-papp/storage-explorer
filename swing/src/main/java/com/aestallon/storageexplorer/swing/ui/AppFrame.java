@@ -27,6 +27,8 @@ import com.aestallon.storageexplorer.swing.ui.dialog.graphsettings.GraphSettings
 import com.aestallon.storageexplorer.swing.ui.dialog.graphsettings.GraphSettingsDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
+import com.aestallon.storageexplorer.swing.ui.dialog.keymap.KeymapController;
+import com.aestallon.storageexplorer.swing.ui.dialog.keymap.KeymapDialog;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
@@ -41,9 +43,9 @@ public class AppFrame extends JFrame {
   private final LafService lafService;
 
   public AppFrame(ApplicationEventPublisher eventPublisher,
-                  StorageInstanceProvider storageInstanceProvider, 
+                  StorageInstanceProvider storageInstanceProvider,
                   UserConfigService userConfigService,
-                  AppContentView appContentView, 
+                  AppContentView appContentView,
                   LafService lafService) {
     this.eventPublisher = eventPublisher;
     this.storageInstanceProvider = storageInstanceProvider;
@@ -104,6 +106,16 @@ public class AppFrame extends JFrame {
     });
     settings.add(graphSettings);
 
+    final var keymapSettings = new JMenuItem("Keymap Settings...");
+    keymapSettings.addActionListener(e -> {
+      final var controller = KeymapController.newInstance(userConfigService);
+      final var dialog = new KeymapDialog(controller);
+      dialog.pack();
+      dialog.setLocationRelativeTo(this);
+      dialog.setVisible(true);
+    });
+    settings.add(keymapSettings);
+
     final var darkMode = new JCheckBoxMenuItem("Dark Mode");
     darkMode.addActionListener(e -> {
       final LafChanged.Laf laf = darkMode.isSelected() ? LafChanged.Laf.DARK : LafChanged.Laf.LIGHT;
@@ -116,7 +128,7 @@ public class AppFrame extends JFrame {
   public void launch() {
     setVisible(true);
   }
-  
+
   private final class SearchAction extends AbstractAction {
 
     private SearchAction() {
