@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -40,6 +40,7 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.service.cache.StorageIndexCache;
 import com.google.common.base.Strings;
 
@@ -51,7 +52,7 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   protected final StorageId storageId;
   protected final ObjectApi objectApi;
   protected final CollectionApi collectionApi;
-  
+
   protected StorageIndexCache cache;
   protected StorageEntryFactory storageEntryFactory;
   protected ApplicationEventPublisher eventPublisher;
@@ -108,11 +109,17 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
 
   @Deprecated(forRemoval = true, since = "0.3.0")
   public void revalidate(final Collection<? extends StorageEntry> entries) {
-    entries.stream()
+    // TODO: This entire thing NEEDS TO GO! Only used by the Graph, which should be configured to 
+    //  use this revalidation strategy or not, and if needed it must be handled appropriately!
+    Set<StorageEntry> needsRevalidation = entries.stream()
         .filter(ObjectEntry.class::isInstance)
         .map(ObjectEntry.class::cast)
         .filter(it -> !it.valid())
-        .forEach(ObjectEntry::refresh);
+        .collect(toSet());
+    new IndexingStrategy.EntryProcessor.Builder(null, needsRevalidation)
+        .build()
+        .execute()
+        .forEach(ObjectEntryLoadRequest::get);
   }
 
   public void setEventPublisher(final ApplicationEventPublisher eventPublisher) {
@@ -128,7 +135,7 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   protected abstract Stream<URI> fetchEntries();
 
   protected abstract Stream<URI> fetchEntries(IndexingTarget target);
-  
+
   public final void notifyRefresh(StorageEntry storageEntry) {
     cache.put(storageEntry.uri(), storageEntry);
   }
@@ -205,7 +212,7 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     final var p = constructPattern(queryString);
     return cache.stream().filter(it -> p.matcher(it.uri().toString()).find());
   }
-  
+
 
   private static Pattern constructPattern(final String queryString) {
     final String q = queryString.replaceAll("[\\.\\+\\*\\-\\(\\)\\[\\]]", "");

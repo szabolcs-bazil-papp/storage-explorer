@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2025 Szabolcs Bazil Papp
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with this program.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package com.aestallon.storageexplorer.core.service;
 
 import java.io.IOException;
@@ -15,6 +30,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.binarydata.BinaryData;
+import org.smartbit4all.api.binarydata.BinaryDataCompressionUtil;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -30,27 +46,52 @@ import com.google.common.base.Strings;
 public final class RelationalDatabaseStorageIndex
     extends StorageIndex<RelationalDatabaseStorageIndex> {
 
-  private static final Logger log = LoggerFactory.getLogger(RelationalDatabaseStorageIndex.class);
+  private enum FeatureLevel {
+    STANDARD("""
+        SELECT e.URI            AS "URI",
+               v.VERSION        AS "VN",
+               e.SINGLEVERSION  AS "SV",
+               v.CREATED_AT     AS "VD",
+               v.OBJECT_CONTENT AS "OAM"
+          FROM OBJECT_ENTRY   e
+          JOIN OBJECT_VERSION v
+            ON v.ENTRY_ID = e.ID
+           AND v.VERSION = e.VERSION
+         WHERE e.CLASSNAME <> 'org_smartbit4all_api_binarydata_BinaryDataObject'
+           AND e.SCHEME <> 'tabledatacontents'
+           AND e.URI IN (:uris)"""),
+    COMPRESSION("""
+        SELECT e.URI                          AS "URI",
+               v.VERSION                      AS "VN",
+               e.SINGLEVERSION                AS "SV",
+               v.CREATED_AT                   AS "VD",
+               v.OBJECT_CONTENT               AS "OAM",
+               v.OBJECT_CONTENT_COMPRESS_TYPE AS "CT"
+          FROM OBJECT_ENTRY   e
+          JOIN OBJECT_VERSION v
+            ON v.ENTRY_ID = e.ID
+           AND v.VERSION = e.VERSION
+         WHERE e.CLASSNAME <> 'org_smartbit4all_api_binarydata_BinaryDataObject'
+           AND e.SCHEME <> 'tabledatacontents'
+           AND e.URI IN (:uris)"""),
+    UNKNOWN("");
 
-  private static final String QUERY_IN = """
-      SELECT e.URI            AS "URI",
-             v.VERSION        AS "VN",
-             e.SINGLEVERSION  AS "SV",
-             v.CREATED_AT     AS "VD",
-             v.OBJECT_CONTENT AS "OAM"
-        FROM OBJECT_ENTRY   e
-        JOIN OBJECT_VERSION v
-          ON v.ENTRY_ID = e.ID
-       WHERE v.VERSION  = (SELECT MAX(v_inner.VERSION)
-                             FROM OBJECT_VERSION v_inner
-                            WHERE v_inner.ENTRY_ID = v.ENTRY_ID)
-         AND e.CLASSNAME <> 'org_smartbit4all_api_binarydata_BinaryDataObject'
-         AND e.SCHEME <> 'tabledatacontents'
-         AND e.URI IN (:uris)""";
+    private final String queryIn;
+
+    FeatureLevel(final String queryIn) {
+      this.queryIn = queryIn;
+    }
+
+
+  }
+
+
+  private static final Logger log = LoggerFactory.getLogger(RelationalDatabaseStorageIndex.class);
 
   final JdbcClient db;
   private final String targetSchema;
   private final ObjectEntryLoadingService<RelationalDatabaseStorageIndex> loader;
+  private FeatureLevel featureLevel = FeatureLevel.UNKNOWN;
 
   public RelationalDatabaseStorageIndex(
       StorageId storageId,
@@ -63,7 +104,7 @@ public final class RelationalDatabaseStorageIndex
     this.targetSchema = targetSchema;
     this.loader = new ObjectEntryLoadingService.RelationalDatabase(this);
     this.storageEntryFactory = StorageEntryFactory.builder(this, objectApi, collectionApi).build();
-    this.cache = StorageIndexCache.persistent(storageId, storageEntryFactory);
+    this.cache = StorageIndexCache.inMemory();
   }
 
   @Override
@@ -160,8 +201,14 @@ public final class RelationalDatabaseStorageIndex
     if (uris.isEmpty()) {
       return Collections.emptyList();
     }
+
+    if (featureLevel == FeatureLevel.UNKNOWN) {
+      featureLevel = determineFeatureLevel();
+      log.info("Determined feature level: {}", featureLevel);
+    }
+
     final Map<URI, ObjectEntryLoadResult> resultsByUri = db
-        .sql(QUERY_IN)
+        .sql(featureLevel.queryIn)
         .param("uris", uris.stream().map(URI::toString).toList())
 
         .query((r, c) -> {
@@ -194,7 +241,25 @@ public final class RelationalDatabaseStorageIndex
     final var versionTimestamp = r.getObject("VD", OffsetDateTime.class);
     Map<String, Object> objectAsMap;
     try (final var in = r.getBlob("OAM").getBinaryStream()) {
-      final var binaryData = BinaryData.of(in);
+      var binaryData = BinaryData.of(in);
+      if (featureLevel == FeatureLevel.COMPRESSION) {
+        // TODO: More sophisticated implementation than a blasted "if"!
+        final var compressionTypeStr = r.getString("CT");
+        final var compressionType = switch (compressionTypeStr) {
+          case "zlib" -> BinaryDataCompressionUtil.CompressionType.ZLIB;
+          case "gzip" -> BinaryDataCompressionUtil.CompressionType.GZIP;
+          case "" -> null;
+          case null -> null;
+          default -> {
+            log.warn("Unknown compression type: {}", compressionTypeStr);
+            throw new IllegalArgumentException("Unknown compression type: " + compressionTypeStr);
+          }
+        };
+        if (compressionType != null) {
+          binaryData = BinaryDataCompressionUtil.decompress(binaryData, compressionType);
+        }
+      }
+
       objectAsMap = objectApi
           .getDefaultSerializer()
           .deserialize(binaryData, LinkedHashMap.class)
@@ -219,6 +284,20 @@ public final class RelationalDatabaseStorageIndex
                 objectApi,
                 ObjectEntryLoadingService.OBJECT_MAPPER,
                 version));
+  }
+
+  private FeatureLevel determineFeatureLevel() {
+    // TODO: This needs to be more sophisticated, extendible and one layer removed from the RDBMS!
+    final boolean isCompressionSupported = !db
+        .sql("""
+            SELECT COLUMN_NAME, DATA_TYPE
+              FROM ALL_TAB_COLUMNS
+             WHERE TABLE_NAME = 'OBJECT_VERSION'
+               AND COLUMN_NAME = 'OBJECT_CONTENT_COMPRESS_TYPE'""")
+        .query()
+        .listOfRows()
+        .isEmpty();
+    return isCompressionSupported ? FeatureLevel.COMPRESSION : FeatureLevel.STANDARD;
   }
 
 }
