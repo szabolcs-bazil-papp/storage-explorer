@@ -33,7 +33,7 @@ import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResults;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.util.AbstractEntryEvaluationExecutor;
 
 public interface IndexingStrategy {
@@ -192,7 +192,7 @@ public interface IndexingStrategy {
         // FIXME: this is not cool.
         results.offer(
             new ObjectEntryLoadRequest.FileSystemObjectEntryLoadRequest(
-                ObjectEntryLoadResults.err("not an object entry")));
+                ObjectEntryLoadResult.err("not an object entry")));
       }
     }
   }

@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.core.service;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,7 +42,6 @@ import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResults;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 
@@ -59,6 +59,9 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
 
   public abstract ObjectEntryLoadRequest load(final ObjectEntry objectEntry);
 
+  public abstract ObjectEntryLoadResult.SingleVersion.Eager loadExact(final URI uri,
+                                                                      final long version);
+
   protected final ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry,
                                                   final ObjectNode node) {
     try {
@@ -69,16 +72,16 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
 
       if (Uris.isSingleVersion(objectEntry.uri())) {
         ret = (node != null)
-            ? ObjectEntryLoadResults.singleVersion(node, OBJECT_MAPPER)
-            : ObjectEntryLoadResults.err("Failed to retrieve single version object entry!");
+            ? ObjectEntryLoadResult.singleVersion(node, OBJECT_MAPPER)
+            : ObjectEntryLoadResult.err("Failed to retrieve single version object entry!");
       } else {
         ret = (node != null)
-            ? ObjectEntryLoadResults.multiVersion(
+            ? ObjectEntryLoadResult.multiVersion(
             node,
-            storageIndex.objectApi,
+            this::loadExact,
             OBJECT_MAPPER,
             Long.MAX_VALUE)
-            : ObjectEntryLoadResults.err("Failed to retrieve multi version object entry!");
+            : ObjectEntryLoadResult.err("Failed to retrieve multi version object entry!");
       }
 
       return ret;
@@ -89,7 +92,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
       log.error(msg);
       log.error(t.getMessage(), t);
 
-      return ObjectEntryLoadResults.err(msg);
+      return ObjectEntryLoadResult.err(msg);
     }
   }
 
@@ -116,11 +119,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
       return sv;
     }
 
-    return ObjectEntryLoadResults.multiVersion(
-        head,
-        storageIndex.objectApi,
-        OBJECT_MAPPER,
-        Long.MAX_VALUE);
+    return ObjectEntryLoadResult.multiVersion(head, this::loadExact, Long.MAX_VALUE);
   }
 
 
@@ -134,6 +133,13 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
     @Override
     public ObjectEntryLoadRequest load(ObjectEntry objectEntry) {
       return new ObjectEntryLoadRequest.FileSystemObjectEntryLoadRequest(loadInner(objectEntry));
+    }
+
+    @Override
+    public ObjectEntryLoadResult.SingleVersion.Eager loadExact(URI uri, long version) {
+      return (ObjectEntryLoadResult.SingleVersion.Eager) ObjectEntryLoadResult.singleVersion(
+          storageIndex.objectApi.load(Uris.atVersion(uri, version)),
+          OBJECT_MAPPER);
     }
 
     private ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry) {
@@ -227,6 +233,11 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
           }
         }
       });
+    }
+
+    @Override
+    public ObjectEntryLoadResult.SingleVersion.Eager loadExact(URI uri, long version) {
+      return storageIndex.loadSingle(uri, version);
     }
 
     @Override
