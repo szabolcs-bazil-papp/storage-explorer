@@ -49,6 +49,7 @@ public final class RelationalDatabaseStorageIndex
     STANDARD(
         """
             SELECT e.URI            AS "URI",
+                   e.ID             AS "ID",
                    v.VERSION        AS "VN",
                    e.SINGLEVERSION  AS "SV",
                    v.CREATED_AT     AS "VD",
@@ -62,6 +63,7 @@ public final class RelationalDatabaseStorageIndex
                AND e.URI IN (:uris)""",
         """
             SELECT e.URI            AS "URI",
+                   e.ID             AS "ID",
                    v.VERSION        AS "VN",
                    e.SINGLEVERSION  AS "SV",
                    v.CREATED_AT     AS "VD",
@@ -74,6 +76,7 @@ public final class RelationalDatabaseStorageIndex
     COMPRESSION(
         """
             SELECT e.URI                          AS "URI",
+                   e.ID                           AS "ID",
                    v.VERSION                      AS "VN",
                    e.SINGLEVERSION                AS "SV",
                    v.CREATED_AT                   AS "VD",
@@ -87,11 +90,12 @@ public final class RelationalDatabaseStorageIndex
                AND e.SCHEME <> 'tabledatacontents'
                AND e.URI IN (:uris)""",
         """
-            SELECT e.URI            AS "URI",
-                   v.VERSION        AS "VN",
-                   e.SINGLEVERSION  AS "SV",
-                   v.CREATED_AT     AS "VD",
-                   v.OBJECT_CONTENT AS "OAM",
+            SELECT e.URI                          AS "URI",
+                   e.ID                           AS "ID",
+                   v.VERSION                      AS "VN",
+                   e.SINGLEVERSION                AS "SV",
+                   v.CREATED_AT                   AS "VD",
+                   v.OBJECT_CONTENT               AS "OAM",
                    v.OBJECT_CONTENT_COMPRESS_TYPE AS "CT"
               FROM OBJECT_ENTRY   e
               JOIN OBJECT_VERSION v
@@ -255,7 +259,7 @@ public final class RelationalDatabaseStorageIndex
                                                                           final long version) {
     log.error("Unexpected error loading {} at version {}", uri, version);
     return new ObjectEntryLoadResult.SingleVersion.Eager(
-        new ObjectEntryMeta(uri, null, null, version, null, null),
+        new ObjectEntryMeta(uri, null, null, version, null, null, null),
         Collections.emptyMap(),
         ObjectEntryLoadingService.OBJECT_MAPPER);
   }
@@ -306,6 +310,7 @@ public final class RelationalDatabaseStorageIndex
     final boolean single = Boolean.TRUE.toString().equals(r.getString("SV"));
     final long version = !single ? r.getLong("VN") : -1L;
     final var versionTimestamp = r.getObject("VD", OffsetDateTime.class);
+    final var id = r.getString("ID");
     Map<String, Object> objectAsMap;
     try (final var in = r.getBlob("OAM").getBinaryStream()) {
       var binaryData = BinaryData.of(in);
@@ -339,7 +344,7 @@ public final class RelationalDatabaseStorageIndex
 
     final ObjectEntryLoadResult.SingleVersion singleVersion =
         new ObjectEntryLoadResult.SingleVersion.Eager(
-            new ObjectEntryMeta(uri, null, null, version, versionTimestamp, null),
+            new ObjectEntryMeta(uri, null, null, version, versionTimestamp, null, id),
             objectAsMap,
             ObjectEntryLoadingService.OBJECT_MAPPER);
     return single || only
