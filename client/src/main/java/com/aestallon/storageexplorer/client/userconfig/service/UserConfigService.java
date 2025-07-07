@@ -15,16 +15,11 @@
 
 package com.aestallon.storageexplorer.client.userconfig.service;
 
-import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -36,92 +31,43 @@ import com.aestallon.storageexplorer.client.userconfig.model.Keymap;
 import com.aestallon.storageexplorer.client.userconfig.model.StorageLocationSettings;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class UserConfigService {
 
   private static final Logger log = LoggerFactory.getLogger(UserConfigService.class);
 
-  public static final String SETTINGS_FOLDER = System.getProperty("java.io.tmpdir")
-                                               + FileSystems.getDefault().getSeparator()
-                                               + "storage-explorer";
-
+  public static final String GRAPH_SETTINGS = "graph.settings";
   public static final String STORAGE_SETTINGS = "storage.settings";
   public static final String KEYMAP_SETTINGS = "keymap.settings";
 
-  private static boolean createSettingsDirectory(Path path) {
-    try {
-      Files.createDirectories(path);
-      return true;
-    } catch (IOException e) {
-      log.error("Cannot create missing settings directory at [ {} ]", path);
-      log.error(e.getMessage(), e);
-      return false;
-    }
-  }
 
-  private final String settingsFolder;
+  private final UserConfigPersistenceService persistenceService;
   private final ApplicationEventPublisher eventPublisher;
-  private final ObjectMapper objectMapper;
 
   private final AtomicReference<GraphSettings> graphSettings;
   private final AtomicReference<StorageLocationSettings> storageLocationSettings;
   private final AtomicReference<Map<String, Keymap>> keymapSettings;
 
-  public UserConfigService(ApplicationEventPublisher eventPublisher, ObjectMapper objectMapper) {
-    this.settingsFolder = SETTINGS_FOLDER;
+  public UserConfigService(UserConfigPersistenceService persistenceService,
+                           ApplicationEventPublisher eventPublisher) {
+    this.persistenceService = persistenceService;
     this.eventPublisher = eventPublisher;
-    this.objectMapper = objectMapper;
-    graphSettings = new AtomicReference<>(readSettingsAt(
-        "graph.settings",
+    graphSettings = new AtomicReference<>(persistenceService.readSettingsAt(
+        GRAPH_SETTINGS,
         new TypeReference<>() {},
         GraphSettings::new));
-    storageLocationSettings = new AtomicReference<>(readSettingsAt(
+    storageLocationSettings = new AtomicReference<>(persistenceService.readSettingsAt(
         STORAGE_SETTINGS,
         new TypeReference<>() {},
         StorageLocationSettings::new));
-    keymapSettings = new AtomicReference<>(readSettingsAt(
+    keymapSettings = new AtomicReference<>(persistenceService.readSettingsAt(
         KEYMAP_SETTINGS,
         new TypeReference<>() {},
         Keymap::defaultKeymaps));
   }
 
-  private <T> T readSettingsAt(String settingsFilename, TypeReference<T> type,
-                               Supplier<T> fallback) {
-    final Path settingsFolderPath = Path.of(this.settingsFolder);
-    if (!Files.exists(settingsFolderPath)) {
-      log.debug("Reading: Creating settings folder at [ {} ]...", settingsFolderPath);
-      createSettingsDirectory(settingsFolderPath);
-    }
 
-    final Path settingsFile = settingsFolderPath.resolve(settingsFilename);
-    try (final var in = Files.newInputStream(settingsFile)) {
-      return objectMapper.readerFor(type).readValue(in);
-    } catch (IOException e) {
-      log.error(
-          "Could not read user configuration from [ {} ], falling back to default values!",
-          settingsFile);
-      return fallback.get();
-    }
-  }
-
-  private <T> void writeSettingsTo(String settingsFilename, T settings) {
-    final Path settingsFolderPath = Path.of(this.settingsFolder);
-    if (!Files.exists(settingsFolderPath)) {
-      log.debug("Writing: Creating settings folder at [ {} ]...", settingsFolderPath);
-      if (!createSettingsDirectory(settingsFolderPath)) {
-        return;
-      }
-    }
-    final Path settingsFile = settingsFolderPath.resolve(settingsFilename);
-    try (final var out = Files.newOutputStream(settingsFile)) {
-      objectMapper.writerWithDefaultPrettyPrinter().writeValue(out, settings);
-    } catch (IOException e) {
-      log.error("Could not write settings to [ {} ]!", settingsFile);
-      log.error(e.getMessage(), e);
-    }
-  }
 
 
   public GraphSettings graphSettings() {
@@ -139,7 +85,7 @@ public class UserConfigService {
   public void addStorageLocation(final StorageInstanceDto storageInstanceDto) {
     final var settings = storageLocationSettings
         .updateAndGet(it -> it.addImportedStorageLocationsItem(storageInstanceDto));
-    writeSettingsTo(STORAGE_SETTINGS, settings);
+    persistenceService.writeSettingsTo(STORAGE_SETTINGS, settings);
   }
 
   public void removeStorageLocation(final StorageInstanceDto storageInstanceDto) {
@@ -148,7 +94,7 @@ public class UserConfigService {
           .removeIf(e -> Objects.equals(e.getId(), storageInstanceDto.getId()));
       return it;
     });
-    writeSettingsTo(STORAGE_SETTINGS, settings);
+    persistenceService.writeSettingsTo(STORAGE_SETTINGS, settings);
   }
 
   public void updateStorageLocation(final StorageInstanceDto storageInstanceDto) {
@@ -167,7 +113,7 @@ public class UserConfigService {
       }
       return it;
     });
-    writeSettingsTo(STORAGE_SETTINGS, settings);
+    persistenceService.writeSettingsTo(STORAGE_SETTINGS, settings);
   }
 
   public void updateGraphSettings(GraphSettings graphSettings) {
@@ -177,12 +123,12 @@ public class UserConfigService {
     }
 
     this.graphSettings.set(graphSettings);
-    writeSettingsTo("graph.settings", graphSettings);
+    persistenceService.writeSettingsTo(GRAPH_SETTINGS, graphSettings);
     eventPublisher.publishEvent(new GraphConfigChanged());
   }
 
   public ArcScriptFileService arcScriptFileService() {
-    return new ArcScriptFileService(Path.of(settingsFolder));
+    return new ArcScriptFileService(persistenceService.settingsFolder());
   }
 
   public void updateKeymapSettings(Map<String, Keymap> keymapSettings) {
@@ -192,7 +138,7 @@ public class UserConfigService {
     }
 
     this.keymapSettings.set(keymapSettings);
-    writeSettingsTo(KEYMAP_SETTINGS, keymapSettings);
+    persistenceService.writeSettingsTo(KEYMAP_SETTINGS, keymapSettings);
     eventPublisher.publishEvent(new KeymapChanged());
   }
 

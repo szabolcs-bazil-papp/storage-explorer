@@ -61,6 +61,10 @@ public class AppFrame extends JFrame {
     add(appContentView);
   }
 
+  public AppContentView appContentView() {
+    return appContentView;
+  }
+
   private void addSearchAction() {
     final var ctrlShiftT = KeyStroke.getKeyStroke(
         KeyEvent.VK_T,
