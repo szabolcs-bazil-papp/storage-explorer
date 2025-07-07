@@ -31,9 +31,8 @@ public class EmbeddedStorageExplorerAutoConfiguration {
 
 
   @Configuration(proxyBeanMethods = false)
-  @ConditionalOnClass(StorageFS.class)
   @ConditionalOnProperty(name = "fs.base.directory")
-  @ConditionalOnBean({ ObjectApi.class, CollectionApi.class })
+  @ConditionalOnBean({ ObjectApi.class, CollectionApi.class, StorageFS.class })
   static class FileSystemConfiguration {
 
     @Bean
@@ -64,12 +63,11 @@ public class EmbeddedStorageExplorerAutoConfiguration {
 
 
   @Configuration(proxyBeanMethods = false)
-  @ConditionalOnClass({ StorageSQL.class, JdbcTemplate.class })
-  @ConditionalOnBean({ ObjectApi.class, CollectionApi.class, JdbcTemplate.class })
+  @ConditionalOnBean({ ObjectApi.class, CollectionApi.class, JdbcTemplate.class, StorageSQL.class })
   static class RelationalDatabaseConfiguration {
 
     @Bean
-    @ConditionalOnBean({ JdbcClient.class })
+    @ConditionalOnMissingBean({ JdbcClient.class })
     public JdbcClient jdbcClient(JdbcTemplate jdbcTemplate) {
       return JdbcClient.create(jdbcTemplate);
     }

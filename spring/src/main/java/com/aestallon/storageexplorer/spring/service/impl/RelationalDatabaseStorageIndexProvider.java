@@ -27,7 +27,7 @@ public class RelationalDatabaseStorageIndexProvider implements StorageIndexProvi
 
 
   @Override
-  public StorageIndex provide() {
+  public StorageIndex<?> provide() {
     return new RelationalDatabaseStorageIndex(id, objectApi, collectionApi, jdbcClient, null);
   }
 }
