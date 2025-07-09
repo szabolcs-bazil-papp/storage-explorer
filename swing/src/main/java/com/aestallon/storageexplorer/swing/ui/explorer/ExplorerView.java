@@ -123,7 +123,7 @@ public class ExplorerView extends JPanel {
 
   private void initContentPane() {
     contentPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, graphView, inspectorContainerView);
-    contentPane.getLeftComponent().setPreferredSize(new Dimension(1_000, 500));
+    contentPane.getLeftComponent().setMinimumSize(new Dimension(500, 250));
   }
 
   public DisplayMode displayMode() {

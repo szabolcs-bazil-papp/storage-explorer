@@ -33,9 +33,12 @@ import javax.swing.tree.TreePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.graph.service.GraphExportService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.common.util.Pair;
@@ -77,18 +80,21 @@ public class MainTreeView extends JPanel {
   private Map<StorageEntry, TreePath> treePathByEntry;
 
   private final AtomicBoolean propagate = new AtomicBoolean(true);
-  private final ApplicationEventPublisher eventPublisher;
-  private final StorageInstanceProvider storageInstanceProvider;
-  private final UserConfigService userConfigService;
+  private final transient ApplicationEventPublisher eventPublisher;
+  private final transient StorageInstanceProvider storageInstanceProvider;
+  private final transient UserConfigService userConfigService;
+  private final transient StorageEntryTrackingService trackingService;
 
   public MainTreeView(ApplicationEventPublisher eventPublisher,
                       StorageInstanceProvider storageInstanceProvider,
-                      UserConfigService userConfigService) {
+                      UserConfigService userConfigService,
+                      StorageEntryTrackingService trackingService) {
     this.eventPublisher = eventPublisher;
     this.storageInstanceProvider = storageInstanceProvider;
+    this.trackingService = trackingService;
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-    setPreferredSize(new Dimension(300, 500));
+    setMinimumSize(new Dimension(100, 500));
 
     initTree();
     treePanel = new JScrollPane(tree);
@@ -97,7 +103,7 @@ public class MainTreeView extends JPanel {
   }
 
   private void initTree() {
-    tree = StorageTree.create();
+    tree = StorageTree.create(trackingService);
     tree.addTreeSelectionListener(e -> {
       final var treeNode = (DefaultMutableTreeNode) e.getPath().getLastPathComponent();
       if (treeNode instanceof ClickableTreeNode && propagate.get()) {
@@ -149,17 +155,16 @@ public class MainTreeView extends JPanel {
           final StorageEntry host = hostEntry.get();
           TreePath hostPath = treePathByEntry.get(host);
           node = switch (scopedEntry) {
-            case ScopedMapEntry scopedMapEntry -> new StorageMapTreeNode(scopedMapEntry);
-            case ScopedListEntry scopedListEntry -> new StorageListTreeNode(scopedListEntry);
-            case ScopedObjectEntry scopedObjectEntry ->
-                new StorageObjectTreeNode(scopedObjectEntry);
+            case ScopedMapEntry sme -> new StorageMapTreeNode(sme, trackingService);
+            case ScopedListEntry sle -> new StorageListTreeNode(sle, trackingService);
+            case ScopedObjectEntry soe -> new StorageObjectTreeNode(soe, trackingService);
           };
 
           final StorageObjectTreeNode hostNode =
               (StorageObjectTreeNode) hostPath.getLastPathComponent();
           if (enumerationToStream(hostNode.children()).anyMatch(
-              it -> it instanceof ClickableTreeNode && ((ClickableTreeNode) it).storageEntry().uri()
-                  .equals(scopedEntry.uri()))) {
+              it -> it instanceof ClickableTreeNode c 
+                    && c.storageEntry().uri().equals(scopedEntry.uri()))) {
             // node is already here...
             return;
           }
@@ -314,6 +319,11 @@ public class MainTreeView extends JPanel {
       });
       export.setToolTipText("Export the storage as a GEXF file.");
       return export;
+    }
+    
+    @EventListener
+    public void onStorageEntryMetaadatChanged(StorageEntryUserDataChanged event) {
+      SwingUtilities.invokeLater(() -> tree.repaint());
     }
 
     private JMenuItem createEditMenuItem(StorageInstanceTreeNode sitn) {

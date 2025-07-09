@@ -153,35 +153,33 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       label.setFont(UIManager.getFont("h3.font"));
       label.setAlignmentX(Component.LEFT_ALIGNMENT);
       box.add(label);
-      box.add(Box.createHorizontalGlue());
 
       Box box1 = new Box(BoxLayout.X_AXIS);
       final var creationLabel = new JLabel("Created at:");
       creationLabel.setFont(UIManager.getFont("h4.font"));
       creationLabel.setBorder(new EmptyBorder(0, 0, 0, 5));
-      label.setAlignmentX(Component.LEFT_ALIGNMENT);
 
       final var creationValue = new JLabel(getNodeCreationValue(version));
       creationValue.setFont(UIManager.getFont("h4.font"));
-      creationValue.setAlignmentX(Component.LEFT_ALIGNMENT);
       box1.add(creationLabel);
       box1.add(creationValue);
-      box1.add(Box.createHorizontalGlue());
 
       final Box box1b = factory.trackingService().getUserData(objectEntry)
           .map(StorageEntryTrackingService.StorageEntryUserData::description)
+          .filter(it -> !it.isBlank())
           .map(it -> {
             final Box b = new Box(BoxLayout.X_AXIS);
-            final var description = new JTextArea(it, 0, 40);
+            final var description = new AutoSizingTextArea(it);
             description.setWrapStyleWord(true);
             description.setLineWrap(true);
             description.setEditable(false);
             description.setOpaque(false);
             description.setFont(UIManager.getFont("h4.font"));
             description.setBorder(new EmptyBorder(0, 0, 0, 0));
-            description.setAlignmentX(Component.LEFT_ALIGNMENT);
+            description.setMinimumSize(new Dimension(0, 100));
+            description.setColumns(0);
+
             b.add(description);
-            b.setAlignmentX(Component.LEFT_ALIGNMENT);
             return b;
           })
           .orElse(null);
@@ -195,17 +193,20 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
           sd.setVisible(true);
         }
       });
-
       box2.add(pane.scrollPane());
-      //box2.add(Box.createHorizontalGlue());
 
       add(toolbar);
+      toolbar.setAlignmentX(Component.LEFT_ALIGNMENT);
       add(box);
+      box.setAlignmentX(Component.LEFT_ALIGNMENT);
       add(box1);
+      box1.setAlignmentX(Component.LEFT_ALIGNMENT);
       if (box1b != null) {
         add(box1b);
+        box1b.setAlignmentX(Component.LEFT_ALIGNMENT);
       }
       add(box2);
+      box2.setAlignmentX(Component.LEFT_ALIGNMENT);
 
       initialised = true;
     }
@@ -295,6 +296,34 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         return null;
       }
     };
+  }
+
+  private static final class AutoSizingTextArea extends JTextArea {
+
+    private AutoSizingTextArea(final String text) {
+      super(text);
+      recalculate();
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+      final FontMetrics fm = getFontMetrics(getFont());
+      final int rows = getRows();
+      return new Dimension(super.getPreferredSize().width,
+          fm.getHeight() * rows + fm.getDescent());
+    }
+
+    @Override
+    public void setText(String t) {
+      super.setText(t);
+      recalculate();
+    }
+
+    private void recalculate() {
+      setRows(getText().split("\n").length);
+      setMaximumSize(new Dimension(Integer.MAX_VALUE, getPreferredSize().height * 2));
+    }
+
   }
 
 }

@@ -16,14 +16,18 @@
 package com.aestallon.storageexplorer.swing.ui.tree.model.node;
 
 import javax.swing.tree.DefaultMutableTreeNode;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
 public final class StorageListTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
 
-
-  public StorageListTreeNode(ListEntry listEntry) {
+  private final transient StorageEntryTrackingService trackingService;
+  
+  public StorageListTreeNode(final ListEntry listEntry,
+                             final StorageEntryTrackingService trackingService) {
     super(listEntry, false);
+    this.trackingService = trackingService;
   }
 
   @Override
@@ -44,7 +48,9 @@ public final class StorageListTreeNode extends DefaultMutableTreeNode implements
   @Override
   public String toString() {
     final var listEntry = (ListEntry) userObject;
-    return listEntry.displayName();
+    return trackingService.getUserData(listEntry)
+        .map(StorageEntryTrackingService.StorageEntryUserData::name)
+        .orElseGet(listEntry::displayName);
   }
 
 }

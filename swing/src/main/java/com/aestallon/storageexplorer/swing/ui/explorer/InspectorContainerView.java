@@ -40,7 +40,7 @@ public class InspectorContainerView extends JTabbedPane {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
     this.eventPublisher = eventPublisher;
 
-    setPreferredSize(new Dimension(100, 0));
+    setMinimumSize(new Dimension(100, 0));
     this.factory = factory;
 
     addChangeListener(e -> {

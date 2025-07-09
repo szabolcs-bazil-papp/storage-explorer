@@ -92,6 +92,7 @@ public final class InspectorTextareaFactory {
     inspectorViewFactory.submitTextArea(objectEntry, textarea);
 
     final var scrollPane = new RTextScrollPane(textarea);
+    scrollPane.setMinimumSize(new Dimension(200, 200));
     return new PaneAndTextarea(scrollPane, textarea);
   }
 

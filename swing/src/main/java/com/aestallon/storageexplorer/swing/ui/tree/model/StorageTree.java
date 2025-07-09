@@ -13,6 +13,8 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreeSelectionModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
+import static com.aestallon.storageexplorer.common.util.Streams.enumerationToStream;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -28,15 +30,14 @@ import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageObjectTreeN
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageSchemaTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageSequenceTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageTypeTreeNode;
-import static com.aestallon.storageexplorer.common.util.Streams.enumerationToStream;
 
 public final class StorageTree extends JTree implements Scrollable, Accessible {
 
   private static final Logger log = LoggerFactory.getLogger(StorageTree.class);
 
-  public static StorageTree create() {
+  public static StorageTree create(final StorageEntryTrackingService trackingService) {
     final var root = new DefaultMutableTreeNode("Storage Explorer");
-    final var tree = new StorageTree(root);
+    final var tree = new StorageTree(root, trackingService);
     final var selectionModel = new DefaultTreeSelectionModel();
     selectionModel.setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
     tree.setSelectionModel(selectionModel);
@@ -57,9 +58,13 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
     }
     return -1;
   }
+  
+  private final StorageEntryTrackingService trackingService;
 
-  private StorageTree(final TreeNode root) {
+  private StorageTree(final TreeNode root, 
+                      final StorageEntryTrackingService trackingService) {
     super(root, true);
+    this.trackingService = trackingService;
   }
 
   public DefaultTreeModel model() {
@@ -70,7 +75,7 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
     final DefaultTreeModel model = model();
     final DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
     final StorageInstanceTreeNode storageInstanceTreeNode =
-        new StorageInstanceTreeNode(storageInstance);
+        new StorageInstanceTreeNode(storageInstance, trackingService);
     model.insertNodeInto(storageInstanceTreeNode, root, root.getChildCount());
     return storageInstanceTreeNode;
   }
@@ -100,7 +105,9 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
       model.removeNodeFromParent((MutableTreeNode) root.getChildAt(idx));
     }
     // Re-add Storage:
-    final var storageInstanceTreeNode = new StorageInstanceTreeNode(storageInstance);
+    final var storageInstanceTreeNode = new StorageInstanceTreeNode(
+        storageInstance, 
+        trackingService);
     model.insertNodeInto(storageInstanceTreeNode, root, pos);
     return storageInstanceTreeNode;
   }
@@ -149,7 +156,10 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
         }
       }
       model.insertNodeInto(
-          new StorageSchemaTreeNode(objectEntry.uri().getScheme(), List.of(objectEntry)),
+          new StorageSchemaTreeNode(
+              objectEntry.uri().getScheme(), 
+              List.of(objectEntry),
+              trackingService),
           sitn,
           schemaIdx);
       // new Schema Node: sitn->schema->type->object
@@ -177,7 +187,7 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
 
     if (typeNode == null) {
       model.insertNodeInto(
-          new StorageTypeTreeNode(objectEntry.typeName(), List.of(objectEntry)),
+          new StorageTypeTreeNode(objectEntry.typeName(), List.of(objectEntry), trackingService),
           schemaNode,
           typeIdx);
       return (StorageObjectTreeNode) schemaNode.getChildAt(typeIdx).getChildAt(0);
@@ -189,7 +199,9 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
       return null;
     }
 
-    final StorageObjectTreeNode objectTreeNode = new StorageObjectTreeNode(objectEntry);
+    final StorageObjectTreeNode objectTreeNode = new StorageObjectTreeNode(
+        objectEntry, 
+        trackingService);
     model.insertNodeInto(objectTreeNode, typeNode, typeNode.getChildCount());
     return objectTreeNode;
   }
@@ -220,7 +232,7 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
 
     }
 
-    final StorageListTreeNode node = new StorageListTreeNode(listEntry);
+    final StorageListTreeNode node = new StorageListTreeNode(listEntry, trackingService);
     model.insertNodeInto(node, sitn, idx);
     return node;
   }
@@ -256,7 +268,7 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
 
     }
 
-    final var node = new StorageMapTreeNode(mapEntry);
+    final var node = new StorageMapTreeNode(mapEntry, trackingService);
     model.insertNodeInto(node, sitn, idx);
     return node;
   }
@@ -292,7 +304,7 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
 
     }
 
-    final var node = new StorageSequenceTreeNode(sequenceEntry);
+    final var node = new StorageSequenceTreeNode(sequenceEntry, trackingService);
     model.insertNodeInto(node, sitn, idx);
     return node;
   }
@@ -304,29 +316,29 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
                                                            boolean expanded, boolean leaf, int row,
                                                            boolean hasFocus) {
       super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
-      if (value instanceof StorageListTreeNode) {
-        if (((StorageListTreeNode) value).getUserObject() instanceof ScopedEntry) {
+      if (value instanceof StorageListTreeNode sltn) {
+        if (sltn.getUserObject() instanceof ScopedEntry) {
           setIcon(IconProvider.SCOPED_LIST);
         } else {
           setIcon(IconProvider.LIST);
         }
 
-      } else if (value instanceof StorageMapTreeNode) {
-        if (((StorageMapTreeNode) value).getUserObject() instanceof ScopedEntry) {
+      } else if (value instanceof StorageMapTreeNode smtn) {
+        if (smtn.getUserObject() instanceof ScopedEntry) {
           setIcon(IconProvider.SCOPED_MAP);
         } else {
           setIcon(IconProvider.MAP);
         }
 
-      } else if (value instanceof StorageObjectTreeNode) {
-        if (((StorageObjectTreeNode) value).getUserObject() instanceof ScopedEntry) {
+      } else if (value instanceof StorageObjectTreeNode sotn) {
+        if (sotn.getUserObject() instanceof ScopedEntry) {
           setIcon(IconProvider.SCOPED_OBJ);
         } else {
           setIcon(IconProvider.OBJ);
         }
 
-      } else if (value instanceof StorageInstanceTreeNode) {
-        final StorageInstance storageInstance = ((StorageInstanceTreeNode) value).storageInstance();
+      } else if (value instanceof StorageInstanceTreeNode sitn) {
+        final StorageInstance storageInstance = sitn.storageInstance();
         setIcon(IconProvider.getIconForStorageInstance(storageInstance));
 
       } else if (value instanceof StorageSequenceTreeNode) {

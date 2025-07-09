@@ -4,7 +4,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Path2D;
-import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -12,6 +11,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
@@ -139,6 +139,11 @@ public class AppContentView extends JPanel {
   @EventListener
   public void onBreadCrumbsChanged(final BreadCrumbsChanged e) {
     breadCrumbs.set(e.path().getPath());
+  }
+  
+  @EventListener
+  public void onStorageEntryUserDataChanged(final StorageEntryUserDataChanged event) {
+    SwingUtilities.invokeLater(breadCrumbs::repaint);
   }
   
   private static final class LoadingQueueLabel extends JLabel {

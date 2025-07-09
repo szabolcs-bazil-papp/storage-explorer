@@ -22,7 +22,7 @@ public class EntryMetaEditorDialog extends JDialog {
   private JLabel labelDescription;
   private JPanel mainPanel;
   
-  private final EntryMetaEditorController controller;
+  private final transient EntryMetaEditorController controller;
 
   public EntryMetaEditorDialog(EntryMetaEditorController controller) {
     this.controller = controller;
@@ -31,6 +31,7 @@ public class EntryMetaEditorDialog extends JDialog {
     textName.setText(initialModel.name());
     textDescription.setText(initialModel.description());
     
+    setTitle("Enter custom metadata for the entry...");
     setContentPane(contentPane);
     setModal(true);
     getRootPane().setDefaultButton(buttonOK);
