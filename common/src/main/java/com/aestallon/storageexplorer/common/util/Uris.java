@@ -54,13 +54,13 @@ public final class Uris {
   }
 
   public static Optional<URI> parse(Object o) {
-    if (o instanceof URI) {
-      return Optional.of((URI) o);
+    if (o instanceof URI uri) {
+      return Optional.of(uri);
     }
 
-    if (o instanceof String) {
+    if (o instanceof String s) {
       try {
-        final URI uri = new URI((String) o);
+        final URI uri = new URI(s);
         return (Strings.isNullOrEmpty(uri.getScheme()) || Strings.isNullOrEmpty(uri.getPath()))
             ? Optional.empty()
             : Optional.of(uri);

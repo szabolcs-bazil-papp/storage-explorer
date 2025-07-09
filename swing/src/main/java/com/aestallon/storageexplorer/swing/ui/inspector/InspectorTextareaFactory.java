@@ -54,28 +54,27 @@ public final class InspectorTextareaFactory {
 
   PaneAndTextarea create(final ObjectEntry objectEntry,
                          final ObjectEntryLoadResult.SingleVersion nodeVersion) {
-    return create(objectEntry, nodeVersion, Type.FANCY);
+    final var oamStr = nodeVersion.oamStr();
+    if (oamStr.length() >= 500_000) {
+      return createSimple(objectEntry, nodeVersion, oamStr);
+    }
+    
+    return createFancy(objectEntry, nodeVersion, oamStr);
   }
 
-  private PaneAndTextarea create(final ObjectEntry objectEntry,
-                                 final ObjectEntryLoadResult.SingleVersion nodeVersion,
-                                 final Type type) {
-    return switch (type) {
-      case SIMPLE -> createSimple(objectEntry, nodeVersion);
-      case FANCY -> createFancy(objectEntry, nodeVersion);
-    };
-  }
 
   private PaneAndTextarea createSimple(final ObjectEntry objectEntry,
-                                       final ObjectEntryLoadResult.SingleVersion nodeVersion) {
-    final var textarea = objectAsMapTextarea(objectEntry, nodeVersion);
+                                       final ObjectEntryLoadResult.SingleVersion nodeVersion,
+                                       final String oamStr) {
+    final var textarea = objectAsMapTextarea(objectEntry, nodeVersion, oamStr);
     final var pane = textAreaContainerPane(textarea);
     return new PaneAndTextarea(pane, textarea);
   }
 
   private PaneAndTextarea createFancy(final ObjectEntry objectEntry,
-                                      final ObjectEntryLoadResult.SingleVersion nodeVersion) {
-    final var textarea = new RSyntaxTextArea(nodeVersion.oamStr());
+                                      final ObjectEntryLoadResult.SingleVersion nodeVersion,
+                                      final String oamStr) {
+    final var textarea = new RSyntaxTextArea(oamStr);
     if (themeProvider.hasTheme()) {
       themeProvider.applyCurrentTheme(textarea);
     }
@@ -98,8 +97,9 @@ public final class InspectorTextareaFactory {
 
 
   private JTextArea objectAsMapTextarea(final ObjectEntry objectEntry,
-                                        final ObjectEntryLoadResult.SingleVersion nodeVersion) {
-    final var textarea = new JTextArea(nodeVersion.oamStr(), 0, 80);
+                                        final ObjectEntryLoadResult.SingleVersion nodeVersion,
+                                        final String oamStr) {
+    final var textarea = new JTextArea(oamStr, 0, 80);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
     textarea.setEditable(false);
