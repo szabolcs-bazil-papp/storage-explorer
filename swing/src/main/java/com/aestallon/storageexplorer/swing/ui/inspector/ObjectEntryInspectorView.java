@@ -31,6 +31,7 @@ import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -142,10 +143,13 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
       factory.addRenderAction(objectEntry, toolbar);
       toolbar.add(openInSystemExplorerAction);
+      factory.addEditMetaAction(objectEntry, toolbar);
       toolbar.add(Box.createHorizontalGlue());
 
       Box box = new Box(BoxLayout.X_AXIS);
-      final var label = new JLabel(objectEntry.getDisplayName(version));
+      final var label = new JLabel(factory.trackingService().getUserData(objectEntry)
+          .map(StorageEntryTrackingService.StorageEntryUserData::name)
+          .orElseGet(() -> objectEntry.getDisplayName(version)));
       label.setFont(UIManager.getFont("h3.font"));
       label.setAlignmentX(Component.LEFT_ALIGNMENT);
       box.add(label);
@@ -164,6 +168,24 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       box1.add(creationValue);
       box1.add(Box.createHorizontalGlue());
 
+      final Box box1b = factory.trackingService().getUserData(objectEntry)
+          .map(StorageEntryTrackingService.StorageEntryUserData::description)
+          .map(it -> {
+            final Box b = new Box(BoxLayout.X_AXIS);
+            final var description = new JTextArea(it, 0, 40);
+            description.setWrapStyleWord(true);
+            description.setLineWrap(true);
+            description.setEditable(false);
+            description.setOpaque(false);
+            description.setFont(UIManager.getFont("h4.font"));
+            description.setBorder(new EmptyBorder(0, 0, 0, 0));
+            description.setAlignmentX(Component.LEFT_ALIGNMENT);
+            b.add(description);
+            b.setAlignmentX(Component.LEFT_ALIGNMENT);
+            return b;
+          })
+          .orElse(null);
+
       Box box2 = new Box(BoxLayout.X_AXIS);
       final var pane = factory.textareaFactory().create(objectEntry, version);
       toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
@@ -175,11 +197,14 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       });
 
       box2.add(pane.scrollPane());
-      box2.add(Box.createHorizontalGlue());
+      //box2.add(Box.createHorizontalGlue());
 
       add(toolbar);
       add(box);
       add(box1);
+      if (box1b != null) {
+        add(box1b);
+      }
       add(box2);
 
       initialised = true;

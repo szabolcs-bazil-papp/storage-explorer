@@ -44,6 +44,8 @@ import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorController;
+import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorDialog;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
@@ -173,6 +175,10 @@ public class StorageEntryInspectorViewFactory {
         }));
   }
 
+  StorageEntryTrackingService trackingService() {
+    return trackingService;
+  }
+  
   public Optional<InspectorView<? extends StorageEntry>> getTab(final StorageEntry storageEntry) {
     if (openedDialogs.containsKey(storageEntry)) {
       return Optional.empty();
@@ -235,6 +241,19 @@ public class StorageEntryInspectorViewFactory {
       @Override
       public void actionPerformed(ActionEvent e) {
         eventPublisher.publishEvent(new GraphRenderingRequest(storageEntry));
+      }
+    });
+  }
+  
+  void addEditMetaAction(final StorageEntry storageEntry, final JToolBar toolbar) {
+    toolbar.add(new AbstractAction(null, IconProvider.EDIT) {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        final var controller = EntryMetaEditorController.newInstance(storageEntry, trackingService);
+        final var dialog = new EntryMetaEditorDialog(controller);
+        dialog.pack();
+        dialog.setLocationRelativeTo(toolbar);
+        dialog.setVisible(true);
       }
     });
   }

@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.client.userconfig.model.FavouriteStorageEntry;
 import com.aestallon.storageexplorer.client.userconfig.model.TrackedInspector;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -156,21 +157,10 @@ public class StorageEntryTrackingService {
         .map(it -> new StorageEntryUserData(it.getName(), it.getDescription()));
   }
 
-  public void setStorageEntryName(final StorageEntry storageEntry, final String name) {
-    setStorageEntryProperty(storageEntry, FavouriteStorageEntry::setName, name);
-  }
-
-  public void setStorageEntryDescription(final StorageEntry storageEntry,
-                                         final String description) {
-    setStorageEntryProperty(storageEntry, FavouriteStorageEntry::setDescription, description);
-  }
-
-  private <T> void setStorageEntryProperty(final StorageEntry storageEntry,
-                                           final BiConsumer<FavouriteStorageEntry, T> mutator,
-                                           final T value) {
+  public void updateStorageEntryUserData(final StorageEntry storageEntry,
+                                         final StorageEntryUserData storageEntryUserData) {
     Objects.requireNonNull(storageEntry, "storageEntry cannot be null!");
-    Objects.requireNonNull(mutator, "mutator cannot be null!");
-    Objects.requireNonNull(value, "value cannot be null!");
+    Objects.requireNonNull(storageEntryUserData, "storageEntryUserData cannot be null!");
 
     final var map = favouriteStorageEntries.updateAndGet(fse -> {
       final FavouriteStorageEntry it = fse.computeIfAbsent(storageEntry.uri(), k -> {
@@ -181,12 +171,14 @@ public class StorageEntryTrackingService {
         entry.setDescription("");
         return entry;
       });
-      mutator.accept(it, value);
+      it.setName(storageEntryUserData.name);
+      it.setDescription(storageEntryUserData.description);
       return fse;
     });
     persistenceService.writeSettingsTo(FAVOURITE_STORAGE_ENTRIES, map);
+    eventPublisher.publishEvent(new StorageEntryUserDataChanged(
+        storageEntry,
+        storageEntryUserData));
   }
-
-
 
 }
