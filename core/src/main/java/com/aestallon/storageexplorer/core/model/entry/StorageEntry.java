@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Set;
 import org.smartbit4all.core.utility.StringConstant;
@@ -40,6 +41,8 @@ public sealed interface StorageEntry permits
   StorageId storageId();
 
   URI uri();
+  
+  Path path();
 
   Set<UriProperty> uriProperties();
 

@@ -4,6 +4,6 @@ import com.aestallon.storageexplorer.core.service.StorageIndex;
 
 public interface StorageIndexProvider {
 
-  StorageIndex provide();
+  StorageIndex<?> provide();
 
 }

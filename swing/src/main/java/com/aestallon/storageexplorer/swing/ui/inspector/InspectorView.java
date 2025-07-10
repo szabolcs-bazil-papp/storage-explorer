@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import javax.swing.*;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
 public interface InspectorView<T extends StorageEntry> {
@@ -25,5 +26,7 @@ public interface InspectorView<T extends StorageEntry> {
   default JComponent asComponent() {
     return (JComponent) this;
   }
+  
+  void onUserDataChanged(StorageEntryTrackingService.StorageEntryUserData userData);
 
 }

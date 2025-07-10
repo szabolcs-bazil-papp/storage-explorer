@@ -26,7 +26,7 @@ public class FileSystemStorageIndexProvider implements StorageIndexProvider {
   }
 
   @Override
-  public StorageIndex provide() {
+  public StorageIndex<?> provide() {
     return new FileSystemStorageIndex(id, objectApi, collectionApi, pathToStorage.toAbsolutePath());
   }
 }

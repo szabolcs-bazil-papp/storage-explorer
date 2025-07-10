@@ -10,7 +10,8 @@ public record ObjectEntryMeta(
     String storageSchema,
     Long versionNr,
     OffsetDateTime createdAt,
-    Long lastModified) {
+    Long lastModified,
+    String entryId) {
 
   public static ObjectEntryMeta of(final ObjectNodeData objectNodeData) {
     return new ObjectEntryMeta(
@@ -19,7 +20,8 @@ public record ObjectEntryMeta(
         objectNodeData.getStorageSchema(),
         objectNodeData.getVersionNr(),
         objectNodeData.getCreatedAt(),
-        objectNodeData.getLastModified());
+        objectNodeData.getLastModified(),
+        objectNodeData.getPhysicalObjectId());
   }
 
 }

@@ -21,7 +21,10 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.event.TreeTouchRequest;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
@@ -40,7 +43,7 @@ public class InspectorContainerView extends JTabbedPane {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
     this.eventPublisher = eventPublisher;
 
-    setPreferredSize(new Dimension(100, 0));
+    setMinimumSize(new Dimension(100, 0));
     this.factory = factory;
 
     addChangeListener(e -> {
@@ -63,7 +66,11 @@ public class InspectorContainerView extends JTabbedPane {
         break;
       case NONE:
         final var inspector = factory.createInspector(storageEntry).asComponent();
-        addTab(storageEntry.toString(), inspector);
+        final var title = factory.trackingService().getUserData(storageEntry)
+            .map(StorageEntryTrackingService.StorageEntryUserData::name)
+            .filter(it -> !it.isBlank())
+            .orElseGet(storageEntry::toString);
+        addTab(title, inspector);
         installTabComponent(inspector);
         setSelectedComponent(inspector);
     }
@@ -84,51 +91,71 @@ public class InspectorContainerView extends JTabbedPane {
     });
   }
 
-  private void installTabComponent(JComponent inspectorComponent) {
-    int index = indexOfComponent(inspectorComponent);
-
-    final var tab = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-    tab.setOpaque(false);
-    final var label = new JLabel() {
-      @Override
-      public String getText() {
-        int idx = InspectorContainerView.this.indexOfTabComponent(tab);
-        if (idx < 0) {
-          return "";
-        }
-        return InspectorContainerView.this.getTitleAt(idx);
-      }
-    };
-    tab.add(label);
-    tab.add(new CloseTabButton(e -> {
-      int idx = InspectorContainerView.this.indexOfTabComponent(tab);
-      if (idx < 0) {
-        return;
-      }
-
-      final var inspector = inspectorViewAt(idx);
-      if (inspector == null) {
-        return;
-      }
-
-      final int alt = ActionEvent.ALT_MASK;
-      if ((e.getModifiers() & alt) == alt) {
-        final int tabCount = getTabCount();
-        if (idx < tabCount - 1) {
-          for (int i = 0; i < tabCount - 1 - idx; i++) {
-            final var inspectorToClose = inspectorViewAt(idx + 1);
-            discardInspector(inspectorToClose);
+  @EventListener
+  void onStorageEntryUserDataChanged(final StorageEntryUserDataChanged event) {
+    SwingUtilities.invokeLater(() -> {
+      factory.getTab(event.storageEntry()).ifPresent(view -> {
+        view.onUserDataChanged(event.data());
+        final int idx = indexOfComponent(view.asComponent());
+        if (idx >= 0) {
+          final var tab = (TabComponent) getTabComponentAt(idx);
+          final var name = event.data().name();
+          if (name != null && !name.isBlank()) {
+            tab.label.setText(name);
+          } else {
+            tab.label.setText(event.storageEntry().toString());
           }
         }
-        for (int i = 0; i < idx; i++) {
-          final var inspectorToClose = inspectorViewAt(0);
-          discardInspector(inspectorToClose);
+      });
+    });
+  }
 
+  private final class TabComponent extends JPanel {
+
+    private final JLabel label;
+
+    private TabComponent(final String title) {
+      super(new FlowLayout(FlowLayout.LEFT, 0, 0));
+      setOpaque(false);
+      label = new JLabel(title);
+      add(label);
+      add(new CloseTabButton(e -> {
+        int idx = InspectorContainerView.this.indexOfTabComponent(TabComponent.this);
+        if (idx < 0) {
+          return;
         }
-      } else {
-        discardInspector(inspector);
-      }
-    }));
+
+        final var inspector = inspectorViewAt(idx);
+        if (inspector == null) {
+          return;
+        }
+
+        final int alt = ActionEvent.ALT_MASK;
+        if ((e.getModifiers() & alt) == alt) {
+          final int tabCount = getTabCount();
+          if (idx < tabCount - 1) {
+            for (int i = 0; i < tabCount - 1 - idx; i++) {
+              final var inspectorToClose = inspectorViewAt(idx + 1);
+              discardInspector(inspectorToClose);
+            }
+          }
+          for (int i = 0; i < idx; i++) {
+            final var inspectorToClose = inspectorViewAt(0);
+            discardInspector(inspectorToClose);
+
+          }
+        } else {
+          discardInspector(inspector);
+        }
+      }));
+    }
+
+  }
+
+  private void installTabComponent(JComponent inspectorComponent) {
+    final int index = indexOfComponent(inspectorComponent);
+    final var title = getTitleAt(index);
+    final var tab = new TabComponent(title);
     setTabComponentAt(index, tab);
   }
 

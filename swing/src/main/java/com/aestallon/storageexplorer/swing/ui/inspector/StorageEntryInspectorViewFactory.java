@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -28,12 +29,14 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.graph.event.GraphRenderingRequest;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
@@ -42,6 +45,8 @@ import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorController;
+import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorDialog;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
@@ -56,6 +61,7 @@ public class StorageEntryInspectorViewFactory {
   private final MonospaceFontProvider monospaceFontProvider;
   private final InspectorTextareaFactory textareaFactory;
   private final RSyntaxTextAreaThemeProvider themeProvider;
+  private final StorageEntryTrackingService trackingService;
   private final Map<StorageEntry, InspectorView<? extends StorageEntry>> openedInspectors;
   private final Map<StorageEntry, InspectorDialog> openedDialogs;
   private final Map<StorageEntry, List<JTextArea>> textAreas;
@@ -63,12 +69,14 @@ public class StorageEntryInspectorViewFactory {
   public StorageEntryInspectorViewFactory(ApplicationEventPublisher eventPublisher,
                                           StorageInstanceProvider storageInstanceProvider,
                                           MonospaceFontProvider monospaceFontProvider,
-                                          RSyntaxTextAreaThemeProvider themeProvider) {
+                                          RSyntaxTextAreaThemeProvider themeProvider,
+                                          StorageEntryTrackingService trackingService) {
     this.eventPublisher = eventPublisher;
     this.storageInstanceProvider = storageInstanceProvider;
     this.monospaceFontProvider = monospaceFontProvider;
     this.themeProvider = themeProvider;
     this.textareaFactory = new InspectorTextareaFactory(this, themeProvider);
+    this.trackingService = trackingService;
 
     openedInspectors = new ConcurrentHashMap<>();
     openedDialogs = new ConcurrentHashMap<>();
@@ -96,6 +104,7 @@ public class StorageEntryInspectorViewFactory {
     openedDialogs.remove(storageEntry);
     openedInspectors.remove(storageEntry);
     textAreas.remove(storageEntry);
+    trackingService.removeTrackedInspector(storageEntry);
   }
 
   public enum InspectorRendering { TAB, DIALOG, NONE }
@@ -123,12 +132,13 @@ public class StorageEntryInspectorViewFactory {
     } else if (storageEntry instanceof ListEntry || storageEntry instanceof MapEntry) {
       inspector = new CollectionEntryInspectorView(storageEntry, this);
     } else if (storageEntry instanceof SequenceEntry s) {
-      inspector = new SequenceEntryInspectorView(s);
+      inspector = new SequenceEntryInspectorView(s, this);
     } else {
       throw new AssertionError(storageEntry + " is not interpreted - TYPE ERROR!");
     }
 
     openedInspectors.put(storageEntry, inspector);
+    trackingService.addTrackedInspector(storageEntry);
     return inspector;
   }
 
@@ -166,12 +176,27 @@ public class StorageEntryInspectorViewFactory {
         }));
   }
 
+  public StorageEntryTrackingService trackingService() {
+    return trackingService;
+  }
+
   public Optional<InspectorView<? extends StorageEntry>> getTab(final StorageEntry storageEntry) {
     if (openedDialogs.containsKey(storageEntry)) {
       return Optional.empty();
     }
 
     return Optional.ofNullable(openedInspectors.get(storageEntry));
+  }
+
+  void setDescriptionTextAreaProps(final JTextArea textareaDescription) {
+    textareaDescription.setWrapStyleWord(true);
+    textareaDescription.setLineWrap(true);
+    textareaDescription.setEditable(false);
+    textareaDescription.setOpaque(false);
+    textareaDescription.setFont(UIManager.getFont("h4.font"));
+    textareaDescription.setBorder(new EmptyBorder(0, 0, 0, 0));
+    textareaDescription.setMinimumSize(new Dimension(0, 0));
+    textareaDescription.setColumns(0);
   }
 
   @EventListener
@@ -198,7 +223,7 @@ public class StorageEntryInspectorViewFactory {
   void addJumpAction(final StorageId storageId, final JTextArea component) {
     final var ctrlShiftI = KeyStroke.getKeyStroke(
         KeyEvent.VK_I,
-        KeyEvent.CTRL_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK);
+        InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
     component.getInputMap().put(ctrlShiftI, "jumpToRef");
     component.getActionMap().put("jumpToRef", new AbstractAction() {
 
@@ -232,6 +257,19 @@ public class StorageEntryInspectorViewFactory {
     });
   }
 
+  void addEditMetaAction(final StorageEntry storageEntry, final JToolBar toolbar) {
+    toolbar.add(new AbstractAction(null, IconProvider.EDIT) {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        final var controller = EntryMetaEditorController.newInstance(storageEntry, trackingService);
+        final var dialog = new EntryMetaEditorDialog(controller);
+        dialog.pack();
+        dialog.setLocationRelativeTo(toolbar);
+        dialog.setVisible(true);
+      }
+    });
+  }
+
   @EventListener
   @Order(0)
   public void discardInspectorDialogsOfStorageAt(StorageIndexDiscardedEvent e) {
@@ -240,7 +278,7 @@ public class StorageEntryInspectorViewFactory {
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
         .forEach((entry, dialog) -> {
           dialog.dispose();
-          dropInspector(entry); // just to make sure if listener is not called.
+          dropInspector(entry); // just to make sure if the listener is not called.
         });
   }
 

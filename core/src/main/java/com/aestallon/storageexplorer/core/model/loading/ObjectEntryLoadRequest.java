@@ -53,9 +53,9 @@ public sealed interface ObjectEntryLoadRequest {
         return result.get();
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        return ObjectEntryLoadResults.err("ObjectEntry loading request interrupted");
+        return ObjectEntryLoadResult.err("ObjectEntry loading request interrupted");
       } catch (ExecutionException e) {
-        return ObjectEntryLoadResults.err(e.getMessage());
+        return ObjectEntryLoadResult.err(e.getMessage());
       }
     }
 

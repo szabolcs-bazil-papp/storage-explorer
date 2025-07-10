@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.swing.ui.tree.model.node;
 
 import javax.swing.tree.DefaultMutableTreeNode;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedListEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedMapEntry;
@@ -28,13 +29,17 @@ public final class StorageObjectTreeNode
 
   private boolean supportsChildren;
 
-  public StorageObjectTreeNode(ObjectEntry objectEntry) {
+  private final transient StorageEntryTrackingService trackingService;
+
+  public StorageObjectTreeNode(final ObjectEntry objectEntry,
+                               final StorageEntryTrackingService trackingService) {
     super(objectEntry, true);
+    this.trackingService = trackingService;
 
     objectEntry.scopedEntries().forEach(it -> add(switch (it) {
-      case ScopedMapEntry m -> new StorageMapTreeNode(m);
-      case ScopedObjectEntry o -> new StorageObjectTreeNode(o);
-      case ScopedListEntry l -> new StorageListTreeNode(l);
+      case ScopedMapEntry m -> new StorageMapTreeNode(m, trackingService);
+      case ScopedObjectEntry o -> new StorageObjectTreeNode(o, trackingService);
+      case ScopedListEntry l -> new StorageListTreeNode(l, trackingService);
     }));
     supportsChildren = !objectEntry.scopedEntries().isEmpty();
   }
@@ -55,7 +60,10 @@ public final class StorageObjectTreeNode
 
   @Override
   public String toString() {
-    return ((ObjectEntry) userObject).uuid();
+    final var objectEntry = (ObjectEntry) userObject;
+    return trackingService.getUserData(objectEntry)
+        .map(StorageEntryTrackingService.StorageEntryUserData::name)
+        .orElseGet(objectEntry::uuid);
   }
 
 }

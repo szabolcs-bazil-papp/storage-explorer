@@ -4,7 +4,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Path2D;
-import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -12,6 +11,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
@@ -141,6 +141,13 @@ public class AppContentView extends JPanel {
     breadCrumbs.set(e.path().getPath());
   }
   
+  @EventListener
+  public void onStorageEntryUserDataChanged(final StorageEntryUserDataChanged event) {
+    SwingUtilities.invokeLater(() -> {
+      breadCrumbs.elements.forEach(BreadCrumbElement::setText);
+    });
+  }
+  
   private static final class LoadingQueueLabel extends JLabel {
     public LoadingQueueLabel(long number) {
       setNumber(number);
@@ -201,21 +208,26 @@ public class AppContentView extends JPanel {
     private static final int SLANT = 10;
 
     private final DefaultMutableTreeNode node;
+    private final int textLimit;
     private final boolean leading;
-
 
     private BreadCrumbElement(final DefaultMutableTreeNode node,
                               final int textLimit,
                               final boolean leading) {
       this.node = node;
+      this.textLimit = textLimit;
       this.leading = leading;
-      setText(MsgStrings.trim(node.toString(), textLimit));
+      setText();
       setContentAreaFilled(false);
       setBorderPainted(false);
       setFocusPainted(false);
       setOpaque(false);
 
       addActionListener(this);
+    }
+    
+    private void setText() {
+      setText(MsgStrings.trim(node.toString(), textLimit));
     }
 
     @Override

@@ -19,21 +19,23 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TreeMap;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 import javax.swing.tree.DefaultMutableTreeNode;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
 
 public final class StorageInstanceTreeNode extends DefaultMutableTreeNode {
 
-  private final StorageInstance storageInstance;
+  private final transient StorageInstance storageInstance;
 
-  public StorageInstanceTreeNode(StorageInstance storageInstance) {
+  public StorageInstanceTreeNode(final StorageInstance storageInstance,
+                                 final StorageEntryTrackingService trackingService) {
     super(storageInstance.name(), true);
     this.storageInstance = storageInstance;
 
@@ -43,10 +45,10 @@ public final class StorageInstanceTreeNode extends DefaultMutableTreeNode {
             || it instanceof MapEntry
             || it instanceof SequenceEntry)
         .map(it -> it instanceof ListEntry list
-            ? new StorageListTreeNode(list)
+            ? new StorageListTreeNode(list, trackingService)
             : it instanceof MapEntry map
-                ? new StorageMapTreeNode(map)
-                : new StorageSequenceTreeNode((SequenceEntry) it))
+                ? new StorageMapTreeNode(map, trackingService)
+                : new StorageSequenceTreeNode((SequenceEntry) it, trackingService))
         .sorted((a, b) -> (a instanceof StorageListTreeNode)
             ? -1
             : (b instanceof StorageListTreeNode)
@@ -62,7 +64,10 @@ public final class StorageInstanceTreeNode extends DefaultMutableTreeNode {
         .filter(it -> !(it instanceof ScopedEntry))
         .map(ObjectEntry.class::cast)
         .collect(groupingBy(it -> it.uri().getScheme(), TreeMap::new, toList()))
-        .forEach((schema, entries) -> add(new StorageSchemaTreeNode(schema, entries)));
+        .forEach((schema, entries) -> add(new StorageSchemaTreeNode(
+            schema, 
+            entries, 
+            trackingService)));
   }
 
   private void sortAndAdd(List<? extends DefaultMutableTreeNode> collections) {

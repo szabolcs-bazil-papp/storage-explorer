@@ -17,7 +17,6 @@ package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import javax.swing.*;
@@ -31,9 +30,12 @@ import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
 
@@ -42,42 +44,9 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   private static final DateTimeFormatter FORMATTER_CREATION_DATE =
       DateTimeFormatter.ISO_ZONED_DATE_TIME;
 
-  private final Action openInSystemExplorerAction = new AbstractAction(null, IconProvider.SE) {
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      if (objectEntry == null) {
-        return;
-      }
-
-      if (!Desktop.isDesktopSupported()) {
-        return;
-      }
-
-      try {
-        final Path path = objectEntry.path();
-        if (path != null) {
-          Desktop.getDesktop().open(path.getParent().toFile());
-        } else {
-          JOptionPane.showMessageDialog(
-              ObjectEntryInspectorView.this,
-              "This entry location is not available on the file system.",
-              "Info",
-              JOptionPane.INFORMATION_MESSAGE);
-        }
-      } catch (final Exception ex) {
-        log.warn("Could not open [ {} ] in system explorer!", objectEntry.uri());
-        log.debug(ex.getMessage(), ex);
-        JOptionPane.showMessageDialog(
-            ObjectEntryInspectorView.this,
-            "Could not show entry location in System Explorer!",
-            "Error",
-            JOptionPane.ERROR_MESSAGE);
-      }
-    }
-  };
-
   private final ObjectEntry objectEntry;
   private final StorageEntryInspectorViewFactory factory;
+  private final Action openInSystemExplorerAction;
 
   public ObjectEntryInspectorView(ObjectEntry objectEntry,
                                   StorageEntryInspectorViewFactory factory) {
@@ -85,6 +54,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
     this.objectEntry = objectEntry;
     this.factory = factory;
+    this.openInSystemExplorerAction = new OpenInSystemExplorerAction(objectEntry, this);
 
     final var result = objectEntry.tryLoad().get();
     switch (result) {
@@ -121,6 +91,9 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     private final ObjectEntryLoadResult.SingleVersion version;
     private boolean initialised = false;
 
+    private JLabel labelName;
+    private JTextArea textareaDescription;
+
     private VersionPane(final ObjectEntryLoadResult.SingleVersion version) {
       this.version = version;
 
@@ -142,27 +115,37 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
       factory.addRenderAction(objectEntry, toolbar);
       toolbar.add(openInSystemExplorerAction);
+      factory.addEditMetaAction(objectEntry, toolbar);
       toolbar.add(Box.createHorizontalGlue());
 
       Box box = new Box(BoxLayout.X_AXIS);
-      final var label = new JLabel(objectEntry.getDisplayName(version));
-      label.setFont(UIManager.getFont("h3.font"));
-      label.setAlignmentX(Component.LEFT_ALIGNMENT);
-      box.add(label);
-      box.add(Box.createHorizontalGlue());
+      labelName = new JLabel(factory.trackingService().getUserData(objectEntry)
+          .map(StorageEntryTrackingService.StorageEntryUserData::name)
+          .filter(it -> !it.isBlank())
+          .map(it -> it + " - " + objectEntry.getDisplayName(version))
+          .orElseGet(() -> objectEntry.getDisplayName(version)));
+      labelName.setFont(UIManager.getFont("h3.font"));
+      labelName.setAlignmentX(Component.LEFT_ALIGNMENT);
+      box.add(labelName);
 
       Box box1 = new Box(BoxLayout.X_AXIS);
       final var creationLabel = new JLabel("Created at:");
       creationLabel.setFont(UIManager.getFont("h4.font"));
       creationLabel.setBorder(new EmptyBorder(0, 0, 0, 5));
-      label.setAlignmentX(Component.LEFT_ALIGNMENT);
 
       final var creationValue = new JLabel(getNodeCreationValue(version));
       creationValue.setFont(UIManager.getFont("h4.font"));
-      creationValue.setAlignmentX(Component.LEFT_ALIGNMENT);
       box1.add(creationLabel);
       box1.add(creationValue);
-      box1.add(Box.createHorizontalGlue());
+
+      final var description = factory.trackingService().getUserData(objectEntry)
+          .map(StorageEntryTrackingService.StorageEntryUserData::description)
+          .filter(it -> !it.isBlank())
+          .orElse("");
+      final Box box1b = new Box(BoxLayout.X_AXIS);
+      textareaDescription = new AutoSizingTextArea(description);
+      factory.setDescriptionTextAreaProps(textareaDescription);
+      box1b.add(textareaDescription);
 
       Box box2 = new Box(BoxLayout.X_AXIS);
       final var pane = factory.textareaFactory().create(objectEntry, version);
@@ -173,14 +156,20 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
           sd.setVisible(true);
         }
       });
-
       box2.add(pane.scrollPane());
-      box2.add(Box.createHorizontalGlue());
 
       add(toolbar);
+      toolbar.setAlignmentX(Component.LEFT_ALIGNMENT);
       add(box);
+      box.setAlignmentX(Component.LEFT_ALIGNMENT);
       add(box1);
+      box1.setAlignmentX(Component.LEFT_ALIGNMENT);
+      if (box1b != null) {
+        add(box1b);
+        box1b.setAlignmentX(Component.LEFT_ALIGNMENT);
+      }
       add(box2);
+      box2.setAlignmentX(Component.LEFT_ALIGNMENT);
 
       initialised = true;
     }
@@ -230,6 +219,26 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   @Override
   public ObjectEntry storageEntry() {
     return objectEntry;
+  }
+
+  @Override
+  public void onUserDataChanged(StorageEntryTrackingService.StorageEntryUserData userData) {
+    for (int i = 0; i < getTabCount(); i++) {
+      final var component = getComponentAt(i);
+      if (!(component instanceof VersionPane versionPane)) {
+        continue;
+      }
+
+      if (!versionPane.initialised) {
+        continue;
+      }
+
+      final var name = userData.name() == null || userData.name().isBlank()
+          ? objectEntry.getDisplayName(versionPane.version)
+          : userData.name() + " - " + objectEntry.getDisplayName(versionPane.version);
+      versionPane.labelName.setText(name);
+      versionPane.textareaDescription.setText(userData.description());
+    }
   }
 
   private SearchListener searchListener(RTextArea textArea) {

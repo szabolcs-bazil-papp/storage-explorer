@@ -180,7 +180,17 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   public String getDisplayName(final ObjectEntryLoadResult.SingleVersion version) {
     final var oam = version.objectAsMap();
     final var heuristicName = getHeuristicName(oam);
-    return heuristicName.isEmpty() ? typeName : typeName + " (" + heuristicName + ")";
+    final var sb = new StringBuilder(typeName);
+    if (!heuristicName.isEmpty()) {
+      sb.append(" (").append(heuristicName).append(")");
+    }
+    
+    final var entryId = version.meta().entryId();
+    if (entryId != null && !entryId.isEmpty()) {
+      sb.append(" (ID: ").append(entryId).append(")");
+    }
+    
+    return sb.toString();
   }
 
   private static String getHeuristicName(Map<String, Object> oam) {
@@ -231,6 +241,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     return versioning;
   }
 
+  @Override
   public @Nullable Path path() {
     return path;
   }

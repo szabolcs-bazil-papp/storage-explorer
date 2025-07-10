@@ -61,12 +61,14 @@ public class StorageExplorerApplication {
   CommandLineRunner frameLauncher(AppFrame appFrame,
                                   StorageInstanceProvider storageInstanceProvider) {
     return args -> {
-      appFrame.launch();
       storageInstanceProvider.fetchAllKnown();
-
-      if (storageInstanceProvider.provide().findAny().isEmpty()) {
-        WelcomePopup.show(appFrame);
-      }
+      SwingUtilities.invokeLater(() -> {
+        appFrame.appContentView().mainView().explorerView().reopenTrackedEntryInspectors();
+        appFrame.launch();
+        if (storageInstanceProvider.provide().findAny().isEmpty()) {
+          WelcomePopup.show(appFrame);
+        }
+      });
     };
   }
 

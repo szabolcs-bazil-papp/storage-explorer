@@ -17,18 +17,20 @@ package com.aestallon.storageexplorer.swing.ui.tree.model.node;
 
 import java.util.List;
 import java.util.TreeMap;
-import javax.swing.tree.DefaultMutableTreeNode;
-import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
+import javax.swing.tree.DefaultMutableTreeNode;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
+import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 
 public final class StorageSchemaTreeNode extends DefaultMutableTreeNode {
 
-  public StorageSchemaTreeNode(String name, List<ObjectEntry> objectEntries) {
+  public StorageSchemaTreeNode(String name, List<ObjectEntry> objectEntries,
+                               StorageEntryTrackingService trackingService) {
     super(name, true);
     objectEntries.stream()
         .collect(groupingBy(ObjectEntry::typeName, TreeMap::new, toList()))
-        .forEach((type, entries) -> add(new StorageTypeTreeNode(type, entries)));
+        .forEach((type, entries) -> add(new StorageTypeTreeNode(type, entries, trackingService)));
   }
 
 }

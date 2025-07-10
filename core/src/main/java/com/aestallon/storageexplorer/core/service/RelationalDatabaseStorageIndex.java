@@ -38,7 +38,6 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResults;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryMeta;
 import com.aestallon.storageexplorer.core.service.cache.StorageIndexCache;
 import com.google.common.base.Strings;
@@ -47,39 +46,70 @@ public final class RelationalDatabaseStorageIndex
     extends StorageIndex<RelationalDatabaseStorageIndex> {
 
   private enum FeatureLevel {
-    STANDARD("""
-        SELECT e.URI            AS "URI",
-               v.VERSION        AS "VN",
-               e.SINGLEVERSION  AS "SV",
-               v.CREATED_AT     AS "VD",
-               v.OBJECT_CONTENT AS "OAM"
-          FROM OBJECT_ENTRY   e
-          JOIN OBJECT_VERSION v
-            ON v.ENTRY_ID = e.ID
-           AND v.VERSION = e.VERSION
-         WHERE e.CLASSNAME <> 'org_smartbit4all_api_binarydata_BinaryDataObject'
-           AND e.SCHEME <> 'tabledatacontents'
-           AND e.URI IN (:uris)"""),
-    COMPRESSION("""
-        SELECT e.URI                          AS "URI",
-               v.VERSION                      AS "VN",
-               e.SINGLEVERSION                AS "SV",
-               v.CREATED_AT                   AS "VD",
-               v.OBJECT_CONTENT               AS "OAM",
-               v.OBJECT_CONTENT_COMPRESS_TYPE AS "CT"
-          FROM OBJECT_ENTRY   e
-          JOIN OBJECT_VERSION v
-            ON v.ENTRY_ID = e.ID
-           AND v.VERSION = e.VERSION
-         WHERE e.CLASSNAME <> 'org_smartbit4all_api_binarydata_BinaryDataObject'
-           AND e.SCHEME <> 'tabledatacontents'
-           AND e.URI IN (:uris)"""),
-    UNKNOWN("");
+    STANDARD(
+        """
+            SELECT e.URI            AS "URI",
+                   e.ID             AS "ID",
+                   v.VERSION        AS "VN",
+                   e.SINGLEVERSION  AS "SV",
+                   v.CREATED_AT     AS "VD",
+                   v.OBJECT_CONTENT AS "OAM"
+              FROM OBJECT_ENTRY   e
+              JOIN OBJECT_VERSION v
+                ON v.ENTRY_ID = e.ID
+               AND v.VERSION = e.VERSION
+             WHERE e.CLASSNAME <> 'org_smartbit4all_api_binarydata_BinaryDataObject'
+               AND e.SCHEME <> 'tabledatacontents'
+               AND e.URI IN (:uris)""",
+        """
+            SELECT e.URI            AS "URI",
+                   e.ID             AS "ID",
+                   v.VERSION        AS "VN",
+                   e.SINGLEVERSION  AS "SV",
+                   v.CREATED_AT     AS "VD",
+                   v.OBJECT_CONTENT AS "OAM"
+              FROM OBJECT_ENTRY   e
+              JOIN OBJECT_VERSION v
+                ON v.ENTRY_ID = e.ID
+             WHERE e.URI = :uri
+               AND v.VERSION = :version"""),
+    COMPRESSION(
+        """
+            SELECT e.URI                          AS "URI",
+                   e.ID                           AS "ID",
+                   v.VERSION                      AS "VN",
+                   e.SINGLEVERSION                AS "SV",
+                   v.CREATED_AT                   AS "VD",
+                   v.OBJECT_CONTENT               AS "OAM",
+                   v.OBJECT_CONTENT_COMPRESS_TYPE AS "CT"
+              FROM OBJECT_ENTRY   e
+              JOIN OBJECT_VERSION v
+                ON v.ENTRY_ID = e.ID
+               AND v.VERSION = e.VERSION
+             WHERE e.CLASSNAME <> 'org_smartbit4all_api_binarydata_BinaryDataObject'
+               AND e.SCHEME <> 'tabledatacontents'
+               AND e.URI IN (:uris)""",
+        """
+            SELECT e.URI                          AS "URI",
+                   e.ID                           AS "ID",
+                   v.VERSION                      AS "VN",
+                   e.SINGLEVERSION                AS "SV",
+                   v.CREATED_AT                   AS "VD",
+                   v.OBJECT_CONTENT               AS "OAM",
+                   v.OBJECT_CONTENT_COMPRESS_TYPE AS "CT"
+              FROM OBJECT_ENTRY   e
+              JOIN OBJECT_VERSION v
+                ON v.ENTRY_ID = e.ID
+             WHERE e.URI = :uri
+               AND v.VERSION = :version"""),
+    UNKNOWN("", "");
 
     private final String queryIn;
+    private final String queryExact;
 
-    FeatureLevel(final String queryIn) {
+    FeatureLevel(final String queryIn, final String queryExact) {
       this.queryIn = queryIn;
+      this.queryExact = queryExact;
     }
 
 
@@ -197,15 +227,49 @@ public final class RelationalDatabaseStorageIndex
 
   }
 
+  ObjectEntryLoadResult.SingleVersion.Eager loadSingle(final URI uri,
+                                                       final long version) {
+    ensureKnownFeatureLevel();
+    List<LoadResult> loadResults = db
+        .sql(featureLevel.queryExact)
+        .param("uri", uri.toString())
+        .param("version", version)
+        .query((r, i) -> {
+          try {
+            return parseResultSet(r, true);
+          } catch (final Exception e) {
+            log.error(e.getMessage(), e);
+            return LoadResult.Err.ERR;
+          }
+        })
+        .list();
+    if (loadResults.isEmpty()) {
+
+      return placeholderFakeResult(uri, version);
+    }
+
+    final LoadResult result = loadResults.getFirst();
+    return switch (result) {
+      case LoadResult.Err err -> placeholderFakeResult(uri, version);
+      case LoadResult.Ok(var ignored, var res) -> (ObjectEntryLoadResult.SingleVersion.Eager) res;
+    };
+  }
+
+  private ObjectEntryLoadResult.SingleVersion.Eager placeholderFakeResult(final URI uri,
+                                                                          final long version) {
+    log.error("Unexpected error loading {} at version {}", uri, version);
+    return new ObjectEntryLoadResult.SingleVersion.Eager(
+        new ObjectEntryMeta(uri, null, null, version, null, null, null),
+        Collections.emptyMap(),
+        ObjectEntryLoadingService.OBJECT_MAPPER);
+  }
+
   List<ObjectEntryLoadResult> loadBatch(final List<URI> uris) {
     if (uris.isEmpty()) {
       return Collections.emptyList();
     }
 
-    if (featureLevel == FeatureLevel.UNKNOWN) {
-      featureLevel = determineFeatureLevel();
-      log.info("Determined feature level: {}", featureLevel);
-    }
+    ensureKnownFeatureLevel();
 
     final Map<URI, ObjectEntryLoadResult> resultsByUri = db
         .sql(featureLevel.queryIn)
@@ -213,7 +277,7 @@ public final class RelationalDatabaseStorageIndex
 
         .query((r, c) -> {
           try {
-            return parseResultSet(r);
+            return parseResultSet(r, false);
           } catch (final Exception e) {
             log.error(e.getMessage(), e);
             return LoadResult.Err.ERR;
@@ -233,12 +297,20 @@ public final class RelationalDatabaseStorageIndex
         .toList();
   }
 
-  private LoadResult parseResultSet(ResultSet r) throws Exception {
+  private void ensureKnownFeatureLevel() {
+    if (featureLevel == FeatureLevel.UNKNOWN) {
+      featureLevel = determineFeatureLevel();
+      log.info("Determined feature level: {}", featureLevel);
+    }
+  }
+
+  private LoadResult parseResultSet(ResultSet r, final boolean only) throws Exception {
     final String uriStr = r.getString("URI");
     final URI uri = URI.create(uriStr);
     final boolean single = Boolean.TRUE.toString().equals(r.getString("SV"));
     final long version = !single ? r.getLong("VN") : -1L;
     final var versionTimestamp = r.getObject("VD", OffsetDateTime.class);
+    final var id = r.getString("ID");
     Map<String, Object> objectAsMap;
     try (final var in = r.getBlob("OAM").getBinaryStream()) {
       var binaryData = BinaryData.of(in);
@@ -272,18 +344,14 @@ public final class RelationalDatabaseStorageIndex
 
     final ObjectEntryLoadResult.SingleVersion singleVersion =
         new ObjectEntryLoadResult.SingleVersion.Eager(
-            new ObjectEntryMeta(uri, null, null, version, versionTimestamp, null),
+            new ObjectEntryMeta(uri, null, null, version, versionTimestamp, null, id),
             objectAsMap,
             ObjectEntryLoadingService.OBJECT_MAPPER);
-    return single
+    return single || only
         ? new LoadResult.Ok(uri, singleVersion)
         : new LoadResult.Ok(
             uri,
-            ObjectEntryLoadResults.multiVersion(
-                singleVersion,
-                objectApi,
-                ObjectEntryLoadingService.OBJECT_MAPPER,
-                version));
+            ObjectEntryLoadResult.multiVersion(singleVersion, loader::loadExact, version));
   }
 
   private FeatureLevel determineFeatureLevel() {

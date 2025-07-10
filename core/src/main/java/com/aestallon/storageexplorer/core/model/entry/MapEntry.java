@@ -63,6 +63,11 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
     return uri;
   }
 
+  @Override
+  public Path path() {
+    return path;
+  }
+
   public String schema() {
     return schema;
   }

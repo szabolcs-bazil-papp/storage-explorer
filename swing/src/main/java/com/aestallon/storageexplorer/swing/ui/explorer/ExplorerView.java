@@ -19,6 +19,7 @@ import java.awt.*;
 import java.util.EnumSet;
 import javax.swing.*;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.swing.ui.graph.GraphView;
 
 @Component
@@ -26,17 +27,22 @@ public class ExplorerView extends JPanel {
 
   public enum DisplayMode { GRAPH_ONLY, INSPECTORS_ONLY, BOTH, NONE }
 
+
   private DisplayMode displayMode;
 
   private JSplitPane contentPane;
 
   private final GraphView graphView;
   private final InspectorContainerView inspectorContainerView;
+  private final transient StorageEntryTrackingService trackingService;
 
-  public ExplorerView(GraphView graphView, InspectorContainerView inspectorContainerView) {
+  public ExplorerView(GraphView graphView,
+                      InspectorContainerView inspectorContainerView,
+                      StorageEntryTrackingService trackingService) {
     super(new BorderLayout());
     this.graphView = graphView;
     this.inspectorContainerView = inspectorContainerView;
+    this.trackingService = trackingService;
 
     displayMode = DisplayMode.NONE;
   }
@@ -102,9 +108,22 @@ public class ExplorerView extends JPanel {
     revalidate();
   }
 
+  public void reopenTrackedEntryInspectors() {
+    final var entries = trackingService.entriesOfTrackedInspectors();
+    if (entries.isEmpty()) {
+      return;
+    }
+
+    if (!inspectorContainerOpen()) {
+      openInspectorContainer();
+    }
+
+    entries.forEach(inspectorContainerView::showInspectorView);
+  }
+
   private void initContentPane() {
     contentPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, graphView, inspectorContainerView);
-    contentPane.getLeftComponent().setPreferredSize(new Dimension(1_000, 500));
+    contentPane.getLeftComponent().setMinimumSize(new Dimension(500, 250));
   }
 
   public DisplayMode displayMode() {
