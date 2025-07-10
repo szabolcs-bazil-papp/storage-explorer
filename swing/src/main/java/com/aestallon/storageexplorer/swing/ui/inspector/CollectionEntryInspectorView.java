@@ -31,7 +31,9 @@ import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
+import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
+import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
 
 public class CollectionEntryInspectorView extends JPanel implements InspectorView<StorageEntry> {
 
@@ -41,9 +43,11 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
   private JTable table;
   private StorageCollectionTableModel tableModel;
   private JScrollPane pane;
+  private JLabel labelName;
+  private JTextArea textareaDescription;
 
-  private final StorageEntry storageEntry;
-  private final StorageEntryInspectorViewFactory factory;
+  private final transient StorageEntry storageEntry;
+  private final transient StorageEntryInspectorViewFactory factory;
 
   public CollectionEntryInspectorView(StorageEntry storageEntry,
                                       StorageEntryInspectorViewFactory factory) {
@@ -54,13 +58,49 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     setBorder(new EmptyBorder(5, 5, 5, 5));
 
     initToolbar();
+    initMeta();
     initTable();
   }
 
   private void initToolbar() {
-    final var toolBar = new JToolBar(JToolBar.TOP);
-    factory.addRenderAction(storageEntry, toolBar);
-    add(toolBar);
+    final var toolbar = new JToolBar(JToolBar.TOP);
+    toolbar.setOrientation(SwingConstants.HORIZONTAL);
+    toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
+    factory.addRenderAction(storageEntry, toolbar);
+    toolbar.add(new OpenInSystemExplorerAction(storageEntry, this));
+    factory.addEditMetaAction(storageEntry, toolbar);
+    toolbar.add(Box.createHorizontalGlue());
+    add(toolbar);
+  }
+
+  private void initMeta() {
+    final var panel = new JPanel();
+    panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
+    panel.setOpaque(false);
+    labelName = new JLabel(factory.trackingService().getUserData(storageEntry)
+        .map(StorageEntryTrackingService.StorageEntryUserData::name)
+        .filter(it -> !it.isBlank())
+        .map(it -> it + " - " + storageEntry.toString())
+        .orElseGet(storageEntry::toString));
+    labelName.setFont(UIManager.getFont("h3.font"));
+    labelName.setAlignmentX(Component.LEFT_ALIGNMENT);
+    panel.setMaximumSize(new Dimension(
+        Integer.MAX_VALUE,
+        labelName.getPreferredSize().height));
+    panel.add(labelName);
+    add(panel);
+
+    final var description = factory.trackingService().getUserData(storageEntry)
+        .map(StorageEntryTrackingService.StorageEntryUserData::description)
+        .filter(it -> !it.isBlank())
+        .orElse("");
+    textareaDescription = new AutoSizingTextArea(description);
+    factory.setDescriptionTextAreaProps(textareaDescription);
+    textareaDescription.setMaximumSize(
+        new Dimension(Integer.MAX_VALUE, textareaDescription.getPreferredSize().height));
+    add(textareaDescription);
+
+    add(Box.createVerticalStrut(5));
   }
 
   private void initTable() {
@@ -84,7 +124,6 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     });
     pane = new JScrollPane(table);
     table.setFillsViewportHeight(true);
-
     add(pane);
   }
 
@@ -95,7 +134,12 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
 
   @Override
   public void onUserDataChanged(StorageEntryTrackingService.StorageEntryUserData userData) {
-
+    labelName.setText(userData.name() == null || userData.name().isBlank()
+        ? storageEntry.toString()
+        : userData.name() + " - " + storageEntry.toString());
+    textareaDescription.setText(userData.description() == null || userData.description().isBlank()
+        ? ""
+        : userData.description());
   }
 
   private static final class StorageCollectionTableModel

@@ -241,6 +241,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     return versioning;
   }
 
+  @Override
   public @Nullable Path path() {
     return path;
   }

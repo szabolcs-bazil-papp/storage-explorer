@@ -34,6 +34,7 @@ public final class StorageSequenceTreeNode extends DefaultMutableTreeNode implem
     final var sequenceEntry = (SequenceEntry) userObject;
     return trackingService.getUserData(sequenceEntry)
         .map(StorageEntryTrackingService.StorageEntryUserData::name)
+        .filter(it -> !it.isBlank())
         .orElseGet(sequenceEntry::displayName);
   }
   

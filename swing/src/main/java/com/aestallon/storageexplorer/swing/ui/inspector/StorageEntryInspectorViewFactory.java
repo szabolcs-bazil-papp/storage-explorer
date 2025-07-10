@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
@@ -131,7 +132,7 @@ public class StorageEntryInspectorViewFactory {
     } else if (storageEntry instanceof ListEntry || storageEntry instanceof MapEntry) {
       inspector = new CollectionEntryInspectorView(storageEntry, this);
     } else if (storageEntry instanceof SequenceEntry s) {
-      inspector = new SequenceEntryInspectorView(s);
+      inspector = new SequenceEntryInspectorView(s, this);
     } else {
       throw new AssertionError(storageEntry + " is not interpreted - TYPE ERROR!");
     }
@@ -185,6 +186,17 @@ public class StorageEntryInspectorViewFactory {
     }
 
     return Optional.ofNullable(openedInspectors.get(storageEntry));
+  }
+
+  void setDescriptionTextAreaProps(final JTextArea textareaDescription) {
+    textareaDescription.setWrapStyleWord(true);
+    textareaDescription.setLineWrap(true);
+    textareaDescription.setEditable(false);
+    textareaDescription.setOpaque(false);
+    textareaDescription.setFont(UIManager.getFont("h4.font"));
+    textareaDescription.setBorder(new EmptyBorder(0, 0, 0, 0));
+    textareaDescription.setMinimumSize(new Dimension(0, 0));
+    textareaDescription.setColumns(0);
   }
 
   @EventListener

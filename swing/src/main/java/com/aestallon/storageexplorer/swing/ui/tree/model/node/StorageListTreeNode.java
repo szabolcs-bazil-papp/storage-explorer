@@ -50,6 +50,7 @@ public final class StorageListTreeNode extends DefaultMutableTreeNode implements
     final var listEntry = (ListEntry) userObject;
     return trackingService.getUserData(listEntry)
         .map(StorageEntryTrackingService.StorageEntryUserData::name)
+        .filter(it -> !it.isBlank())
         .orElseGet(listEntry::displayName);
   }
 

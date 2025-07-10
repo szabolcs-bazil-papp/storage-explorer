@@ -50,6 +50,7 @@ public final class StorageMapTreeNode extends DefaultMutableTreeNode implements 
     return trackingService
         .getUserData(mapEntry)
         .map(StorageEntryTrackingService.StorageEntryUserData::name)
+        .filter(it -> !it.isBlank())
         .orElseGet(mapEntry::displayName);
   }
 

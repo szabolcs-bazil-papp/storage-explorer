@@ -63,6 +63,11 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
     return uri;
   }
 
+  @Override
+  public Path path() {
+    return path;
+  }
+
   public String schema() {
     return schema;
   }

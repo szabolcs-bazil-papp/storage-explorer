@@ -56,6 +56,11 @@ public final class SequenceEntry implements StorageEntry {
     return uri;
   }
 
+  @Override
+  public Path path() {
+    return path;
+  }
+
   public String schema() {
     return schema;
   }

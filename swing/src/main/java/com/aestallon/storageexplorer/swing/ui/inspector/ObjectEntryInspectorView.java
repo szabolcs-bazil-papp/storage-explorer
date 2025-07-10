@@ -17,7 +17,6 @@ package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import javax.swing.*;
@@ -34,7 +33,9 @@ import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
 
@@ -43,42 +44,9 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   private static final DateTimeFormatter FORMATTER_CREATION_DATE =
       DateTimeFormatter.ISO_ZONED_DATE_TIME;
 
-  private final Action openInSystemExplorerAction = new AbstractAction(null, IconProvider.SE) {
-    @Override
-    public void actionPerformed(ActionEvent e) {
-      if (objectEntry == null) {
-        return;
-      }
-
-      if (!Desktop.isDesktopSupported()) {
-        return;
-      }
-
-      try {
-        final Path path = objectEntry.path();
-        if (path != null) {
-          Desktop.getDesktop().open(path.getParent().toFile());
-        } else {
-          JOptionPane.showMessageDialog(
-              ObjectEntryInspectorView.this,
-              "This entry location is not available on the file system.",
-              "Info",
-              JOptionPane.INFORMATION_MESSAGE);
-        }
-      } catch (final Exception ex) {
-        log.warn("Could not open [ {} ] in system explorer!", objectEntry.uri());
-        log.debug(ex.getMessage(), ex);
-        JOptionPane.showMessageDialog(
-            ObjectEntryInspectorView.this,
-            "Could not show entry location in System Explorer!",
-            "Error",
-            JOptionPane.ERROR_MESSAGE);
-      }
-    }
-  };
-
   private final ObjectEntry objectEntry;
   private final StorageEntryInspectorViewFactory factory;
+  private final Action openInSystemExplorerAction;
 
   public ObjectEntryInspectorView(ObjectEntry objectEntry,
                                   StorageEntryInspectorViewFactory factory) {
@@ -86,6 +54,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
     this.objectEntry = objectEntry;
     this.factory = factory;
+    this.openInSystemExplorerAction = new OpenInSystemExplorerAction(objectEntry, this);
 
     final var result = objectEntry.tryLoad().get();
     switch (result) {
@@ -175,14 +144,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
           .orElse("");
       final Box box1b = new Box(BoxLayout.X_AXIS);
       textareaDescription = new AutoSizingTextArea(description);
-      textareaDescription.setWrapStyleWord(true);
-      textareaDescription.setLineWrap(true);
-      textareaDescription.setEditable(false);
-      textareaDescription.setOpaque(false);
-      textareaDescription.setFont(UIManager.getFont("h4.font"));
-      textareaDescription.setBorder(new EmptyBorder(0, 0, 0, 0));
-      textareaDescription.setMinimumSize(new Dimension(0, 0));
-      textareaDescription.setColumns(0);
+      factory.setDescriptionTextAreaProps(textareaDescription);
       box1b.add(textareaDescription);
 
       Box box2 = new Box(BoxLayout.X_AXIS);
@@ -317,34 +279,6 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         return null;
       }
     };
-  }
-
-  private static final class AutoSizingTextArea extends JTextArea {
-
-    private AutoSizingTextArea(final String text) {
-      super(text);
-      recalculate();
-    }
-
-    @Override
-    public Dimension getPreferredSize() {
-      final FontMetrics fm = getFontMetrics(getFont());
-      final int rows = getRows();
-      return new Dimension(super.getPreferredSize().width,
-          fm.getHeight() * rows + fm.getDescent());
-    }
-
-    @Override
-    public void setText(String t) {
-      super.setText(t);
-      recalculate();
-    }
-
-    private void recalculate() {
-      setRows(getText().split("\n").length);
-      setMaximumSize(new Dimension(Integer.MAX_VALUE, getPreferredSize().height * 2));
-    }
-
   }
 
 }
