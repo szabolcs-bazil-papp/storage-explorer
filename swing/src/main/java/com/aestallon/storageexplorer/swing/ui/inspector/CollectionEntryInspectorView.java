@@ -20,17 +20,18 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
 import java.util.List;
+import static java.util.stream.Collectors.toList;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.AbstractTableModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
-import static java.util.stream.Collectors.toList;
 
 public class CollectionEntryInspectorView extends JPanel implements InspectorView<StorageEntry> {
 
@@ -92,7 +93,12 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     return storageEntry;
   }
 
-  private final static class StorageCollectionTableModel
+  @Override
+  public void onUserDataChanged(StorageEntryTrackingService.StorageEntryUserData userData) {
+
+  }
+
+  private static final class StorageCollectionTableModel
       extends AbstractTableModel
       implements EnumeratorWithUri {
 

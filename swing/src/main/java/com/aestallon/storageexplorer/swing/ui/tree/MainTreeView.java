@@ -253,6 +253,11 @@ public class MainTreeView extends JPanel {
     tree.removeStorage(storageInstance);
   }
 
+  @EventListener
+  public void onStorageEntryUserDataChanged(StorageEntryUserDataChanged event) {
+    SwingUtilities.invokeLater(() -> tree.repaint());
+  }
+
   private final class StorageIndexNodePopupMenu extends JPopupMenu {
     private StorageIndexNodePopupMenu(StorageInstanceTreeNode sitn) {
       super(String.valueOf(sitn.getUserObject()));
@@ -319,11 +324,6 @@ public class MainTreeView extends JPanel {
       });
       export.setToolTipText("Export the storage as a GEXF file.");
       return export;
-    }
-    
-    @EventListener
-    public void onStorageEntryMetaadatChanged(StorageEntryUserDataChanged event) {
-      SwingUtilities.invokeLater(() -> tree.repaint());
     }
 
     private JMenuItem createEditMenuItem(StorageInstanceTreeNode sitn) {

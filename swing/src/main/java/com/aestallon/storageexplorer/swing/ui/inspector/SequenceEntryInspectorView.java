@@ -2,6 +2,7 @@ package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 
 public class SequenceEntryInspectorView extends JPanel implements InspectorView<SequenceEntry> {
@@ -22,5 +23,10 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
   @Override
   public SequenceEntry storageEntry() {
     return sequenceEntry;
+  }
+
+  @Override
+  public void onUserDataChanged(StorageEntryTrackingService.StorageEntryUserData userData) {
+    
   }
 }

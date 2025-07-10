@@ -143,7 +143,9 @@ public class AppContentView extends JPanel {
   
   @EventListener
   public void onStorageEntryUserDataChanged(final StorageEntryUserDataChanged event) {
-    SwingUtilities.invokeLater(breadCrumbs::repaint);
+    SwingUtilities.invokeLater(() -> {
+      breadCrumbs.elements.forEach(BreadCrumbElement::setText);
+    });
   }
   
   private static final class LoadingQueueLabel extends JLabel {
@@ -206,21 +208,26 @@ public class AppContentView extends JPanel {
     private static final int SLANT = 10;
 
     private final DefaultMutableTreeNode node;
+    private final int textLimit;
     private final boolean leading;
-
 
     private BreadCrumbElement(final DefaultMutableTreeNode node,
                               final int textLimit,
                               final boolean leading) {
       this.node = node;
+      this.textLimit = textLimit;
       this.leading = leading;
-      setText(MsgStrings.trim(node.toString(), textLimit));
+      setText();
       setContentAreaFilled(false);
       setBorderPainted(false);
       setFocusPainted(false);
       setOpaque(false);
 
       addActionListener(this);
+    }
+    
+    private void setText() {
+      setText(MsgStrings.trim(node.toString(), textLimit));
     }
 
     @Override

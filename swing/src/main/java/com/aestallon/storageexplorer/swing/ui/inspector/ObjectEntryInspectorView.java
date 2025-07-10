@@ -122,6 +122,9 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     private final ObjectEntryLoadResult.SingleVersion version;
     private boolean initialised = false;
 
+    private JLabel labelName;
+    private JTextArea textareaDescription;
+
     private VersionPane(final ObjectEntryLoadResult.SingleVersion version) {
       this.version = version;
 
@@ -147,12 +150,14 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       toolbar.add(Box.createHorizontalGlue());
 
       Box box = new Box(BoxLayout.X_AXIS);
-      final var label = new JLabel(factory.trackingService().getUserData(objectEntry)
+      labelName = new JLabel(factory.trackingService().getUserData(objectEntry)
           .map(StorageEntryTrackingService.StorageEntryUserData::name)
+          .filter(it -> !it.isBlank())
+          .map(it -> it + " - " + objectEntry.getDisplayName(version))
           .orElseGet(() -> objectEntry.getDisplayName(version)));
-      label.setFont(UIManager.getFont("h3.font"));
-      label.setAlignmentX(Component.LEFT_ALIGNMENT);
-      box.add(label);
+      labelName.setFont(UIManager.getFont("h3.font"));
+      labelName.setAlignmentX(Component.LEFT_ALIGNMENT);
+      box.add(labelName);
 
       Box box1 = new Box(BoxLayout.X_AXIS);
       final var creationLabel = new JLabel("Created at:");
@@ -164,25 +169,21 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       box1.add(creationLabel);
       box1.add(creationValue);
 
-      final Box box1b = factory.trackingService().getUserData(objectEntry)
+      final var description = factory.trackingService().getUserData(objectEntry)
           .map(StorageEntryTrackingService.StorageEntryUserData::description)
           .filter(it -> !it.isBlank())
-          .map(it -> {
-            final Box b = new Box(BoxLayout.X_AXIS);
-            final var description = new AutoSizingTextArea(it);
-            description.setWrapStyleWord(true);
-            description.setLineWrap(true);
-            description.setEditable(false);
-            description.setOpaque(false);
-            description.setFont(UIManager.getFont("h4.font"));
-            description.setBorder(new EmptyBorder(0, 0, 0, 0));
-            description.setMinimumSize(new Dimension(0, 100));
-            description.setColumns(0);
-
-            b.add(description);
-            return b;
-          })
-          .orElse(null);
+          .orElse("");
+      final Box box1b = new Box(BoxLayout.X_AXIS);
+      textareaDescription = new AutoSizingTextArea(description);
+      textareaDescription.setWrapStyleWord(true);
+      textareaDescription.setLineWrap(true);
+      textareaDescription.setEditable(false);
+      textareaDescription.setOpaque(false);
+      textareaDescription.setFont(UIManager.getFont("h4.font"));
+      textareaDescription.setBorder(new EmptyBorder(0, 0, 0, 0));
+      textareaDescription.setMinimumSize(new Dimension(0, 0));
+      textareaDescription.setColumns(0);
+      box1b.add(textareaDescription);
 
       Box box2 = new Box(BoxLayout.X_AXIS);
       final var pane = factory.textareaFactory().create(objectEntry, version);
@@ -256,6 +257,26 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   @Override
   public ObjectEntry storageEntry() {
     return objectEntry;
+  }
+
+  @Override
+  public void onUserDataChanged(StorageEntryTrackingService.StorageEntryUserData userData) {
+    for (int i = 0; i < getTabCount(); i++) {
+      final var component = getComponentAt(i);
+      if (!(component instanceof VersionPane versionPane)) {
+        continue;
+      }
+
+      if (!versionPane.initialised) {
+        continue;
+      }
+
+      final var name = userData.name() == null || userData.name().isBlank()
+          ? objectEntry.getDisplayName(versionPane.version)
+          : userData.name() + " - " + objectEntry.getDisplayName(versionPane.version);
+      versionPane.labelName.setText(name);
+      versionPane.textareaDescription.setText(userData.description());
+    }
   }
 
   private SearchListener searchListener(RTextArea textArea) {

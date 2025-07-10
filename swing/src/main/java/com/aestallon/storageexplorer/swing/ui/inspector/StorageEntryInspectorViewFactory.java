@@ -175,10 +175,10 @@ public class StorageEntryInspectorViewFactory {
         }));
   }
 
-  StorageEntryTrackingService trackingService() {
+  public StorageEntryTrackingService trackingService() {
     return trackingService;
   }
-  
+
   public Optional<InspectorView<? extends StorageEntry>> getTab(final StorageEntry storageEntry) {
     if (openedDialogs.containsKey(storageEntry)) {
       return Optional.empty();
@@ -244,7 +244,7 @@ public class StorageEntryInspectorViewFactory {
       }
     });
   }
-  
+
   void addEditMetaAction(final StorageEntry storageEntry, final JToolBar toolbar) {
     toolbar.add(new AbstractAction(null, IconProvider.EDIT) {
       @Override
