@@ -27,8 +27,8 @@ import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.WelcomePopup;
-import com.formdev.flatlaf.FlatDarculaLaf;
 import com.formdev.flatlaf.FlatIntelliJLaf;
+import com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme;
 
 @SpringBootApplication(
     exclude = DataSourceAutoConfiguration.class,
@@ -77,7 +77,7 @@ public class StorageExplorerApplication {
     SwingUtilities.invokeLater(() -> {
       switch (event.laf()) {
         case LIGHT -> FlatIntelliJLaf.setup();
-        case DARK -> FlatDarculaLaf.setup();
+        case DARK -> FlatGruvboxDarkHardIJTheme.setup();
       }
       SwingUtilities.updateComponentTreeUI(frame);
     });
