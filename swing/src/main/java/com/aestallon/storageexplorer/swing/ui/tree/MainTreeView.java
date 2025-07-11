@@ -58,6 +58,7 @@ import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyTyp
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
+import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryDialog;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -77,7 +78,7 @@ public class MainTreeView extends JPanel {
   private StorageTree tree;
   private JScrollPane treePanel;
 
-  private Map<StorageEntry, TreePath> treePathByEntry;
+  private transient Map<StorageEntry, TreePath> treePathByEntry;
 
   private final AtomicBoolean propagate = new AtomicBoolean(true);
   private final transient ApplicationEventPublisher eventPublisher;
@@ -266,14 +267,7 @@ public class MainTreeView extends JPanel {
       add(edit);
 
       if (IndexingStrategyType.ON_DEMAND == sitn.storageInstance().indexingStrategy()) {
-        final var loadEntry = new JMenuItem("Load entry...", IconProvider.DATA_TRANSFER);
-        loadEntry.addActionListener(e -> {
-          final var dialog = LoadEntryController.newDialog(sitn.storageInstance());
-          dialog.setLocationRelativeTo(MainTreeView.this);
-          dialog.pack();
-          dialog.setVisible(true);
-        });
-        loadEntry.setToolTipText("Provide an exact URI and manually load a sub-graph around it.");
+        final var loadEntry = createLoadEntryMenuItem(sitn);
         add(loadEntry);
       }
 
@@ -295,6 +289,22 @@ public class MainTreeView extends JPanel {
       add(export);
       final var stats = createStatsMenuItem(sitn);
       add(stats);
+    }
+
+    private JMenuItem createLoadEntryMenuItem(StorageInstanceTreeNode sitn) {
+      final var loadEntry = new JMenuItem("Load entry...", IconProvider.DATA_TRANSFER);
+      loadEntry.addActionListener(e -> {
+        final var controller = LoadEntryController.create(
+            sitn.storageInstance(),
+            storageInstanceProvider,
+            userConfigService);
+        final var dialog = new LoadEntryDialog(controller);
+        dialog.setLocationRelativeTo(MainTreeView.this);
+        dialog.pack();
+        dialog.setVisible(true);
+      });
+      loadEntry.setToolTipText("Provide an exact URI and manually load a sub-graph around it.");
+      return loadEntry;
     }
 
     private JMenuItem createExportMenuItem(StorageInstanceTreeNode sitn) {

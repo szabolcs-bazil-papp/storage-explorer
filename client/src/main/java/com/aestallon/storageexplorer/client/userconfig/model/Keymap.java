@@ -41,6 +41,13 @@ public final class Keymap {
                 .getKeyStroke(KeyEvent.VK_I,
                     InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK)),
             -1),
+        
+        "Load Entry from Storage",
+        new Keymap(
+            asInt(KeyStroke
+                .getKeyStroke(KeyEvent.VK_L,
+                    InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK)),
+            -1),
 
         "Reset Graph",
         new Keymap(

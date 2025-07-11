@@ -4,12 +4,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
+import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.controller.AbstractDialogController;
 
-public class LoadEntryController extends AbstractDialogController<String> {
+public class LoadEntryController extends AbstractDialogController<LoadEntryDialogModel> {
 
   private static final Set<String> STORED_COLLECTION_IDENTIFIERS = Set.of(
       StorageEntryFactory.STORED_LIST_MARKER,
@@ -19,20 +22,30 @@ public class LoadEntryController extends AbstractDialogController<String> {
   private static final String REGEX_TIMESTAMP = "/\\d{4}/\\d{1,2}/\\d{1,2}/\\d{1,2}";
   private static final Pattern PATTERN_TIMESTAMP = Pattern.compile(REGEX_TIMESTAMP);
 
-  public static LoadEntryController create(StorageInstance storageInstance) {
-    return new LoadEntryController((before, after) ->
-        CompletableFuture.runAsync(() -> storageInstance.acquire(URI.create(after))));
+  public static LoadEntryController create(final StorageInstance storageInstance,
+                                           final StorageInstanceProvider storageInstanceProvider,
+                                           final UserConfigService userConfigService) {
+    return new LoadEntryController(
+        new LoadEntryDialogModel(
+            "", 
+            storageInstance, 
+            storageInstanceProvider.provide().toList()),
+        (before, after) ->  {
+          CompletableFuture.runAsync(() -> after.selection().acquire(URI.create(after.input())));
+          CompletableFuture.runAsync(() -> userConfigService
+              .setMostRecentStorageInstanceLoad(after.selection().id()));
+        });
   }
 
-  public static LoadEntryDialog newDialog(StorageInstance storageInstance) {
-    final var controller = create(storageInstance);
-    final var dialog = new LoadEntryDialog(controller);
-    dialog.setTitle("Load Entry From " + storageInstance.name());
-    return dialog;
+  protected LoadEntryController(LoadEntryDialogModel initialModel,
+                                Finisher<LoadEntryDialogModel> finisher) {
+    super(initialModel, finisher);
   }
 
-  public LoadEntryController(Finisher<String> finisher) {
-    super("", finisher);
+  protected LoadEntryController(LoadEntryDialogModel initialModel,
+                                Finisher<LoadEntryDialogModel> finisher,
+                                Consumer<LoadEntryDialogModel> postProcessor) {
+    super(initialModel, finisher, postProcessor);
   }
 
   boolean validate(final String input) {

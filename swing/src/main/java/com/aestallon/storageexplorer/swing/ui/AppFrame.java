@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.swing.ui;
 
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
@@ -29,6 +30,8 @@ import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorage
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.keymap.KeymapController;
 import com.aestallon.storageexplorer.swing.ui.dialog.keymap.KeymapDialog;
+import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
+import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryDialog;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
@@ -58,6 +61,7 @@ public class AppFrame extends JFrame {
     setDefaultCloseOperation(EXIT_ON_CLOSE);
     initMenu();
     addSearchAction();
+    addLoadAction();
     add(appContentView);
   }
 
@@ -68,12 +72,23 @@ public class AppFrame extends JFrame {
   private void addSearchAction() {
     final var ctrlShiftT = KeyStroke.getKeyStroke(
         KeyEvent.VK_T,
-        KeyEvent.CTRL_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK);
+        InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
     InputMap im = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
     ActionMap am = getRootPane().getActionMap();
 
     im.put(ctrlShiftT, "cancel");
     am.put("cancel", new SearchAction());
+  }
+
+  private void addLoadAction() {
+    final var ctrlShiftL = KeyStroke.getKeyStroke(
+        KeyEvent.VK_L,
+        InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
+    InputMap im = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+    ActionMap am = getRootPane().getActionMap();
+
+    im.put(ctrlShiftL, "load");
+    am.put("load", new LoadAction());
   }
 
   private void initMenu() {
@@ -142,6 +157,29 @@ public class AppFrame extends JFrame {
     @Override
     public void actionPerformed(ActionEvent e) {
       final var dialog = new SearchForEntryDialog(storageInstanceProvider, eventPublisher);
+      dialog.setLocationRelativeTo(AppFrame.this);
+      dialog.setVisible(true);
+    }
+
+  }
+
+
+  private final class LoadAction extends AbstractAction {
+    private LoadAction() {
+      super("Load...");
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      final var storageInstance = userConfigService.getMostRecentStorageInstanceLoad()
+          .map(storageInstanceProvider::get)
+          .orElse(null);
+      final var controller = LoadEntryController.create(
+          storageInstance,
+          storageInstanceProvider,
+          userConfigService);
+      final var dialog = new LoadEntryDialog(controller);
+      dialog.pack();
       dialog.setLocationRelativeTo(AppFrame.this);
       dialog.setVisible(true);
     }

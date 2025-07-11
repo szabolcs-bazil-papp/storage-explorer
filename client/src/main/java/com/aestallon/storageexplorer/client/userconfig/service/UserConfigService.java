@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +31,7 @@ import com.aestallon.storageexplorer.client.userconfig.event.KeymapChanged;
 import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.aestallon.storageexplorer.client.userconfig.model.Keymap;
 import com.aestallon.storageexplorer.client.userconfig.model.StorageLocationSettings;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 
@@ -40,7 +43,9 @@ public class UserConfigService {
   public static final String GRAPH_SETTINGS = "graph.settings";
   public static final String STORAGE_SETTINGS = "storage.settings";
   public static final String KEYMAP_SETTINGS = "keymap.settings";
+  public static final String MISC_STATE = "misc.state";
 
+  private static final String MOST_RECENT_STORAGE_INSTANCE_LOAD = "mostRecentStorageInstanceLoad";
 
   private final UserConfigPersistenceService persistenceService;
   private final ApplicationEventPublisher eventPublisher;
@@ -48,6 +53,7 @@ public class UserConfigService {
   private final AtomicReference<GraphSettings> graphSettings;
   private final AtomicReference<StorageLocationSettings> storageLocationSettings;
   private final AtomicReference<Map<String, Keymap>> keymapSettings;
+  private final AtomicReference<Map<String, String>> miscState;
 
   public UserConfigService(UserConfigPersistenceService persistenceService,
                            ApplicationEventPublisher eventPublisher) {
@@ -65,10 +71,11 @@ public class UserConfigService {
         KEYMAP_SETTINGS,
         new TypeReference<>() {},
         Keymap::defaultKeymaps));
+    miscState = new AtomicReference<>(persistenceService.readSettingsAt(
+        MISC_STATE,
+        new TypeReference<>() {},
+        HashMap::new));
   }
-
-
-
 
   public GraphSettings graphSettings() {
     return graphSettings.get();
@@ -140,6 +147,20 @@ public class UserConfigService {
     this.keymapSettings.set(keymapSettings);
     persistenceService.writeSettingsTo(KEYMAP_SETTINGS, keymapSettings);
     eventPublisher.publishEvent(new KeymapChanged());
+  }
+  
+  public void setMostRecentStorageInstanceLoad(StorageId storageId) {
+    final var miscStateMap = miscState.updateAndGet(it -> {
+      it.put(MOST_RECENT_STORAGE_INSTANCE_LOAD, storageId.toString());
+      return it;
+    });
+    persistenceService.writeSettingsTo(MISC_STATE, miscStateMap);
+  }
+  
+  public Optional<StorageId> getMostRecentStorageInstanceLoad() {
+    return Optional.ofNullable(miscState.get().get(MOST_RECENT_STORAGE_INSTANCE_LOAD))
+        .map(UUID::fromString)
+        .map(StorageId::new);
   }
 
 }

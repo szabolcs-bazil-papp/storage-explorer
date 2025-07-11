@@ -7,10 +7,12 @@ import java.awt.event.WindowEvent;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.plaf.basic.BasicComboBoxRenderer;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
-import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 public class LoadEntryDialog extends JDialog {
   private JPanel contentPane;
@@ -22,6 +24,7 @@ public class LoadEntryDialog extends JDialog {
   private JPanel panelField;
   private JLabel labelSearchField;
   private JLabel labelValidation;
+  private JComboBox comboBoxStorageInstance;
 
   private final LoadEntryController controller;
 
@@ -29,7 +32,10 @@ public class LoadEntryDialog extends JDialog {
 
   public LoadEntryDialog(LoadEntryController controller) {
     this.controller = controller;
-    textFieldSearchField.setText(controller.initialModel());
+    final var initialModel = controller.initialModel();
+
+    initComboBox(initialModel);
+    textFieldSearchField.setText(initialModel.input());
 
     setContentPane(contentPane);
     setModal(true);
@@ -54,6 +60,42 @@ public class LoadEntryDialog extends JDialog {
 
     renderValidation();
     textFieldSearchField.getDocument().addDocumentListener(getSearchFieldListener());
+  }
+
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  private void initComboBox(final LoadEntryDialogModel initialModel) {
+    comboBoxStorageInstance.setModel(new DefaultComboBoxModel());
+    for (final var instance : initialModel.options()) {
+      comboBoxStorageInstance.addItem(instance);
+    }
+    comboBoxStorageInstance.setSelectedItem(initialModel.selection());
+    comboBoxStorageInstance.setRenderer(new StorageInstanceRenderer());
+  }
+
+  private static class StorageInstanceRenderer extends BasicComboBoxRenderer {
+    @Override
+    public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                  int index, boolean isSelected,
+                                                  boolean cellHasFocus) {
+
+      super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+      if (value == null) {
+        setText("None selected");
+        setIcon(null);
+        return this;
+      }
+
+      final StorageInstance instance = (StorageInstance) value;
+      setText(instance.name());
+
+      final ImageIcon icon = IconProvider.getIconForStorageInstance(instance);
+      setIcon(icon);
+
+      setHorizontalTextPosition(SwingConstants.RIGHT);
+      setIconTextGap(10);
+      return this;
+    }
   }
 
   private DocumentListener getSearchFieldListener() {
@@ -93,7 +135,10 @@ public class LoadEntryDialog extends JDialog {
   }
 
   private void onOK() {
-    controller.finish(textFieldSearchField.getText());
+    controller.finish(new LoadEntryDialogModel(
+        textFieldSearchField.getText(),
+        (StorageInstance) comboBoxStorageInstance.getSelectedItem(),
+        null));
     dispose();
   }
 
@@ -159,7 +204,7 @@ public class LoadEntryDialog extends JDialog {
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null,
             null, 0, false));
     panelField = new JPanel();
-    panelField.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+    panelField.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
     panelForm.add(panelField,
         new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
@@ -168,14 +213,19 @@ public class LoadEntryDialog extends JDialog {
     labelSearchField = new JLabel();
     labelSearchField.setText("Enter URI:");
     panelField.add(labelSearchField,
-        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
+        new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
             GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
             false));
     textFieldSearchField = new JTextField();
     panelField.add(textFieldSearchField,
-        new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST,
+        new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST,
             GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW,
             GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+    comboBoxStorageInstance = new JComboBox();
+    panelField.add(comboBoxStorageInstance,
+        new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST,
+            GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW,
+            GridConstraints.SIZEPOLICY_FIXED, new Dimension(140, -1), null, null, 0, false));
     labelValidation = new JLabel();
     labelValidation.setText("Label");
     panelForm.add(labelValidation,
