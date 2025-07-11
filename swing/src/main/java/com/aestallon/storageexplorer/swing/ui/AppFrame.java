@@ -15,6 +15,7 @@
 
 package com.aestallon.storageexplorer.swing.ui;
 
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -58,6 +59,7 @@ public class AppFrame extends JFrame {
 
     setTitle("Storage Explorer");
     setSize(900, 600);
+    setExtendedState(Frame.MAXIMIZED_BOTH);
     setDefaultCloseOperation(EXIT_ON_CLOSE);
     initMenu();
     addSearchAction();

@@ -23,6 +23,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
+import com.aestallon.storageexplorer.client.ff.FeatureFlag;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
@@ -46,6 +47,8 @@ public class StorageExplorerApplication {
   }
 
   public static void main(String[] args) {
+    FeatureFlag.parse(args);
+
     System.setProperty("sun.java2d.uiScale", "100%");
     System.setProperty("org.graphstream.ui", "swing");
     FlatIntelliJLaf.setup();

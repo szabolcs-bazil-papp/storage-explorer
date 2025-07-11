@@ -22,7 +22,7 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.swing.ui.misc.PaneAndTextarea;
 import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
@@ -31,6 +31,7 @@ import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 public final class InspectorTextareaFactory {
 
   private static final Logger log = LoggerFactory.getLogger(InspectorTextareaFactory.class);
+
 
   public enum Type { SIMPLE, FANCY }
 
@@ -52,28 +53,46 @@ public final class InspectorTextareaFactory {
     this.themeProvider = themeProvider;
   }
 
-  PaneAndTextarea create(final ObjectEntry objectEntry,
-                         final ObjectEntryLoadResult.SingleVersion nodeVersion) {
+  public PaneAndTextarea create(final StorageEntry storageEntry,
+                                final ObjectEntryLoadResult.SingleVersion nodeVersion,
+                                final boolean readOnly) {
     final var oamStr = nodeVersion.oamStr();
-    if (oamStr.length() >= 500_000) {
-      return createSimple(objectEntry, nodeVersion, oamStr);
+    return create(storageEntry, oamStr, readOnly);
+  }
+
+  public PaneAndTextarea create(final StorageEntry storageEntry,
+                                final String text,
+                                final boolean readOnly) {
+    if (text.length() >= 500_000) {
+      return createSimple(storageEntry, text, readOnly);
     }
-    
-    return createFancy(objectEntry, nodeVersion, oamStr);
+
+    return createFancy(storageEntry, text, readOnly);
+  }
+
+  public PaneAndTextarea create(final StorageEntry storageEntry,
+                                final ObjectEntryLoadResult.SingleVersion nodeVersion,
+                                final boolean readOnly,
+                                final Type type) {
+    final var oamStr = nodeVersion.oamStr();
+    return switch (type) {
+      case SIMPLE -> createSimple(storageEntry, oamStr, readOnly);
+      case FANCY -> createFancy(storageEntry, oamStr, readOnly);
+    };
   }
 
 
-  private PaneAndTextarea createSimple(final ObjectEntry objectEntry,
-                                       final ObjectEntryLoadResult.SingleVersion nodeVersion,
-                                       final String oamStr) {
-    final var textarea = objectAsMapTextarea(objectEntry, nodeVersion, oamStr);
+  private PaneAndTextarea createSimple(final StorageEntry storageEntry,
+                                       final String oamStr,
+                                       final boolean readOnly) {
+    final var textarea = objectAsMapTextarea(storageEntry, oamStr, readOnly);
     final var pane = textAreaContainerPane(textarea);
     return new PaneAndTextarea(pane, textarea);
   }
 
-  private PaneAndTextarea createFancy(final ObjectEntry objectEntry,
-                                      final ObjectEntryLoadResult.SingleVersion nodeVersion,
-                                      final String oamStr) {
+  private PaneAndTextarea createFancy(final StorageEntry storageEntry,
+                                      final String oamStr,
+                                      final boolean readOnly) {
     final var textarea = new RSyntaxTextArea(oamStr);
     if (themeProvider.hasTheme()) {
       themeProvider.applyCurrentTheme(textarea);
@@ -83,13 +102,15 @@ public final class InspectorTextareaFactory {
     textarea.setCodeFoldingEnabled(true);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
-    textarea.setEditable(false);
+    textarea.setEditable(!readOnly);
     textarea.setFont(inspectorViewFactory.monospaceFontProvider().getFont());
 
-    inspectorViewFactory.addJumpAction(objectEntry.storageId(), textarea);
+    inspectorViewFactory.addJumpAction(storageEntry.storageId(), textarea);
     inspectorViewFactory.monospaceFontProvider().applyFontSizeChangeAction(textarea);
 
-    inspectorViewFactory.submitTextArea(objectEntry, textarea);
+    if (readOnly) {
+      inspectorViewFactory.submitTextArea(storageEntry, textarea);
+    }
 
     final var scrollPane = new RTextScrollPane(textarea);
     scrollPane.setMinimumSize(new Dimension(200, 200));
@@ -97,20 +118,22 @@ public final class InspectorTextareaFactory {
   }
 
 
-  private JTextArea objectAsMapTextarea(final ObjectEntry objectEntry,
-                                        final ObjectEntryLoadResult.SingleVersion nodeVersion,
-                                        final String oamStr) {
+  private JTextArea objectAsMapTextarea(final StorageEntry storageEntry,
+                                        final String oamStr,
+                                        final boolean readOnly) {
     final var textarea = new JTextArea(oamStr, 0, 80);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
-    textarea.setEditable(false);
-    textarea.setOpaque(false);
+    textarea.setEditable(!readOnly);
+    textarea.setOpaque(!readOnly);
     textarea.setFont(inspectorViewFactory.monospaceFontProvider().getFont());
 
-    inspectorViewFactory.addJumpAction(objectEntry.storageId(), textarea);
+    inspectorViewFactory.addJumpAction(storageEntry.storageId(), textarea);
     inspectorViewFactory.monospaceFontProvider().applyFontSizeChangeAction(textarea);
 
-    inspectorViewFactory.submitTextArea(objectEntry, textarea);
+    if (readOnly) {
+      inspectorViewFactory.submitTextArea(storageEntry, textarea);
+    }
 
     return textarea;
   }

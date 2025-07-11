@@ -143,6 +143,12 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
 
   public abstract ObjectEntryLoadingService<T> loader();
 
+  // TODO: Make abstract and implement!
+  public StorageEntryModificationService<T> modifier() {
+    return (entry, content, mode) ->
+        new StorageEntryModificationService.StorageEntryModificationResult.Ok(entry);
+  }
+
   public Stream<StorageEntry> entities() {
     return cache.stream();
   }

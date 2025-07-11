@@ -15,6 +15,7 @@ dependencies {
   implementation 'com.fifesoft:rstaui:3.3.1'
 
   implementation 'com.intellij:forms_rt:7.0.3'
+  implementation "io.github.java-diff-utils:java-diff-utils:4.15"
 }
 
 test {
