@@ -20,16 +20,27 @@ import javax.swing.*;
 import com.aestallon.storageexplorer.swing.ui.misc.PaneAndTextarea;
 
 public class StorageEntryEditorEditView extends JPanel {
-  
+
   private final StorageEntryEditorController controller;
   final JTextArea textArea;
+
   StorageEntryEditorEditView(StorageEntryEditorController controller) {
     this.controller = controller;
     setLayout(new GridLayout(1, 1));
-    final PaneAndTextarea paneAndTextarea = controller.textareaFactory().create(
-        controller.storageEntry(),
-        controller.version(),
-        false);
+    
+    final PaneAndTextarea paneAndTextarea;
+    if (controller.text() != null) {
+      paneAndTextarea = controller.textareaFactory().create(
+          controller.storageEntry(),
+          controller.text(),
+          false);
+    } else {
+      paneAndTextarea = controller.textareaFactory().create(
+          controller.storageEntry(),
+          controller.version(),
+          false);
+    }
+    
     textArea = paneAndTextarea.textArea();
     add(paneAndTextarea.scrollPane());
   }

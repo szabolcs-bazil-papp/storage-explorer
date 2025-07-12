@@ -27,6 +27,10 @@ import com.github.difflib.text.DiffRowGenerator;
 
 public class StorageEntryEditorDiffView extends JPanel {
 
+  private static final Color COLOUR_MOD = new Color(128, 128, 0, 60);
+  private static final Color COLOUR_DEL = new Color(128, 0, 0, 60);
+  private static final Color COLOUR_INS = new Color(0, 128, 0, 60);
+
   private final transient StorageEntryEditorController controller;
 
   private final JTextArea leftTextArea;
@@ -44,7 +48,7 @@ public class StorageEntryEditorDiffView extends JPanel {
     final var right = controller.textareaFactory().create(
         controller.storageEntry(),
         controller.text(),
-        false);
+        true);
 
     leftTextArea = left.textArea();
     rightTextArea = right.textArea();
@@ -74,7 +78,6 @@ public class StorageEntryEditorDiffView extends JPanel {
 
     int leftPtr = 0;
     int rightPtr = 0;
-    LOOP:
     for (final var row : diffRows) {
       try {
 
@@ -84,13 +87,13 @@ public class StorageEntryEditorDiffView extends JPanel {
             rightPtr++;
           }
           case CHANGE -> {
-            left.addLineHighlight(leftPtr++, new Color(128, 128, 0, 60));
-            right.addLineHighlight(rightPtr++, new Color(128, 128, 0, 60));
+            left.addLineHighlight(leftPtr++, COLOUR_MOD);
+            right.addLineHighlight(rightPtr++, COLOUR_MOD);
           }
-          case DELETE -> left.addLineHighlight(leftPtr++, new Color(128, 0, 0, 60));
-          case INSERT -> right.addLineHighlight(rightPtr++, new Color(0, 128, 0, 60));
+          case DELETE -> left.addLineHighlight(leftPtr++, COLOUR_DEL);
+          case INSERT -> right.addLineHighlight(rightPtr++, COLOUR_INS);
         }
-      
+
       } catch (final BadLocationException e) {
         System.err.println(e.getMessage());
       }

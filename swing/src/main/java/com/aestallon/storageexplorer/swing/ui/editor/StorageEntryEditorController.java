@@ -45,6 +45,7 @@ public class StorageEntryEditorController {
   private boolean singleVersionMode;
   private String text;
   private State state = State.INTENT;
+  private StorageEntryModificationService.ModificationMode modificationMode;
 
   public StorageEntryEditorController(ApplicationEventPublisher eventPublisher,
                                       InspectorTextareaFactory textareaFactory,
@@ -95,7 +96,11 @@ public class StorageEntryEditorController {
   State state() {
     return state;
   }
-
+  
+  StorageEntryModificationService.ModificationMode modificationMode() {
+    return modificationMode;
+  }
+  
   public void launch(final StorageEntry storageEntry,
                      final ObjectEntryLoadResult.SingleVersion version,
                      final long versionNr) {
@@ -116,12 +121,12 @@ public class StorageEntryEditorController {
       case INTENT -> {
         state = State.EDIT;
         frame.back.setEnabled(true);
-        frame.contentPane.header.setText("Make Your Edits");
+        setHeaderText(frame);
         frame.contentPane.setContent(new StorageEntryEditorEditView(this));
       }
       case EDIT -> {
         state = State.REVIEW;
-        frame.contentPane.header.setText("Review Your Changes");
+        setHeaderText(frame);
         text(((StorageEntryEditorEditView) frame.contentPane.content).textArea.getText());
         frame.contentPane.setContent(new StorageEntryEditorDiffView(this));
       }
@@ -157,15 +162,24 @@ public class StorageEntryEditorController {
       case EDIT -> {
         state = State.INTENT;
         frame.back.setEnabled(false);
-        frame.contentPane.header.setText("Declare Your Intent");
+        setHeaderText(frame);
         frame.contentPane.setContent(new StorageEntryEditorIntentView(this));
       }
       case REVIEW -> {
         state = State.EDIT;
-        frame.contentPane.header.setText("Make Your Edits");
+        setHeaderText(frame);
         frame.contentPane.setContent(new StorageEntryEditorEditView(this));
       }
     }
+  }
+  
+  void setHeaderText(final StorageEntryEditorFrame frame) {
+    final String s = switch (state) {
+      case INTENT -> "Declare Your Intent";
+      case EDIT -> "Edit Your Entry";
+      case REVIEW -> "Review Your Entry";
+    };
+    frame.contentPane.header.setText(s);
   }
 
 }

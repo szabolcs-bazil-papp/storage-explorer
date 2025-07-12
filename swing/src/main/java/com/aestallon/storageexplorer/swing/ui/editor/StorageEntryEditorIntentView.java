@@ -21,13 +21,30 @@ public class StorageEntryEditorIntentView extends JPanel {
 
   private final StorageEntryEditorController controller;
 
+  /*
+   * @formatter:off
+   * +-------------------------------------------------------------------------+
+   * | Text about the entry you are about to edit, and what options you        |
+   * | have.                                                                   |
+   * +-------------------------------------------------------------------------+
+   * | [ ] Yes, I want to modify this single version entry                     | <- if StColl or SV
+   * +-------------------------------------------------------------------------+
+   * | ( ) I want to OVERRIDE the contents of version ${v} of this entry       |
+   * | ( ) I want to SAVE A NEW VERSION of this entry using version ${v} as    | <- otherwise
+   * |       the basis of my modifications                                     |
+   * +-------------------------------------------------------------------------+
+   * | [ ] I declare I have the proper authorisation                           |
+   * | [ ] I declare I understand the implications of the software licence     |
+   * | [ ] I declare I am aware this is an experimental feature                |
+   * +-------------------------------------------------------------------------+
+   * @formatter:on
+   */
+
   StorageEntryEditorIntentView(StorageEntryEditorController controller) {
     this.controller = controller;
-    
+
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-    add(new JLabel("Select an action:"));
-    final ButtonGroup buttonGroup = new ButtonGroup();
-    buttonGroup.add(new JRadioButton());
+
   }
-  
+
 }
