@@ -219,7 +219,10 @@ public class StorageEntryEditorController {
   void setHeaderText(final StorageEntryEditorFrame frame) {
     final String s = switch (state) {
       case INTENT -> "Declare Your Intent";
-      case EDIT -> "Make Your Changes";
+      case EDIT ->
+          modificationMode instanceof StorageEntryModificationService.ModificationMode.SaveNewVersion
+              ? "Create the New Version"
+              : "Make Your Changes";
       case REVIEW -> "Review Your Modifications";
     };
     frame.contentPane.header.setText(s);
