@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -34,6 +35,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
+import com.aestallon.storageexplorer.client.ff.FeatureFlag;
 import com.aestallon.storageexplorer.client.graph.event.GraphRenderingRequest;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
@@ -45,8 +47,10 @@ import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorController;
 import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorDialog;
+import com.aestallon.storageexplorer.swing.ui.editor.StorageEntryEditorController;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
@@ -199,6 +203,8 @@ public class StorageEntryInspectorViewFactory {
     textareaDescription.setColumns(0);
   }
 
+
+
   @EventListener
   void onFontSizeChanged(
       @SuppressWarnings("unused") MonospaceFontProvider.FontSizeChange fontSizeChange) {
@@ -266,6 +272,44 @@ public class StorageEntryInspectorViewFactory {
         dialog.pack();
         dialog.setLocationRelativeTo(toolbar);
         dialog.setVisible(true);
+      }
+    });
+  }
+
+  void addModifyAction(final StorageEntry storageEntry,
+                       final Supplier<ObjectEntryLoadResult.SingleVersion> versionSupplier,
+                       final long versionNr,
+                       final ObjectEntryLoadResult.MultiVersion multiVersion,
+                       final JToolBar toolbar) {
+    if (!FeatureFlag.ENTRY_EDITOR.isEnabled()) {
+      return;
+    }
+    
+    if (versionSupplier == null) {
+      return;
+    }
+
+    toolbar.add(new AbstractAction("MODIFY ENTRY") {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        final var controller = new StorageEntryEditorController(
+            eventPublisher,
+            textareaFactory,
+            storageInstanceProvider,
+            StorageEntryInspectorViewFactory.this);
+        final ObjectEntryLoadResult.SingleVersion headVersion;
+        final long headVersionNr;
+        if (multiVersion != null) {
+          headVersion = multiVersion.head();
+          headVersionNr = multiVersion.versions().size() - 1L;
+        } else {
+          headVersion = null;
+          headVersionNr = -1L;
+        }
+        controller.launch(
+            storageEntry, 
+            versionSupplier.get(), versionNr, 
+            headVersion, headVersionNr);
       }
     });
   }

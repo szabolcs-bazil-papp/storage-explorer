@@ -74,7 +74,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   private void setUpObjectNodeDisplay(ObjectEntryLoadResult.MultiVersion multiVersion) {
     final var versions = multiVersion.versions();
     for (int i = 0; i < versions.size(); i++) {
-      addTab(String.format("%02d", i), new VersionPane(versions.get(i)));
+      addTab(String.format("%02d", i), new VersionPane(versions.get(i), i, multiVersion));
     }
 
     setSelectedIndex(versions.size() - 1);
@@ -82,20 +82,31 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
   private void setUpObjectNodeDisplay(
       ObjectEntryLoadResult.SingleVersion singleVersion) {
-    addTab("SINGLE", new VersionPane(singleVersion));
+    addTab("SINGLE", new VersionPane(singleVersion, -1L));
     setSelectedIndex(0);
   }
 
   private final class VersionPane extends JPanel {
 
     private final ObjectEntryLoadResult.SingleVersion version;
+    private final long versionNr;
+    private final ObjectEntryLoadResult.MultiVersion multiVersion;
     private boolean initialised = false;
 
     private JLabel labelName;
     private JTextArea textareaDescription;
 
-    private VersionPane(final ObjectEntryLoadResult.SingleVersion version) {
+    private VersionPane(final ObjectEntryLoadResult.SingleVersion version,
+                        final long versionNr) {
+      this(version, versionNr, null);
+    }
+
+    private VersionPane(final ObjectEntryLoadResult.SingleVersion version,
+                        final long versionNr,
+                        final ObjectEntryLoadResult.MultiVersion multiVersion) {
       this.version = version;
+      this.versionNr = versionNr;
+      this.multiVersion = multiVersion;
 
       setLayout(new BoxLayout(VersionPane.this, BoxLayout.Y_AXIS));
       setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -116,6 +127,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       factory.addRenderAction(objectEntry, toolbar);
       toolbar.add(openInSystemExplorerAction);
       factory.addEditMetaAction(objectEntry, toolbar);
+      factory.addModifyAction(objectEntry, () -> version, versionNr, multiVersion, toolbar);
       toolbar.add(Box.createHorizontalGlue());
 
       Box box = new Box(BoxLayout.X_AXIS);
@@ -148,7 +160,9 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       box1b.add(textareaDescription);
 
       Box box2 = new Box(BoxLayout.X_AXIS);
-      final var pane = factory.textareaFactory().create(objectEntry, version);
+      final var pane = factory.textareaFactory().create(
+          objectEntry, version,
+          new InspectorTextareaFactory.Config(null, true, true));
       toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
         @Override
         public void actionPerformed(ActionEvent e) {

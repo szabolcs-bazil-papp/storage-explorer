@@ -20,6 +20,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
 import java.util.List;
+import java.util.function.Supplier;
 import static java.util.stream.Collectors.toList;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -29,8 +30,10 @@ import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
+import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
 import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
@@ -69,8 +72,17 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     factory.addRenderAction(storageEntry, toolbar);
     toolbar.add(new OpenInSystemExplorerAction(storageEntry, this));
     factory.addEditMetaAction(storageEntry, toolbar);
+    factory.addModifyAction(storageEntry, singleVersionSupplier(), -1, null, toolbar);
     toolbar.add(Box.createHorizontalGlue());
     add(toolbar);
+  }
+
+  private Supplier<ObjectEntryLoadResult.SingleVersion> singleVersionSupplier() {
+    return switch (storageEntry) {
+      case ListEntry l -> l::asSingleVersion;
+      case MapEntry m -> m::asSingleVersion;
+      default -> null;
+    };
   }
 
   private void initMeta() {

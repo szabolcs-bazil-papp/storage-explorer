@@ -18,14 +18,16 @@ package com.aestallon.storageexplorer.core.model.entry;
 import java.net.URI;
 import java.nio.file.Path;
 import org.smartbit4all.api.collection.CollectionApi;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import org.smartbit4all.core.object.ObjectApi;
 import com.aestallon.storageexplorer.common.util.Uris;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 
 public final class ScopedMapEntry extends MapEntry implements ScopedEntry, StorageEntry {
   private final URI scopeUri;
 
-  ScopedMapEntry(StorageId id, Path path, URI uri, CollectionApi collectionApi, URI scopeUri) {
-    super(id, path, uri, collectionApi);
+  ScopedMapEntry(StorageId id, Path path, URI uri, ObjectApi objectApi, CollectionApi collectionApi,
+                 URI scopeUri) {
+    super(id, path, uri, objectApi, collectionApi);
     this.scopeUri = scopeUri;
   }
 
@@ -36,12 +38,9 @@ public final class ScopedMapEntry extends MapEntry implements ScopedEntry, Stora
 
   @Override
   public boolean equals(Object o) {
-    if (this == o)
-      return true;
-    if (o == null || getClass() != o.getClass())
-      return false;
-    if (!super.equals(o))
-      return false;
+    if (this == o) { return true; }
+    if (o == null || getClass() != o.getClass()) { return false; }
+    if (!super.equals(o)) { return false; }
     ScopedMapEntry that = (ScopedMapEntry) o;
     return Uris.equalIgnoringVersion(uri(), that.uri());
   }

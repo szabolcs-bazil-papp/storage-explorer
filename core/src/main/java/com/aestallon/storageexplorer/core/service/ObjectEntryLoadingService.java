@@ -49,7 +49,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntryLoadingService.class);
 
-  static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   protected final T storageIndex;
 
