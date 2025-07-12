@@ -17,15 +17,18 @@ package com.aestallon.storageexplorer.swing.ui.editor;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.io.Serial;
 import javax.swing.*;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 public class StorageEntryEditorFrame extends JFrame {
 
+  @Serial
   private static final long serialVersionUID = 1L;
 
   private final StorageEntryEditorController controller;
   final ContentPane contentPane;
+  JLabel toolbarLabel;
   JButton proceed;
   JButton back;
 
@@ -33,7 +36,8 @@ public class StorageEntryEditorFrame extends JFrame {
     super("Storage Entry Editor");
     this.controller = controller;
     setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-    setExtendedState(Frame.MAXIMIZED_BOTH);
+    setSize(1_000, 700);
+    //setExtendedState(Frame.MAXIMIZED_BOTH);
     setLocationRelativeTo(null);
 
     contentPane = new ContentPane(
@@ -53,6 +57,8 @@ public class StorageEntryEditorFrame extends JFrame {
     final var toolbar = new JToolBar();
     toolbar.setFloatable(false);
     toolbar.setOrientation(SwingConstants.HORIZONTAL);
+    toolbarLabel = new JLabel(" ");
+    toolbar.add(toolbarLabel);
     toolbar.add(Box.createHorizontalGlue());
     toolbar.add(new AbstractAction("Cancel", IconProvider.CLOSE) {
       @Override
@@ -79,6 +85,7 @@ public class StorageEntryEditorFrame extends JFrame {
 
   static final class ContentPane extends JPanel {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     final JLabel header;

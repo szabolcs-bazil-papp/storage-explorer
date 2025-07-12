@@ -74,7 +74,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   private void setUpObjectNodeDisplay(ObjectEntryLoadResult.MultiVersion multiVersion) {
     final var versions = multiVersion.versions();
     for (int i = 0; i < versions.size(); i++) {
-      addTab(String.format("%02d", i), new VersionPane(versions.get(i), i));
+      addTab(String.format("%02d", i), new VersionPane(versions.get(i), i, multiVersion));
     }
 
     setSelectedIndex(versions.size() - 1);
@@ -90,14 +90,23 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
     private final ObjectEntryLoadResult.SingleVersion version;
     private final long versionNr;
+    private final ObjectEntryLoadResult.MultiVersion multiVersion;
     private boolean initialised = false;
 
     private JLabel labelName;
     private JTextArea textareaDescription;
 
-    private VersionPane(final ObjectEntryLoadResult.SingleVersion version, long versionNr) {
+    private VersionPane(final ObjectEntryLoadResult.SingleVersion version,
+                        final long versionNr) {
+      this(version, versionNr, null);
+    }
+    
+    private VersionPane(final ObjectEntryLoadResult.SingleVersion version,
+                        final long versionNr,
+                        final ObjectEntryLoadResult.MultiVersion multiVersion) {
       this.version = version;
       this.versionNr = versionNr;
+      this.multiVersion = multiVersion;
 
       setLayout(new BoxLayout(VersionPane.this, BoxLayout.Y_AXIS));
       setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -118,7 +127,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       factory.addRenderAction(objectEntry, toolbar);
       toolbar.add(openInSystemExplorerAction);
       factory.addEditMetaAction(objectEntry, toolbar);
-      factory.addModifyAction(objectEntry, () -> version, versionNr, toolbar);
+      factory.addModifyAction(objectEntry, () -> version, versionNr, multiVersion, toolbar);
       toolbar.add(Box.createHorizontalGlue());
 
       Box box = new Box(BoxLayout.X_AXIS);

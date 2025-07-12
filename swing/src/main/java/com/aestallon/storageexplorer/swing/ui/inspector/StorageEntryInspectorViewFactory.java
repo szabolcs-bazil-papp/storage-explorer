@@ -279,8 +279,13 @@ public class StorageEntryInspectorViewFactory {
   void addModifyAction(final StorageEntry storageEntry,
                        final Supplier<ObjectEntryLoadResult.SingleVersion> versionSupplier,
                        final long versionNr,
+                       final ObjectEntryLoadResult.MultiVersion multiVersion,
                        final JToolBar toolbar) {
     if (!FeatureFlag.ENTRY_EDITOR.isEnabled()) {
+      return;
+    }
+    
+    if (versionSupplier == null) {
       return;
     }
 
@@ -292,7 +297,19 @@ public class StorageEntryInspectorViewFactory {
             textareaFactory,
             storageInstanceProvider,
             StorageEntryInspectorViewFactory.this);
-        controller.launch(storageEntry, versionSupplier.get(), versionNr);
+        final ObjectEntryLoadResult.SingleVersion headVersion;
+        final long headVersionNr;
+        if (multiVersion != null) {
+          headVersion = multiVersion.head();
+          headVersionNr = multiVersion.versions().size() - 1L;
+        } else {
+          headVersion = null;
+          headVersionNr = -1L;
+        }
+        controller.launch(
+            storageEntry, 
+            versionSupplier.get(), versionNr, 
+            headVersion, headVersionNr);
       }
     });
   }

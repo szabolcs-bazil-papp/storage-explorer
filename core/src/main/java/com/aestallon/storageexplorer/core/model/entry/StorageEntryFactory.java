@@ -69,13 +69,15 @@ public final class StorageEntryFactory {
       if (uriString.contains(STORED_LIST_MARKER)) {
         return scopeUri(uriString, STORED_LIST_MARKER)
             .map(
-                scope -> (ListEntry) new ScopedListEntry(id, path, latestUri, collectionApi, scope))
-            .or(() -> Optional.of(new ListEntry(id, path, latestUri, collectionApi)));
+                scope -> (ListEntry) new ScopedListEntry(id, path, latestUri, objectApi,
+                    collectionApi, scope))
+            .or(() -> Optional.of(new ListEntry(id, path, latestUri, objectApi, collectionApi)));
 
       } else if (uriString.contains(STORED_MAP_MARKER)) {
         return scopeUri(uriString, STORED_MAP_MARKER)
-            .map(scope -> (MapEntry) new ScopedMapEntry(id, path, latestUri, collectionApi, scope))
-            .or(() -> Optional.of(new MapEntry(id, path, latestUri, collectionApi)));
+            .map(scope -> (MapEntry) new ScopedMapEntry(id, path, latestUri, objectApi,
+                collectionApi, scope))
+            .or(() -> Optional.of(new MapEntry(id, path, latestUri, objectApi, collectionApi)));
 
       } else if (uriString.contains(STORED_REF_MARKER)) {
         return scopeUri(uriString, STORED_REF_MARKER)
@@ -106,7 +108,8 @@ public final class StorageEntryFactory {
 
     private Path pathToStorage;
 
-    private Builder(StorageIndex<?> storageIndex, ObjectApi objectApi, CollectionApi collectionApi) {
+    private Builder(StorageIndex<?> storageIndex, ObjectApi objectApi,
+                    CollectionApi collectionApi) {
       this.storageIndex = Objects.requireNonNull(storageIndex, "StorageId must not be null!");
       this.objectApi = Objects.requireNonNull(objectApi, "ObjectApi must not be null!");
       this.collectionApi = Objects.requireNonNull(collectionApi, "CollectionApi must not be null!");

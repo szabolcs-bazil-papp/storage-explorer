@@ -21,29 +21,33 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.core.service.StorageEntryModificationService;
 import com.aestallon.storageexplorer.swing.ui.misc.PaneAndTextarea;
 import com.github.difflib.text.DiffRow;
 import com.github.difflib.text.DiffRowGenerator;
 
 public class StorageEntryEditorDiffView extends JPanel {
 
+  private static final Logger log = LoggerFactory.getLogger(StorageEntryEditorDiffView.class);
+  
   private static final Color COLOUR_MOD = new Color(128, 128, 0, 60);
   private static final Color COLOUR_DEL = new Color(128, 0, 0, 60);
   private static final Color COLOUR_INS = new Color(0, 128, 0, 60);
 
-  private final transient StorageEntryEditorController controller;
 
   private final JTextArea leftTextArea;
   private final JTextArea rightTextArea;
 
   StorageEntryEditorDiffView(final StorageEntryEditorController controller) {
-    this.controller = controller;
-
     setLayout(new GridLayout(1, 2));
 
     final PaneAndTextarea left = controller.textareaFactory().create(
         controller.storageEntry(),
-        controller.version(),
+        controller.modificationMode() instanceof StorageEntryModificationService.ModificationMode.SaveNewVersion
+            ? controller.headVersion()
+            : controller.version(),
         true);
     final var right = controller.textareaFactory().create(
         controller.storageEntry(),
@@ -72,9 +76,9 @@ public class StorageEntryEditorDiffView extends JPanel {
     applyDifferences((RSyntaxTextArea) leftTextArea, (RSyntaxTextArea) rightTextArea, diffRows);
   }
 
-  private void applyDifferences(RSyntaxTextArea left,
-                                RSyntaxTextArea right,
-                                List<DiffRow> diffRows) {
+  private void applyDifferences(final RSyntaxTextArea left,
+                                final RSyntaxTextArea right,
+                                final List<DiffRow> diffRows) {
 
     int leftPtr = 0;
     int rightPtr = 0;
@@ -95,32 +99,8 @@ public class StorageEntryEditorDiffView extends JPanel {
         }
 
       } catch (final BadLocationException e) {
-        System.err.println(e.getMessage());
+        log.error(e.getMessage(), e);
       }
-    }
-  }
-
-
-  public static void main(String[] args) {
-    final var left = """
-        a
-        b2
-        c
-        d
-        e""";
-    final var right = """
-        a
-        b
-        e
-        g""";
-    List<DiffRow> diffRows = DiffRowGenerator.create()
-        .inlineDiffByWord(true)
-        .build()
-        .generateDiffRows(
-            Arrays.asList(left.split("\n")),
-            Arrays.asList(right.split("\n")));
-    for (final var row : diffRows) {
-      System.out.println(row.getTag());
     }
   }
 

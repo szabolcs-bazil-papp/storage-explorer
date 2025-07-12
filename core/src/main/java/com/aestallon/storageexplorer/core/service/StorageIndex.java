@@ -146,7 +146,9 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   // TODO: Make abstract and implement!
   public StorageEntryModificationService<T> modifier() {
     return (entry, content, mode) ->
-        new StorageEntryModificationService.StorageEntryModificationResult.Ok(entry);
+        new StorageEntryModificationService.StorageEntryModificationResult.Err(
+            entry,
+            "Feature not yet implemented");
   }
 
   public Stream<StorageEntry> entities() {

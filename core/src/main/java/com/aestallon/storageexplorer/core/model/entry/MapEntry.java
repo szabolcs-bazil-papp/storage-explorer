@@ -23,14 +23,19 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.toSet;
 import org.smartbit4all.api.collection.CollectionApi;
+import org.smartbit4all.api.collection.StoredMapStorageImpl;
+import org.smartbit4all.core.object.ObjectApi;
 import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.core.service.ObjectEntryLoadingService;
 
 public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
 
   private final StorageId id;
   private final Path path;
   private final URI uri;
+  private final ObjectApi objectApi;
   private final CollectionApi collectionApi;
   private final String schema;
   private final String name;
@@ -39,10 +44,11 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
-  MapEntry(StorageId id, Path path, URI uri, CollectionApi collectionApi) {
+  MapEntry(StorageId id, Path path, URI uri, ObjectApi objectApi, CollectionApi collectionApi) {
     this.id = id;
     this.path = path;
     this.uri = uri;
+    this.objectApi = objectApi;
     this.collectionApi = collectionApi;
 
     final String fullScheme = uri.getScheme();
@@ -76,6 +82,12 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
     return name;
   }
 
+  public ObjectEntryLoadResult.SingleVersion asSingleVersion() {
+    final var map = (StoredMapStorageImpl) collectionApi.map(schema, name);
+    final var node = objectApi.loadLatest(map.getUri());
+    return ObjectEntryLoadResult.singleVersion(node, ObjectEntryLoadingService.OBJECT_MAPPER);
+  }
+  
   @Override
   public Set<UriProperty> uriProperties() {
     if (!valid) {
