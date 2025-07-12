@@ -60,6 +60,9 @@ import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 @Service
 public class StorageEntryInspectorViewFactory {
 
+  private record TextAreasByDiffView(ObjectEntryDiffView view, List<JTextArea> textAreas) {}
+
+
   private final ApplicationEventPublisher eventPublisher;
   private final StorageInstanceProvider storageInstanceProvider;
   private final MonospaceFontProvider monospaceFontProvider;
@@ -69,6 +72,8 @@ public class StorageEntryInspectorViewFactory {
   private final Map<StorageEntry, InspectorView<? extends StorageEntry>> openedInspectors;
   private final Map<StorageEntry, InspectorDialog> openedDialogs;
   private final Map<StorageEntry, List<JTextArea>> textAreas;
+
+  private final List<TextAreasByDiffView> diffTextAreas;
 
   public StorageEntryInspectorViewFactory(ApplicationEventPublisher eventPublisher,
                                           StorageInstanceProvider storageInstanceProvider,
@@ -85,6 +90,7 @@ public class StorageEntryInspectorViewFactory {
     openedInspectors = new ConcurrentHashMap<>();
     openedDialogs = new ConcurrentHashMap<>();
     textAreas = new ConcurrentHashMap<>();
+    diffTextAreas = new ArrayList<>();
   }
 
   MonospaceFontProvider monospaceFontProvider() {
@@ -102,6 +108,17 @@ public class StorageEntryInspectorViewFactory {
   public void dropInspector(final InspectorView<? extends StorageEntry> inspector) {
     final var storageEntry = inspector.storageEntry();
     dropInspector(storageEntry);
+  }
+
+  private void dropDiffInspector(final ObjectEntryDiffView diffInspector) {
+    diffTextAreas.stream()
+        .filter(it -> it.view() == diffInspector)
+        .findFirst()
+        .ifPresent(it -> {
+          diffTextAreas.remove(it);
+          textAreas.computeIfAbsent(diffInspector.storageEntry(), k -> new ArrayList<>())
+              .removeAll(it.textAreas());
+        });
   }
 
   private void dropInspector(final StorageEntry storageEntry) {
@@ -168,6 +185,26 @@ public class StorageEntryInspectorViewFactory {
     dialog.setVisible(true);
   }
 
+  public void showDiffDialog(ObjectEntry objectEntry,
+                             ObjectEntryLoadResult.SingleVersion base,
+                             long version,
+                             Component parent) {
+    final var diffView = new ObjectEntryDiffView(objectEntry, this, base, version);
+    final var dialog = new InspectorDialog(diffView);
+    dialog.setSize(1_000, 800);
+    dialog.addWindowListener(new WindowAdapter() {
+
+      @Override
+      public void windowClosing(WindowEvent e) {
+        super.windowClosing(e);
+        dropDiffInspector(diffView);
+      }
+
+    });
+    dialog.setLocationRelativeTo(parent);
+    dialog.setVisible(true);
+  }
+
   public void focusDialog(final StorageEntry storageEntry) {
     Optional.ofNullable(openedDialogs.get(storageEntry))
         .ifPresent(dialog -> SwingUtilities.invokeLater(() -> {
@@ -211,6 +248,9 @@ public class StorageEntryInspectorViewFactory {
     SwingUtilities.invokeLater(() -> {
       final Font font = monospaceFontProvider.getFont();
       textAreas.values().stream().flatMap(List::stream).forEach(it -> it.setFont(font));
+      diffTextAreas.stream()
+          .flatMap(it -> it.textAreas().stream())
+          .forEach(it -> it.setFont(font));
     });
   }
 
@@ -223,6 +263,12 @@ public class StorageEntryInspectorViewFactory {
         themeProvider.applyCurrentTheme(it);
         it.setFont(font);
       });
+      diffTextAreas.stream()
+          .flatMap(it -> it.textAreas().stream())
+          .forEach(it -> {
+            themeProvider.applyCurrentTheme(it);
+            it.setFont(font);
+          });
     });
   }
 
@@ -275,6 +321,19 @@ public class StorageEntryInspectorViewFactory {
       }
     });
   }
+  
+  void addDiffAction(final ObjectEntry objectEntry, 
+                     final ObjectEntryLoadResult.SingleVersion singleVersion,
+                     final long versionNr,
+                     final JToolBar toolbar,
+                     final Component parent) {
+    toolbar.add(new AbstractAction(null, IconProvider.DIFF) {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        showDiffDialog(objectEntry, singleVersion, versionNr, parent);
+      }
+    });
+  }
 
   void addModifyAction(final StorageEntry storageEntry,
                        final Supplier<ObjectEntryLoadResult.SingleVersion> versionSupplier,
@@ -284,7 +343,7 @@ public class StorageEntryInspectorViewFactory {
     if (!FeatureFlag.ENTRY_EDITOR.isEnabled()) {
       return;
     }
-    
+
     if (versionSupplier == null) {
       return;
     }
@@ -307,8 +366,8 @@ public class StorageEntryInspectorViewFactory {
           headVersionNr = -1L;
         }
         controller.launch(
-            storageEntry, 
-            versionSupplier.get(), versionNr, 
+            storageEntry,
+            versionSupplier.get(), versionNr,
             headVersion, headVersionNr);
       }
     });
