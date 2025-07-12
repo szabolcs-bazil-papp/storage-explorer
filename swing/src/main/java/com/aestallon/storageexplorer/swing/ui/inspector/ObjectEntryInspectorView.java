@@ -100,7 +100,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
                         final long versionNr) {
       this(version, versionNr, null);
     }
-    
+
     private VersionPane(final ObjectEntryLoadResult.SingleVersion version,
                         final long versionNr,
                         final ObjectEntryLoadResult.MultiVersion multiVersion) {
@@ -160,7 +160,9 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       box1b.add(textareaDescription);
 
       Box box2 = new Box(BoxLayout.X_AXIS);
-      final var pane = factory.textareaFactory().create(objectEntry, version, true);
+      final var pane = factory.textareaFactory().create(
+          objectEntry, version,
+          new InspectorTextareaFactory.Config(null, true, true));
       toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
         @Override
         public void actionPerformed(ActionEvent e) {

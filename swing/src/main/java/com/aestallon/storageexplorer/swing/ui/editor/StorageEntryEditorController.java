@@ -28,6 +28,7 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.StorageEntryModificationService;
 import com.aestallon.storageexplorer.swing.ui.inspector.InspectorTextareaFactory;
 import com.aestallon.storageexplorer.swing.ui.inspector.StorageEntryInspectorViewFactory;
+import com.aestallon.storageexplorer.swing.ui.inspector.StorageEntryVersionDiffView;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import jakarta.annotation.Nonnull;
 
@@ -62,7 +63,7 @@ public class StorageEntryEditorController {
     this.inspectorViewFactory = inspectorViewFactory;
   }
 
-  InspectorTextareaFactory textareaFactory() {
+  public InspectorTextareaFactory textareaFactory() {
     return textareaFactory;
   }
 
@@ -74,11 +75,11 @@ public class StorageEntryEditorController {
     return eventPublisher;
   }
 
-  StorageEntry storageEntry() {
+  public StorageEntry storageEntry() {
     return storageEntry;
   }
 
-  ObjectEntryLoadResult.SingleVersion version() {
+  public ObjectEntryLoadResult.SingleVersion version() {
     return version;
   }
 
@@ -90,7 +91,7 @@ public class StorageEntryEditorController {
     return singleVersionMode;
   }
 
-  ObjectEntryLoadResult.SingleVersion headVersion() {
+  public ObjectEntryLoadResult.SingleVersion headVersion() {
     return headVersion;
   }
 
@@ -98,7 +99,7 @@ public class StorageEntryEditorController {
     return headVersionNr;
   }
 
-  String text() {
+  public String text() {
     return text;
   }
 
@@ -110,7 +111,7 @@ public class StorageEntryEditorController {
     return state;
   }
 
-  StorageEntryModificationService.ModificationMode modificationMode() {
+  public StorageEntryModificationService.ModificationMode modificationMode() {
     return modificationMode;
   }
 
@@ -158,7 +159,7 @@ public class StorageEntryEditorController {
         setHeaderText(frame);
         setToolbarText(frame);
         text(((StorageEntryEditorEditView) frame.contentPane.content).textArea.getText());
-        frame.contentPane.setContent(new StorageEntryEditorDiffView(this));
+        frame.contentPane.setContent(new StorageEntryVersionDiffView(this));
       }
       case REVIEW -> {
         frame.proceed.setEnabled(false);

@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.swing.ui.editor;
 
 import java.awt.*;
 import javax.swing.*;
+import com.aestallon.storageexplorer.swing.ui.inspector.InspectorTextareaFactory;
 import com.aestallon.storageexplorer.swing.ui.misc.PaneAndTextarea;
 
 public class StorageEntryEditorEditView extends JPanel {
@@ -27,20 +28,20 @@ public class StorageEntryEditorEditView extends JPanel {
   StorageEntryEditorEditView(StorageEntryEditorController controller) {
     this.controller = controller;
     setLayout(new GridLayout(1, 1));
-    
+
     final PaneAndTextarea paneAndTextarea;
     if (controller.text() != null) {
       paneAndTextarea = controller.textareaFactory().create(
           controller.storageEntry(),
           controller.text(),
-          false);
+          new InspectorTextareaFactory.Config(InspectorTextareaFactory.Type.FANCY, false, false));
     } else {
       paneAndTextarea = controller.textareaFactory().create(
           controller.storageEntry(),
           controller.version(),
-          false);
+          new InspectorTextareaFactory.Config(InspectorTextareaFactory.Type.FANCY, false, false));
     }
-    
+
     textArea = paneAndTextarea.textArea();
     add(paneAndTextarea.scrollPane());
   }

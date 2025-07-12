@@ -35,6 +35,8 @@ public final class InspectorTextareaFactory {
 
   public enum Type { SIMPLE, FANCY }
 
+  public record Config(Type type, boolean readOnly, boolean track) {}
+  
   static JScrollPane textAreaContainerPane(JTextArea objectAsMapTextarea) {
     final var pane = new JScrollPane(
         objectAsMapTextarea,
@@ -55,44 +57,39 @@ public final class InspectorTextareaFactory {
 
   public PaneAndTextarea create(final StorageEntry storageEntry,
                                 final ObjectEntryLoadResult.SingleVersion nodeVersion,
-                                final boolean readOnly) {
+                                final Config config) {
     final var oamStr = nodeVersion.oamStr();
-    return create(storageEntry, oamStr, readOnly);
+    return create(storageEntry, oamStr, config);
   }
 
   public PaneAndTextarea create(final StorageEntry storageEntry,
                                 final String text,
-                                final boolean readOnly) {
+                                Config config) {
+    if (config.type() != null) {
+      return switch (config.type()) {
+        case SIMPLE -> createSimple(storageEntry, text, config);
+        case FANCY -> createFancy(storageEntry, text, config);
+      };
+    }
+    
     if (text.length() >= 500_000) {
-      return createSimple(storageEntry, text, readOnly);
+      return createSimple(storageEntry, text, config);
     }
 
-    return createFancy(storageEntry, text, readOnly);
+    return createFancy(storageEntry, text, config);
   }
-
-  public PaneAndTextarea create(final StorageEntry storageEntry,
-                                final ObjectEntryLoadResult.SingleVersion nodeVersion,
-                                final boolean readOnly,
-                                final Type type) {
-    final var oamStr = nodeVersion.oamStr();
-    return switch (type) {
-      case SIMPLE -> createSimple(storageEntry, oamStr, readOnly);
-      case FANCY -> createFancy(storageEntry, oamStr, readOnly);
-    };
-  }
-
 
   private PaneAndTextarea createSimple(final StorageEntry storageEntry,
                                        final String oamStr,
-                                       final boolean readOnly) {
-    final var textarea = objectAsMapTextarea(storageEntry, oamStr, readOnly);
+                                       final Config config) {
+    final var textarea = objectAsMapTextarea(storageEntry, oamStr, config);
     final var pane = textAreaContainerPane(textarea);
     return new PaneAndTextarea(pane, textarea);
   }
 
   private PaneAndTextarea createFancy(final StorageEntry storageEntry,
                                       final String oamStr,
-                                      final boolean readOnly) {
+                                      final Config config) {
     final var textarea = new RSyntaxTextArea(oamStr);
     if (themeProvider.hasTheme()) {
       themeProvider.applyCurrentTheme(textarea);
@@ -102,13 +99,13 @@ public final class InspectorTextareaFactory {
     textarea.setCodeFoldingEnabled(true);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
-    textarea.setEditable(!readOnly);
+    textarea.setEditable(!config.readOnly());
     textarea.setFont(inspectorViewFactory.monospaceFontProvider().getFont());
 
     inspectorViewFactory.addJumpAction(storageEntry.storageId(), textarea);
     inspectorViewFactory.monospaceFontProvider().applyFontSizeChangeAction(textarea);
 
-    if (readOnly) {
+    if (config.track()) {
       inspectorViewFactory.submitTextArea(storageEntry, textarea);
     }
 
@@ -120,18 +117,18 @@ public final class InspectorTextareaFactory {
 
   private JTextArea objectAsMapTextarea(final StorageEntry storageEntry,
                                         final String oamStr,
-                                        final boolean readOnly) {
+                                        final Config config) {
     final var textarea = new JTextArea(oamStr, 0, 80);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
-    textarea.setEditable(!readOnly);
-    textarea.setOpaque(!readOnly);
+    textarea.setEditable(!config.readOnly());
+    textarea.setOpaque(!config.readOnly());
     textarea.setFont(inspectorViewFactory.monospaceFontProvider().getFont());
 
     inspectorViewFactory.addJumpAction(storageEntry.storageId(), textarea);
     inspectorViewFactory.monospaceFontProvider().applyFontSizeChangeAction(textarea);
 
-    if (readOnly) {
+    if (config.track()) {
       inspectorViewFactory.submitTextArea(storageEntry, textarea);
     }
 

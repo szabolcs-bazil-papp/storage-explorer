@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.editor;
+package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import java.awt.*;
 import java.util.Arrays;
@@ -23,14 +23,17 @@ import javax.swing.text.BadLocationException;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.StorageEntryModificationService;
+import com.aestallon.storageexplorer.swing.ui.editor.StorageEntryEditorController;
 import com.aestallon.storageexplorer.swing.ui.misc.PaneAndTextarea;
 import com.github.difflib.text.DiffRow;
 import com.github.difflib.text.DiffRowGenerator;
 
-public class StorageEntryEditorDiffView extends JPanel {
+public class StorageEntryVersionDiffView extends JPanel {
 
-  private static final Logger log = LoggerFactory.getLogger(StorageEntryEditorDiffView.class);
+  private static final Logger log = LoggerFactory.getLogger(StorageEntryVersionDiffView.class);
   
   private static final Color COLOUR_MOD = new Color(128, 128, 0, 60);
   private static final Color COLOUR_DEL = new Color(128, 0, 0, 60);
@@ -40,7 +43,28 @@ public class StorageEntryEditorDiffView extends JPanel {
   private final JTextArea leftTextArea;
   private final JTextArea rightTextArea;
 
-  StorageEntryEditorDiffView(final StorageEntryEditorController controller) {
+  public StorageEntryVersionDiffView(final InspectorTextareaFactory textareaFactory,
+                                     final StorageEntry storageEntry,
+                                     final ObjectEntryLoadResult.SingleVersion a, 
+                                     final ObjectEntryLoadResult.SingleVersion b) {
+    setLayout(new GridLayout(1, 2));
+    
+    final var left = textareaFactory.create(
+        storageEntry,
+        a,
+        new InspectorTextareaFactory.Config(InspectorTextareaFactory.Type.FANCY, true, false));
+    final var right = textareaFactory.create(
+        storageEntry,
+        b,
+        new InspectorTextareaFactory.Config(InspectorTextareaFactory.Type.FANCY, true, false));
+    leftTextArea = left.textArea();
+    rightTextArea = right.textArea();
+    add(left.scrollPane());
+    add(right.scrollPane());
+    showDiff();
+  } 
+  
+  public StorageEntryVersionDiffView(final StorageEntryEditorController controller) {
     setLayout(new GridLayout(1, 2));
 
     final PaneAndTextarea left = controller.textareaFactory().create(
@@ -48,25 +72,20 @@ public class StorageEntryEditorDiffView extends JPanel {
         controller.modificationMode() instanceof StorageEntryModificationService.ModificationMode.SaveNewVersion
             ? controller.headVersion()
             : controller.version(),
-        true);
+        new InspectorTextareaFactory.Config(InspectorTextareaFactory.Type.FANCY, true, false));
     final var right = controller.textareaFactory().create(
         controller.storageEntry(),
         controller.text(),
-        true);
+        new InspectorTextareaFactory.Config(InspectorTextareaFactory.Type.FANCY, true, false));
 
     leftTextArea = left.textArea();
     rightTextArea = right.textArea();
-
-    // Add scroll panes
-
     add(left.scrollPane());
     add(right.scrollPane());
-
     showDiff();
-
   }
 
-  public void showDiff() {
+  private void showDiff() {
     final List<DiffRow> diffRows = DiffRowGenerator.create()
         .inlineDiffByWord(true)
         .build()
