@@ -44,8 +44,8 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   private static final DateTimeFormatter FORMATTER_CREATION_DATE =
       DateTimeFormatter.ISO_ZONED_DATE_TIME;
 
-  private final ObjectEntry objectEntry;
-  private final StorageEntryInspectorViewFactory factory;
+  protected final ObjectEntry objectEntry;
+  protected final StorageEntryInspectorViewFactory factory;
   private final Action openInSystemExplorerAction;
 
   public ObjectEntryInspectorView(ObjectEntry objectEntry,
@@ -74,7 +74,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   private void setUpObjectNodeDisplay(ObjectEntryLoadResult.MultiVersion multiVersion) {
     final var versions = multiVersion.versions();
     for (int i = 0; i < versions.size(); i++) {
-      addTab(String.format("%02d", i), new VersionPane(versions.get(i), i, multiVersion));
+      addTab(String.format("%02d", i), versionPane(versions.get(i), i, multiVersion));
     }
 
     setSelectedIndex(versions.size() - 1);
@@ -82,28 +82,34 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
   private void setUpObjectNodeDisplay(
       ObjectEntryLoadResult.SingleVersion singleVersion) {
-    addTab("SINGLE", new VersionPane(singleVersion, -1L));
+    addTab("SINGLE", versionPane(singleVersion, -1L));
     setSelectedIndex(0);
   }
 
-  private final class VersionPane extends JPanel {
+  protected VersionPane versionPane(ObjectEntryLoadResult.SingleVersion version,
+                                    long versionNr) {
+    return new VersionPane(version, versionNr, null);
+  }
 
-    private final ObjectEntryLoadResult.SingleVersion version;
-    private final long versionNr;
+  protected VersionPane versionPane(ObjectEntryLoadResult.SingleVersion version,
+                                    long versionNr,
+                                    final ObjectEntryLoadResult.MultiVersion multiVersion) {
+    return new VersionPane(version, versionNr, multiVersion);
+  }
+
+  protected class VersionPane extends JPanel {
+
+    protected final ObjectEntryLoadResult.SingleVersion version;
+    protected final long versionNr;
     private final ObjectEntryLoadResult.MultiVersion multiVersion;
     private boolean initialised = false;
 
     private JLabel labelName;
     private JTextArea textareaDescription;
 
-    private VersionPane(final ObjectEntryLoadResult.SingleVersion version,
-                        final long versionNr) {
-      this(version, versionNr, null);
-    }
-
-    private VersionPane(final ObjectEntryLoadResult.SingleVersion version,
-                        final long versionNr,
-                        final ObjectEntryLoadResult.MultiVersion multiVersion) {
+    protected VersionPane(final ObjectEntryLoadResult.SingleVersion version,
+                          final long versionNr,
+                          final ObjectEntryLoadResult.MultiVersion multiVersion) {
       this.version = version;
       this.versionNr = versionNr;
       this.multiVersion = multiVersion;
@@ -116,7 +122,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       }
     }
 
-    private void initialise() {
+    protected void initialise() {
       if (initialised) {
         return;
       }
@@ -127,6 +133,11 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       factory.addRenderAction(objectEntry, toolbar);
       toolbar.add(openInSystemExplorerAction);
       factory.addEditMetaAction(objectEntry, toolbar);
+      if (multiVersion != null) {
+        factory.addDiffAction(
+            objectEntry, version, versionNr, toolbar,
+            ObjectEntryInspectorView.this);
+      }
       factory.addModifyAction(objectEntry, () -> version, versionNr, multiVersion, toolbar);
       toolbar.add(Box.createHorizontalGlue());
 
@@ -159,18 +170,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       factory.setDescriptionTextAreaProps(textareaDescription);
       box1b.add(textareaDescription);
 
-      Box box2 = new Box(BoxLayout.X_AXIS);
-      final var pane = factory.textareaFactory().create(
-          objectEntry, version,
-          new InspectorTextareaFactory.Config(null, true, true));
-      toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-          final var sd = new FindDialog((Frame) null, searchListener((RTextArea) pane.textArea()));
-          sd.setVisible(true);
-        }
-      });
-      box2.add(pane.scrollPane());
+      final Box box2 = createTextareaContainer(toolbar);
 
       add(toolbar);
       toolbar.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -186,6 +186,22 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       box2.setAlignmentX(Component.LEFT_ALIGNMENT);
 
       initialised = true;
+    }
+
+    protected Box createTextareaContainer(JToolBar toolbar) {
+      Box box2 = new Box(BoxLayout.X_AXIS);
+      final var pane = factory.textareaFactory().create(
+          objectEntry, version,
+          new InspectorTextareaFactory.Config(null, true, true));
+      toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+          final var sd = new FindDialog((Frame) null, searchListener((RTextArea) pane.textArea()));
+          sd.setVisible(true);
+        }
+      });
+      box2.add(pane.scrollPane());
+      return box2;
     }
 
   }
