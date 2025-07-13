@@ -1,3 +1,11 @@
+pluginManagement {
+  repositories {
+    google()  // <--- very important
+    gradlePluginPortal()
+    mavenCentral()
+  }
+}
+
 rootProject.name = 'storage-explorer'
 
 includeBuild '../platform-jdk21-silent-mode-20250706'
