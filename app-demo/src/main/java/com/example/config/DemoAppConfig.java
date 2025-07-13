@@ -11,8 +11,6 @@ import org.smartbit4all.api.session.SessionManagementApi;
 import org.smartbit4all.api.session.restserver.config.SessionSrvRestConfig;
 import org.smartbit4all.api.view.restserver.config.ViewSrvRestConfig;
 import org.smartbit4all.core.object.ObjectDefinitionApi;
-import org.smartbit4all.core.utility.FinalReference;
-import org.smartbit4all.domain.data.storage.ObjectStorage;
 import org.smartbit4all.domain.data.storage.StorageApi;
 import org.smartbit4all.sec.jwt.JwtSessionRequestFilter;
 import org.smartbit4all.sec.jwt.JwtUtil;
@@ -38,7 +36,7 @@ public class DemoAppConfig {
   
   
   @Bean
-  ObjectStorage objectStorage(ObjectDefinitionApi objectDefinitionApi) {
+  StorageFS objectStorage(ObjectDefinitionApi objectDefinitionApi) {
     return new StorageFS(Path.of(fsBaseDirectory).toFile(), objectDefinitionApi);
   }
   
