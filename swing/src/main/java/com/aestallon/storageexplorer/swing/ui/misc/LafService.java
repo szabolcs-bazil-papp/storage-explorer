@@ -1,5 +1,7 @@
 package com.aestallon.storageexplorer.swing.ui.misc;
 
+import java.awt.*;
+import javax.swing.plaf.UIResource;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
@@ -7,6 +9,10 @@ import jakarta.annotation.Nullable;
 
 @Service
 public class LafService {
+
+  public static Font wrap(Font font) {
+    return (font instanceof UIResource) ? font.deriveFont(font.getStyle()) : font;
+  }
 
   private LafChanged.Laf laf;
   private final ApplicationEventPublisher eventPublisher;

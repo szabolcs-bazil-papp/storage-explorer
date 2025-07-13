@@ -35,6 +35,7 @@ import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
@@ -147,17 +148,17 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
           .filter(it -> !it.isBlank())
           .map(it -> it + " - " + objectEntry.getDisplayName(version))
           .orElseGet(() -> objectEntry.getDisplayName(version)));
-      labelName.setFont(UIManager.getFont("h3.font"));
+      labelName.setFont(LafService.wrap(UIManager.getFont("h3.font")));
       labelName.setAlignmentX(Component.LEFT_ALIGNMENT);
       box.add(labelName);
 
       Box box1 = new Box(BoxLayout.X_AXIS);
       final var creationLabel = new JLabel("Created at:");
-      creationLabel.setFont(UIManager.getFont("h4.font"));
+      creationLabel.setFont(LafService.wrap(UIManager.getFont("h4.font")));
       creationLabel.setBorder(new EmptyBorder(0, 0, 0, 5));
 
       final var creationValue = new JLabel(getNodeCreationValue(version));
-      creationValue.setFont(UIManager.getFont("h4.font"));
+      creationValue.setFont(LafService.wrap(UIManager.getFont("h4.font")));
       box1.add(creationLabel);
       box1.add(creationValue);
 
@@ -178,10 +179,8 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       box.setAlignmentX(Component.LEFT_ALIGNMENT);
       add(box1);
       box1.setAlignmentX(Component.LEFT_ALIGNMENT);
-      if (box1b != null) {
-        add(box1b);
-        box1b.setAlignmentX(Component.LEFT_ALIGNMENT);
-      }
+      add(box1b);
+      box1b.setAlignmentX(Component.LEFT_ALIGNMENT);
       add(box2);
       box2.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -228,7 +227,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
     final var label = new JLabel(
         (objectEntry == null ? "" : objectEntry + " ") + "LOADING ERROR");
-    label.setFont(UIManager.getFont("h3.font"));
+    label.setFont(LafService.wrap(UIManager.getFont("h3.font")));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     container.add(label);

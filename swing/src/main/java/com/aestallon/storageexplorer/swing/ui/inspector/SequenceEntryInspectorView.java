@@ -6,6 +6,7 @@ import javax.swing.border.EmptyBorder;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
 
 public class SequenceEntryInspectorView extends JPanel implements InspectorView<SequenceEntry> {
@@ -36,6 +37,7 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
     toolbar.add(new OpenInSystemExplorerAction(sequenceEntry, this));
     factory.addEditMetaAction(sequenceEntry, toolbar);
     toolbar.setAlignmentX(LEFT_ALIGNMENT);
+    toolbar.setMinimumSize(new Dimension(Integer.MAX_VALUE, toolbar.getPreferredSize().height));
     add(toolbar);
   }
 
@@ -48,7 +50,7 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
         .filter(it -> !it.isBlank())
         .map(it -> it + " - " + sequenceEntry.toString())
         .orElseGet(sequenceEntry::toString));
-    labelName.setFont(UIManager.getFont("h3.font"));
+    labelName.setFont(LafService.wrap(UIManager.getFont("h3.font")));
     labelName.setAlignmentX(Component.LEFT_ALIGNMENT);
     panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, labelName.getPreferredSize().height));
     panel.add(labelName);
@@ -61,9 +63,6 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
         .orElse("");
     textareaDescription = new AutoSizingTextArea(description);
     factory.setDescriptionTextAreaProps(textareaDescription);
-    textareaDescription.setMaximumSize(new Dimension(
-        Integer.MAX_VALUE,
-        textareaDescription.getPreferredSize().height));
     add(textareaDescription);
 
     add(Box.createVerticalStrut(5));
@@ -71,12 +70,12 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
 
   private void initValue() {
     final var label = new JLabel("Current value:");
-    label.setFont(UIManager.getFont("h4.font"));
+    label.setFont(LafService.wrap(UIManager.getFont("h4.font")));
     label.setAlignmentX(LEFT_ALIGNMENT);
     add(label);
     
     final var value = new JLabel(String.valueOf(sequenceEntry.current()));
-    value.setFont(UIManager.getFont("h2.font"));
+    value.setFont(LafService.wrap(UIManager.getFont("h2.font")));
     value.setAlignmentX(LEFT_ALIGNMENT);
     add(value);
   }

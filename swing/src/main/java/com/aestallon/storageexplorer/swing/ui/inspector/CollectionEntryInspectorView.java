@@ -36,6 +36,7 @@ import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
 
 public class CollectionEntryInspectorView extends JPanel implements InspectorView<StorageEntry> {
@@ -94,7 +95,7 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
         .filter(it -> !it.isBlank())
         .map(it -> it + " - " + storageEntry.toString())
         .orElseGet(storageEntry::toString));
-    labelName.setFont(UIManager.getFont("h3.font"));
+    labelName.setFont(LafService.wrap(UIManager.getFont("h3.font")));
     labelName.setAlignmentX(Component.LEFT_ALIGNMENT);
     panel.setMaximumSize(new Dimension(
         Integer.MAX_VALUE,

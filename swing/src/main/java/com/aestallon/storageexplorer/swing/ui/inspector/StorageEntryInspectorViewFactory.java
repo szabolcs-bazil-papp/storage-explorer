@@ -30,7 +30,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
@@ -54,6 +53,7 @@ import com.aestallon.storageexplorer.swing.ui.editor.StorageEntryEditorControlle
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
@@ -234,9 +234,8 @@ public class StorageEntryInspectorViewFactory {
     textareaDescription.setLineWrap(true);
     textareaDescription.setEditable(false);
     textareaDescription.setOpaque(false);
-    textareaDescription.setFont(UIManager.getFont("h4.font"));
-    textareaDescription.setBorder(new EmptyBorder(0, 0, 0, 0));
-    textareaDescription.setMinimumSize(new Dimension(0, 0));
+    textareaDescription.setFont(LafService.wrap(UIManager.getFont("medium.font")));
+    textareaDescription.setBorder(BorderFactory.createEmptyBorder() /* BorderFactory.createLineBorder(Color.RED, 1) */);
     textareaDescription.setColumns(0);
   }
 
