@@ -20,6 +20,7 @@ import java.awt.event.ActionEvent;
 import java.io.Serial;
 import javax.swing.*;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
 public class StorageEntryEditorFrame extends JFrame {
 
@@ -49,7 +50,7 @@ public class StorageEntryEditorFrame extends JFrame {
   
   private JLabel initHeader() {
     final var header = new JLabel("Declare Your Intent");
-    header.setFont(UIManager.getFont("h1.font"));
+    header.setFont(LafService.wrap(UIManager.getFont("h1.font")));
     return header;
   }
   

@@ -147,7 +147,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
       refresh(null, 0L);
     } else {
       final Long versionNr = objectNode.getVersionNr();
-      final long version = versionNr == null ? 0L : versionNr;
+      final long version = versionNr == null ? -1L : versionNr;
       refresh(objectNode.getObjectAsMap(), version);
     }
   }

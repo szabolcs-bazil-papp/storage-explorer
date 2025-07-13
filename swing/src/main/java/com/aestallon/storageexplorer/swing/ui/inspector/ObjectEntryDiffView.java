@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
 public class ObjectEntryDiffView
     extends ObjectEntryInspectorView
@@ -74,9 +75,9 @@ public class ObjectEntryDiffView
       final var titlePanel = new JPanel();
       titlePanel.setLayout(new GridLayout(1, 2));
       final var label1 = new JLabel("Comparing v" + versionNr +"...");
-      label1.setFont(UIManager.getFont("h2.font"));
+      label1.setFont(LafService.wrap(UIManager.getFont("h2.font")));
       final var label2 = new JLabel("to v" + baseVersionNr);
-      label2.setFont(UIManager.getFont("h2.font"));
+      label2.setFont(LafService.wrap(UIManager.getFont("h2.font")));
       
       titlePanel.add(label1);
       titlePanel.add(label2);

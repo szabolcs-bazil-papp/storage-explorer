@@ -4,11 +4,12 @@ import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
+import com.aestallon.storageexplorer.swing.ui.misc.Severity;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
-import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
-import com.aestallon.storageexplorer.swing.ui.misc.Severity;
 
 public class ToastView {
   private JLabel title;
@@ -37,7 +38,7 @@ public class ToastView {
 
     this.title.setIcon(icon);
     this.title.setText(title);
-    this.title.setFont(UIManager.getFont("h4.font"));
+    this.title.setFont(LafService.wrap(UIManager.getFont("medium.font")));
     mainPanel.setBorder(border);
     this.message.setText(message);
   }

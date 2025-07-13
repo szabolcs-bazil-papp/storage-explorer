@@ -27,6 +27,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
 public class SearchForEntryDialog extends JFrame {
 
@@ -75,7 +76,7 @@ public class SearchForEntryDialog extends JFrame {
 
     private void initTextfield() {
       final var label = new JLabel("Query for:");
-      label.setFont(UIManager.getFont("h4.font"));
+      label.setFont(LafService.wrap(UIManager.getFont("medium.font")));
       label.setAlignmentX(LEFT_ALIGNMENT);
       label.setBorder(new EmptyBorder(10, 0, 5, 10));
       SearchForEntryView.this.add(label);
@@ -93,7 +94,7 @@ public class SearchForEntryDialog extends JFrame {
 
     private void initList() {
       final var label = new JLabel("Results:");
-      label.setFont(UIManager.getFont("h4.font"));
+      label.setFont(LafService.wrap(UIManager.getFont("h4.font")));
       label.setAlignmentX(LEFT_ALIGNMENT);
       label.setBorder(new EmptyBorder(10, 0, 5, 10));
       SearchForEntryView.this.add(label);

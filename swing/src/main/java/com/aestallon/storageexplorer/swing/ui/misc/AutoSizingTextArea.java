@@ -25,6 +25,11 @@ public final class AutoSizingTextArea extends JTextArea {
     super(text);
     recalculate();
   }
+  
+  @Override
+  public Dimension getMinimumSize() {
+    return getPreferredSize();
+  }
 
   @Override
   public Dimension getPreferredSize() {
