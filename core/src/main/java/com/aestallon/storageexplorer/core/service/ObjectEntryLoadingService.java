@@ -112,7 +112,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
           head.objectAsMap(),
           headLoadResult instanceof ObjectEntryLoadResult.MultiVersion(var versions)
               ? versions.size()
-              : 0L);
+              : -1L);
     }
 
     if (headLoadResult instanceof ObjectEntryLoadResult.SingleVersion sv) {
