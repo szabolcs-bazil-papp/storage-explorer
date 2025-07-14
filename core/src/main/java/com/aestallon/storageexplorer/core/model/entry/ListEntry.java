@@ -15,13 +15,19 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
+import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.collection.StoredListStorageImpl;
 import org.smartbit4all.core.object.ObjectApi;
@@ -29,14 +35,17 @@ import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.ObjectEntryLoadingService;
+import com.aestallon.storageexplorer.core.service.StorageIndex;
 
 public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
 
+  private static final Logger log = LoggerFactory.getLogger(ListEntry.class);
+  private final WeakReference<StorageIndex<?>> storageIndex;
   private final StorageId id;
   private final Path path;
   private final URI uri;
   private final ObjectApi objectApi;
-  private final CollectionApi collectionApi;
+  protected final CollectionApi collectionApi;
   private final String schema;
   private final String name;
 
@@ -44,9 +53,10 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
-  ListEntry(StorageId id, Path path, URI uri,
+  ListEntry(final StorageIndex<?> storageIndex, StorageId id, Path path, URI uri,
             ObjectApi objectApi,
             CollectionApi collectionApi) {
+    this.storageIndex = new WeakReference<>(storageIndex);
     this.id = id;
     this.path = path;
     this.uri = uri;
@@ -85,9 +95,17 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
   }
 
   public ObjectEntryLoadResult.SingleVersion asSingleVersion() {
-    final var list = (StoredListStorageImpl) collectionApi.list(schema, name);
-    final var node = objectApi.loadLatest(list.getUri());
-    return ObjectEntryLoadResult.singleVersion(node, ObjectEntryLoadingService.OBJECT_MAPPER);
+    final var list = impl();
+    try {
+      return storageIndex.get().loader().loadExact(list.getUri(), 0);
+    } catch (Exception e) {
+      log.error(e.getMessage(), e);
+      return null;
+    }
+  }
+  
+  protected StoredListStorageImpl impl() {
+    return (StoredListStorageImpl) collectionApi.list(schema, name);
   }
 
   @Override
@@ -111,7 +129,7 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
         return;
       }
 
-      final var list = collectionApi.list(schema, name).uris();
+      final var list = asUriList(asSingleVersion());
       final var uriProperties = new HashSet<UriProperty>();
       for (int i = 0; i < list.size(); i++) {
         uriProperties.add(
@@ -124,8 +142,18 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
     } finally {
       refreshLock.unlock();
     }
+  }
 
+  public List<URI> asUriList(ObjectEntryLoadResult.SingleVersion singleVersion) {
+    final Object urisObj = singleVersion.objectAsMap().get("uris");
+    if (urisObj instanceof List<?> uriObjList) {
+      return uriObjList.stream()
+          .map(Uris::parse)
+          .flatMap(Optional::stream)
+          .toList();
+    }
 
+    return Collections.emptyList();
   }
 
   @Override

@@ -138,7 +138,9 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
     @Override
     public ObjectEntryLoadResult.SingleVersion.Eager loadExact(URI uri, long version) {
       return (ObjectEntryLoadResult.SingleVersion.Eager) ObjectEntryLoadResult.singleVersion(
-          storageIndex.objectApi.load(Uris.atVersion(uri, version)),
+          Uris.isSingleVersion(uri)
+              ? storageIndex.objectApi.loadLatest(uri, null)
+              : storageIndex.objectApi.load(Uris.atVersion(uri, version)),
           OBJECT_MAPPER);
     }
 

@@ -69,15 +69,15 @@ public final class StorageEntryFactory {
       if (uriString.contains(STORED_LIST_MARKER)) {
         return scopeUri(uriString, STORED_LIST_MARKER)
             .map(
-                scope -> (ListEntry) new ScopedListEntry(id, path, latestUri, objectApi,
+                scope -> (ListEntry) new ScopedListEntry(storageIndex, id, path, latestUri, objectApi,
                     collectionApi, scope))
-            .or(() -> Optional.of(new ListEntry(id, path, latestUri, objectApi, collectionApi)));
+            .or(() -> Optional.of(new ListEntry(storageIndex, id, path, latestUri, objectApi, collectionApi)));
 
       } else if (uriString.contains(STORED_MAP_MARKER)) {
         return scopeUri(uriString, STORED_MAP_MARKER)
-            .map(scope -> (MapEntry) new ScopedMapEntry(id, path, latestUri, objectApi,
+            .map(scope -> (MapEntry) new ScopedMapEntry(storageIndex, id, path, latestUri, objectApi,
                 collectionApi, scope))
-            .or(() -> Optional.of(new MapEntry(id, path, latestUri, objectApi, collectionApi)));
+            .or(() -> Optional.of(new MapEntry(storageIndex, id, path, latestUri, objectApi, collectionApi)));
 
       } else if (uriString.contains(STORED_REF_MARKER)) {
         return scopeUri(uriString, STORED_REF_MARKER)
