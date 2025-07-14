@@ -5,7 +5,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Path2D;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -13,6 +15,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
+import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.HiddenPaneSize;
@@ -51,7 +55,7 @@ public class AppContentView extends JPanel {
 
     /* Toolbar stuff */
     breadCrumbs = new BreadCrumbs();
-    loadingQueueLabel = new LoadingQueueLabel(0L);
+    loadingQueueLabel = new LoadingQueueLabel();
     toolBar = initToolBar();
     add(toolBar);
 
@@ -132,8 +136,8 @@ public class AppContentView extends JPanel {
     return commanderView;
   }
   
-  public void setLoadingQueueSize(final long size) {
-    loadingQueueLabel.setNumber(size);
+  public void setLoadingQueueSize(final LoadingQueueSize event) {
+    loadingQueueLabel.setNumber(event);
   }
 
   @EventListener
@@ -149,8 +153,10 @@ public class AppContentView extends JPanel {
   }
   
   private static final class LoadingQueueLabel extends JLabel {
-    public LoadingQueueLabel(long number) {
-      setNumber(number);
+    private final Map<StorageId, Long> sizes;
+    public LoadingQueueLabel() {
+      sizes = new HashMap<>();
+      setNumberInternal(0L);
       setOpaque(true);
       setHorizontalAlignment(SwingConstants.CENTER);
       setFont(getFont().deriveFont(Font.BOLD));
@@ -158,7 +164,12 @@ public class AppContentView extends JPanel {
       setBorder(new EmptyBorder(2, 15, 2, 15));
     }
 
-    public void setNumber(long number) {
+    public void setNumber(LoadingQueueSize size) {
+      sizes.put(size.storageId(), size.size());
+      setNumberInternal(sizes.values().stream().reduce(0L, Long::sum));
+    }
+    
+    private void setNumberInternal(final long number) {
       setText(String.valueOf(number));
 
       if (number < 1000) {

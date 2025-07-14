@@ -259,7 +259,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
       final var timeoutMillisMax = params.timeoutMillisMax;
       final var timeoutMillisMin = params.timeoutMillisMin;
 
-      storageIndex.publishEvent(new LoadingQueueSize(queue.size()));
+      storageIndex.publishEvent(new LoadingQueueSize(storageIndex.id(), queue.size()));
 
       final List<LoadingTask> batch = new ArrayList<>(batchSize);
       final var t = queue.poll(timeoutMillis.get(), TimeUnit.MILLISECONDS);

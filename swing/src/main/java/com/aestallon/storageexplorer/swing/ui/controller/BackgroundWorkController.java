@@ -29,7 +29,7 @@ public class BackgroundWorkController {
   
   @EventListener
   public void onLoadingQueueSizeChanged(final LoadingQueueSize event) {
-    SwingUtilities.invokeLater(() -> appContentView.setLoadingQueueSize(event.size()));
+    SwingUtilities.invokeLater(() -> appContentView.setLoadingQueueSize(event));
   }
   
 }

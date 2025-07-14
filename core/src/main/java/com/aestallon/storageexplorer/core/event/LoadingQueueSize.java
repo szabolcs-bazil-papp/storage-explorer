@@ -1,3 +1,5 @@
 package com.aestallon.storageexplorer.core.event;
 
-public record LoadingQueueSize(long size) {}
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+
+public record LoadingQueueSize(StorageId storageId, long size) {}
