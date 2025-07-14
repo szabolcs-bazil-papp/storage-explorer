@@ -101,18 +101,16 @@ sémához (ez bizonyos környezetekben így is van, ez tehát nem egy pusztán e
 lenne is írási jog, az sem lenne túl szerencsés, hisz eredményképpen a vizsgált adatbázisba "
 piszkítana" az Explorer használója, ami környezettől függően nem biztos, hogy megengedhető.
 
-Eredményképpen az egyetlen változtatás, melyet meg kellett ejteni, a verziózott `URI`-val történi
-`objectApi.load(URI)` kiváltása volt. A működés így sem tökéletes sajnos: egyelőre nincs support a
-`CollectionApi` által kezelt listák és map-ek betöltésére a "legacy" `StorageSQL` alatt futó
-alkalmazások esetén.
+Eredményképpen az egyetlen változtatás, melyet meg kellett ejteni, a verziózott `URI`-val történő
+`objectApi.load(URI)` kiváltása volt (beleértve a `CollectionApi` által meghívott verziókat). Ennek
+egy meglepő, de mindenképp örvendetes mellékhatása volt, hogy "körbe lett programozva" a `Crud.*`
+static függvények csokorja, melyek miatt ezeddig az Explorer csak egyetlen egy `StorageSQL` alapú
+storage-t tudott kezelni (és annak a példánynak nevezetesen a beimportált storage-ok közül az
+utolsónak kellett lennie). Erről az platform-kuriózumról az előző irományomban már
+részletesebben írtam, így itt most nem teszem; a lényeg, hogy már tisztességesen működik tetszőleges
+számú és hátterű storage példány egyidejű kezelése:
 
-Noha az átállási időszak meglehetősen rövid, a fenti hiányosságot is pótolni fogom a jövőben:
-ugyanis a fenti API-któl való függetlenedés lehetővé teszi annak a gyakorlati akadálynak
-megkerülését, hogy a `Crud.*` statikus függvények miatt egyszerre csak egy, `StorageSQL`-t használó
-storage-t tud az Explorer kezelni. Erről az platform-kuriózumról az előző irományomban már
-részletesebben írtam, így itt most nem teszem. Nem tudtam meggyőzni magam, hogy egy forkon történő
-refaktorálása megérné-e a belefektetett energiát, főleg hogy az Exploreren kívül más "
-kedvezményezettje" nem lenne - így marad megoldásnak mindenki kedvenc műfaja, a körbeprogramozás.
+![10_multi-storagesql](10_multi-storagsql.png)
 
 ## Rekordfelülírás - elméletben
 
@@ -178,6 +176,32 @@ Természetesen a végén valódi mentés nem történik. A preview elérhető, h
 `--enable-editor` vagy `-e` flag-gel indítjátok, bármelyik betekintő felületen.
 
 ## ArcScript
+
+A Storage Explorerrel csomagolt query DSL-ről eddig még csak szóban volt szó, itt most csak pár
+bekezdés hagynék a kedves érdeklődőknek magáról a DSL implementációról, a - véleményem szerint -
+rapid feltételkiértékelésről, és azon jövőbeli irányokról, amik a jelenlegi impl limitációit
+céloznak lebontani.
+
+Aki esetleg még nem találkozott vele, így néz ki körülbelül az editor és a megjelenített
+eredményképernyő a Swing kliensben:
+
+![11_as](11_as.png)
+
+Egy editor (kb. 90%-os syntax highlighting-gal), egy kimutatás a végrehajtott műveletekről, és hogy
+mennyi időbe kerültek, ill. egy eredménytábla, mely CSV/JSON formátumban exportálható.
+
+### A DSL
+
+A "nyelv" Groovy-ban készült, a _builder pattern_-t használja. Ez a fogalom itt kissé mást jelent,
+mint a hagyományos Java környezetben, bővebben infó, és részletes walkthrough az implementációhoz
+található pl. [itt, a Groovy honlapján](https://groovy-lang.org/dsls.html). Tömören: a scriptben egy
+előre definiált Java osztály (`ArcScript`) metódusait lehet meghívni, így áll össze egy leíró
+objektum a végrehajtandó műveletekről. Ezt ezután egy "engine" értelmezi, ha kell kiegészíti,
+reorder-eli a műveletek sorrendjét, majd a definiált műveleteket végrehajtja. A fő előnye az ilyetén
+való megközelítésnek, hogy a script írójának - az SQL-hez némiképp hasonlóan - nem a "hogyan?"-t
+kell lekódolnia, hanem a "mi?"-t. Minden 
+
+### Kalandok semi-persistent cache-k irányába
 
 ## Merre tovább?
 

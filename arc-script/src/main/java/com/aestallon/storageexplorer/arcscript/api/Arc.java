@@ -1,17 +1,12 @@
 package com.aestallon.storageexplorer.arcscript.api;
 
-import java.lang.invoke.VarHandle;
-import java.net.URI;
-import java.util.List;
-import java.util.concurrent.Executor;
 import org.codehaus.groovy.control.CompilerConfiguration;
+import com.aestallon.storageexplorer.arcscript.engine.ArcScriptEngine;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
 import com.aestallon.storageexplorer.arcscript.internal.ArcScriptImpl;
-import com.aestallon.storageexplorer.arcscript.engine.ArcScriptEngine;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
-import groovy.transform.Final;
 
 public final class Arc {
 
