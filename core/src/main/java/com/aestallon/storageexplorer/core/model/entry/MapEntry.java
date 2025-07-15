@@ -15,8 +15,11 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
+import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
@@ -25,18 +28,21 @@ import static java.util.stream.Collectors.toSet;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.collection.StoredMapStorageImpl;
 import org.smartbit4all.core.object.ObjectApi;
+import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.ObjectEntryLoadingService;
+import com.aestallon.storageexplorer.core.service.StorageIndex;
 
 public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
 
+  private final WeakReference<StorageIndex<?>> storageIndex;
   private final StorageId id;
   private final Path path;
   private final URI uri;
   private final ObjectApi objectApi;
-  private final CollectionApi collectionApi;
+  protected final CollectionApi collectionApi;
   private final String schema;
   private final String name;
 
@@ -44,7 +50,8 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
-  MapEntry(StorageId id, Path path, URI uri, ObjectApi objectApi, CollectionApi collectionApi) {
+  MapEntry(final StorageIndex<?> storageIndex, StorageId id, Path path, URI uri, ObjectApi objectApi, CollectionApi collectionApi) {
+    this.storageIndex = new WeakReference<>(storageIndex);
     this.id = id;
     this.path = path;
     this.uri = uri;
@@ -83,11 +90,14 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   }
 
   public ObjectEntryLoadResult.SingleVersion asSingleVersion() {
-    final var map = (StoredMapStorageImpl) collectionApi.map(schema, name);
-    final var node = objectApi.loadLatest(map.getUri());
-    return ObjectEntryLoadResult.singleVersion(node, ObjectEntryLoadingService.OBJECT_MAPPER);
+    final var map = impl();
+    return storageIndex.get().loader().loadExact(map.getUri(), 0);
   }
   
+  protected StoredMapStorageImpl impl() {
+    return  (StoredMapStorageImpl) collectionApi.map(schema, name);
+  }
+
   @Override
   public Set<UriProperty> uriProperties() {
     if (!valid) {
@@ -106,7 +116,7 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
     refreshLock.lock();
     try {
 
-      this.uriProperties = collectionApi.map(schema, name).uris().entrySet().stream()
+      this.uriProperties = asUriMap(asSingleVersion()).entrySet().stream()
           .map(e -> UriProperty.of(
               new UriProperty.Segment[] { UriProperty.Segment.key(e.getKey()) },
               e.getValue()))
@@ -116,6 +126,20 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
     } finally {
       refreshLock.unlock();
     }
+  }
+
+  private Map<String, URI> asUriMap(ObjectEntryLoadResult.SingleVersion singleVersion) {
+    final Object urisObj = singleVersion.objectAsMap().get("uris");
+    if (urisObj instanceof Map<?, ?> m) {
+      return m.entrySet().stream()
+          .map(Pair::of)
+          .map(Pair.onA(String::valueOf))
+          .map(Pair.onB(Uris::parse))
+          .flatMap(Pair.streamOnB())
+          .collect(Pair.toMap());
+    }
+
+    return Collections.emptyMap();
   }
 
   @Override
@@ -130,14 +154,14 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   @Override
   public void accept(StorageEntry storageEntry) {
     refreshLock.lock();
-    
+
     try {
 
       if (Objects.requireNonNull(storageEntry) instanceof MapEntry that && that.valid) {
         uriProperties = that.uriProperties();
         valid = true;
       }
-      
+
     } finally {
       refreshLock.unlock();
     }

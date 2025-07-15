@@ -98,8 +98,14 @@ public final class SequenceEntry implements StorageEntry {
     }
 
     final StoredSequence sequence = collectionApi.sequence(schema, name);
-    final Long currentBoxed = sequence.current();
-    current = (currentBoxed != null) ? currentBoxed : -1L;
+    try {
+      final Long currentBoxed = sequence.current();
+      current = (currentBoxed != null) ? currentBoxed : -1L;
+    } catch (Exception e) {
+      log.error(e.getMessage(), e);
+      current = -1L;
+    }
+    
     valid = true;
   }
 
