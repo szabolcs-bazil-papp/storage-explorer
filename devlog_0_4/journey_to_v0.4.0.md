@@ -64,16 +64,29 @@ bundle-ölve érhető el.
       ![6_difftool](./6_difftool.png)
     - Ha olyan hatalmas objektumot szeretnénk megtekinteni, amit az egyébként kiváló
       `RSyntaxTextArea` már nem bír, akkor automatikusan hagyományos `JTextArea`-ra vált az
-      alkalmazás az adott rekordnál. Itt nincs sajnos keresés, és syntax highlighting egyelőre, de
+      alkalmazás az adott rekordnál. Itt nincs sajnos se keresés, se syntax highlighting egyelőre,
+      de
       legalább az FPS mutató a természetes számok halmazán marad :)
     - `StorageSQL`-ben tárolt rekordok esetén kijelezzük az `OBJECT_ENTRY.ID` értéket, mert néha
       hasznos tud lenni...
+    - `StorageIndex` exportálható `GEXF` formátumban.
+
+      A Storage Explorer gráfmegjelenítője nem
+      képes, és nem is hívatott a teljes storage-ot ábrázolni, kizárólag egy olyan szegmensét, amire
+      a felhasználó kitüntetett figyelmet szán. Ez pusztán a vizualizációhoz használt lib, a
+      grafikus környezet és jómagam hiányossága. Semmi gondot nem okoz azonban több százezer
+      StorageEntry felindexelése (és nem is akármilyen sebességgel!). Ha ekkora számosságú
+      gráfot szeretnénk vizualizálni, és a rajtuk lévő trendeket, a teljes, memóriában tartott
+      StorageIndex kiexportálható GEXF fájlként, és Gephivel vizualizálható:
+
+      ![gephi](12_gephi.png)
+      _egy, körülbelül 127k objektumot tartalmazó schema belső kapcsolatai Gephi-ben_
 
 ## Compression Enabled StorageSQL
 
 Mivel a Storage Explorer by design egyszerre több storage-t tud kezelni, alapvetés volt, hogy a
 tömörítés támogatása úgy valósuljon meg, hogy ne veszítsük el annak képességét, hogy még korábbi, a
-tömörítést nem ismerő adatbázisokat is továbbra is tudjunk kezelni. Ennek praktikus oka pusztán az
+tömörítést nem ismerő adatbázisokat is tudjunk kezelni. Ennek praktikus oka pusztán az
 volt, hogy az átállás során különböző környezetek még különböző platformverziókat - és különböző
 adatbázissémákat használnak. Kár lett volna összebuildelni egy release-t, ami demó környezetben
 ugyan működik, de éles adatbázison "még" nem.
@@ -98,8 +111,8 @@ Ez nem jelentett _túl nagy változtatást_, mert a legtöbb betöltésnél már
 program a fenti API-kat. Ennek oka, hogy a legtöbb `load` jellegű művelet `INSERT` side effect-el
 jár, a Storage Explorer-nek pedig azt kell mindenkor feltételeznie, hogy nincs írási joga a vizsgált
 sémához (ez bizonyos környezetekben így is van, ez tehát nem egy pusztán elméleti probléma). Ha
-lenne is írási jog, az sem lenne túl szerencsés, hisz eredményképpen a vizsgált adatbázisba "
-piszkítana" az Explorer használója, ami környezettől függően nem biztos, hogy megengedhető.
+lenne is írási jog, az sem lenne túl szerencsés, hisz eredményképpen a vizsgált adatbázisba
+"piszkítana" az Explorer használója, ami környezettől függően nem biztos, hogy megengedhető.
 
 Eredményképpen az egyetlen változtatás, melyet meg kellett ejteni, a verziózott `URI`-val történő
 `objectApi.load(URI)` kiváltása volt (beleértve a `CollectionApi` által meghívott verziókat). Ennek
@@ -190,7 +203,7 @@ eredményképernyő a Swing kliensben:
 Egy editor (kb. 90%-os syntax highlighting-gal), egy kimutatás a végrehajtott műveletekről, és hogy
 mennyi időbe kerültek, ill. egy eredménytábla, mely CSV/JSON formátumban exportálható.
 
-### A DSL
+### A DSL és futtatókörnyezete
 
 A "nyelv" Groovy-ban készült, a _builder pattern_-t használja. Ez a fogalom itt kissé mást jelent,
 mint a hagyományos Java környezetben, bővebben infó, és részletes walkthrough az implementációhoz
@@ -199,11 +212,82 @@ előre definiált Java osztály (`ArcScript`) metódusait lehet meghívni, így 
 objektum a végrehajtandó műveletekről. Ezt ezután egy "engine" értelmezi, ha kell kiegészíti,
 reorder-eli a műveletek sorrendjét, majd a definiált műveleteket végrehajtja. A fő előnye az ilyetén
 való megközelítésnek, hogy a script írójának - az SQL-hez némiképp hasonlóan - nem a "hogyan?"-t
-kell lekódolnia, hanem a "mi?"-t. Minden 
+kell lekódolnia, hanem a "mi?"-t, az "engine" dönthet a végrehajtás mikéntjéről.
+
+"Egy kép többet mond ezer szónál", így álljon itt egy _activity diagram_ a query végrehajtásának
+módjáról:
+
+![query_exec](query_execution-0.png)
+
+A diagram PlantUML formátumban elérhető csatolmányként.Az UML diagramok szerelmeseinek mellékeltem
+PlantUML _class diagram_-okat az alábbi domain szegmensekről:
+
+| File                      | Domain                                                                                                                       |
+|---------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| query_domain.puml         | `ArcScript` query instrukciókat leíró típusok                                                                                |
+| storage_entry_domain.puml | A storage-ban tárolt rekordok zárt típushierarchiája (`StorageEntry` és gyerekei)                                            |
+| loading_domain.puml       | A `StorageEntry`-k tartalmának betöltésekor talált adattartalmat, szerkezetet és rendelkezésre állást leíró típusok          |
+| examiner_domain.puml      | A betöltött rekordok adattartalmát értelmező `StorageInstanceExaminer` belső típus-szerkezete.                               |
+| swing.puml                | A Swing kliens GUI componentek, widgetek, controllerek és component factoryk relációi (a bayeux-i faliszőnyegek rajongóinak) |
 
 ### Kalandok semi-persistent cache-k irányába
 
+Ahogy a fenti _activity diagram_-on található megjegyzés is írja (de maga a diagram nem ábrázolja),
+query végrehajtás során minden egyes entry-t maximum egy alkalommal töltünk be, ha a későbbiek
+szükség van rá, akkor egy in-memory lookup-table-ből halásszuk elő. Erre leginkább `StorageSQL`
+esetén van szükség, ahol minden egyes DB access aranyat ér, és ezek számának minimalizálása
+létfontosságú. A probléma ezzel az in-memory megközelítéssel, hogy - dobpergés - kell hozzá memória.
+Ha a query-nek pár tízezer rekordot kell végigfésülnie, akkor általában megússzuk egy ideiglenes,
+pár GB-os memóriahasználattal, de ha átlépjük a 100-120k rekord betöltésének rémhatárát (amibe
+sajnos nagy számosságú séma-típus kombók esetén jószándékkal is bele lehet futni), akkor annyi
+RAM-ot eszik a rendszer, amennyi csak van. Ez a gyakorlatban azt jelenti, hogy pl.
+`AsyncInvocationRequest`-ekre nem lehet keresni, csak elméletben.
+
+Áthidalandó a fenti problémát, kísérleteztem pár félperzisztens cache-elési megoldással, amit egy
+kliens még kibír. Ezek a következőképpen néztek ki:
+
+- Egy write-behind cache aggresszív expiry-val és limitált maximális mérettel (Guava, Caffeine vagy
+  akár egy lokálisan futó HazelCast)
+- és egy backing perzisztens tárolás (fájlrendszeri - effektíve egy mini `StorageFS` kópia
+  lokálisan; egy SQLite)
+- a perzisztens tárhelyre szimplán kiírunk, Apache F(o/u)ry-vel szerializálunk, vagy egyszerűen
+  tömörítünk. Művelet végén takarítunk.
+
+Egyelőre semmilyen megoldás nem tetszett: vagy túl sok helyet foglal, vagy a cleanup macerás, vagy a
+kiírás olyan lassú, hogy masszív cache miss-ek jönnek szembe, és újra kell loadolni (szegény SQLite
+és a egy darabos writeLock, amit parallel access-nél szétszáll a búbánatba).
+
+Ezentúl mindenképpen érzékelhető overheadet jelent, mind memóriában, mind végrehajtási időben - ez
+persze elnézhető, ha enélkül a query sose érne véget, mert kifutnánk RAM-ból, de egyéb esetben több,
+mint bosszantó.
+
+Szívesen fogadok bármilyen ötletet, javaslatot, analógiát és bármi másegyebet, mert a nagy
+candidate-pool ellenében végrehajtható, stabil query-végrehajtásra nagy szükség(em) van: az
+alapvetőnek számító predicate függvények impl-jének befejezését követően a következő lépés a
+[Cypher-hez "hasonló"](https://en.wikipedia.org/wiki/Cypher_(query_language)), tipikus
+gráfpredicate-k implementálása lesz a "nyelv"-ben (pl. rekurzív élbejárás, connectivity keresés), és
+egyre inkább elengedhetetlen lesz, hogy virtuálisan _bármilyen_ reasonable query-t végre tudjon
+hajtani az "engine" a gyakorlatban is.
+
 ## Merre tovább?
 
-- MODIF
-- CLI
+Ismét egy "terveim" c. fejezettel zárnék; a jelenlegi fő érdeklődésem a fenti két nagyobb témára
+irányul
+
+- data manipulation
+- ArcScript feature-k és "kiköltözés a memóriából"
+- CLI: Az elmúlt hetek vívmánya, hogy a különböző "nem is a `core` modul felelőssége, de nem is kéne
+  a `swing` kliensbe beleprogramozni" jellegű funkciók kiszerveződtek egy, megjelenítéstől független
+  `client` modulba (eddig ezek mind külön-külön modulban laktak funkcióként). Ez persze kinyitja
+  pandora szelencéjét, hogy ha egy UI-t ki lehet szolgálni, akkor miért ne lehetne többet is? Egy
+  parancssori interface gyakorlati előnye az lenne, hogy tetszőleges storageFS-t lehetne
+  vizsgálgatni olyan távoli helyeken, ahol csak headless módban lehet futni (pl. SSH kapcsolaton
+  keresztül).
+
+  Jelenleg 3 féle elképzelésem van, hogy mit kéne alkotni:
+    - Egy REPL környezet Spring Shellel mindenféle hierarchikus command-dal és context-tel
+    - Egy ArcScript REPL Groovy shellel (gyakorlatilag a fenti megoldás, de _minden_ Storage
+      Explorer képesség `ArcScript` instrukcióként megvalósítva)
+    - egy teljes TUI (szintén Spring Shellel vagy Jexerrel)
+- A már létező Angular 19 kliens továbbgondolása - főleg, hogy a mostani release tartotta a lépés a
+  Spring Boot starter kiadás frontvonalán is.

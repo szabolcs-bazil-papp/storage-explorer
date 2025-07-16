@@ -1,0 +1,138 @@
+@startuml
+start
+#HotPink:start query execution;
+note
+  pink denotes GUI activity
+end note
+group #4da542 Groovy {
+  :parse script text;
+}
+if (syntax errors present) then (yes)
+  #HotPink:display error markers;
+  stop
+else (no)
+  group #4da542 Groovy {
+    :execute Groovy script;
+  }
+endif
+
+partition #dfd090 "Indexing instruction preprocessing" {
+  note right
+    Current implementation only considers the need to add
+    implicit instructions, no merging and #pragma interpretation
+    is performed.
+  end note
+  if (query instructions missing) then (yes)
+    if (index instructions missing) then (yes)
+      stop
+    else (no)
+    endif
+  else (no)
+    if (index instructions cover query instructions indexing requirements) then (yes)
+    else (no)
+      :create implicit index instructions;
+    endif
+
+    if (pragma TRUST_INDEX is present) then (yes)
+      :remove index instructions;
+    else (no)
+    endif
+  endif
+  :merge index instructions;
+}
+
+
+if (index instructions present) then (yes)
+  partition #a0c5f0 "Indexing" {
+    if (storage implementation) then (FS)
+      fork
+        :discover URI 1;
+      fork again
+        :discover URI 2;
+      fork again
+        :discover URI 3;
+      end fork
+    else (RDB)
+      :issue single query for every possible URI affected;
+    endif
+    :create StorageEntries;
+  }
+else (no)
+  :fetch all candidate Entries;
+endif
+
+if (query instructions present) then (yes)
+  partition #b2d2ff "Querying" {
+    fork
+      :load candidate;
+      note
+        Every time an activity is labelled as 'Load', it is performed
+        massively concurrently on separate virtual threads as far as
+        the core module is concerned.
+        
+        On <b>File System</b> storages every load operation is indeed
+        performed concurrently.
+        
+        On <b>Relation Database</b> backed storages, every load operation
+        is enqueued in a task queue, and batch loaded with with a maximum
+        batch size and an adapting timeout (shortens based on queue size).
+        
+        Every individual <b>Entry</b> is loaded at most once, and made
+        available in a shared lookup-table for downstream operations such
+        as later query executions and columns property discovery.
+      end note
+      partition #aliceblue "Execute WHERE clause" {
+        while (property on referenced entry?)
+          :load referenced Entry;
+        endwhile
+        :extract property value;
+        :test value against property predicate;
+        if (matches WHERE clause?) then (yes)
+          :include in result set;
+        else (no)
+          :drop entry;
+          kill
+        endif
+      }
+    fork again
+      :load candidate;
+      :execute WHERE clause;
+      -[dashed]->
+    fork again
+      :load candidate;
+      :execute WHERE clause;
+      -[dashed]->
+    end fork
+  }
+else (no)  
+  #HotPink:report completion;
+  stop
+endif
+
+if (custom column rendering) then (yes)
+  partition #lightblue "Column Property Discovery" {
+    fork
+      :examine result set Entry;
+      partition #aliceblue "Fetch target property value" {
+        while (property on referenced entry?)
+          :load referenced Entry;
+        endwhile
+        :extract property value;
+      }
+    fork again
+      :examine result set Entry;
+      :fetch target property value;
+    fork again
+      :load candidate;
+      :fetch target property value;
+    end fork
+  }
+  :enumerate result set with chosen columns;
+else (no)
+  :enumerate result set URIs;
+endif
+
+#HotPink:render columns;
+
+stop
+@enduml

@@ -1,0 +1,95 @@
+@startuml
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+
+class Assertion {
+  - value: String
+  - prop: String
+  - _listElementCondition: QueryConditionImpl
+  - op: String
+  - _predicate: PropertyPredicate
+}
+entity AssertionElement << record >> {
+  - element: QueryElement
+  - relation: AssertionRelation
+}
+class AssertionIterator {
+  - stack: Deque<AssertionElement>
+  - EMPTY_ITERATOR: AssertionIterator
+}
+class AssertionOperation<T> {
+  # assertion: Assertion
+}
+class AssertionOperationBool
+class AssertionOperationJson
+class AssertionOperationList
+class AssertionOperationNum
+class AssertionOperationStr
+enum AssertionRelation << enumeration >> {
+  + OR: 
+  + AND: 
+}
+enum MatchOp << enumeration >> {
+  + ALL: 
+  + ANY: 
+  + UNKNOWN: 
+  - strVal: String
+  + NONE: 
+}
+interface PropertyPredicate << interface >>
+class QueryConditionImpl {
+  - elements: List<AssertionElement>
+}
+interface QueryElement << interface >>
+class QueryInstructionImpl {
+  + _types: Set<String>
+  + condition: QueryConditionImpl
+  + _schemas: Set<String>
+  + _limit: long
+  + _columns: List<ShowColumn>
+}
+class ShowColumn {
+  - property: String
+  - displayName: String
+}
+
+Assertion               -[#595959,dashed]->  AssertionOperationBool : "«create»"
+Assertion               -[#595959,dashed]->  AssertionOperationJson : "«create»"
+Assertion               -[#595959,dashed]->  AssertionOperationList : "«create»"
+Assertion               -[#595959,dashed]->  AssertionOperationNum  : "«create»"
+Assertion               -[#595959,dashed]->  AssertionOperationStr  : "«create»"
+Assertion              "1" *-[#595959,plain]-> "_predicate\n1" PropertyPredicate      
+Assertion               -[#595959,dashed]->  QueryConditionImpl     : "«create»"
+Assertion              "1" *-[#595959,plain]-> "_listElementCondition\n1" QueryConditionImpl     
+Assertion               -[#008200,dashed]-^  QueryElement           
+AssertionElement       "1" *-[#595959,plain]-> "relation\n1" AssertionRelation      
+AssertionElement        +-[#820000,plain]-  QueryConditionImpl     
+AssertionIterator      "1" *-[#595959,plain]-> "stack\n*" AssertionElement       
+AssertionIterator       +-[#820000,plain]-  QueryConditionImpl     
+AssertionOperation     "1" *-[#595959,plain]-> "assertion\n1" Assertion              
+AssertionOperationBool  -[#000082,plain]-^  AssertionOperation     
+AssertionOperationBool  +-[#820000,plain]-  AssertionOperation     
+AssertionOperationJson  -[#000082,plain]-^  AssertionOperation     
+AssertionOperationJson  +-[#820000,plain]-  AssertionOperation     
+AssertionOperationList  -[#000082,plain]-^  AssertionOperation     
+AssertionOperationList  +-[#820000,plain]-  AssertionOperation     
+AssertionOperationList  -[#595959,dashed]->  QueryConditionImpl     : "«create»"
+AssertionOperationNum   +-[#820000,plain]-  AssertionOperation     
+AssertionOperationNum   -[#000082,plain]-^  AssertionOperation     
+AssertionOperationStr   +-[#820000,plain]-  AssertionOperation     
+AssertionOperationStr   -[#000082,plain]-^  AssertionOperation     
+AssertionRelation       +-[#820000,plain]-  QueryConditionImpl     
+MatchOp                 +-[#820000,plain]-  Assertion              
+QueryConditionImpl      -[#595959,dashed]->  Assertion              : "«create»"
+QueryConditionImpl     "1" *-[#595959,plain]-> "elements\n*" AssertionElement       
+QueryConditionImpl      -[#595959,dashed]->  AssertionElement       : "«create»"
+QueryConditionImpl      -[#595959,dashed]->  AssertionIterator      : "«create»"
+QueryConditionImpl      -[#008200,dashed]-^  QueryElement           
+QueryInstructionImpl   "1" *-[#595959,plain]-> "condition\n1" QueryConditionImpl     
+QueryInstructionImpl    -[#595959,dashed]->  QueryConditionImpl     : "«create»"
+QueryInstructionImpl    -[#595959,dashed]->  ShowColumn             : "«create»"
+QueryInstructionImpl   "1" *-[#595959,plain]-> "_columns\n*" ShowColumn             
+ShowColumn              +-[#820000,plain]-  QueryInstructionImpl   
+@enduml

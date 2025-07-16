@@ -1,0 +1,93 @@
+@startuml
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+
+entity BooleanFound << record >> {
+  - bool: boolean
+  - host: StorageEntry
+  - path: String
+}
+entity ComplexFound << record >> {
+  - path: String
+  - value: Map<String, Object>
+  - host: StorageEntry
+}
+class Cursor {
+  - segments: Segment[]
+  - ptr: int
+}
+entity Idx << record >> {
+  - value: int
+}
+class InlinePropertyDiscoverer {
+  - cursor: Cursor
+  - host: StorageEntry
+}
+entity Key << record >> {
+  - value: String
+}
+entity ListFound << record >> {
+  - value: List<PropertyDiscoveryResult>
+  - host: StorageEntry
+  - path: String
+  - terminal: boolean
+}
+entity NoValue << record >>
+interface None << interface >>
+entity NotFound << record >> {
+  - errMsg: String
+}
+entity NumberFound << record >> {
+  - number: Number
+  - path: String
+  - host: StorageEntry
+}
+class ObjectEntryLookupTable {
+  - inner: ConcurrentHashMap<ObjectEntry, ObjectEntryLoadRequest>
+}
+interface PrimitiveDiscoveryResult << interface >>
+class PropQuery {
+  - segments: Segment[]
+  - keysRequested: Key[]
+  - matchIndices: Map<UriProperty, Integer>
+}
+interface PropertyDiscoveryResult << interface >>
+interface Segment << interface >>
+interface Some << interface >>
+class StorageInstanceExaminer {
+  - discoverer: Function<URI, Optional<StorageEntry>>
+}
+entity StringFound << record >> {
+  - string: String
+  - path: String
+  - host: StorageEntry
+}
+class UriProperty {
+  + OWN: String
+  + uri: URI
+  + segments: Segment[]
+  + position: int
+}
+
+BooleanFound              -[#008200,dashed]-^  PrimitiveDiscoveryResult 
+ComplexFound              -[#008200,dashed]-^  Some                     
+Cursor                   "1" *-[#595959,plain]-> "segments\n*" Segment                  
+Idx                       -[#008200,dashed]-^  Segment                  
+InlinePropertyDiscoverer "1" *-[#595959,plain]-> "cursor\n1" Cursor                   
+Key                       -[#008200,dashed]-^  Segment                  
+ListFound                "1" *-[#595959,plain]-> "value\n*" PropertyDiscoveryResult  
+ListFound                 -[#008200,dashed]-^  Some                     
+NoValue                   -[#008200,dashed]-^  None                     
+None                      -[#008200,plain]-^  PropertyDiscoveryResult  
+NotFound                  -[#008200,dashed]-^  None                     
+NumberFound               -[#008200,dashed]-^  PrimitiveDiscoveryResult 
+PrimitiveDiscoveryResult  -[#008200,plain]-^  Some                     
+PropQuery                "1" *-[#595959,plain]-> "keysRequested\n*" Key                      
+PropQuery                "1" *-[#595959,plain]-> "segments\n*" Segment                  
+PropQuery                "1" *-[#595959,plain]-> "matchIndices\n*" UriProperty              
+Some                      -[#008200,plain]-^  PropertyDiscoveryResult  
+StringFound               -[#008200,dashed]-^  PrimitiveDiscoveryResult 
+UriProperty              "1" *-[#595959,plain]-> "segments\n*" Segment                  
+@enduml

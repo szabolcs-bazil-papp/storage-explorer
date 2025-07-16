@@ -1,0 +1,70 @@
+@startuml
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+
+class Eager {
+  - meta: ObjectEntryMeta
+  - objectAsMap: Map<String, Object>
+  - oamSupplier: Supplier<String>
+}
+entity Err << record >> {
+  - msg: String
+}
+interface ExactVersionLoader << interface >>
+class FileSystemObjectEntryLoadRequest {
+  - result: ObjectEntryLoadResult
+}
+entity IndexingTarget << record >> {
+  - ANY: IndexingTarget
+  - schemas: Set<String>
+  - types: Set<String>
+}
+class Lazy {
+  - supplier: Supplier<Eager>
+  - inner: Eager
+}
+entity MultiVersion << record >> {
+  - versions: List<SingleVersion>
+}
+interface ObjectEntryLoadRequest << interface >>
+interface ObjectEntryLoadResult << interface >>
+entity ObjectEntryMeta << record >> {
+  - versionNr: Long
+  - uri: URI
+  - createdAt: OffsetDateTime
+  - storageSchema: String
+  - lastModified: Long
+  - qualifiedName: String
+  - entryId: String
+}
+class RelationalDatabaseObjectEntryLoadRequest {
+  - result: Future<ObjectEntryLoadResult>
+}
+interface SingleVersion << interface >>
+
+Eager                                    "1" *-[#595959,plain]-> "meta\n1" ObjectEntryMeta                          
+Eager                                     +-[#820000,plain]-  SingleVersion                            
+Eager                                     -[#008200,dashed]-^  SingleVersion                            
+Err                                       +-[#820000,plain]-  ObjectEntryLoadResult                    
+Err                                       -[#008200,dashed]-^  ObjectEntryLoadResult                    
+ExactVersionLoader                        +-[#820000,plain]-  ObjectEntryLoadResult                    
+FileSystemObjectEntryLoadRequest          +-[#820000,plain]-  ObjectEntryLoadRequest                   
+FileSystemObjectEntryLoadRequest          -[#008200,dashed]-^  ObjectEntryLoadRequest                   
+FileSystemObjectEntryLoadRequest         "1" *-[#595959,plain]-> "result\n1" ObjectEntryLoadResult                    
+Lazy                                     "1" *-[#595959,plain]-> "inner\n1" Eager                                    
+Lazy                                      -[#008200,dashed]-^  SingleVersion                            
+Lazy                                      +-[#820000,plain]-  SingleVersion                            
+MultiVersion                              -[#008200,dashed]-^  ObjectEntryLoadResult                    
+MultiVersion                              +-[#820000,plain]-  ObjectEntryLoadResult                    
+MultiVersion                             "1" *-[#595959,plain]-> "versions\n*" SingleVersion                            
+ObjectEntryLoadResult                     -[#595959,dashed]->  Eager                                    : "«create»"
+ObjectEntryLoadResult                     -[#595959,dashed]->  Err                                      : "«create»"
+ObjectEntryLoadResult                     -[#595959,dashed]->  Lazy                                     : "«create»"
+ObjectEntryLoadResult                     -[#595959,dashed]->  MultiVersion                             : "«create»"
+RelationalDatabaseObjectEntryLoadRequest  +-[#820000,plain]-  ObjectEntryLoadRequest                   
+RelationalDatabaseObjectEntryLoadRequest  -[#008200,dashed]-^  ObjectEntryLoadRequest                   
+SingleVersion                             +-[#820000,plain]-  ObjectEntryLoadResult                    
+SingleVersion                             -[#008200,plain]-^  ObjectEntryLoadResult                    
+@enduml

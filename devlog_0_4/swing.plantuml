@@ -1,0 +1,413 @@
+@startuml
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+
+class AbstractDialogController<T>
+class AppContentView
+class AppFrame
+class ArcScriptContainerView
+class ArcScriptController
+class ArcScriptSelectorTree
+class ArcScriptTextareaFactory
+class ArcScriptTokenMaker
+class ArcScriptView
+class AutoSizingTextArea
+class BackgroundWorkController
+class BreadCrumbElement
+class BreadCrumbs
+entity BreadCrumbsChanged << record >>
+class CellPopUpMenu
+interface ClickableTreeNode << interface >>
+class CloseTabButton
+class CollectionEntryInspectorView
+class CommanderView
+entity Config << record >>
+class ConsoleView
+class ContentPane
+class CustomisedQueryResultTableModel
+class DefaultQueryResultTableModel
+class DiffVersionPane
+enum DisplayMode << enumeration >>
+class EntryListElementRenderer
+class EntryMetaEditorController
+class EntryMetaEditorDialog
+entity EntryStat << record >>
+interface EnumeratorWithUri << interface >>
+class ErrorMarker
+class ExplorerView
+interface Finisher<T> << interface >>
+entity FontSizeChange << record >>
+class GraphSettingsController
+class GraphSettingsDialog
+class GraphStylingProvider
+class GraphView
+entity GraphViewCloseRequest << record >>
+class GraphViewMouseManager
+interface HasStorage << interface >>
+entity HiddenPaneSize << record >>
+class IconProvider
+class ImportStorageAction
+class ImportStorageController
+class ImportStorageDialog
+class IndexResultPanel
+class IndexingOperationResultTableModel
+class Initial
+class InspectorContainerView
+class InspectorDialog
+enum InspectorRendering << enumeration >>
+class InspectorTextareaFactory
+interface InspectorView<T> << interface >>
+class JLink
+class JumpToUri
+class KeymapController
+class KeymapDialog
+class KeymapTableModel
+enum Laf << enumeration >>
+entity LafChanged << record >>
+class LafService
+class LearnMoreView
+class LoadAction
+class LoadEntryController
+class LoadEntryDialog
+entity LoadEntryDialogModel << record >>
+class LoadingQueueLabel
+class MainTreeView
+class MainView
+class ModificationModeDeterminationException
+class MonospaceFontProvider
+class NewScriptView
+class NewScriptViewContent
+class NodePopupMenu
+entity None << record >>
+class ObjectEntryDiffView
+class ObjectEntryInspectorView
+class OpenInSystemExplorerAction
+class OperationResultTableModel
+entity PaneAndTextarea << record >>
+class QueryOperationResultTableModel
+class QueryResultPanel
+class RSyntaxTextAreaThemeProvider
+class RenderOperationResultTableModel
+class Renderer
+class ResultDisplay
+class SchemaRow
+class ScreenshotListener
+entity ScriptFile << record >>
+class ScriptNode
+interface ScriptResultView << interface >>
+class SearchAction
+class SearchForEntryDialog
+class SearchForEntryView
+interface Selection << interface >>
+interface SelectionChangeListener << interface >>
+class SequenceEntryInspectorView
+enum Severity << enumeration >>
+class SideBar
+interface SimpleDocumentListener << interface >>
+enum State << enumeration >>
+entity Storage << record >>
+class StorageCollectionTableModel
+class StorageEntryEditorController
+class StorageEntryEditorEditView
+class StorageEntryEditorFrame
+class StorageEntryEditorIntentView
+class StorageEntryInspectorViewFactory
+class StorageEntryVersionDiffView
+class StorageIndexNodePopupMenu
+entity StorageInstanceRenamed << record >>
+class StorageInstanceRenderer
+class StorageInstanceStatComponent
+class StorageInstanceStatTableModel
+class StorageInstanceTreeNode
+class StorageListTreeNode
+class StorageMapTreeNode
+class StorageNode
+class StorageObjectTreeNode
+class StorageSchemaTreeNode
+class StorageSequenceTreeNode
+class StorageTree
+class StorageTreeNodeRenderer
+class StorageTypeTreeNode
+class TabComponent
+class TabComponent
+class TableDisplayMagic
+entity TextAreasByDiffView << record >>
+class ToastService
+class ToastView
+enum Type << enumeration >>
+class VersionPane
+class ViewController
+class WelcomePopup
+
+AbstractDialogController               "1" *-[#595959,plain]-> "finisher\n1" Finisher                               
+AppContentView                         "1" *-[#595959,plain]-> "breadCrumbs\n1" BreadCrumbs                            
+AppContentView                          -[#595959,dashed]->  BreadCrumbs                            : "«create»"
+AppContentView                         "1" *-[#595959,plain]-> "commanderView\n1" CommanderView                          
+AppContentView                         "1" *-[#595959,plain]-> "hiddenPaneSize\n1" HiddenPaneSize                         
+AppContentView                          -[#595959,dashed]->  HiddenPaneSize                         : "«create»"
+AppContentView                          -[#595959,dashed]->  LoadingQueueLabel                      : "«create»"
+AppContentView                         "1" *-[#595959,plain]-> "loadingQueueLabel\n1" LoadingQueueLabel                      
+AppContentView                         "1" *-[#595959,plain]-> "mainView\n1" MainView                               
+AppContentView                          -[#595959,dashed]->  SideBar                                : "«create»"
+AppFrame                               "1" *-[#595959,plain]-> "appContentView\n1" AppContentView                         
+AppFrame                                -[#595959,dashed]->  GraphSettingsDialog                    : "«create»"
+AppFrame                                -[#595959,dashed]->  ImportStorageAction                    : "«create»"
+AppFrame                                -[#595959,dashed]->  KeymapDialog                           : "«create»"
+AppFrame                               "1" *-[#595959,plain]-> "lafService\n1" LafService                             
+AppFrame                                -[#595959,dashed]->  LoadAction                             : "«create»"
+AppFrame                                -[#595959,dashed]->  SearchAction                           : "«create»"
+ArcScriptContainerView                 "1" *-[#595959,plain]-> "controller\n1" ArcScriptController                    
+ArcScriptContainerView                  -[#595959,dashed]->  CloseTabButton                         : "«create»"
+ArcScriptContainerView                 "1" *-[#595959,plain]-> "newScriptView\n1" NewScriptView                          
+ArcScriptContainerView                  -[#595959,dashed]->  NewScriptView                          : "«create»"
+ArcScriptContainerView                  -[#595959,dashed]->  NewScriptViewContent                   : "«create»"
+ArcScriptContainerView                  -[#595959,dashed]->  TabComponent                           : "«create»"
+ArcScriptController                    "1" *-[#595959,plain]-> "containerView\n1" ArcScriptContainerView                 
+ArcScriptController                     -[#595959,dashed]->  ArcScriptTextareaFactory               : "«create»"
+ArcScriptController                    "1" *-[#595959,plain]-> "arcScriptTextareaFactory\n1" ArcScriptTextareaFactory               
+ArcScriptController                    "1" *-[#595959,plain]-> "arcScriptViews\n*" ArcScriptView                          
+ArcScriptController                     -[#595959,dashed]->  ArcScriptView                          : "«create»"
+ArcScriptController                    "1" *-[#595959,plain]-> "monospaceFontProvider\n1" MonospaceFontProvider                  
+ArcScriptController                    "1" *-[#595959,plain]-> "themeProvider\n1" RSyntaxTextAreaThemeProvider           
+ArcScriptSelectorTree                   -[#595959,dashed]->  None                                   : "«create»"
+ArcScriptSelectorTree                   -[#595959,dashed]->  Renderer                               : "«create»"
+ArcScriptSelectorTree                   -[#595959,dashed]->  ScriptFile                             : "«create»"
+ArcScriptSelectorTree                   -[#595959,dashed]->  ScriptNode                             : "«create»"
+ArcScriptSelectorTree                  "1" *-[#595959,plain]-> "selectionChangeListener\n1" SelectionChangeListener                
+ArcScriptSelectorTree                   -[#595959,dashed]->  Storage                                : "«create»"
+ArcScriptSelectorTree                   -[#595959,dashed]->  StorageNode                            : "«create»"
+ArcScriptTextareaFactory               "1" *-[#595959,plain]-> "monospaceFontProvider\n1" MonospaceFontProvider                  
+ArcScriptTextareaFactory                -[#595959,dashed]->  PaneAndTextarea                        : "«create»"
+ArcScriptTextareaFactory               "1" *-[#595959,plain]-> "themeProvider\n1" RSyntaxTextAreaThemeProvider           
+ArcScriptView                          "1" *-[#595959,plain]-> "controller\n1" ArcScriptController                    
+ArcScriptView                           -[#595959,dashed]->  ErrorMarker                            : "«create»"
+ArcScriptView                          "1" *-[#595959,plain]-> "compilationError\n1" ErrorMarker                            
+ArcScriptView                           -[#595959,dashed]->  Initial                                : "«create»"
+ArcScriptView                           -[#595959,dashed]->  ResultDisplay                          : "«create»"
+ArcScriptView                          "1" *-[#595959,plain]-> "scriptResultView\n1" ScriptResultView                       
+BackgroundWorkController               "1" *-[#595959,plain]-> "appContentView\n1" AppContentView                         
+BreadCrumbElement                       +-[#820000,plain]-  AppContentView                         
+BreadCrumbs                             +-[#820000,plain]-  AppContentView                         
+BreadCrumbs                             -[#595959,dashed]->  BreadCrumbElement                      : "«create»"
+BreadCrumbs                            "1" *-[#595959,plain]-> "elements\n*" BreadCrumbElement                      
+CellPopUpMenu                           +-[#820000,plain]-  ResultDisplay                          
+CollectionEntryInspectorView            -[#595959,dashed]->  AutoSizingTextArea                     : "«create»"
+CollectionEntryInspectorView            -[#008200,dashed]-^  InspectorView                          
+CollectionEntryInspectorView            -[#595959,dashed]->  OpenInSystemExplorerAction             : "«create»"
+CollectionEntryInspectorView           "1" *-[#595959,plain]-> "tableModel\n1" StorageCollectionTableModel            
+CollectionEntryInspectorView            -[#595959,dashed]->  StorageCollectionTableModel            : "«create»"
+CollectionEntryInspectorView           "1" *-[#595959,plain]-> "factory\n1" StorageEntryInspectorViewFactory       
+CommanderView                          "1" *-[#595959,plain]-> "arcScriptContainerView\n1" ArcScriptContainerView                 
+Config                                  +-[#820000,plain]-  InspectorTextareaFactory               
+Config                                 "1" *-[#595959,plain]-> "type\n1" Type                                   
+ContentPane                             +-[#820000,plain]-  StorageEntryEditorFrame                
+CustomisedQueryResultTableModel         +-[#820000,plain]-  ArcScriptView                          
+CustomisedQueryResultTableModel         -[#008200,dashed]-^  EnumeratorWithUri                      
+DefaultQueryResultTableModel            -[#008200,dashed]-^  EnumeratorWithUri                      
+DefaultQueryResultTableModel            +-[#820000,plain]-  ResultDisplay                          
+DiffVersionPane                         +-[#820000,plain]-  ObjectEntryDiffView                    
+DiffVersionPane                         -[#595959,dashed]->  StorageEntryVersionDiffView            : "«create»"
+DiffVersionPane                         -[#000082,plain]-^  VersionPane                            
+DisplayMode                             +-[#820000,plain]-  ExplorerView                           
+EntryListElementRenderer                +-[#820000,plain]-  SearchForEntryDialog                   
+EntryMetaEditorController               -[#000082,plain]-^  AbstractDialogController               
+EntryMetaEditorDialog                  "1" *-[#595959,plain]-> "controller\n1" EntryMetaEditorController              
+EntryStat                               +-[#820000,plain]-  StorageInstanceStatTableModel          
+ErrorMarker                             +-[#820000,plain]-  ArcScriptView                          
+ExplorerView                           "1" *-[#595959,plain]-> "displayMode\n1" DisplayMode                            
+ExplorerView                           "1" *-[#595959,plain]-> "graphView\n1" GraphView                              
+ExplorerView                           "1" *-[#595959,plain]-> "inspectorContainerView\n1" InspectorContainerView                 
+Finisher                                +-[#820000,plain]-  AbstractDialogController               
+FontSizeChange                          +-[#820000,plain]-  MonospaceFontProvider                  
+GraphSettingsController                 -[#000082,plain]-^  AbstractDialogController               
+GraphSettingsDialog                    "1" *-[#595959,plain]-> "controller\n1" GraphSettingsController                
+GraphView                               -[#595959,dashed]->  GraphViewCloseRequest                  : "«create»"
+GraphView                               -[#595959,dashed]->  GraphViewMouseManager                  : "«create»"
+GraphView                              "1" *-[#595959,plain]-> "lafService\n1" LafService                             
+GraphView                               -[#595959,dashed]->  ScreenshotListener                     : "«create»"
+GraphViewCloseRequest                   +-[#820000,plain]-  ViewController                         
+GraphViewMouseManager                   +-[#820000,plain]-  GraphView                              
+GraphViewMouseManager                   -[#595959,dashed]->  NodePopupMenu                          : "«create»"
+HasStorage                              -[#008200,plain]-^  Selection                              
+HasStorage                              +-[#820000,plain]-  Selection                              
+ImportStorageAction                     +-[#820000,plain]-  AppFrame                               
+ImportStorageAction                     -[#595959,dashed]->  ImportStorageDialog                    : "«create»"
+ImportStorageController                 -[#000082,plain]-^  AbstractDialogController               
+ImportStorageDialog                    "1" *-[#595959,plain]-> "controller\n1" ImportStorageController                
+ImportStorageDialog                     -[#595959,dashed]->  ImportStorageController                : "«create»"
+IndexResultPanel                        +-[#820000,plain]-  ResultDisplay                          
+IndexingOperationResultTableModel       -[#000082,plain]-^  OperationResultTableModel              
+IndexingOperationResultTableModel       +-[#820000,plain]-  ResultDisplay                          
+Initial                                 +-[#820000,plain]-  ArcScriptView                          
+Initial                                 -[#008200,dashed]-^  ScriptResultView                       
+InspectorContainerView                 "1" *-[#595959,plain]-> "factory\n1" StorageEntryInspectorViewFactory       
+InspectorContainerView                  -[#595959,dashed]->  TabComponent                           : "«create»"
+InspectorRendering                      +-[#820000,plain]-  StorageEntryInspectorViewFactory       
+InspectorTextareaFactory                -[#595959,dashed]->  PaneAndTextarea                        : "«create»"
+InspectorTextareaFactory               "1" *-[#595959,plain]-> "themeProvider\n1" RSyntaxTextAreaThemeProvider           
+InspectorTextareaFactory               "1" *-[#595959,plain]-> "inspectorViewFactory\n1" StorageEntryInspectorViewFactory       
+KeymapController                        -[#000082,plain]-^  AbstractDialogController               
+KeymapDialog                           "1" *-[#595959,plain]-> "controller\n1" KeymapController                       
+KeymapDialog                            -[#595959,dashed]->  KeymapTableModel                       : "«create»"
+KeymapTableModel                        +-[#820000,plain]-  KeymapDialog                           
+Laf                                     +-[#820000,plain]-  LafChanged                             
+LafChanged                             "1" *-[#595959,plain]-> "laf\n1" Laf                                    
+LafService                             "1" *-[#595959,plain]-> "laf\n1" Laf                                    
+LafService                              -[#595959,dashed]->  LafChanged                             : "«create»"
+LearnMoreView                           -[#595959,dashed]->  JLink                                  : "«create»"
+LoadAction                              +-[#820000,plain]-  AppFrame                               
+LoadAction                              -[#595959,dashed]->  LoadEntryDialog                        : "«create»"
+LoadEntryController                     -[#000082,plain]-^  AbstractDialogController               
+LoadEntryController                     -[#595959,dashed]->  LoadEntryDialogModel                   : "«create»"
+LoadEntryDialog                        "1" *-[#595959,plain]-> "controller\n1" LoadEntryController                    
+LoadEntryDialog                         -[#595959,dashed]->  LoadEntryDialogModel                   : "«create»"
+LoadEntryDialog                         -[#595959,dashed]->  StorageInstanceRenderer                : "«create»"
+LoadingQueueLabel                       +-[#820000,plain]-  AppContentView                         
+MainTreeView                            -[#595959,dashed]->  BreadCrumbsChanged                     : "«create»"
+MainTreeView                            -[#595959,dashed]->  StorageIndexNodePopupMenu              : "«create»"
+MainTreeView                            -[#595959,dashed]->  StorageListTreeNode                    : "«create»"
+MainTreeView                            -[#595959,dashed]->  StorageMapTreeNode                     : "«create»"
+MainTreeView                            -[#595959,dashed]->  StorageObjectTreeNode                  : "«create»"
+MainTreeView                           "1" *-[#595959,plain]-> "tree\n1" StorageTree                            
+MainView                               "1" *-[#595959,plain]-> "explorerView\n1" ExplorerView                           
+MainView                               "1" *-[#595959,plain]-> "hiddenPaneSize\n1" HiddenPaneSize                         
+MainView                               "1" *-[#595959,plain]-> "mainTreeView\n1" MainTreeView                           
+ModificationModeDeterminationException  +-[#820000,plain]-  StorageEntryEditorController           
+MonospaceFontProvider                   -[#595959,dashed]->  FontSizeChange                         : "«create»"
+NewScriptView                           +-[#820000,plain]-  ArcScriptContainerView                 
+NewScriptView                          "1" *-[#595959,plain]-> "content\n1" NewScriptViewContent                   
+NewScriptViewContent                    +-[#820000,plain]-  ArcScriptContainerView                 
+NewScriptViewContent                   "1" *-[#595959,plain]-> "containerView\n1" ArcScriptContainerView                 
+NewScriptViewContent                   "1" *-[#595959,plain]-> "tree\n1" ArcScriptSelectorTree                  
+NewScriptViewContent                    -[#595959,dashed]->  LearnMoreView                          : "«create»"
+None                                    -[#008200,dashed]-^  Selection                              
+None                                    +-[#820000,plain]-  Selection                              
+ObjectEntryDiffView                     -[#595959,dashed]->  DiffVersionPane                        : "«create»"
+ObjectEntryDiffView                     -[#008200,dashed]-^  InspectorView                          
+ObjectEntryDiffView                     -[#000082,plain]-^  ObjectEntryInspectorView               
+ObjectEntryInspectorView                -[#008200,dashed]-^  InspectorView                          
+ObjectEntryInspectorView                -[#595959,dashed]->  OpenInSystemExplorerAction             : "«create»"
+ObjectEntryInspectorView               "1" *-[#595959,plain]-> "factory\n1" StorageEntryInspectorViewFactory       
+ObjectEntryInspectorView                -[#595959,dashed]->  VersionPane                            : "«create»"
+OperationResultTableModel               +-[#820000,plain]-  ResultDisplay                          
+QueryOperationResultTableModel          -[#000082,plain]-^  OperationResultTableModel              
+QueryOperationResultTableModel          +-[#820000,plain]-  ResultDisplay                          
+QueryResultPanel                        -[#595959,dashed]->  CellPopUpMenu                          : "«create»"
+QueryResultPanel                        -[#595959,dashed]->  CustomisedQueryResultTableModel        : "«create»"
+QueryResultPanel                        -[#595959,dashed]->  DefaultQueryResultTableModel           : "«create»"
+QueryResultPanel                        +-[#820000,plain]-  ResultDisplay                          
+RenderOperationResultTableModel         -[#000082,plain]-^  OperationResultTableModel              
+RenderOperationResultTableModel         +-[#820000,plain]-  ResultDisplay                          
+Renderer                                +-[#820000,plain]-  ArcScriptSelectorTree                  
+ResultDisplay                           +-[#820000,plain]-  ArcScriptView                          
+ResultDisplay                           -[#595959,dashed]->  IndexResultPanel                       : "«create»"
+ResultDisplay                           -[#595959,dashed]->  IndexingOperationResultTableModel      : "«create»"
+ResultDisplay                           -[#595959,dashed]->  QueryOperationResultTableModel         : "«create»"
+ResultDisplay                           -[#595959,dashed]->  QueryResultPanel                       : "«create»"
+ResultDisplay                           -[#595959,dashed]->  RenderOperationResultTableModel        : "«create»"
+ResultDisplay                           -[#008200,dashed]-^  ScriptResultView                       
+SchemaRow                               +-[#820000,plain]-  StorageInstanceStatTableModel          
+ScreenshotListener                      +-[#820000,plain]-  GraphView                              
+ScriptFile                              -[#008200,dashed]-^  HasStorage                             
+ScriptFile                              +-[#820000,plain]-  Selection                              
+ScriptNode                              +-[#820000,plain]-  ArcScriptSelectorTree                  
+ScriptResultView                        +-[#820000,plain]-  ArcScriptView                          
+SearchAction                            +-[#820000,plain]-  AppFrame                               
+SearchAction                            -[#595959,dashed]->  SearchForEntryDialog                   : "«create»"
+SearchForEntryDialog                    -[#595959,dashed]->  SearchForEntryView                     : "«create»"
+SearchForEntryView                      -[#595959,dashed]->  EntryListElementRenderer               : "«create»"
+SearchForEntryView                      +-[#820000,plain]-  SearchForEntryDialog                   
+Selection                               +-[#820000,plain]-  ArcScriptSelectorTree                  
+SelectionChangeListener                 +-[#820000,plain]-  ArcScriptSelectorTree                  
+SequenceEntryInspectorView              -[#595959,dashed]->  AutoSizingTextArea                     : "«create»"
+SequenceEntryInspectorView              -[#008200,dashed]-^  InspectorView                          
+SequenceEntryInspectorView              -[#595959,dashed]->  OpenInSystemExplorerAction             : "«create»"
+SequenceEntryInspectorView             "1" *-[#595959,plain]-> "factory\n1" StorageEntryInspectorViewFactory       
+SideBar                                 +-[#820000,plain]-  AppContentView                         
+SimpleDocumentListener                  +-[#820000,plain]-  SearchForEntryDialog                   
+State                                   +-[#820000,plain]-  StorageEntryEditorController           
+Storage                                 -[#008200,dashed]-^  HasStorage                             
+Storage                                 +-[#820000,plain]-  Selection                              
+StorageCollectionTableModel             +-[#820000,plain]-  CollectionEntryInspectorView           
+StorageCollectionTableModel             -[#008200,dashed]-^  EnumeratorWithUri                      
+StorageEntryEditorController           "1" *-[#595959,plain]-> "textareaFactory\n1" InspectorTextareaFactory               
+StorageEntryEditorController            -[#595959,dashed]->  ModificationModeDeterminationException : "«create»"
+StorageEntryEditorController           "1" *-[#595959,plain]-> "state\n1" State                                  
+StorageEntryEditorController            -[#595959,dashed]->  StorageEntryEditorEditView             : "«create»"
+StorageEntryEditorController            -[#595959,dashed]->  StorageEntryEditorFrame                : "«create»"
+StorageEntryEditorController            -[#595959,dashed]->  StorageEntryEditorIntentView           : "«create»"
+StorageEntryEditorController           "1" *-[#595959,plain]-> "inspectorViewFactory\n1" StorageEntryInspectorViewFactory       
+StorageEntryEditorController            -[#595959,dashed]->  StorageEntryVersionDiffView            : "«create»"
+StorageEntryEditorEditView              -[#595959,dashed]->  Config                                 : "«create»"
+StorageEntryEditorEditView             "1" *-[#595959,plain]-> "controller\n1" StorageEntryEditorController           
+StorageEntryEditorFrame                "1" *-[#595959,plain]-> "contentPane\n1" ContentPane                            
+StorageEntryEditorFrame                 -[#595959,dashed]->  ContentPane                            : "«create»"
+StorageEntryEditorFrame                "1" *-[#595959,plain]-> "controller\n1" StorageEntryEditorController           
+StorageEntryEditorFrame                 -[#595959,dashed]->  StorageEntryEditorIntentView           : "«create»"
+StorageEntryEditorIntentView           "1" *-[#595959,plain]-> "controller\n1" StorageEntryEditorController           
+StorageEntryInspectorViewFactory        -[#595959,dashed]->  CollectionEntryInspectorView           : "«create»"
+StorageEntryInspectorViewFactory        -[#595959,dashed]->  EntryMetaEditorDialog                  : "«create»"
+StorageEntryInspectorViewFactory        -[#595959,dashed]->  InspectorDialog                        : "«create»"
+StorageEntryInspectorViewFactory       "1" *-[#595959,plain]-> "openedDialogs\n*" InspectorDialog                        
+StorageEntryInspectorViewFactory       "1" *-[#595959,plain]-> "textareaFactory\n1" InspectorTextareaFactory               
+StorageEntryInspectorViewFactory        -[#595959,dashed]->  InspectorTextareaFactory               : "«create»"
+StorageEntryInspectorViewFactory       "1" *-[#595959,plain]-> "openedInspectors\n*" InspectorView                          
+StorageEntryInspectorViewFactory       "1" *-[#595959,plain]-> "monospaceFontProvider\n1" MonospaceFontProvider                  
+StorageEntryInspectorViewFactory        -[#595959,dashed]->  ObjectEntryDiffView                    : "«create»"
+StorageEntryInspectorViewFactory        -[#595959,dashed]->  ObjectEntryInspectorView               : "«create»"
+StorageEntryInspectorViewFactory       "1" *-[#595959,plain]-> "themeProvider\n1" RSyntaxTextAreaThemeProvider           
+StorageEntryInspectorViewFactory        -[#595959,dashed]->  SequenceEntryInspectorView             : "«create»"
+StorageEntryInspectorViewFactory        -[#595959,dashed]->  StorageEntryEditorController           : "«create»"
+StorageEntryInspectorViewFactory       "1" *-[#595959,plain]-> "diffTextAreas\n*" TextAreasByDiffView                    
+StorageEntryVersionDiffView             -[#595959,dashed]->  Config                                 : "«create»"
+StorageIndexNodePopupMenu               -[#595959,dashed]->  ImportStorageDialog                    : "«create»"
+StorageIndexNodePopupMenu               -[#595959,dashed]->  LoadEntryDialog                        : "«create»"
+StorageIndexNodePopupMenu               +-[#820000,plain]-  MainTreeView                           
+StorageIndexNodePopupMenu               -[#595959,dashed]->  StorageInstanceRenamed                 : "«create»"
+StorageIndexNodePopupMenu               -[#595959,dashed]->  StorageInstanceStatComponent           : "«create»"
+StorageInstanceRenderer                 +-[#820000,plain]-  LoadEntryDialog                        
+StorageInstanceStatComponent            -[#595959,dashed]->  StorageInstanceStatTableModel          : "«create»"
+StorageInstanceStatTableModel           -[#595959,dashed]->  EntryStat                              : "«create»"
+StorageInstanceStatTableModel          "1" *-[#595959,plain]-> "rows\n*" SchemaRow                              
+StorageInstanceStatTableModel           +-[#820000,plain]-  StorageInstanceStatComponent           
+StorageInstanceTreeNode                 -[#595959,dashed]->  StorageListTreeNode                    : "«create»"
+StorageInstanceTreeNode                 -[#595959,dashed]->  StorageMapTreeNode                     : "«create»"
+StorageInstanceTreeNode                 -[#595959,dashed]->  StorageSchemaTreeNode                  : "«create»"
+StorageInstanceTreeNode                 -[#595959,dashed]->  StorageSequenceTreeNode                : "«create»"
+StorageListTreeNode                     -[#008200,dashed]-^  ClickableTreeNode                      
+StorageMapTreeNode                      -[#008200,dashed]-^  ClickableTreeNode                      
+StorageNode                             +-[#820000,plain]-  ArcScriptSelectorTree                  
+StorageObjectTreeNode                   -[#008200,dashed]-^  ClickableTreeNode                      
+StorageObjectTreeNode                   -[#595959,dashed]->  StorageListTreeNode                    : "«create»"
+StorageObjectTreeNode                   -[#595959,dashed]->  StorageMapTreeNode                     : "«create»"
+StorageSchemaTreeNode                   -[#595959,dashed]->  StorageTypeTreeNode                    : "«create»"
+StorageSequenceTreeNode                 -[#008200,dashed]-^  ClickableTreeNode                      
+StorageTree                             -[#595959,dashed]->  StorageInstanceTreeNode                : "«create»"
+StorageTree                             -[#595959,dashed]->  StorageListTreeNode                    : "«create»"
+StorageTree                             -[#595959,dashed]->  StorageMapTreeNode                     : "«create»"
+StorageTree                             -[#595959,dashed]->  StorageObjectTreeNode                  : "«create»"
+StorageTree                             -[#595959,dashed]->  StorageSchemaTreeNode                  : "«create»"
+StorageTree                             -[#595959,dashed]->  StorageSequenceTreeNode                : "«create»"
+StorageTree                             -[#595959,dashed]->  StorageTreeNodeRenderer                : "«create»"
+StorageTree                             -[#595959,dashed]->  StorageTypeTreeNode                    : "«create»"
+StorageTreeNodeRenderer                 +-[#820000,plain]-  StorageTree                            
+StorageTypeTreeNode                     -[#595959,dashed]->  StorageObjectTreeNode                  : "«create»"
+TabComponent                            +-[#820000,plain]-  ArcScriptContainerView                 
+TabComponent                            -[#595959,dashed]->  CloseTabButton                         : "«create»"
+TabComponent                            +-[#820000,plain]-  InspectorContainerView                 
+TextAreasByDiffView                    "1" *-[#595959,plain]-> "view\n1" ObjectEntryDiffView                    
+TextAreasByDiffView                     +-[#820000,plain]-  StorageEntryInspectorViewFactory       
+ToastService                           "1" *-[#595959,plain]-> "appFrame\n1" AppFrame                               
+ToastService                            -[#595959,dashed]->  ToastView                              : "«create»"
+Type                                    +-[#820000,plain]-  InspectorTextareaFactory               
+VersionPane                             -[#595959,dashed]->  AutoSizingTextArea                     : "«create»"
+VersionPane                             -[#595959,dashed]->  Config                                 : "«create»"
+VersionPane                             +-[#820000,plain]-  ObjectEntryInspectorView               
+ViewController                         "1" *-[#595959,plain]-> "explorerView\n1" ExplorerView                           
+ViewController                         "1" *-[#595959,plain]-> "graphView\n1" GraphView                              
+ViewController                         "1" *-[#595959,plain]-> "mainTreeView\n1" MainTreeView                           
+WelcomePopup                            -[#595959,dashed]->  JLink                                  : "«create»"
+WelcomePopup                           "1" *-[#595959,plain]-> "wikiLink\n1" JLink                                  
+@enduml
