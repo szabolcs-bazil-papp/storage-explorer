@@ -101,11 +101,8 @@ class UriProperty {
 }
 interface Versioning << interface >>
 
-Builder              +-[#820000,plain]-  StorageEntryFactory 
 Builder              -[#595959,dashed]->  StorageEntryFactory : "«create»"
-Idx                  +-[#820000,plain]-  Segment             
 Idx                  -[#008200,dashed]-^  Segment             
-Key                  +-[#820000,plain]-  Segment             
 Key                  -[#008200,dashed]-^  Segment             
 ListEntry            -[#595959,dashed]->  Segment             : "«create»"
 ListEntry            -[#008200,dashed]-^  StorageEntry        
@@ -114,7 +111,6 @@ MapEntry             -[#595959,dashed]->  Segment             : "«create»"
 MapEntry             -[#008200,dashed]-^  StorageEntry        
 MapEntry            "1" *-[#595959,plain]-> "uriProperties\n*" UriProperty         
 Multi                -[#008200,dashed]-^  Versioning          
-Multi                +-[#820000,plain]-  Versioning          
 ObjectEntry          -[#595959,dashed]->  Multi               : "«create»"
 ObjectEntry         "1" *-[#595959,plain]-> "scopedEntries\n*" ScopedEntry         
 ObjectEntry          -[#595959,dashed]->  Segment             : "«create»"
@@ -133,9 +129,7 @@ ScopedObjectEntry    -[#008200,dashed]-^  ScopedEntry
 ScopedObjectEntry    -[#008200,dashed]-^  StorageEntry        
 Segment              -[#595959,dashed]->  Idx                 : "«create»"
 Segment              -[#595959,dashed]->  Key                 : "«create»"
-Segment              +-[#820000,plain]-  UriProperty         
 SequenceEntry        -[#008200,dashed]-^  StorageEntry        
-Single               +-[#820000,plain]-  Versioning          
 Single               -[#008200,dashed]-^  Versioning          
 StorageEntryFactory  -[#595959,dashed]->  Builder             : "«create»"
 StorageEntryFactory  -[#595959,dashed]->  ListEntry           : "«create»"
@@ -147,5 +141,4 @@ StorageEntryFactory  -[#595959,dashed]->  ScopedObjectEntry   : "«create»"
 StorageEntryFactory  -[#595959,dashed]->  SequenceEntry       : "«create»"
 UriProperty         "1" *-[#595959,plain]-> "segments\n*" Segment             
 UriProperty          -[#595959,dashed]->  Segment             : "«create»"
-Versioning           +-[#820000,plain]-  ObjectEntry         
 @enduml

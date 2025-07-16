@@ -7,7 +7,7 @@ end note
 group #4da542 Groovy {
   :parse script text;
 }
-if (syntax errors present) then (yes)
+if (are syntax errors present?) then (yes)
   #HotPink:display error markers;
   stop
 else (no)
@@ -16,24 +16,30 @@ else (no)
   }
 endif
 
+if (has script execution failed?) is (yes) then
+  #HotPink:display error markers;
+  stop
+else (no)
+endif
+
 partition #dfd090 "Indexing instruction preprocessing" {
   note right
     Current implementation only considers the need to add
     implicit instructions, no merging and #pragma interpretation
     is performed.
   end note
-  if (query instructions missing) then (yes)
-    if (index instructions missing) then (yes)
+  if (are query instructions missing?) then (yes)
+    if (are index instructions missing?) then (yes)
       stop
     else (no)
     endif
   else (no)
-    if (index instructions cover query instructions indexing requirements) then (yes)
+    if (do index instructions cover query instruction indexing requirements?) then (yes)
     else (no)
       :create implicit index instructions;
     endif
 
-    if (pragma TRUST_INDEX is present) then (yes)
+    if (is pragma TRUST_INDEX present?) then (yes)
       :remove index instructions;
     else (no)
     endif
@@ -42,29 +48,31 @@ partition #dfd090 "Indexing instruction preprocessing" {
 }
 
 
-if (index instructions present) then (yes)
+if (are any index instructions present?) then (yes)
   partition #a0c5f0 "Indexing" {
-    if (storage implementation) then (FS)
+    if (storage implementation?) then (FS)
       fork
-        :discover URI 1;
+        :discover candidate entry URI;
       fork again
-        :discover URI 2;
+        :discover candidate entry URI;
       fork again
-        :discover URI 3;
+        :...; <<continuous>>
+      fork again
+        :discover candidate entry URI;
       end fork
     else (RDB)
-      :issue single query for every possible URI affected;
+      :issue single query for every possible candidate entry URI;
     endif
-    :create StorageEntries;
+    :register/confirm candidate entries;
   }
 else (no)
-  :fetch all candidate Entries;
+  :fetch all candidate entries;
 endif
 
-if (query instructions present) then (yes)
+if (are query instructions present?) then (yes)
   partition #b2d2ff "Querying" {
     fork
-      :load candidate;
+      :load candidate entry;
       note
         Every time an activity is labelled as 'Load', it is performed
         massively concurrently on separate virtual threads as far as
@@ -74,17 +82,21 @@ if (query instructions present) then (yes)
         performed concurrently.
         
         On <b>Relation Database</b> backed storages, every load operation
-        is enqueued in a task queue, and batch loaded with with a maximum
-        batch size and an adapting timeout (shortens based on queue size).
+        is enqueued in a task queue, and batch loaded with a maximum
+        batch size and an adapting timeout (adjusted based on queue size).
         
-        Every individual <b>Entry</b> is loaded at most once, and made
+        Every individual <b>entry</b> is loaded at most once, and made
         available in a shared lookup-table for downstream operations such
         as later query executions and columns property discovery.
       end note
       partition #aliceblue "Execute WHERE clause" {
         while (property on referenced entry?)
-          :load referenced Entry;
-        endwhile
+          if (is referenced entry in lookup-table?) then (yes)
+            :lookup entry;
+          else (no)
+            :load referenced entry;
+          endif
+        endwhile (no)
         :extract property value;
         :test value against property predicate;
         if (matches WHERE clause?) then (yes)
@@ -95,11 +107,14 @@ if (query instructions present) then (yes)
         endif
       }
     fork again
-      :load candidate;
+      :...; <<continuous>>
+      -[dashed]->
+    fork again
+      :load candidate entry;
       :execute WHERE clause;
       -[dashed]->
     fork again
-      :load candidate;
+      :load candidate entry;
       :execute WHERE clause;
       -[dashed]->
     end fork
@@ -109,21 +124,27 @@ else (no)
   stop
 endif
 
-if (custom column rendering) then (yes)
+if (is custom column rendering requested?) then (yes)
   partition #lightblue "Column Property Discovery" {
     fork
-      :examine result set Entry;
+      :examine result set entry;
       partition #aliceblue "Fetch target property value" {
         while (property on referenced entry?)
-          :load referenced Entry;
-        endwhile
+          if (is referenced entry in lookup-table?) then (yes)
+            :lookup entry;
+          else (no)
+            :load referenced entry;
+          endif
+        endwhile (no)
         :extract property value;
       }
     fork again
-      :examine result set Entry;
+      :...; <<continuous>>
+    fork again
+      :examine result set entry;
       :fetch target property value;
     fork again
-      :load candidate;
+      :load result set entry;
       :fetch target property value;
     end fork
   }

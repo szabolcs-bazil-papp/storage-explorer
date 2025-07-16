@@ -1,10 +1,10 @@
-# Storage Explorer 0.4.0 fejlesztési kalandok
+# Storage Explorer 0.4.1 fejlesztési kalandok
 
-Utoljára január elsején írtam ilyen szösszenetet, amit az akkor még vadiúj `StorageSQL`
+Utoljára január elsején írtam ilyen szösszenetet a 0.3.0 verzió kapcsán, amit az akkor még vadiúj `StorageSQL`
 támogatásának implementálása, és az embedded módon való működést megalapozó Spring Boot starter
 megírása inspirált. Ezt követően még folyt egy bő hónapnyi fejlesztés, melyről szóban ugyan
 beszámoltam (itt is köszönöm mindenki kedves türelmét!), de a hallgatóságon - és a nagyon kitartó
-érdeklődőkön - túl máshoz nemigen jutott el. Hátha ezen tanulságok hasznosak, vagy ha azok nem is,
+érdeklődőkön - kívül máshoz nemigen jutott el. Hátha ezen tanulságok hasznosak, vagy ha azok nem is,
 de legalább érdekesek lesznek!
 
 Ezt követően, legfőképp az idő hiánya miatt, egy hosszabb inaktív periódus következett. Kizárólag
@@ -32,36 +32,36 @@ bundle-ölve érhető el.
 - Testreszabható gráfvizualizáció (fehér- és feketelisták, csomópontméretezés és színezési
   beállítások)
 
-  ![0_graph-visualisation_types](./0_graph-vis-types.png)
+  ![0_graph-visualisation_types](0_graph-vis-types.png)
 
   *csomópontok objektumtípus szerint színezve, verziószám szerint méretezve*
 
-  ![1_graph_visualisation_degree](./1_graph-vis-degree.png)
+  ![1_graph_visualisation_degree](1_graph-vis-degree.png)
 
   *csomópontok degree szerint színezve és méretezve*
 - Egy csokor "quality of life" update:
     - A kliens kijelzi, hogy hány rekord várakozik betöltésre indexelés és lekérdezés végrehajtás
       alatt.
 
-      ![2_loading_indicator](./2_loading-indicator.png)
+      ![2_loading_indicator](2_loading-indicator.png)
     - A megnyitott betekintőket felírjuk a kéménybe korommal, és alkalmazásinduláskor újranyitjuk
       őket.
     - A támogatott billentyűkombinációkat meg lehet tekinteni, ha esetleg nem tudjuk álmunkból
       ébredve is felsorolni őket:
 
-      ![3_keymap_settings](./3_keymap-settings.png)
+      ![3_keymap_settings](3_keymap-settings.png)
     - Az objektumbetöltés dialógusban választható, hogy melyik storage-ból szeretnénk tölteni, és a
       legutolsót meg is jegyzi az alkalmazás. A dialógust már billentyűkombóval is elő lehet hívni:
 
-      ![4_load_entry_dialog](./4_load-entry.png)
+      ![4_load_entry_dialog](4_load-entry.png)
     - Az egyes rekordoknak egyedi nevet és leírást lehet adni, melyet szinte minden GUI elemen
       használunk - hogy később meg lehessen ismerni, hogy a 82 nyitott `ProcessInstanceState` közül
       melyik melyik:
 
-      ![5_custom_meta_dialog](./5_custom-meta.png)
+      ![5_custom_meta_dialog](5_custom-meta.png)
     - Difftool, amivel össze lehet hasonlítani egyazon objektum különböző verzióit:
 
-      ![6_difftool](./6_difftool.png)
+      ![6_difftool](6_difftool.png)
     - Ha olyan hatalmas objektumot szeretnénk megtekinteni, amit az egyébként kiváló
       `RSyntaxTextArea` már nem bír, akkor automatikusan hagyományos `JTextArea`-ra vált az
       alkalmazás az adott rekordnál. Itt nincs sajnos se keresés, se syntax highlighting egyelőre,
@@ -178,12 +178,12 @@ Részei:
 1. Egy nyilatkozattevő oldal, ahol a User kiválasztja, hogy új verziót akar menteni, vagy
    verziófelülírást akar végrehajtani:
 
-   ![7_edit-1](./7_editor-1.png)
+   ![7_edit-1](7_editor-1.png)
 2. Egy szerkesztőfelület, ahol magát az objektumtartalmat lehet átírkálni:
 
-   ![8_edit-2](./8_editor-2.png)
+   ![8_edit-2](8_editor-2.png)
 3. És egy diff nézet, ahol a módosításokat lehet review-zni:
-   ![9_edit-3](./9_editor-3.png)
+   ![9_edit-3](9_editor-3.png)
 
 Természetesen a végén valódi mentés nem történik. A preview elérhető, ha az alkalmazást
 `--enable-editor` vagy `-e` flag-gel indítjátok, bármelyik betekintő felületen.
@@ -237,8 +237,8 @@ query végrehajtás során minden egyes entry-t maximum egy alkalommal töltünk
 szükség van rá, akkor egy in-memory lookup-table-ből halásszuk elő. Erre leginkább `StorageSQL`
 esetén van szükség, ahol minden egyes DB access aranyat ér, és ezek számának minimalizálása
 létfontosságú. A probléma ezzel az in-memory megközelítéssel, hogy - dobpergés - kell hozzá memória.
-Ha a query-nek pár tízezer rekordot kell végigfésülnie, akkor általában megússzuk egy ideiglenes,
-pár GB-os memóriahasználattal, de ha átlépjük a 100-120k rekord betöltésének rémhatárát (amibe
+Ha a query-nek max ~100-200k rekordot kell végigfésülnie, akkor általában megússzuk egy ideiglenes,
+pár GB-os memóriahasználattal, de ha átlépjük sokszázezres rekord betöltésének rémhatárát (amibe
 sajnos nagy számosságú séma-típus kombók esetén jószándékkal is bele lehet futni), akkor annyi
 RAM-ot eszik a rendszer, amennyi csak van. Ez a gyakorlatban azt jelenti, hogy pl.
 `AsyncInvocationRequest`-ekre nem lehet keresni, csak elméletben.
@@ -289,5 +289,24 @@ irányul
     - Egy ArcScript REPL Groovy shellel (gyakorlatilag a fenti megoldás, de _minden_ Storage
       Explorer képesség `ArcScript` instrukcióként megvalósítva)
     - egy teljes TUI (szintén Spring Shellel vagy Jexerrel)
-- A már létező Angular 19 kliens továbbgondolása - főleg, hogy a mostani release tartotta a lépés a
-  Spring Boot starter kiadás frontvonalán is.
+- A már létező Angular 19 kliens továbbgondolása - főleg, hogy a mostani release tartotta a lépést a
+  Spring Boot starter frontvonalán is.
+- És optimalizációs faragások:
+
+  "Premature optimisation is the root of all evil", szól a bölcselet, és a programozgatás is ennek
+  jegyében telt: akkor került sor optimalizálásra, amikor valamilyen use case megkívánta, hogy
+  bizonyos komponensek gyorsabban/hatékonyabban fussanak.
+
+  Mostanra azonban eljutott a szoftver egy olyan, kényelmes állapotra, hogy a napi használati
+  igényeknek elégségesen megfelel; ez tökéletes alap ahhoz, hogy a dolgok mélyére lehessen ásni,
+  flame graphokat generálni, heap dumpokat bogarászni, kipróbálni, hogy viselkedik ZGC alatt,
+  különböző G1 GC paraméterek mellett, stb. Remélhetőleg ezen a vonalon is szembejön egy-két
+  izgalmas tanulság.
+
+## Zárásként
+
+Nagyon köszönöm, ha idáig elolvastad, remélem találtál benne valami érdekeset. Ahogy fenn is az
+egyes kérdésköröknél írtam, nagy szeretettel várom a visszejelzésket, ötleteket - minden témában is.
+
+Feature requesteket, bug reportokat - és természetesen a délceg contributorokat hozzájuk -
+pedig [itt lehet szabadon felvenni!](https://github.com/szabolcs-bazil-papp/storage-explorer/issues)
