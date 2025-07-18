@@ -31,11 +31,10 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.collection.StoredListStorageImpl;
 import org.smartbit4all.core.object.ObjectApi;
-import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.service.ObjectEntryLoadingService;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.core.util.Uris;
 
 public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
 

@@ -10,9 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
-import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.core.util.Uris;
 import com.google.common.base.Strings;
 
 public final class StorageEntryFactory {

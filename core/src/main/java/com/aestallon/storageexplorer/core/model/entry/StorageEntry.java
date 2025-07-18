@@ -20,8 +20,8 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Set;
 import org.smartbit4all.core.utility.StringConstant;
-import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.core.util.Uris;
 
 public sealed interface StorageEntry permits
     ListEntry, MapEntry, ObjectEntry,

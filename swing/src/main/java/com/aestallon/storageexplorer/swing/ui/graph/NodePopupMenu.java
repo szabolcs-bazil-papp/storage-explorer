@@ -15,6 +15,7 @@
 
 package com.aestallon.storageexplorer.swing.ui.graph;
 
+import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import org.graphstream.graph.Graph;
 import com.aestallon.storageexplorer.client.graph.service.GraphRenderingService;
@@ -47,7 +48,8 @@ public class NodePopupMenu extends JPopupMenu {
 
   private JMenuItem loadMoreMenuItem() {
     final var item = new JMenuItem("Load more");
-    item.addActionListener(e -> graphRenderingService.render(graph, storageEntry));
+    item.addActionListener(
+        e -> CompletableFuture.runAsync(() -> graphRenderingService.render(graph, storageEntry)));
     return item;
   }
 

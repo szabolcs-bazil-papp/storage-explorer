@@ -75,10 +75,10 @@ public class MainTreeView extends JPanel {
 
   private static final Logger log = LoggerFactory.getLogger(MainTreeView.class);
 
-  private StorageTree tree;
-  private JScrollPane treePanel;
+  private final StorageTree tree;
+  private final JScrollPane treePanel;
 
-  private transient Map<StorageEntry, TreePath> treePathByEntry;
+  private final transient Map<StorageEntry, TreePath> treePathByEntry;
 
   private final AtomicBoolean propagate = new AtomicBoolean(true);
   private final transient ApplicationEventPublisher eventPublisher;
@@ -97,14 +97,15 @@ public class MainTreeView extends JPanel {
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     setMinimumSize(new Dimension(100, 500));
 
-    initTree();
+    tree = initTree();
     treePanel = new JScrollPane(tree);
+    treePathByEntry = new HashMap<>();
     add(treePanel);
     this.userConfigService = userConfigService;
   }
 
-  private void initTree() {
-    tree = StorageTree.create(trackingService);
+  private StorageTree initTree() {
+    final var tree = StorageTree.create(trackingService);
     tree.addTreeSelectionListener(e -> {
       final var treeNode = (DefaultMutableTreeNode) e.getPath().getLastPathComponent();
       if (treeNode instanceof ClickableTreeNode && propagate.get()) {
@@ -130,8 +131,7 @@ public class MainTreeView extends JPanel {
         }
       }
     });
-
-    treePathByEntry = new HashMap<>();
+    return tree;
   }
 
   public void incorporateEntryIntoTree(final StorageInstance storageInstance,
@@ -189,7 +189,7 @@ public class MainTreeView extends JPanel {
     }
 
     if (node != null) {
-      memoizeTreePathsOf(tree.nodeOf(storageInstance));
+      memoizeTreePathsOf(node);
     }
   }
 
@@ -208,6 +208,15 @@ public class MainTreeView extends JPanel {
             new TreePath(it.getPath())))
         .collect(Pair.toMap());
     treePathByEntry.putAll(newTreePaths);
+  }
+  
+  private void memoizeTreePathsOf(ClickableTreeNode node) {
+    final var oldPath = treePathByEntry.put(
+        node.storageEntry(),
+        new TreePath(((DefaultMutableTreeNode) node).getPath()));
+    if (oldPath != null) {
+      log.warn("Overwriting tree path for entry {}: {}", node.storageEntry(), oldPath);
+    }
   }
 
   public void reindexStorage(final StorageInstance storageInstance) {

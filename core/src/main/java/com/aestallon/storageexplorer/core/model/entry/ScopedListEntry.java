@@ -17,13 +17,12 @@ package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.Collections;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.collection.StoredListStorageImpl;
 import org.smartbit4all.core.object.ObjectApi;
-import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.core.util.Uris;
 
 public final class ScopedListEntry extends ListEntry implements ScopedEntry, StorageEntry {
 

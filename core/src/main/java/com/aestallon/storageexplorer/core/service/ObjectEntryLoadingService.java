@@ -37,11 +37,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
 import com.aestallon.storageexplorer.common.util.IO;
-import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.core.util.Uris;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 
