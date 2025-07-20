@@ -33,10 +33,12 @@ public class OutgoingEdgeDiscoveryService {
 
   private final StorageInstance storageInstance;
   private final GraphContainmentPredicate inclusionCriterion;
+  private final boolean discover;
 
   public OutgoingEdgeDiscoveryService(StorageInstance storageInstance, GraphSettings settings) {
     this.storageInstance = storageInstance;
     this.inclusionCriterion = GraphContainmentPredicate.whiteListBlackListPredicate(settings);
+    this.discover = settings.getAggressiveDiscovery();
   }
 
   public Stream<Pair<StorageEntry, Set<UriProperty>>> execute(Graph graph,
@@ -55,7 +57,9 @@ public class OutgoingEdgeDiscoveryService {
     // we can safely call StorageEntry::uriProperties here, because it is guaranteed to be either a
     // valid ObjectEntry or non-object -> we avoid every non-managed load possible
     return storageEntry.uriProperties().stream()
-        .map(it -> Pair.of(storageInstance.discover(it.uri), it))
+        .map(it -> Pair.of(
+            discover ? storageInstance.discover(it.uri) : storageInstance.index().get(it.uri), 
+            it))
         .flatMap(Pair.streamOnA())
         .filter(it -> condition.test(graph, it.a()))
         .filter(it -> NodeAdditionService.edgeMissing(graph, storageEntry, it.a()))
