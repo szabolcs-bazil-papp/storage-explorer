@@ -17,10 +17,8 @@ package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
-import org.smartbit4all.core.object.ObjectApi;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.core.util.Uris;
 
 public final class ScopedObjectEntry extends ObjectEntry implements StorageEntry, ScopedEntry {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -13,21 +13,31 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.common.util;
+package com.aestallon.storageexplorer.core.util;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import org.smartbit4all.domain.data.storage.ObjectStorageImpl;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.google.common.base.Strings;
 
 public final class Uris {
 
   private Uris() {}
 
+  private static final Set<String> STORED_COLLECTION_IDENTIFIERS = Set.of(
+      StorageEntryFactory.STORED_LIST_MARKER,
+      StorageEntryFactory.STORED_MAP_MARKER,
+      StorageEntryFactory.STORED_REF_MARKER,
+      StorageEntryFactory.STORED_SEQ_MARKER);
+  private static final String REGEX_TIMESTAMP = "/\\d{4}/\\d{1,2}/\\d{1,2}/\\d{1,2}";
+  private static final Pattern PATTERN_TIMESTAMP = Pattern.compile(REGEX_TIMESTAMP);
 
   public static boolean equalIgnoringVersion(URI u1, URI u2) {
     return Objects.equals(
@@ -59,14 +69,7 @@ public final class Uris {
     }
 
     if (o instanceof String s) {
-      try {
-        final URI uri = new URI(s);
-        return (Strings.isNullOrEmpty(uri.getScheme()) || Strings.isNullOrEmpty(uri.getPath()))
-            ? Optional.empty()
-            : Optional.of(uri);
-      } catch (URISyntaxException e) {
-        return Optional.empty();
-      }
+      return parseStr(s);
     }
 
     return Optional.empty();
@@ -95,4 +98,46 @@ public final class Uris {
     return uri.toString().endsWith("-s");
   }
 
+  private static boolean containsStoredCollectionIdentifier(final String input) {
+    return STORED_COLLECTION_IDENTIFIERS.stream().anyMatch(input::contains);
+  }
+
+  private static boolean containsTimestampPattern(final String input) {
+    return PATTERN_TIMESTAMP.matcher(input).find();
+  }
+  
+  public static Optional<URI> parseStr(final String s) {
+    if (s == null || s.isBlank()) {
+      return Optional.empty();
+    }
+
+    if (s.length() < 4) {
+      return Optional.empty();
+    }
+
+    if (!s.contains(":/")) {
+      return Optional.empty();
+    }
+
+    if (s.endsWith(".") || s.endsWith(".v")) {
+      return Optional.empty();
+    }
+    
+    if (Strings.isNullOrEmpty(s.substring(0, s.indexOf(':')))) {
+      return Optional.empty();
+    }
+
+    // must contain a stored collection identifier or a timestamp segment:
+    if (!containsStoredCollectionIdentifier(s) && !containsTimestampPattern(s)) {
+      return Optional.empty();
+    }
+
+    try {
+      
+      return Optional.of(new URI(s));
+    } catch (final URISyntaxException e) {
+      return Optional.empty();
+    }
+  }
+  
 }

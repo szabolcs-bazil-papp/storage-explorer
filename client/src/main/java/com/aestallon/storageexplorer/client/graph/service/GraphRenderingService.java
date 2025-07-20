@@ -89,7 +89,7 @@ public final class GraphRenderingService {
         .collect(collectingAndThen(toSet(), s -> Map.of(storageEntry, s)));
     int c = 0;
     do {
-      log.info("OUTGOING REFERENCES: [ {} ]", refs);
+      log.info("OUTGOING REFERENCES: loop enter");
       refs.forEach(
           (from, tos) -> tos.forEach(it -> nodeAdditionService.add(graph, from, it.a(), it.b())));
 
@@ -104,7 +104,10 @@ public final class GraphRenderingService {
               it -> outgoingEdgeDiscoveryService
                   .execute(graph, it)
                   .collect(toSet())));
-    } while ((++c < limit || limit < 0) && hasValues(refs));
+    } while (!Thread.currentThread().isInterrupted()
+             && (++c < limit || limit < 0)
+             && hasValues(refs));
+    log.info("OUTGOING REFERENCES: loop exit");
   }
 
   private void renderIncomingReferences(Graph graph, StorageEntry storageEntry) {
@@ -115,7 +118,7 @@ public final class GraphRenderingService {
             collect(toSet()));
     int c = 0;
     do {
-      log.info("INCOMING REFERENCES: [ {} ]", referrers);
+      log.info("INCOMING REFERENCES: loop enter");
       Set<StorageEntry> candidates = referrers.values().stream()
           .flatMap(Set::stream)
           .collect(toSet());
@@ -129,7 +132,10 @@ public final class GraphRenderingService {
               .execute(graph, it)
               .filter(r -> NodeAdditionService.edgeMissing(graph, r, it))
               .collect(toSet())));
-    } while ((++c < limit || limit < 1) && hasValues(referrers));
+    } while (!Thread.currentThread().isInterrupted()
+             && (++c < limit || limit < 1)
+             && hasValues(referrers));
+    log.info("INCOMING REFERENCES: loop exit");
   }
 
   private static boolean hasValues(Map<?, ? extends Set<?>> m) {
@@ -192,7 +198,7 @@ public final class GraphRenderingService {
       if (colouring != null && !colouring.isBlank()) {
         inlineStyle.append(replaceLast(colouring, "FF", "59"));
       }
-      
+
       if (!inlineStyle.isEmpty()) {
         edge.setAttribute(Attributes.INLINE_STYLE, inlineStyle.toString());
       } else {

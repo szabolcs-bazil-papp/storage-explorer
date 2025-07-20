@@ -25,9 +25,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.common.util.Attributes;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
-import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
+import com.aestallon.storageexplorer.core.util.Uris;
 
 public class NodeAdditionService {
 

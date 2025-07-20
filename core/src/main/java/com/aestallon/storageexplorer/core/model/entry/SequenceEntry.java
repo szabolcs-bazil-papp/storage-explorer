@@ -10,8 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.collection.StoredSequence;
 import org.smartbit4all.core.utility.StringConstant;
-import com.aestallon.storageexplorer.common.util.Uris;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.core.util.Uris;
 
 public final class SequenceEntry implements StorageEntry {
 

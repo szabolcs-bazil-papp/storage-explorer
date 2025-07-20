@@ -27,6 +27,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import javax.swing.*;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.MultiGraph;
@@ -35,6 +38,7 @@ import org.graphstream.stream.file.images.Resolutions;
 import org.graphstream.ui.geom.Point3;
 import org.graphstream.ui.graphicGraph.GraphicElement;
 import org.graphstream.ui.graphicGraph.GraphicGraph;
+import org.graphstream.ui.layout.springbox.implementations.LinLog;
 import org.graphstream.ui.spriteManager.SpriteManager;
 import org.graphstream.ui.swing.util.SwingFileSinkImages;
 import org.graphstream.ui.swing_viewer.SwingViewer;
@@ -76,7 +80,9 @@ public class GraphView extends JPanel {
   private transient StorageEntry origin;
   private transient StorageEntry currentHighlight;
   private transient GraphRenderingService graphRenderingService;
+  private transient Future<?> rendering;
 
+  private final transient ExecutorService executorService = Executors.newSingleThreadExecutor();
   private final transient StorageInstanceProvider storageInstanceProvider;
   private final transient ApplicationEventPublisher eventPublisher;
   private final transient UserConfigService userConfigService;
@@ -98,6 +104,9 @@ public class GraphView extends JPanel {
     if (screenshotListener != null) {
       panel.removeKeyListener(screenshotListener);
     }
+
+    abortRendering(false);
+
     if (panel != null) {
       remove(panel);
     }
@@ -124,8 +133,7 @@ public class GraphView extends JPanel {
     graph.setAttribute("ui.quality");
 
     viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_ANOTHER_THREAD);
-
-    viewer.enableAutoLayout();
+    viewer.enableAutoLayout(new LinLog());
 
     panel = (ViewPanel) viewer.addDefaultView(false);
     panel.enableMouseOptions();
@@ -141,7 +149,29 @@ public class GraphView extends JPanel {
     add(panel);
     setVisible(true);
     revalidate();
-    CompletableFuture.runAsync(() -> graphRenderingService.render(graph, storageEntry));
+    rendering = CompletableFuture.runAsync(() -> graphRenderingService.render(graph, storageEntry));
+  }
+
+  private void abortRendering(final boolean shutdown) {
+    if (rendering != null) {
+      switch (rendering.state()) {
+        case RUNNING -> {
+          rendering.cancel(true);
+        }
+        case null, default -> {
+          log.info("No rendering in progress!");
+        }
+      }
+    }
+
+    rendering = null;
+    if (shutdown) {
+      executorService.shutdownNow();
+    }
+  }
+
+  private void startRendering(final StorageEntry storageEntry) {
+    rendering = executorService.submit(() -> graphRenderingService.render(graph, storageEntry));
   }
 
   private JPanel overlay() {
@@ -170,6 +200,8 @@ public class GraphView extends JPanel {
       remove(panel);
       panel = null;
     }
+
+    abortRendering(true);
 
     if (overlay != null) {
       remove(overlay);
