@@ -58,7 +58,7 @@ public class OutgoingEdgeDiscoveryService {
     // valid ObjectEntry or non-object -> we avoid every non-managed load possible
     return storageEntry.uriProperties().stream()
         .map(it -> Pair.of(
-            discover ? storageInstance.discover(it.uri) : storageInstance.index().get(it.uri), 
+            discover ? storageInstance.discover(it.uri) : storageInstance.index().get(it.uri),
             it))
         .flatMap(Pair.streamOnA())
         .filter(it -> condition.test(graph, it.a()))
