@@ -38,7 +38,9 @@ import org.graphstream.stream.file.images.Resolutions;
 import org.graphstream.ui.geom.Point3;
 import org.graphstream.ui.graphicGraph.GraphicElement;
 import org.graphstream.ui.graphicGraph.GraphicGraph;
+import org.graphstream.ui.layout.springbox.BarnesHutLayout;
 import org.graphstream.ui.layout.springbox.implementations.LinLog;
+import org.graphstream.ui.layout.springbox.implementations.SpringBox;
 import org.graphstream.ui.spriteManager.SpriteManager;
 import org.graphstream.ui.swing.util.SwingFileSinkImages;
 import org.graphstream.ui.swing_viewer.SwingViewer;
@@ -52,9 +54,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.graph.layout.forceatlas2.ForceAtlas2;
 import com.aestallon.storageexplorer.client.graph.service.GraphRenderingService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.GraphConfigChanged;
+import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -133,7 +137,18 @@ public class GraphView extends JPanel {
     graph.setAttribute("ui.quality");
 
     viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_ANOTHER_THREAD);
-    viewer.enableAutoLayout(new LinLog());
+    final BarnesHutLayout layout = switch (userConfig.getLayoutAlgorithm()) {
+      case SPRING_BOX -> new SpringBox();
+      case LINLOG -> new LinLog();
+      case FORCE_ATLAS2 -> new ForceAtlas2(false);
+      case FORCE_ATLAS2_LINLOG -> new ForceAtlas2(true);
+    };
+    if (layout instanceof ForceAtlas2) {
+      layout.setGravityFactor(0.8d);
+    }
+    
+    layout.setQuality(1.1d);
+    viewer.enableAutoLayout(layout);
 
     panel = (ViewPanel) viewer.addDefaultView(false);
     panel.enableMouseOptions();
@@ -153,6 +168,10 @@ public class GraphView extends JPanel {
   }
 
   private void abortRendering(final boolean shutdown) {
+    if (viewer != null) {
+      viewer.disableAutoLayout();
+    }
+
     if (rendering != null) {
       switch (rendering.state()) {
         case RUNNING -> {

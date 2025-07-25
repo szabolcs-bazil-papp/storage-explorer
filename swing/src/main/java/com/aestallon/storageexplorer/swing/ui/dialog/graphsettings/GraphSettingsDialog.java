@@ -53,6 +53,8 @@ public class GraphSettingsDialog extends JDialog {
   private JPanel panelRendering;
   private JTextPane nodeDiscoveryHelp;
   private JButton buttonAccept;
+  private JComboBox comboBoxLayout;
+  private JLabel labelLayout;
 
   private final GraphSettingsController controller;
 
@@ -69,6 +71,14 @@ public class GraphSettingsDialog extends JDialog {
     comboBoxNodeSizing.getModel().setSelectedItem(initialModel.getNodeSizing().getValue());
     comboBoxNodeColouring.getModel().setSelectedItem(initialModel.getNodeColouring().getValue());
     discoverNodesOnTheCheckBox.getModel().setSelected(initialModel.getAggressiveDiscovery());
+
+    final var layoutModel = new DefaultComboBoxModel<String>();
+    layoutModel.addAll(Arrays
+        .stream(GraphSettings.LayoutAlgorithm.values())
+        .map(GraphSettings.LayoutAlgorithm::toString)
+        .toList());
+    layoutModel.setSelectedItem(initialModel.getLayoutAlgorithm().toString());
+    comboBoxLayout.setModel(layoutModel);
 
     setTitle("Graph Settings");
     setPreferredSize(new Dimension(700, 700));
@@ -108,7 +118,11 @@ public class GraphSettingsDialog extends JDialog {
             comboBoxNodeSizing.getModel().getSelectedItem().toString()))
         .nodeColouring(GraphSettings.NodeColouring.fromValue(
             comboBoxNodeColouring.getModel().getSelectedItem().toString()))
-        .aggressiveDiscovery(discoverNodesOnTheCheckBox.getModel().isSelected());
+        .aggressiveDiscovery(discoverNodesOnTheCheckBox.getModel().isSelected())
+        .layoutAlgorithm(GraphSettings.LayoutAlgorithm.fromValue(comboBoxLayout
+            .getModel()
+            .getSelectedItem()
+            .toString()));
     controller.finish(model);
   }
 
@@ -323,7 +337,7 @@ public class GraphSettingsDialog extends JDialog {
             "Node Rendering", TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION,
             null, null));
     final JPanel panel3 = new JPanel();
-    panel3.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
+    panel3.setLayout(new GridLayoutManager(3, 2, new Insets(0, 0, 0, 0), -1, -1));
     panelRendering.add(panel3,
         new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
             GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
@@ -366,6 +380,16 @@ public class GraphSettingsDialog extends JDialog {
     panel3.add(comboBoxNodeColouring, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST,
         GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW,
         GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    comboBoxLayout = new JComboBox();
+    panel3.add(comboBoxLayout, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST,
+        GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW,
+        GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    labelLayout = new JLabel();
+    labelLayout.setText("Layout Algorithm");
+    panel3.add(labelLayout,
+        new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
+            GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
+            false));
   }
 
   /** @noinspection ALL */

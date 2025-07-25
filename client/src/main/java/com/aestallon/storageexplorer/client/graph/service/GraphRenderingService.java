@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -179,7 +179,7 @@ public final class GraphRenderingService {
         attributeMap.set(node, "colouring", colouring);
       }
 
-      if (!sizing.isBlank() && !colouring.isBlank()) {
+      if (!sizing.isBlank() || !colouring.isBlank()) {
         final String inlineStyle = sizing + colouring;
         node.setAttribute(Attributes.INLINE_STYLE, inlineStyle);
       } else {
@@ -438,7 +438,8 @@ public final class GraphRenderingService {
 
       final int red = (int) (ratio * 255);
       final int green = 255 - red;
-      final int blue = 0;
+      int blue = Float.compare(ratio, 0.5f) <= 0 ? red : green;
+      blue = (int) (1.3f * blue);
 
       return String.format("%02x%02x%02xFF", red, green, blue);
     }
