@@ -13,6 +13,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
 import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
@@ -30,6 +31,7 @@ public class AppContentView extends JPanel {
   private final JSplitPane content;
   private final JToolBar toolBar;
   private final BreadCrumbs breadCrumbs;
+  private final GraphStateLabel graphStateLabel;
   private final LoadingQueueLabel loadingQueueLabel;
   private JProgressBar progressBar;
   private HiddenPaneSize hiddenPaneSize;
@@ -55,6 +57,7 @@ public class AppContentView extends JPanel {
 
     /* Toolbar stuff */
     breadCrumbs = new BreadCrumbs();
+    graphStateLabel = new GraphStateLabel();
     loadingQueueLabel = new LoadingQueueLabel();
     toolBar = initToolBar();
     add(toolBar);
@@ -68,6 +71,7 @@ public class AppContentView extends JPanel {
     tb.add(breadCrumbs);
     tb.addSeparator();
     tb.add(Box.createGlue());
+    tb.add(graphStateLabel);
     tb.add(loadingQueueLabel);
     return tb;
   }
@@ -152,6 +156,10 @@ public class AppContentView extends JPanel {
     });
   }
   
+  public void setGraphState(final GraphState state) {
+    graphStateLabel.setState(state);
+  }
+  
   private static final class LoadingQueueLabel extends JLabel {
     private final Map<StorageId, Long> sizes;
     public LoadingQueueLabel() {
@@ -179,6 +187,33 @@ public class AppContentView extends JPanel {
       } else {
         setBackground(new Color(244, 121, 113));
       }
+    }
+  }
+  
+  private static final class GraphStateLabel extends JLabel {
+    private long nodes;
+    private long edges;
+    
+    private GraphStateLabel() {
+      setHorizontalAlignment(SwingConstants.CENTER);
+      setBorder(new EmptyBorder(2, 15, 2, 15));
+      setTextInternal();
+    }
+    
+    private void setTextInternal() {
+      if (nodes < 1L && edges < 1L) {
+        setText("");
+        setOpaque(false);
+      } else {
+        setText("Nodes: " + nodes + " Edges: " + edges);
+        setOpaque(true);
+      }
+    }
+    
+    private void setState(GraphState state) {
+      nodes = state.nodeCount();
+      edges = state.edgeCount();
+      setTextInternal();
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -22,6 +22,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.graph.event.GraphRenderingRequest;
 import com.aestallon.storageexplorer.client.graph.event.GraphSelectionRequest;
+import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.common.event.msg.ErrorMsg;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.event.EntryAcquired;
@@ -33,6 +34,7 @@ import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.event.StorageReimportedEvent;
 import com.aestallon.storageexplorer.core.event.StorageReindexed;
 import com.aestallon.storageexplorer.core.event.TreeTouchRequest;
+import com.aestallon.storageexplorer.swing.ui.AppContentView;
 import com.aestallon.storageexplorer.swing.ui.explorer.ExplorerView;
 import com.aestallon.storageexplorer.swing.ui.graph.GraphView;
 import com.aestallon.storageexplorer.swing.ui.tree.MainTreeView;
@@ -47,13 +49,15 @@ public class ViewController {
   public record GraphViewCloseRequest() {}
 
 
+  private final AppContentView appContentView;
   private final ExplorerView explorerView;
   private final MainTreeView mainTreeView;
   private final GraphView graphView;
 
-  public ViewController(ExplorerView explorerView,
+  public ViewController(AppContentView appContentView, ExplorerView explorerView,
                         MainTreeView mainTreeView,
                         GraphView graphView) {
+    this.appContentView = appContentView;
     this.explorerView = explorerView;
     this.mainTreeView = mainTreeView;
     this.graphView = graphView;
@@ -149,6 +153,11 @@ public class ViewController {
     SwingUtilities.invokeLater(() -> mainTreeView.incorporateEntryIntoTree(
         e.storageInstance(),
         e.storageEntry()));
+  }
+  
+  @EventListener
+  public void onGraphStateChanged(GraphState e) {
+    SwingUtilities.invokeLater(() -> appContentView.setGraphState(e));
   }
 
 }

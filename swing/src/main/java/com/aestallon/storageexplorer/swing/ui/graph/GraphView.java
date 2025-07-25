@@ -26,7 +26,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -56,9 +55,9 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.graph.layout.forceatlas2.ForceAtlas2;
 import com.aestallon.storageexplorer.client.graph.service.GraphRenderingService;
+import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.GraphConfigChanged;
-import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -84,9 +83,10 @@ public class GraphView extends JPanel {
   private transient StorageEntry origin;
   private transient StorageEntry currentHighlight;
   private transient GraphRenderingService graphRenderingService;
+  private transient ExecutorService executorService = Executors.newSingleThreadExecutor();
   private transient Future<?> rendering;
+  private transient boolean showLabels = true;
 
-  private final transient ExecutorService executorService = Executors.newSingleThreadExecutor();
   private final transient StorageInstanceProvider storageInstanceProvider;
   private final transient ApplicationEventPublisher eventPublisher;
   private final transient UserConfigService userConfigService;
@@ -109,7 +109,7 @@ public class GraphView extends JPanel {
       panel.removeKeyListener(screenshotListener);
     }
 
-    abortRendering(false);
+    abortRendering();
 
     if (panel != null) {
       remove(panel);
@@ -123,7 +123,10 @@ public class GraphView extends JPanel {
 
     final StorageInstance storageInstance = storageInstanceProvider.storageInstanceOf(storageEntry);
     final var userConfig = userConfigService.graphSettings();
-    graphRenderingService = new GraphRenderingService(storageInstance, userConfig);
+    graphRenderingService = new GraphRenderingService(
+        storageInstance,
+        userConfig,
+        this::onGraphStateChanged);
     origin = storageEntry;
 
     graph = new MultiGraph("fs");
@@ -146,7 +149,7 @@ public class GraphView extends JPanel {
     if (layout instanceof ForceAtlas2) {
       layout.setGravityFactor(0.8d);
     }
-    
+
     layout.setQuality(1.1d);
     viewer.enableAutoLayout(layout);
 
@@ -164,10 +167,14 @@ public class GraphView extends JPanel {
     add(panel);
     setVisible(true);
     revalidate();
-    rendering = CompletableFuture.runAsync(() -> graphRenderingService.render(graph, storageEntry));
+    startRendering(storageEntry);
   }
 
-  private void abortRendering(final boolean shutdown) {
+  private void onGraphStateChanged(final GraphState state) {
+    eventPublisher.publishEvent(state);
+  }
+
+  private void abortRendering() {
     if (viewer != null) {
       viewer.disableAutoLayout();
     }
@@ -184,13 +191,13 @@ public class GraphView extends JPanel {
     }
 
     rendering = null;
-    if (shutdown) {
-      executorService.shutdownNow();
-    }
+    executorService.shutdownNow();
+    executorService = Executors.newSingleThreadExecutor();
   }
 
-  private void startRendering(final StorageEntry storageEntry) {
-    rendering = executorService.submit(() -> graphRenderingService.render(graph, storageEntry));
+  void startRendering(final StorageEntry storageEntry) {
+    rendering = executorService.submit(
+        () -> graphRenderingService.render(graph, storageEntry, showLabels));
   }
 
   private JPanel overlay() {
@@ -204,9 +211,20 @@ public class GraphView extends JPanel {
     closeBtn.setAlignmentY(TOP_ALIGNMENT);
     closeBtn.setAlignmentX(RIGHT_ALIGNMENT);
 
+    final var labelBtn = new JToggleButton(IconProvider.MAGNIFY);
+    labelBtn.setSelected(showLabels);
+    labelBtn.addActionListener(e -> {
+      showLabels = labelBtn.isSelected();
+      executorService.submit(
+          () -> graphRenderingService.showLabels(graph, showLabels));
+    });
+    labelBtn.setAlignmentY(TOP_ALIGNMENT);
+    labelBtn.setAlignmentX(RIGHT_ALIGNMENT);
+
     final var box = Box.createHorizontalBox();
     box.setOpaque(false);
     box.add(Box.createGlue());
+    box.add(labelBtn);
     box.add(closeBtn);
 
     overlayPanel.add(box);
@@ -214,13 +232,14 @@ public class GraphView extends JPanel {
   }
 
   public void discard() {
+    onGraphStateChanged(GraphState.EMPTY);
     setVisible(false);
     if (panel != null) {
       remove(panel);
       panel = null;
     }
 
-    abortRendering(true);
+    abortRendering();
 
     if (overlay != null) {
       remove(overlay);
@@ -322,7 +341,7 @@ public class GraphView extends JPanel {
     }
 
     private void showNodePopup(final StorageEntry entry, final int x, final int y) {
-      final var popup = new NodePopupMenu(entry, graph, graphRenderingService);
+      final var popup = new NodePopupMenu(entry, GraphView.this);
       popup.show(GraphView.this, x, y);
     }
 
