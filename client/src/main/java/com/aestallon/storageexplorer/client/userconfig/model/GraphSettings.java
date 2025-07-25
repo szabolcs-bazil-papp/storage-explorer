@@ -34,7 +34,8 @@ import jakarta.validation.constraints.NotNull;
     "whitelistedTypes",
     "nodeSizing",
     "nodeColouring",
-    "aggressiveDiscovery"
+    "aggressiveDiscovery",
+    "layoutAlgorithm"
 })
 @JsonTypeName("GraphSettings")
 public final class GraphSettings {
@@ -89,10 +90,12 @@ public final class GraphSettings {
       throw new IllegalArgumentException("Unexpected value '" + value + "'");
     }
   }
-  
+
+
   @JsonProperty("nodeSizing")
   private NodeSizing nodeSizing = NodeSizing.UNIFORM;
-  
+
+
   public enum NodeColouring {
     UNIFORM("UNIFORM"),
     OUT_DEGREE("OUT DEGREE"),
@@ -128,13 +131,52 @@ public final class GraphSettings {
       throw new IllegalArgumentException("Unexpected value '" + value + "'");
     }
   }
-  
+
+
   @JsonProperty("nodeColouring")
   private NodeColouring nodeColouring = NodeColouring.UNIFORM;
 
   @JsonProperty("aggressiveDiscovery")
   private boolean aggressiveDiscovery = true;
-  
+
+
+  public enum LayoutAlgorithm {
+    SPRING_BOX("SPRING BOX"),
+    LINLOG("LINLOG"),
+    FORCE_ATLAS2("ForceAtlas2"),
+    FORCE_ATLAS2_LINLOG("ForceAtlas2 - LINLOG");
+
+    private final String value;
+
+    LayoutAlgorithm(String value) {
+      this.value = value;
+    }
+
+    @JsonValue
+    public String getValue() {
+      return value;
+    }
+
+    @Override
+    public String toString() {
+      return String.valueOf(value);
+    }
+
+    @JsonCreator
+    public static LayoutAlgorithm fromValue(String value) {
+      for (LayoutAlgorithm b : LayoutAlgorithm.values()) {
+        if (b.value.equals(value)) {
+          return b;
+        }
+      }
+      throw new IllegalArgumentException("Unexpected value '" + value + "'");
+    }
+  }
+
+
+  @JsonProperty("layoutAlgorithm")
+  private LayoutAlgorithm layoutAlgorithm = LayoutAlgorithm.SPRING_BOX;
+
   public GraphSettings() { /* POJO constructor */ }
 
   public GraphSettings graphTraversalInboundLimit(int graphTraversalInboundLimit) {
@@ -271,6 +313,21 @@ public final class GraphSettings {
   public void setAggressiveDiscovery(boolean aggressiveDiscovery) {
     this.aggressiveDiscovery = aggressiveDiscovery;
   }
+  
+  public GraphSettings layoutAlgorithm(final LayoutAlgorithm layoutAlgorithm) {
+    this.layoutAlgorithm = Objects.requireNonNull(layoutAlgorithm);
+    return this;
+  }
+
+  @JsonProperty("layoutAlgorithm")
+  public LayoutAlgorithm getLayoutAlgorithm() {
+    return layoutAlgorithm;
+  }
+
+  @JsonProperty("layoutAlgorithm")
+  public void setLayoutAlgorithm(LayoutAlgorithm layoutAlgorithm) {
+    this.layoutAlgorithm = layoutAlgorithm;
+  }
 
   @Override
   public boolean equals(Object o) {
@@ -283,14 +340,15 @@ public final class GraphSettings {
            && Objects.equals(whitelistedSchemas, that.whitelistedSchemas)
            && Objects.equals(whitelistedTypes, that.whitelistedTypes)
            && nodeSizing == that.nodeSizing && nodeColouring == that.nodeColouring
-           && aggressiveDiscovery == that.aggressiveDiscovery;
+           && aggressiveDiscovery == that.aggressiveDiscovery
+           && layoutAlgorithm == that.layoutAlgorithm;
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(graphTraversalInboundLimit, graphTraversalOutboundLimit, blacklistedSchemas,
         blacklistedTypes, whitelistedSchemas, whitelistedTypes, nodeSizing, nodeColouring,
-        aggressiveDiscovery);
+        aggressiveDiscovery, layoutAlgorithm);
   }
 
   @Override
@@ -305,7 +363,8 @@ public final class GraphSettings {
            ",\n  nodeSizing: " + nodeSizing +
            ",\n  nodeColouring: " + nodeColouring +
            ",\n  aggressiveDiscovery: " + aggressiveDiscovery +
+           ",\n  layoutAlgorithm: " + layoutAlgorithm +
            "\n}";
   }
-  
+
 }

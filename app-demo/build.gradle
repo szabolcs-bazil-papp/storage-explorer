@@ -7,8 +7,8 @@ plugins {
 dependencies {
   implementation 'org.smartbit4all.platform:api'
   implementation 'org.smartbit4all.platform:api-srv-rest'
-  // implementation 'com.aestallon.storageexplorer:storageexplorer-spring-boot-starter:0.3.0'
-  implementation files('../spring-boot-starter/build/libs/spring-boot-starter-0.4.0.jar')
+  implementation 'com.aestallon.storageexplorer:storageexplorer-spring-boot-starter:0.4.0'
+  //implementation files('../spring-boot-starter/build/libs/spring-boot-starter-0.4.0.jar')
   
   api 'org.apache.groovy:groovy:4.0.14'
   api 'org.apache.groovy:groovy-json:4.0.24'

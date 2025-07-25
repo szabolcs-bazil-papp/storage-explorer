@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -15,25 +15,19 @@
 
 package com.aestallon.storageexplorer.swing.ui.graph;
 
-import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
-import org.graphstream.graph.Graph;
-import com.aestallon.storageexplorer.client.graph.service.GraphRenderingService;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
 public class NodePopupMenu extends JPopupMenu {
 
   private final transient StorageEntry storageEntry;
-  private final transient Graph graph;
-  private final transient GraphRenderingService graphRenderingService;
+  private final GraphView graphView;
 
-  public NodePopupMenu(StorageEntry storageEntry, Graph graph,
-                       GraphRenderingService graphRenderingService) {
+  public NodePopupMenu(StorageEntry storageEntry, GraphView graphView) {
     super(storageEntry.uri().toString());
 
     this.storageEntry = storageEntry;
-    this.graph = graph;
-    this.graphRenderingService = graphRenderingService;
+    this.graphView = graphView;
 
     add(title());
     addSeparator();
@@ -48,8 +42,7 @@ public class NodePopupMenu extends JPopupMenu {
 
   private JMenuItem loadMoreMenuItem() {
     final var item = new JMenuItem("Load more");
-    item.addActionListener(
-        e -> CompletableFuture.runAsync(() -> graphRenderingService.render(graph, storageEntry)));
+    item.addActionListener(e -> graphView.startRendering(storageEntry));
     return item;
   }
 

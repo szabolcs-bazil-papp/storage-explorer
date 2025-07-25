@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -19,6 +19,7 @@ import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
 import static java.util.stream.Collectors.collectingAndThen;
@@ -28,6 +29,7 @@ import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.graph.service.internal.AttributeMap;
 import com.aestallon.storageexplorer.client.graph.service.internal.IncomingEdgeDiscoveryService;
 import com.aestallon.storageexplorer.client.graph.service.internal.NodeAdditionService;
@@ -52,10 +54,18 @@ public final class GraphRenderingService {
   private final OutgoingEdgeDiscoveryService outgoingEdgeDiscoveryService;
   private final NodeAdditionService nodeAdditionService;
   private final AttributeMap attributeMap;
+  private final Consumer<GraphState> graphStateListener;
 
   public GraphRenderingService(StorageInstance storageInstance, GraphSettings settings) {
+    this(storageInstance, settings, null);
+  }
+
+  public GraphRenderingService(StorageInstance storageInstance,
+                               GraphSettings settings,
+                               Consumer<GraphState> graphStateListener) {
     this.storageInstance = storageInstance;
     this.settings = settings;
+    this.graphStateListener = graphStateListener;
 
     attributeMap = new AttributeMap();
     incomingEdgeDiscoveryService = new IncomingEdgeDiscoveryService(storageInstance, settings);
@@ -63,11 +73,12 @@ public final class GraphRenderingService {
     nodeAdditionService = new NodeAdditionService(attributeMap);
   }
 
-  public void render(Graph graph, StorageEntry storageEntry) {
+  public void render(Graph graph, StorageEntry storageEntry, boolean showLabels) {
     if (!NodeAdditionService.containsNode(graph, storageEntry)) {
       nodeAdditionService.addOrigin(graph, storageEntry);
     }
-
+    reportGraphState(graph);
+    
     if (settings.getGraphTraversalOutboundLimit() != 0) {
       renderOutgoingReferences(graph, storageEntry);
     }
@@ -76,6 +87,15 @@ public final class GraphRenderingService {
     }
 
     styleGraph(graph);
+    showLabels(graph, showLabels);
+  }
+  
+  private void reportGraphState(final Graph graph) {
+    if (graphStateListener == null) {
+      return;
+    }
+    
+    graphStateListener.accept(new GraphState(graph.getNodeCount(), graph.getEdgeCount()));
   }
 
   public StorageInstance storageInstance() {
@@ -104,6 +124,7 @@ public final class GraphRenderingService {
               it -> outgoingEdgeDiscoveryService
                   .execute(graph, it)
                   .collect(toSet())));
+      reportGraphState(graph);
     } while (!Thread.currentThread().isInterrupted()
              && (++c < limit || limit < 0)
              && hasValues(refs));
@@ -132,6 +153,7 @@ public final class GraphRenderingService {
               .execute(graph, it)
               .filter(r -> NodeAdditionService.edgeMissing(graph, r, it))
               .collect(toSet())));
+      reportGraphState(graph);
     } while (!Thread.currentThread().isInterrupted()
              && (++c < limit || limit < 1)
              && hasValues(referrers));
@@ -169,6 +191,30 @@ public final class GraphRenderingService {
     }
   }
 
+  public void showLabels(final Graph graph, final boolean show) {
+    final String styleToAdd = show ? "text-mode:normal;" : "text-mode:hidden;";
+    graph.nodes().forEach(node -> {
+      final String inlineStyle = node.getAttribute(Attributes.INLINE_STYLE, String.class);
+      final String newStyle = safeConcat(inlineStyle, styleToAdd);
+      node.setAttribute(Attributes.INLINE_STYLE, newStyle);
+    });
+    graph.edges().forEach(edge -> {
+      final String inlineStyle = edge.getAttribute(Attributes.INLINE_STYLE, String.class);
+      final String newStyle = safeConcat(inlineStyle, styleToAdd);
+      edge.setAttribute(Attributes.INLINE_STYLE, newStyle);
+    });
+  }
+
+  private static String safeConcat(String inlineStyle, String styleToAdd) {
+    final String newStyle;
+    if (inlineStyle != null) {
+      newStyle = inlineStyle + styleToAdd;
+    } else {
+      newStyle = styleToAdd;
+    }
+    return newStyle;
+  }
+
   private void styleGraph(final Graph graph) {
     final var sStrategy = createNodeSizingStrategy(graph, settings.getNodeSizing());
     final var cStrategy = createNodeColouringStrategy(graph, settings.getNodeColouring());
@@ -179,7 +225,7 @@ public final class GraphRenderingService {
         attributeMap.set(node, "colouring", colouring);
       }
 
-      if (!sizing.isBlank() && !colouring.isBlank()) {
+      if (!sizing.isBlank() || !colouring.isBlank()) {
         final String inlineStyle = sizing + colouring;
         node.setAttribute(Attributes.INLINE_STYLE, inlineStyle);
       } else {
@@ -438,7 +484,8 @@ public final class GraphRenderingService {
 
       final int red = (int) (ratio * 255);
       final int green = 255 - red;
-      final int blue = 0;
+      int blue = Float.compare(ratio, 0.5f) <= 0 ? red : green;
+      blue = (int) (1.3f * blue);
 
       return String.format("%02x%02x%02xFF", red, green, blue);
     }
