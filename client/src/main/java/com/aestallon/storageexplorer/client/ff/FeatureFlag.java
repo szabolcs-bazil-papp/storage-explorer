@@ -47,7 +47,7 @@ public enum FeatureFlag {
         temp.add(flag);
       }
     }
-    enabledFlags = EnumSet.copyOf(temp);
+    enabledFlags = temp.isEmpty() ? EnumSet.noneOf(FeatureFlag.class) : EnumSet.copyOf(temp);
   }
 
   private static boolean matchesFlag(final String arg, final FeatureFlag flag) {

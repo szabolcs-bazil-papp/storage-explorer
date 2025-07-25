@@ -18,22 +18,51 @@ package com.aestallon.storageexplorer.client.userconfig.service;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.security.spec.DSAPrivateKeySpec;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.aestallon.storageexplorer.core.service.ObjectEntryLoadingService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 
 @Service
 public class UserConfigPersistenceService {
 
   private static final Logger log = LoggerFactory.getLogger(UserConfigPersistenceService.class);
 
-  public static final String SETTINGS_FOLDER = System.getProperty("java.io.tmpdir")
-                                               + FileSystems.getDefault().getSeparator()
-                                               + "storage-explorer";
+  private static final ObjectMapper OBJECT_MAPPER = ObjectEntryLoadingService.OBJECT_MAPPER;
+
+  private static Path getSettingsFolder(final String customFolder) {
+    if (!Strings.isNullOrEmpty(customFolder)) {
+      try {
+
+        return Path.of(customFolder);
+
+      } catch (final InvalidPathException e) {
+
+        log.error("Invalid custom path for settings folder: [ {} ]", customFolder, e);
+        log.error("Falling back to default value...");
+      }
+    }
+    final String osName = System.getProperty("os.name").toLowerCase();
+    final String parent;
+    final String child;
+    if (osName.contains("win")) {
+      parent = System.getenv("LOCALAPPDATA");
+      child = "StorageExplorer";
+    } else {
+      parent = System.getProperty("user.home");
+      child = ".storage-explorer";
+    }
+
+    return Path.of(parent, child);
+  }
 
   private static boolean createSettingsDirectory(Path path) {
     try {
@@ -46,12 +75,12 @@ public class UserConfigPersistenceService {
     }
   }
 
-  private final ObjectMapper objectMapper;
   private final Path settingsFolder;
 
-  public UserConfigPersistenceService(ObjectMapper objectMapper) {
-    this.objectMapper = objectMapper;
-    settingsFolder = Path.of(SETTINGS_FOLDER);
+  public UserConfigPersistenceService(
+      @Value("${settings-folder:}") final String customSettingsFolder) {
+    settingsFolder = getSettingsFolder(customSettingsFolder);
+    log.info("Settings folder identified as: [ {} ]", settingsFolder);
   }
 
   Path settingsFolder() {
@@ -67,7 +96,7 @@ public class UserConfigPersistenceService {
 
     final Path settingsFile = settingsFolder.resolve(settingsFilename);
     try (final var in = Files.newInputStream(settingsFile)) {
-      return objectMapper.readerFor(type).readValue(in);
+      return OBJECT_MAPPER.readerFor(type).readValue(in);
     } catch (IOException e) {
       log.error(
           "Could not read user configuration from [ {} ], falling back to default values!",
@@ -85,7 +114,7 @@ public class UserConfigPersistenceService {
     }
     final Path settingsFile = settingsFolder.resolve(settingsFilename);
     try (final var out = Files.newOutputStream(settingsFile)) {
-      objectMapper.writerWithDefaultPrettyPrinter().writeValue(out, settings);
+      OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValue(out, settings);
     } catch (IOException e) {
       log.error("Could not write settings to [ {} ]!", settingsFile);
       log.error(e.getMessage(), e);
