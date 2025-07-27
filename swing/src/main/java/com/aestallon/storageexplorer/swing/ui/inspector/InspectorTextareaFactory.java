@@ -17,6 +17,8 @@ package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import java.awt.*;
 import javax.swing.*;
+import javax.swing.event.HyperlinkEvent;
+import org.fife.ui.rsyntaxtextarea.LinkGeneratorResult;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
@@ -24,6 +26,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.core.util.Uris;
+import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.PaneAndTextarea;
 import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
@@ -35,8 +39,9 @@ public final class InspectorTextareaFactory {
 
   public enum Type { SIMPLE, FANCY }
 
+
   public record Config(Type type, boolean readOnly, boolean track) {}
-  
+
   static JScrollPane textAreaContainerPane(JTextArea objectAsMapTextarea) {
     final var pane = new JScrollPane(
         objectAsMapTextarea,
@@ -71,7 +76,7 @@ public final class InspectorTextareaFactory {
         case FANCY -> createFancy(storageEntry, text, config);
       };
     }
-    
+
     if (text.length() >= 500_000) {
       return createSimple(storageEntry, text, config);
     }
@@ -91,6 +96,10 @@ public final class InspectorTextareaFactory {
                                       final String oamStr,
                                       final Config config) {
     final var textarea = new RSyntaxTextArea(oamStr);
+    if (config.readOnly()) {
+      enableUriLinks(storageEntry, textarea);
+    }
+
     if (themeProvider.hasTheme()) {
       themeProvider.applyCurrentTheme(textarea);
     }
@@ -112,6 +121,67 @@ public final class InspectorTextareaFactory {
     final var scrollPane = new RTextScrollPane(textarea);
     scrollPane.setMinimumSize(new Dimension(200, 200));
     return new PaneAndTextarea(scrollPane, textarea);
+  }
+
+  private void enableUriLinks(StorageEntry storageEntry, RSyntaxTextArea textarea) {
+    textarea.setLinkGenerator((textArea, offs) -> {
+      final String text = textArea.getText();
+      int start = -1;
+      for (int i = offs; i >= 0; i--) {
+        if (text.charAt(i) == '"') {
+          start = i;
+          break;
+        }
+
+        if (offs - i > 500) {
+          start = -1;
+          break;
+        }
+      }
+
+      int end = -1;
+      for (int i = offs; i < text.length(); i++) {
+        if (i == start) {
+          continue;
+        }
+
+        if (text.charAt(i) == '"') {
+          end = i;
+          break;
+        }
+
+        if (i - offs > 500) {
+          end = -1;
+          break;
+        }
+      }
+
+      if (start < 0 || end < 0) {
+        return null;
+      }
+
+      final int actualStart = start + 1;
+      final String candidate = text.substring(actualStart, end);
+      return Uris.parseStr(candidate)
+          .map(uri -> new LinkGeneratorResult() {
+            @Override
+            public HyperlinkEvent execute() {
+              JumpToUri.jump(
+                  inspectorViewFactory.eventPublisher(),
+                  uri,
+                  inspectorViewFactory.storageInstanceProvider(),
+                  storageEntry.storageId());
+              return null;
+            }
+
+            @Override
+            public int getSourceOffset() {
+              return actualStart;
+            }
+          })
+          .orElse(null);
+    });
+    textarea.setHyperlinksEnabled(true);
   }
 
 
