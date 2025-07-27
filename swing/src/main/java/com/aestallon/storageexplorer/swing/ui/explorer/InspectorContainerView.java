@@ -17,6 +17,8 @@ package com.aestallon.storageexplorer.swing.ui.explorer;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -58,13 +60,11 @@ public class InspectorContainerView extends JTabbedPane {
 
   public void showInspectorView(final StorageEntry storageEntry) {
     switch (factory.inspectorRendering(storageEntry)) {
-      case DIALOG:
-        factory.focusDialog(storageEntry);
-        break;
-      case TAB:
-        factory.getTab(storageEntry).ifPresent(tab -> setSelectedComponent(tab.asComponent()));
-        break;
-      case NONE:
+      case DIALOG -> factory.focusDialog(storageEntry);
+      case TAB -> factory
+          .getTab(storageEntry)
+          .ifPresent(tab -> setSelectedComponent(tab.asComponent()));
+      case NONE -> {
         final var inspector = factory.createInspector(storageEntry).asComponent();
         final var title = factory.trackingService().getUserData(storageEntry)
             .map(StorageEntryTrackingService.StorageEntryUserData::name)
@@ -73,6 +73,12 @@ public class InspectorContainerView extends JTabbedPane {
         addTab(title, inspector);
         installTabComponent(inspector);
         setSelectedComponent(inspector);
+
+        inspector.registerKeyboardAction(
+            e -> discardInspector((InspectorView<? extends StorageEntry>) inspector),
+            KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK),
+            JComponent.WHEN_IN_FOCUSED_WINDOW);
+      }
     }
   }
 
