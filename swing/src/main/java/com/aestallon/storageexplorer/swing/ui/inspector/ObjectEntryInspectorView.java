@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -17,6 +17,8 @@ package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import javax.swing.*;
@@ -45,13 +47,13 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   private static final DateTimeFormatter FORMATTER_CREATION_DATE =
       DateTimeFormatter.ISO_ZONED_DATE_TIME;
 
-  protected final ObjectEntry objectEntry;
-  protected final StorageEntryInspectorViewFactory factory;
-  private final Action openInSystemExplorerAction;
+  protected final transient ObjectEntry objectEntry;
+  protected final transient StorageEntryInspectorViewFactory factory;
+  private final transient Action openInSystemExplorerAction;
 
   public ObjectEntryInspectorView(ObjectEntry objectEntry,
                                   StorageEntryInspectorViewFactory factory) {
-    super(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
+    super(SwingConstants.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
 
     this.objectEntry = objectEntry;
     this.factory = factory;
@@ -128,7 +130,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         return;
       }
 
-      final var toolbar = new JToolBar(JToolBar.TOP);
+      final var toolbar = new JToolBar(SwingConstants.TOP);
       toolbar.setOrientation(SwingConstants.HORIZONTAL);
       toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
       factory.addRenderAction(objectEntry, toolbar);
@@ -192,13 +194,20 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       final var pane = factory.textareaFactory().create(
           objectEntry, version,
           new InspectorTextareaFactory.Config(null, true, true));
-      toolbar.add(new AbstractAction(null, IconProvider.MAGNIFY) {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-          final var sd = new FindDialog((Frame) null, searchListener((RTextArea) pane.textArea()));
-          sd.setVisible(true);
-        }
-      });
+      if (pane.textArea() instanceof RTextArea rTextArea) {
+        final var findAction = new AbstractAction(null, IconProvider.MAGNIFY) {
+          @Override
+          public void actionPerformed(ActionEvent e) {
+            final var sd = new FindDialog((Frame) null, searchListener(rTextArea));
+            sd.setVisible(true);
+          }
+        };
+        toolbar.add(findAction);
+        rTextArea.registerKeyboardAction(
+            findAction, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK),
+            JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+      }
       box2.add(pane.scrollPane());
       return box2;
     }

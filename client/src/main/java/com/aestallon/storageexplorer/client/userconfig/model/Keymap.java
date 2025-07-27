@@ -56,7 +56,10 @@ public final class Keymap {
             -1),
 
         "Screenshot Graph",
-        new Keymap(KeyEvent.VK_F12, -1)
+        new Keymap(KeyEvent.VK_F12, -1),
+        
+        "Close Tab",
+        new Keymap(asInt(KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK)), -1)
 
     );
   }

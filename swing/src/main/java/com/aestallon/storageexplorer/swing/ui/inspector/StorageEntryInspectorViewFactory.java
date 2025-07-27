@@ -109,6 +109,14 @@ public class StorageEntryInspectorViewFactory {
     final var storageEntry = inspector.storageEntry();
     dropInspector(storageEntry);
   }
+  
+  ApplicationEventPublisher eventPublisher() {
+    return eventPublisher;
+  }
+  
+  StorageInstanceProvider storageInstanceProvider() {
+    return storageInstanceProvider;
+  }
 
   private void dropDiffInspector(final ObjectEntryDiffView diffInspector) {
     diffTextAreas.stream()
