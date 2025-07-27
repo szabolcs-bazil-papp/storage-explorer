@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -17,11 +17,14 @@ package com.aestallon.storageexplorer.swing.ui.explorer;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -37,12 +40,13 @@ import com.aestallon.storageexplorer.swing.ui.misc.CloseTabButton;
 @Component
 public class InspectorContainerView extends JTabbedPane {
 
-  private final ApplicationEventPublisher eventPublisher;
-  private final StorageEntryInspectorViewFactory factory;
+  private static final Logger log = LoggerFactory.getLogger(InspectorContainerView.class);
+  private final transient ApplicationEventPublisher eventPublisher;
+  private final transient StorageEntryInspectorViewFactory factory;
 
   public InspectorContainerView(ApplicationEventPublisher eventPublisher,
                                 StorageEntryInspectorViewFactory factory) {
-    super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
+    super(SwingConstants.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
     this.eventPublisher = eventPublisher;
 
     setMinimumSize(new Dimension(100, 0));
@@ -56,6 +60,38 @@ public class InspectorContainerView extends JTabbedPane {
             selectedComponent.storageEntry()));
       }
     });
+
+    for (int i = 0; i < 8; i++) {
+      registerKeyboardAction(
+          tabSelectAction(i),
+          KeyStroke.getKeyStroke(KeyEvent.VK_1 + i, InputEvent.CTRL_DOWN_MASK),
+          JComponent.WHEN_IN_FOCUSED_WINDOW);
+    }
+    registerKeyboardAction(
+        tabSelectAction(-1),
+        KeyStroke.getKeyStroke(KeyEvent.VK_9, InputEvent.CTRL_DOWN_MASK),
+        JComponent.WHEN_IN_FOCUSED_WINDOW);
+  }
+
+  private ActionListener tabSelectAction(int idx) {
+    return e -> {
+      int tabCount = getTabCount();
+      if (idx < 0) {
+        if (tabCount > 0) {
+          setSelectedComponent(getComponentAt(tabCount - 1));
+        } else {
+          log.warn("No tabs are available!");
+        }
+        return;
+      }
+
+      if (idx >= tabCount) {
+        log.error("Invalid tab index: [ {} / {} ]", idx, tabCount);
+        return;
+      }
+
+      setSelectedComponent(getComponentAt(idx));
+    };
   }
 
   public void showInspectorView(final StorageEntry storageEntry) {
@@ -99,21 +135,19 @@ public class InspectorContainerView extends JTabbedPane {
 
   @EventListener
   void onStorageEntryUserDataChanged(final StorageEntryUserDataChanged event) {
-    SwingUtilities.invokeLater(() -> {
-      factory.getTab(event.storageEntry()).ifPresent(view -> {
-        view.onUserDataChanged(event.data());
-        final int idx = indexOfComponent(view.asComponent());
-        if (idx >= 0) {
-          final var tab = (TabComponent) getTabComponentAt(idx);
-          final var name = event.data().name();
-          if (name != null && !name.isBlank()) {
-            tab.label.setText(name);
-          } else {
-            tab.label.setText(event.storageEntry().toString());
-          }
+    SwingUtilities.invokeLater(() -> factory.getTab(event.storageEntry()).ifPresent(view -> {
+      view.onUserDataChanged(event.data());
+      final int idx = indexOfComponent(view.asComponent());
+      if (idx >= 0) {
+        final var tab = (TabComponent) getTabComponentAt(idx);
+        final var name = event.data().name();
+        if (name != null && !name.isBlank()) {
+          tab.label.setText(name);
+        } else {
+          tab.label.setText(event.storageEntry().toString());
         }
-      });
-    });
+      }
+    }));
   }
 
   private final class TabComponent extends JPanel {

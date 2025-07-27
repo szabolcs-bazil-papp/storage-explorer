@@ -47,13 +47,13 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   private static final DateTimeFormatter FORMATTER_CREATION_DATE =
       DateTimeFormatter.ISO_ZONED_DATE_TIME;
 
-  protected final ObjectEntry objectEntry;
-  protected final StorageEntryInspectorViewFactory factory;
-  private final Action openInSystemExplorerAction;
+  protected final transient ObjectEntry objectEntry;
+  protected final transient StorageEntryInspectorViewFactory factory;
+  private final transient Action openInSystemExplorerAction;
 
   public ObjectEntryInspectorView(ObjectEntry objectEntry,
                                   StorageEntryInspectorViewFactory factory) {
-    super(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
+    super(SwingConstants.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
 
     this.objectEntry = objectEntry;
     this.factory = factory;
@@ -130,7 +130,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         return;
       }
 
-      final var toolbar = new JToolBar(JToolBar.TOP);
+      final var toolbar = new JToolBar(SwingConstants.TOP);
       toolbar.setOrientation(SwingConstants.HORIZONTAL);
       toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
       factory.addRenderAction(objectEntry, toolbar);
