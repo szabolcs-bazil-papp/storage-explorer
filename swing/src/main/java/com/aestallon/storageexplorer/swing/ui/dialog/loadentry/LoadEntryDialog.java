@@ -36,9 +36,11 @@ public class LoadEntryDialog extends JDialog {
 
     initComboBox(initialModel);
     textFieldSearchField.setText(initialModel.input());
+    SwingUtilities.invokeLater(() -> textFieldSearchField.requestFocusInWindow());
 
     setContentPane(contentPane);
     setModal(true);
+    setTitle("Load Entry...");
     getRootPane().setDefaultButton(buttonOK);
 
     buttonOK.addActionListener(e -> onOK());
@@ -217,6 +219,7 @@ public class LoadEntryDialog extends JDialog {
             GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0,
             false));
     textFieldSearchField = new JTextField();
+    textFieldSearchField.setFocusCycleRoot(false);
     panelField.add(textFieldSearchField,
         new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST,
             GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW,
