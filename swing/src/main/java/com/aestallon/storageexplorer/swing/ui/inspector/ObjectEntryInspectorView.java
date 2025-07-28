@@ -209,6 +209,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
             JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
       }
       box2.add(pane.scrollPane());
+      SwingUtilities.invokeLater(() -> pane.scrollPane().getVerticalScrollBar().setValue(0));
       return box2;
     }
 

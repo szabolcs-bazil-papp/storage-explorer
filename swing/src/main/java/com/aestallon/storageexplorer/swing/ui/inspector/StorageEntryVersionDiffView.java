@@ -61,6 +61,10 @@ public class StorageEntryVersionDiffView extends JPanel {
     rightTextArea = right.textArea();
     add(left.scrollPane());
     add(right.scrollPane());
+    SwingUtilities.invokeLater(() -> {
+      left.scrollPane().getVerticalScrollBar().setValue(0);
+      right.scrollPane().getVerticalScrollBar().setValue(0);
+    });
     showDiff();
   } 
   
