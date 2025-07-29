@@ -226,9 +226,10 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
 
     private Thread startWorker() {
       return Thread.ofPlatform().name("Batch Loader").start(() -> {
+        int queueSize = 0;
         while (!Thread.currentThread().isInterrupted()) {
           try {
-            processBatch();
+            queueSize = processBatch(queueSize);
           } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             break;
@@ -253,13 +254,16 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
       return new ObjectEntryLoadRequest.RelationalDatabaseObjectEntryLoadRequest(f);
     }
 
-    private void processBatch() throws InterruptedException {
+    private int processBatch(final int oldQueueSize) throws InterruptedException {
       final var params = this.params.get();
       final var batchSize = params.batchSize;
       final var timeoutMillisMax = params.timeoutMillisMax;
       final var timeoutMillisMin = params.timeoutMillisMin;
 
-      storageIndex.publishEvent(new LoadingQueueSize(storageIndex.id(), queue.size()));
+      final int newQueueSize = queue.size();
+      if (newQueueSize != oldQueueSize) {
+        storageIndex.publishEvent(new LoadingQueueSize(storageIndex.id(), newQueueSize));
+      }
 
       final List<LoadingTask> batch = new ArrayList<>(batchSize);
       final var t = queue.poll(timeoutMillis.get(), TimeUnit.MILLISECONDS);
@@ -289,6 +293,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
           });
         }
       }
+      return newQueueSize;
     }
 
   }
