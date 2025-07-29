@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer;
+package com.aestallon.storageexplorer.app;
 
 import javax.swing.*;
 import org.springframework.boot.CommandLineRunner;
@@ -36,7 +36,8 @@ import com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme;
     scanBasePackages = {
         "com.aestallon.storageexplorer.core",
         "com.aestallon.storageexplorer.client",
-        "com.aestallon.storageexplorer.swing"
+        "com.aestallon.storageexplorer.swing",
+        "com.aestallon.storageexplorer.app.config"
     })
 public class StorageExplorerApplication {
 

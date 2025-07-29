@@ -21,24 +21,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.swing.ui.commander.arcscript.ArcScriptContainerView;
-import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.commander.console.ConsoleView;
 
 @Component
-public class CommanderView extends JTabbedPane {
+public class CommanderView extends JPanel {
 
   private static final Logger log = LoggerFactory.getLogger(CommanderView.class);
 
   private final ArcScriptContainerView arcScriptContainerView;
+  private final ConsoleView consoleView;
 
-  public CommanderView(ArcScriptContainerView arcScriptContainerView) {
-    super(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
+  public CommanderView(ArcScriptContainerView arcScriptContainerView, ConsoleView consoleView) {
     this.arcScriptContainerView = arcScriptContainerView;
+    this.consoleView = consoleView;
+
+    setLayout(new GridLayout(1, 1));
+    setBorder(BorderFactory.createLineBorder(Color.MAGENTA));
 
     initArcScriptTab();
   }
 
   private void initArcScriptTab() {
-    addTab(null, IconProvider.ARC_SCRIPT, arcScriptContainerView);
+    add(consoleView);
   }
 
 }
