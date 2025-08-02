@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.graph.event.GraphRenderingRequest;
 import com.aestallon.storageexplorer.client.graph.event.GraphSelectionRequest;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
+import com.aestallon.storageexplorer.client.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.common.event.msg.ErrorMsg;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.event.EntryAcquired;
@@ -66,14 +67,14 @@ public class ViewController {
   @EventListener
   public GraphSelectionRequest onMainTreeNodeSelected(ClickableTreeNode clickableTreeNode) {
     explorerView.openInspectorContainer();
-    explorerView.inspectorContainerView().showInspectorView(clickableTreeNode.storageEntry());
+    explorerView.inspectorContainerView().showInspectorView(clickableTreeNode.entity());
 
-    return new GraphSelectionRequest(clickableTreeNode.storageEntry());
+    return new GraphSelectionRequest(clickableTreeNode.entity());
   }
 
   @EventListener
   public void onEntryInspected(EntryInspectionEvent e) {
-    mainTreeView.selectEntry(e.storageEntry());
+    mainTreeView.selectNode(e.storageEntry());
   }
 
   @EventListener
@@ -84,7 +85,7 @@ public class ViewController {
 
   @EventListener
   public GraphSelectionRequest onTreeTouchRequest(TreeTouchRequest e) {
-    mainTreeView.softSelectEntry(e.storageEntry());
+    mainTreeView.selectNodeSoft(e.storageEntry());
 
     return new GraphSelectionRequest(e.storageEntry());
   }
@@ -116,7 +117,7 @@ public class ViewController {
         explorerView.closeGraphView();
       }
       explorerView.inspectorContainerView().discardInspectorViewOfStorageAt(e.storageInstance());
-      mainTreeView.removeStorageNodeOf(e.storageInstance());
+      mainTreeView.removeStorage(e.storageInstance());
     });
   }
 
@@ -134,11 +135,9 @@ public class ViewController {
   public void onEntryAcquired(EntryAcquired e) {
     SwingUtilities.invokeLater(() -> {
       log.info("Entry acquired: {}", e.storageEntry());
-      mainTreeView.incorporateEntryIntoTree(
-          e.storageInstance(),
-          e.storageEntry());
+      mainTreeView.incorporateNode(e.storageEntry());
       log.info("Selecting entry: {}", e.storageEntry());
-      mainTreeView.selectEntry(e.storageEntry());
+      mainTreeView.selectNode(e.storageEntry());
     });
   }
 
@@ -150,14 +149,20 @@ public class ViewController {
 
   @EventListener
   public void onEntryDiscovered(EntryDiscovered e) {
-    SwingUtilities.invokeLater(() -> mainTreeView.incorporateEntryIntoTree(
-        e.storageInstance(),
-        e.storageEntry()));
+    SwingUtilities.invokeLater(
+        () -> mainTreeView.incorporateNode(e.storageEntry()));
   }
-  
+
   @EventListener
   public void onGraphStateChanged(GraphState e) {
     SwingUtilities.invokeLater(() -> appContentView.setGraphState(e));
+  }
+
+  public record ArcScriptTreeTouchRequest(StoredArcScript sas) {}
+
+  @EventListener
+  public void onArcScriptTreeTouchRequested(ArcScriptTreeTouchRequest e) {
+    log.info("e");
   }
 
 }

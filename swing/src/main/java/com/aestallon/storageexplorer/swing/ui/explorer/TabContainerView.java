@@ -30,34 +30,44 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
+import com.aestallon.storageexplorer.client.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.core.event.TreeTouchRequest;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
+import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptView;
+import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
+import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.inspector.InspectorView;
 import com.aestallon.storageexplorer.swing.ui.inspector.StorageEntryInspectorViewFactory;
 import com.aestallon.storageexplorer.swing.ui.misc.CloseTabButton;
 
 @Component
-public class InspectorContainerView extends JTabbedPane {
+public class TabContainerView extends JTabbedPane {
 
-  private static final Logger log = LoggerFactory.getLogger(InspectorContainerView.class);
+  private static final Logger log = LoggerFactory.getLogger(TabContainerView.class);
   private final transient ApplicationEventPublisher eventPublisher;
   private final transient StorageEntryInspectorViewFactory factory;
+  private final transient ArcScriptController arcScriptController;
 
-  public InspectorContainerView(ApplicationEventPublisher eventPublisher,
-                                StorageEntryInspectorViewFactory factory) {
+  public TabContainerView(ApplicationEventPublisher eventPublisher,
+                          StorageEntryInspectorViewFactory factory,
+                          ArcScriptController arcScriptController) {
     super(SwingConstants.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
     this.eventPublisher = eventPublisher;
+    this.arcScriptController = arcScriptController;
 
     setMinimumSize(new Dimension(100, 0));
     this.factory = factory;
 
     addChangeListener(e -> {
-      InspectorView<? extends StorageEntry> selectedComponent =
-          (InspectorView<? extends StorageEntry>) getSelectedComponent();
-      if (selectedComponent != null) {
-        eventPublisher.publishEvent(new TreeTouchRequest(
-            selectedComponent.storageEntry()));
+      final TabView selectedComponent = (TabView) getSelectedComponent();
+      switch (selectedComponent) {
+        case InspectorView<?> inspector -> eventPublisher.publishEvent(
+            new TreeTouchRequest(inspector.storageEntry()));
+        case ArcScriptView as -> eventPublisher.publishEvent(
+            new ViewController.ArcScriptTreeTouchRequest(as.storedArcScript()));
+        default -> log.warn("Unknown selected component: [ {} ]", selectedComponent);
       }
     });
 
@@ -111,26 +121,38 @@ public class InspectorContainerView extends JTabbedPane {
         setSelectedComponent(inspector);
 
         inspector.registerKeyboardAction(
-            e -> discardInspector((InspectorView<? extends StorageEntry>) inspector),
+            e -> discardTabView((InspectorView<? extends StorageEntry>) inspector),
             KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK),
             JComponent.WHEN_IN_FOCUSED_WINDOW);
       }
     }
   }
+  
+  public void showArcScriptView(final StoredArcScript storedArcScript) {
+    log.info("Showing ArcScriptView for [ {} ]", storedArcScript);
+  }
 
   public void discardInspectorViewOfStorageAt(final StorageInstance storageInstance) {
-    final List<InspectorView<? extends StorageEntry>> viewsOnStorage = new ArrayList<>();
+    final List<TabView> viewsOnStorage = new ArrayList<>();
     for (int i = 0; i < getTabCount(); i++) {
-      final InspectorView<? extends StorageEntry> inspectorView = inspectorViewAt(i);
-      if (inspectorView.storageEntry().storageId().equals(storageInstance.id())) {
-        viewsOnStorage.add(inspectorView);
+      final TabView tabView = tabViewAt(i);
+      if (tabView.storageId().equals(storageInstance.id())) {
+        viewsOnStorage.add(tabView);
       }
     }
 
-    viewsOnStorage.forEach(it -> {
-      remove(it.asComponent());
-      factory.dropInspector(it);
-    });
+    viewsOnStorage.forEach(this::discardTabView);
+  }
+  
+  @EventListener
+  void onArcScriptViewRenamed(final ArcScriptViewRenamed e) {
+    final int idx = indexOfComponent(e.arcScriptView());
+    if (idx < 0) {
+      return;
+    }
+
+    final var tab = (TabComponent) getTabComponentAt(idx);
+    tab.label.setText(e.name());
   }
 
   @EventListener
@@ -160,13 +182,13 @@ public class InspectorContainerView extends JTabbedPane {
       label = new JLabel(title);
       add(label);
       add(new CloseTabButton(e -> {
-        int idx = InspectorContainerView.this.indexOfTabComponent(TabComponent.this);
+        int idx = TabContainerView.this.indexOfTabComponent(TabComponent.this);
         if (idx < 0) {
           return;
         }
 
-        final var inspector = inspectorViewAt(idx);
-        if (inspector == null) {
+        final var tabView = tabViewAt(idx);
+        if (tabView == null) {
           return;
         }
 
@@ -175,17 +197,15 @@ public class InspectorContainerView extends JTabbedPane {
           final int tabCount = getTabCount();
           if (idx < tabCount - 1) {
             for (int i = 0; i < tabCount - 1 - idx; i++) {
-              final var inspectorToClose = inspectorViewAt(idx + 1);
-              discardInspector(inspectorToClose);
+              discardTabView(tabViewAt(idx + 1));
             }
           }
           for (int i = 0; i < idx; i++) {
-            final var inspectorToClose = inspectorViewAt(0);
-            discardInspector(inspectorToClose);
+            discardTabView(tabViewAt(0));
 
           }
         } else {
-          discardInspector(inspector);
+          discardTabView(tabView);
         }
       }));
     }
@@ -199,13 +219,17 @@ public class InspectorContainerView extends JTabbedPane {
     setTabComponentAt(index, tab);
   }
 
-  private void discardInspector(final InspectorView<? extends StorageEntry> inspectorToClose) {
-    factory.dropInspector(inspectorToClose);
-    remove(inspectorToClose.asComponent());
+  private void discardTabView(final TabView tabViewToClose) {
+    remove(tabViewToClose.asComponent());
+    switch (tabViewToClose) {
+      case InspectorView<?> inspector -> factory.dropInspector(inspector);
+      case ArcScriptView arcScriptView -> arcScriptController.drop(arcScriptView);
+      default -> log.warn("Unknown tab view to close: [ {} ]", tabViewToClose);
+    }
   }
 
-  private InspectorView<?> inspectorViewAt(final int idx) {
-    return (InspectorView<? extends StorageEntry>) getComponentAt(idx);
+  private TabView tabViewAt(final int idx) {
+    return (TabView) getComponentAt(idx);
   }
 
 }

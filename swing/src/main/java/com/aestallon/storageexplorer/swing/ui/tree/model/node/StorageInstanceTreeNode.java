@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -29,8 +29,12 @@ import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.swing.ui.tree.AbstractTreeView;
 
-public final class StorageInstanceTreeNode extends DefaultMutableTreeNode {
+public final class StorageInstanceTreeNode
+    extends DefaultMutableTreeNode
+    implements AbstractTreeView.StorageInstanceNode {
 
   private final transient StorageInstance storageInstance;
 
@@ -42,8 +46,8 @@ public final class StorageInstanceTreeNode extends DefaultMutableTreeNode {
     final var collections = storageInstance.entities()
         .filter(it -> !(it instanceof ScopedEntry))
         .filter(it -> it instanceof ListEntry
-            || it instanceof MapEntry
-            || it instanceof SequenceEntry)
+                      || it instanceof MapEntry
+                      || it instanceof SequenceEntry)
         .map(it -> it instanceof ListEntry list
             ? new StorageListTreeNode(list, trackingService)
             : it instanceof MapEntry map
@@ -65,14 +69,19 @@ public final class StorageInstanceTreeNode extends DefaultMutableTreeNode {
         .map(ObjectEntry.class::cast)
         .collect(groupingBy(it -> it.uri().getScheme(), TreeMap::new, toList()))
         .forEach((schema, entries) -> add(new StorageSchemaTreeNode(
-            schema, 
-            entries, 
+            schema,
+            entries,
             trackingService)));
   }
 
   private void sortAndAdd(List<? extends DefaultMutableTreeNode> collections) {
     collections.sort(Comparator.comparing(DefaultMutableTreeNode::toString));
     collections.forEach(this::add);
+  }
+
+  @Override
+  public StorageId storageId() {
+    return storageInstance.id();
   }
 
   public StorageInstance storageInstance() {

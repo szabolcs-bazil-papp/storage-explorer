@@ -19,6 +19,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 import static java.util.stream.Collectors.toList;
@@ -64,6 +65,11 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     initToolbar();
     initMeta();
     initTable();
+  }
+
+  @Override
+  public List<JTextArea> textAreas() {
+    return Collections.emptyList();
   }
 
   private void initToolbar() {

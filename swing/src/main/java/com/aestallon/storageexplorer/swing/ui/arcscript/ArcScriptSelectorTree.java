@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
+package com.aestallon.storageexplorer.swing.ui.arcscript;
 
 import java.awt.*;
 import java.util.List;

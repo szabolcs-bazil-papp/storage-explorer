@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -15,12 +15,25 @@
 
 package com.aestallon.storageexplorer.swing.ui.tree.model.node;
 
+import javax.swing.tree.DefaultMutableTreeNode;
+import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.swing.ui.tree.AbstractTreeView;
 
-public sealed interface ClickableTreeNode permits
+public abstract sealed class ClickableTreeNode
+    extends DefaultMutableTreeNode
+    implements AbstractTreeView.EntityNode<StorageEntry>
+    permits
     StorageListTreeNode, StorageMapTreeNode,
     StorageObjectTreeNode, StorageSequenceTreeNode {
-
-  StorageEntry storageEntry();
+  
+  
+  protected ClickableTreeNode(StorageEntry storageEntry) {
+    super(storageEntry, false);
+  }
+  
+  protected ClickableTreeNode(ObjectEntry objectEntry, boolean allowsChildren) {
+    super(objectEntry, allowsChildren);
+  }
 
 }

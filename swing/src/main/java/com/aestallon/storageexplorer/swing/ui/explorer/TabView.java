@@ -13,23 +13,18 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
+package com.aestallon.storageexplorer.swing.ui.explorer;
 
-import java.net.URI;
+import java.util.List;
 import javax.swing.*;
-import com.aestallon.storageexplorer.swing.ui.misc.JLink;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 
-public final class LearnMoreView extends JPanel {
-  private static final URI URI_WIKI =
-      URI.create("https://github.com/szabolcs-bazil-papp/storage-explorer/wiki/ArcScript");
+public interface TabView {
 
-  public LearnMoreView() {
-    setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+  StorageId storageId();
 
-    final var label = new JLabel("The learn more about ArcScript, visit the wiki ");
-    add(label);
+  List<JTextArea> textAreas();
+  
+  JComponent asComponent();
 
-    final var btn = new JLink("here", URI_WIKI);
-    add(btn);
-  }
 }

@@ -313,7 +313,7 @@ public class AppContentView extends JPanel {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      mainView().mainTreeView().softSelectNode(node);
+      mainView().mainTreeView().selectNodeSoft(node);
     }
   }
 
@@ -330,8 +330,23 @@ public class AppContentView extends JPanel {
       showHideTree.setToolTipText("Show/hide tree displaying storage hierarchy");
       showHideTree.setFocusPainted(false);
       showHideTree.setSelected(true);
-      showHideTree.addActionListener(e -> mainView().showHideTree(showHideTree.isSelected()));
+      
       add(showHideTree);
+      
+      final var showHideAs = new JToggleButton(IconProvider.ARC_SCRIPT);
+      showHideAs.setToolTipText("Show/hide scripting facilities");
+      showHideAs.setFocusPainted(false);
+      showHideAs.setSelected(false);
+      showHideTree.addActionListener(e -> {
+        showHideAs.setSelected(false);
+        mainView().showHideTree(showHideTree.isSelected());
+      });
+      showHideAs.addActionListener(e -> {
+        showHideTree.setSelected(false);
+        mainView().showHideAs(showHideAs.isSelected());
+      });
+      
+      add(Box.createVerticalGlue());
 
       final var showHideCommander = new JToggleButton(IconProvider.TERMINAL);
       showHideCommander.setToolTipText("Show/hide scripting facilities");

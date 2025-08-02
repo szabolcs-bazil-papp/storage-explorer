@@ -13,19 +13,23 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.tree.model.node;
+package com.aestallon.storageexplorer.swing.ui.arcscript;
 
-import java.util.List;
-import javax.swing.tree.DefaultMutableTreeNode;
-import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
-import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import java.net.URI;
+import javax.swing.*;
+import com.aestallon.storageexplorer.swing.ui.misc.JLink;
 
-public final class StorageTypeTreeNode extends DefaultMutableTreeNode {
+public final class LearnMoreView extends JPanel {
+  private static final URI URI_WIKI =
+      URI.create("https://github.com/szabolcs-bazil-papp/storage-explorer/wiki/ArcScript");
 
-  public StorageTypeTreeNode(String name, List<ObjectEntry> objectEntries,
-                             StorageEntryTrackingService trackingService) {
-    super(name, true);
-    objectEntries.forEach(it -> add(new StorageObjectTreeNode(it, trackingService)));
+  public LearnMoreView() {
+    setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+
+    final var label = new JLabel("The learn more about ArcScript, visit the wiki ");
+    add(label);
+
+    final var btn = new JLink("here", URI_WIKI);
+    add(btn);
   }
-
 }

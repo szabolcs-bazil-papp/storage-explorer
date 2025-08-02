@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 it4all Hungary Kft.
+ * Copyright (C) 2025 Szabolcs Bazil Papp
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -15,22 +15,21 @@
 
 package com.aestallon.storageexplorer.swing.ui.tree.model.node;
 
-import javax.swing.tree.DefaultMutableTreeNode;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
-public final class StorageMapTreeNode extends DefaultMutableTreeNode implements ClickableTreeNode {
+public final class StorageMapTreeNode extends ClickableTreeNode {
 
   private final transient StorageEntryTrackingService trackingService;
 
   public StorageMapTreeNode(MapEntry mapEntry, StorageEntryTrackingService trackingService) {
-    super(mapEntry, false);
+    super(mapEntry);
     this.trackingService = trackingService;
   }
 
   @Override
-  public StorageEntry storageEntry() {
+  public StorageEntry entity() {
     return (StorageEntry) userObject;
   }
 

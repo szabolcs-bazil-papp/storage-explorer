@@ -1,6 +1,8 @@
 package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import java.awt.*;
+import java.util.Collections;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
@@ -28,6 +30,11 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
     initToolbar();
     initMeta();
     initValue();
+  }
+
+  @Override
+  public List<JTextArea> textAreas() {
+    return Collections.emptyList();
   }
 
   private void initToolbar() {

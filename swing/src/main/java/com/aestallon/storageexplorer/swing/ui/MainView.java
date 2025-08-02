@@ -40,6 +40,9 @@ public class MainView extends JSplitPane {
     return hiddenPaneSize == null;
   }
 
+  public void showHideAs(final boolean show) {
+    
+  }
   public void showHideTree(final boolean show) {
     if (show == showingTree()) {
       return;

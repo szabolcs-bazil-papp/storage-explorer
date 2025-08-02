@@ -13,10 +13,9 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
+package com.aestallon.storageexplorer.swing.ui.arcscript;
 
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -35,20 +34,24 @@ import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.service.ArcScriptFileService;
 import com.aestallon.storageexplorer.client.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.event.StorageImportEvent;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
+import com.aestallon.storageexplorer.swing.ui.tree.MainTreeView;
 
 @Service
 public class ArcScriptController {
 
   private static final Logger log = LoggerFactory.getLogger(ArcScriptController.class);
+
+  private static int fCounter = 0;
 
   private final StorageInstanceProvider storageInstanceProvider;
   private final ApplicationEventPublisher applicationEventPublisher;
@@ -58,26 +61,23 @@ public class ArcScriptController {
   private final ArcScriptTextareaFactory arcScriptTextareaFactory;
   private final ResultSetExporterFactory resultSetExporterFactory;
   private final List<ArcScriptView> arcScriptViews = new ArrayList<>();
-
-  private ArcScriptContainerView containerView;
+  private final MainTreeView mainTreeView;
 
   public ArcScriptController(final StorageInstanceProvider storageInstanceProvider,
                              final ApplicationEventPublisher applicationEventPublisher,
                              final UserConfigService userConfigService,
                              final RSyntaxTextAreaThemeProvider themeProvider,
-                             final MonospaceFontProvider monospaceFontProvider) {
+                             final MonospaceFontProvider monospaceFontProvider,
+                             MainTreeView mainTreeView) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.applicationEventPublisher = applicationEventPublisher;
     this.userConfigService = userConfigService;
     this.themeProvider = themeProvider;
     this.monospaceFontProvider = monospaceFontProvider;
+    this.mainTreeView = mainTreeView;
     this.resultSetExporterFactory = new ResultSetExporterFactory();
 
     arcScriptTextareaFactory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
-  }
-
-  void containerView(ArcScriptContainerView containerView) {
-    this.containerView = containerView;
   }
 
   UserConfigService userConfigService() {
@@ -134,41 +134,24 @@ public class ArcScriptController {
           .arcScriptFileService()
           .checkAllAvailable()
           .getOrDefault(storageInstance.id(), new ArrayList<>());
-      containerView.newScriptView.content.addTree();
-      containerView.newScriptView.content.tree.addStorage(
-          storageInstance,
-          loadableScripts);
-      containerView.newScriptView.revalidate();
-      containerView.newScriptView.repaint();
+      //mainTreeView.arcScriptSelectorTree().addStorage(storageInstance, loadableScripts);
     });
   }
 
   @EventListener
   public void onStorageDeleted(StorageIndexDiscardedEvent event) {
     SwingUtilities.invokeLater(() -> {
-
       final StorageInstance storageInstance = event.storageInstance();
-      containerView.newScriptView.content.tree.removeStorage(storageInstance.id());
-      if (containerView.newScriptView.content.tree.isEmpty()) {
-        containerView.newScriptView.content.addEmptyMessage();
-        containerView.newScriptView.revalidate();
-        containerView.newScriptView.repaint();
-      }
-
-      final List<ArcScriptView> viewsToRemove = arcScriptViews.stream()
-          .filter(it -> it.storageInstance.equals(storageInstance))
-          .toList();
-      viewsToRemove.forEach(this::delete);
+      //mainTreeView.arcScriptSelectorTree().removeStorage(storageInstance.id());
+      // cleanup of views are done together elsewhere
     });
   }
 
   @EventListener
   public void onStorageInstanceRenamed(final StorageInstanceRenamed event) {
-    SwingUtilities.invokeLater(() -> containerView
-        .newScriptView
-        .content
-        .tree
-        .storageRenamed(event.storageInstance().id()));
+//    SwingUtilities.invokeLater(() -> mainTreeView
+//        .arcScriptSelectorTree()
+//        .storageRenamed(event.storageInstance().id()));
   }
 
   List<StorageInstance> availableStorageInstances() {
@@ -181,7 +164,7 @@ public class ArcScriptController {
     switch (result) {
       case ArcScriptFileService.ArcScriptIoResult.Ok(StoredArcScript arcScript) -> {
         arcScriptView.storedArcScript(arcScript);
-        containerView.rename(arcScriptView, title);
+        applicationEventPublisher.publishEvent(new ArcScriptViewRenamed(arcScriptView, title));
       }
       case ArcScriptFileService.ArcScriptIoResult.Err(String msg) -> JOptionPane.showMessageDialog(
           arcScriptView,
@@ -211,128 +194,44 @@ public class ArcScriptController {
   }
 
   void delete(ArcScriptView arcScriptView) {
-    close(arcScriptView, false);
     userConfigService.arcScriptFileService().delete(
         arcScriptView.storedArcScript().storageId(),
         arcScriptView.storedArcScript().title());
   }
 
-  void close(ArcScriptView arcScriptView, boolean reclaim) {
-    containerView.remove(arcScriptView);
-    arcScriptViews.remove(arcScriptView);
-    if (reclaim) {
-      containerView.newScriptView.content.tree.addScript(
-          arcScriptView.storedArcScript().storageId(),
-          arcScriptView.storedArcScript().title());
-    }
-  }
-
-  void closeAllBut(ArcScriptView arcScriptView) {
-    final var views = new ArrayList<>(arcScriptViews);
-    for (final var view : views) {
-      if (!arcScriptView.equals(view)) {
-        close(view, true);
-      }
-    }
-  }
-
-  ArcScriptSelectorTree.SelectionChangeListener treeListener() {
-    return it -> {
-      if (loadBtn == null || createBtn == null) {
-        return;
-      }
-
-      switch (it) {
-        case ArcScriptSelectorTree.Selection.None none -> {
-          loadBtn.setEnabled(false);
-          createBtn.setEnabled(false);
-        }
-        case ArcScriptSelectorTree.Selection.HasStorage hasStorage -> {
-          createBtn.setEnabled(true);
-          if (createActionListener != null) {
-            createBtn.removeActionListener(createActionListener);
-          }
-
-          createActionListener =
-              e -> newScript(storageInstanceProvider.get(hasStorage.storageId()));
-          createBtn.addActionListener(createActionListener);
-          if (hasStorage instanceof ArcScriptSelectorTree.Selection.ScriptFile(
-              StorageId id, String title
-          )) {
-            loadBtn.setEnabled(true);
-            if (loadActionListener != null) {
-              loadBtn.removeActionListener(loadActionListener);
-            }
-
-            loadActionListener = e -> {
-              final boolean success = loadScript(
-                  storageInstanceProvider.get(hasStorage.storageId()),
-                  title);
-              if (success) {
-                containerView.newScriptView.content.tree.removeScript(id, title);
-              }
-            };
-            loadBtn.addActionListener(loadActionListener);
-          } else {
-            loadBtn.setEnabled(false);
-            if (loadActionListener != null) {
-              loadBtn.removeActionListener(loadActionListener);
-            }
-          }
-        }
-      }
-    };
-  }
-
-  private JButton loadBtn;
-  private ActionListener loadActionListener;
-  private JButton createBtn;
-  private ActionListener createActionListener;
-
-  void setControlButtons(final JButton loadBtn, final JButton createBtn) {
-    this.loadBtn = loadBtn;
-    this.createBtn = createBtn;
-  }
-
-  private void newScript(final StorageInstance storageInstance) {
+  public ArcScriptView newScript(final StorageInstance storageInstance) {
     final String titleSuggestion = "(%s) New Script-%02d".formatted(
         storageInstance.name(),
-        containerView.getTabCount());
+        ++fCounter);
     final var result = userConfigService
         .arcScriptFileService()
         .saveAsNew(storageInstance.id(), titleSuggestion, "");
-    showScript(storageInstance, result);
+    return showScript(storageInstance, result);
   }
 
-  private boolean loadScript(final StorageInstance storageInstance, final String title) {
+  ArcScriptView loadScript(final StorageInstance storageInstance, final String title) {
     final var result = userConfigService
         .arcScriptFileService()
         .load(storageInstance.id(), title);
     return showScript(storageInstance, result);
   }
 
-  private boolean showScript(final StorageInstance storageInstance,
-                             final ArcScriptFileService.ArcScriptIoResult result) {
+  private ArcScriptView showScript(final StorageInstance storageInstance,
+                                   final ArcScriptFileService.ArcScriptIoResult result) {
     return switch (result) {
-      case ArcScriptFileService.ArcScriptIoResult.Ok ok -> {
-        final var view = new ArcScriptView(
-            this,
-            storageInstance,
-            ok.storedArcScript());
-        add(view);
-        containerView.insertAndSelect(view);
-        yield true;
-      }
-      case ArcScriptFileService.ArcScriptIoResult.Err err -> {
-        JOptionPane.showMessageDialog(
-            containerView,
-            "Could not create new ArcScript file: " + err.msg(),
-            "ArcScript Editor init failure",
-            JOptionPane.ERROR_MESSAGE,
-            IconProvider.ERROR);
-        yield false;
+      case ArcScriptFileService.ArcScriptIoResult.Ok(var sas) -> new ArcScriptView(
+          this,
+          storageInstance,
+          sas);
+      case ArcScriptFileService.ArcScriptIoResult.Err(String msg) -> {
+        applicationEventPublisher.publishEvent(Msg.err("Could not create ArcScript file", msg));
+        yield null;
       }
     };
+  }
+
+  public void drop(ArcScriptView arcScriptView) {
+    log.info("Drop requested...");
   }
 
 

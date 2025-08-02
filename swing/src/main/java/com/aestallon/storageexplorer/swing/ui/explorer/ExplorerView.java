@@ -33,15 +33,15 @@ public class ExplorerView extends JPanel {
   private JSplitPane contentPane;
 
   private final GraphView graphView;
-  private final InspectorContainerView inspectorContainerView;
+  private final TabContainerView tabContainerView;
   private final transient StorageEntryTrackingService trackingService;
 
   public ExplorerView(GraphView graphView,
-                      InspectorContainerView inspectorContainerView,
+                      TabContainerView tabContainerView,
                       StorageEntryTrackingService trackingService) {
     super(new BorderLayout());
     this.graphView = graphView;
-    this.inspectorContainerView = inspectorContainerView;
+    this.tabContainerView = tabContainerView;
     this.trackingService = trackingService;
 
     displayMode = DisplayMode.NONE;
@@ -67,7 +67,7 @@ public class ExplorerView extends JPanel {
 
       displayMode = DisplayMode.BOTH;
     } else {
-      add(inspectorContainerView);
+      add(tabContainerView);
       displayMode = DisplayMode.INSPECTORS_ONLY;
     }
     revalidate();
@@ -79,7 +79,7 @@ public class ExplorerView extends JPanel {
     }
 
     if (inspectorContainerOpen()) {
-      remove(inspectorContainerView);
+      remove(tabContainerView);
       initContentPane();
       add(contentPane);
 
@@ -98,7 +98,7 @@ public class ExplorerView extends JPanel {
     graphView.discard();
     if (inspectorContainerOpen()) {
       remove(contentPane);
-      add(inspectorContainerView);
+      add(tabContainerView);
 
       displayMode = DisplayMode.INSPECTORS_ONLY;
     } else {
@@ -118,11 +118,11 @@ public class ExplorerView extends JPanel {
       openInspectorContainer();
     }
 
-    entries.forEach(inspectorContainerView::showInspectorView);
+    entries.forEach(tabContainerView::showInspectorView);
   }
 
   private void initContentPane() {
-    contentPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, graphView, inspectorContainerView);
+    contentPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, graphView, tabContainerView);
     contentPane.getLeftComponent().setMinimumSize(new Dimension(500, 250));
   }
 
@@ -134,8 +134,8 @@ public class ExplorerView extends JPanel {
     return graphView;
   }
 
-  public InspectorContainerView inspectorContainerView() {
-    return inspectorContainerView;
+  public TabContainerView inspectorContainerView() {
+    return tabContainerView;
   }
 
 

@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
+package com.aestallon.storageexplorer.swing.ui.arcscript;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -32,7 +32,6 @@ public class ArcScriptContainerView extends JTabbedPane {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
 
     this.controller = controller;
-    controller.containerView(this);
 
     newScriptView = addNewScriptView();
   }
@@ -68,9 +67,7 @@ public class ArcScriptContainerView extends JTabbedPane {
       final int alt = ActionEvent.ALT_MASK;
       if ((e.getModifiers() & alt) == alt) {
         setSelectedComponent(arcScriptView);
-        controller.closeAllBut(arcScriptView);
       } else {
-        controller.close(arcScriptView, true);
       }
     });
     final var tab = new TabComponent(arcScriptView, closeTabButton);
@@ -180,11 +177,9 @@ public class ArcScriptContainerView extends JTabbedPane {
       createBtn.setEnabled(false);
       treeControlContainer.add(loadBtn);
       treeControlContainer.add(createBtn);
-      containerView.controller.setControlButtons(loadBtn, createBtn);
 
       treeContainer.add(treeControlContainer);
 
-      tree.onSelectionChanged(containerView.controller.treeListener());
       final var treePane = new JScrollPane(tree);
       treePane.setAlignmentX(LEFT_ALIGNMENT);
       treeContainer.add(treePane);

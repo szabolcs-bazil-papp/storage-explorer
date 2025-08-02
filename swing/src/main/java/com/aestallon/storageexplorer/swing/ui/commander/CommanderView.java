@@ -20,7 +20,7 @@ import javax.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import com.aestallon.storageexplorer.swing.ui.commander.arcscript.ArcScriptContainerView;
+import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptContainerView;
 import com.aestallon.storageexplorer.swing.ui.commander.console.ConsoleView;
 
 @Component
@@ -39,7 +39,7 @@ public class CommanderView extends JPanel {
     setBorder(BorderFactory.createLineBorder(Color.MAGENTA));
 
     initArcScriptTab();
-  }
+  } 
 
   private void initArcScriptTab() {
     add(consoleView);

@@ -45,7 +45,7 @@ public class RSyntaxTextAreaThemeProvider {
         (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
     atmf.putMapping(
         SYNTAX_STYLE_ARCSCRIPT,
-        "com.aestallon.storageexplorer.swing.ui.commander.arcscript.ArcScriptTokenMaker");
+        "com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptTokenMaker");
     FoldParserManager.get().addFoldParserMapping(SYNTAX_STYLE_ARCSCRIPT, new CurlyFoldParser());
   }
 
