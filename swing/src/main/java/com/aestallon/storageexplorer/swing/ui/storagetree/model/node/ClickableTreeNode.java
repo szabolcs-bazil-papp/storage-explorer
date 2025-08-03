@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.tree.model.node;
+package com.aestallon.storageexplorer.swing.ui.storagetree.model.node;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;

@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.tree;
+package com.aestallon.storageexplorer.swing.ui.storagetree;
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -48,6 +48,7 @@ import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
+import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
@@ -55,39 +56,58 @@ import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryDialog;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.StorageInstanceStatComponent;
-import com.aestallon.storageexplorer.swing.ui.tree.model.StorageTree;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.ClickableTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageInstanceTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageListTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageMapTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageObjectTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.StorageTree;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.ClickableTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageInstanceTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageListTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageMapTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageObjectTreeNode;
+import com.aestallon.storageexplorer.swing.ui.tree.AbstractTreeView;
+import com.aestallon.storageexplorer.swing.ui.tree.TreeView;
 
 @Component
-public class MainTreeView
+public class StorageTreeView
     extends AbstractTreeView
     <
-        StorageTree,
-        StorageEntry,
-        StorageEntryUserDataChanged,
-        StorageInstanceTreeNode,
-        ClickableTreeNode,
-        MainTreeView>
+            StorageTree,
+            StorageEntry,
+            StorageEntryUserDataChanged,
+            StorageInstanceTreeNode,
+            ClickableTreeNode,
+            StorageTreeView>
     implements TreeView
     <
-        StorageEntry,
-        StorageEntryUserDataChanged> {
+            StorageEntry,
+            StorageEntryUserDataChanged> {
 
-  private static final Logger log = LoggerFactory.getLogger(MainTreeView.class);
+  private static final Logger log = LoggerFactory.getLogger(StorageTreeView.class);
 
   private transient StorageEntryTrackingService trackingService;
 
-  public MainTreeView(ApplicationEventPublisher eventPublisher,
-                      StorageInstanceProvider storageInstanceProvider,
-                      UserConfigService userConfigService,
-                      StorageEntryTrackingService trackingService) {
+  public StorageTreeView(ApplicationEventPublisher eventPublisher,
+                         StorageInstanceProvider storageInstanceProvider,
+                         UserConfigService userConfigService,
+                         SideBarController sideBarController,
+                         StorageEntryTrackingService trackingService) {
     super(
         eventPublisher, storageInstanceProvider, userConfigService,
+        sideBarController,
         self -> self.trackingService = trackingService);
+  }
+
+  @Override
+  public String name() {
+    return "Storage Tree";
+  }
+
+  @Override
+  public ImageIcon icon() {
+    return IconProvider.TREE;
+  }
+
+  @Override
+  public String tooltip() {
+    return "Show/hide tree displaying storage hierarchy";
   }
 
   @Override
@@ -248,7 +268,7 @@ public class MainTreeView
             storageInstanceProvider,
             userConfigService);
         final var dialog = new LoadEntryDialog(controller);
-        dialog.setLocationRelativeTo(MainTreeView.this);
+        dialog.setLocationRelativeTo(StorageTreeView.this);
         dialog.pack();
         dialog.setVisible(true);
       });
@@ -299,7 +319,7 @@ public class MainTreeView
             });
         final ImportStorageDialog dialog = new ImportStorageDialog(controller);
         dialog.pack();
-        dialog.setLocationRelativeTo(MainTreeView.this);
+        dialog.setLocationRelativeTo(StorageTreeView.this);
         dialog.setVisible(true);
       });
       edit.setToolTipText("Edit the Storage Instance's name and connection settings.");
@@ -312,7 +332,7 @@ public class MainTreeView
         final JDialog dialog = new JDialog();
         dialog.setTitle("Statistics");
         dialog.setModal(true);
-        dialog.setLocationRelativeTo(MainTreeView.this);
+        dialog.setLocationRelativeTo(StorageTreeView.this);
         dialog.getContentPane()
             .add(new StorageInstanceStatComponent(sitn.storageInstance()).asComponent());
         dialog.pack();

@@ -38,13 +38,14 @@ import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.event.StorageImportEvent;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
-import com.aestallon.storageexplorer.swing.ui.tree.MainTreeView;
+import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
 
 @Service
 public class ArcScriptController {
@@ -61,20 +62,20 @@ public class ArcScriptController {
   private final ArcScriptTextareaFactory arcScriptTextareaFactory;
   private final ResultSetExporterFactory resultSetExporterFactory;
   private final List<ArcScriptView> arcScriptViews = new ArrayList<>();
-  private final MainTreeView mainTreeView;
+  private final StorageTreeView storageTreeView;
 
   public ArcScriptController(final StorageInstanceProvider storageInstanceProvider,
                              final ApplicationEventPublisher applicationEventPublisher,
                              final UserConfigService userConfigService,
                              final RSyntaxTextAreaThemeProvider themeProvider,
                              final MonospaceFontProvider monospaceFontProvider,
-                             MainTreeView mainTreeView) {
+                             StorageTreeView storageTreeView) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.applicationEventPublisher = applicationEventPublisher;
     this.userConfigService = userConfigService;
     this.themeProvider = themeProvider;
     this.monospaceFontProvider = monospaceFontProvider;
-    this.mainTreeView = mainTreeView;
+    this.storageTreeView = storageTreeView;
     this.resultSetExporterFactory = new ResultSetExporterFactory();
 
     arcScriptTextareaFactory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
@@ -129,11 +130,7 @@ public class ArcScriptController {
   public void onStorageImported(StorageImportEvent event) {
     SwingUtilities.invokeLater(() -> {
 
-      final StorageInstance storageInstance = event.storageInstance();
-      final List<String> loadableScripts = userConfigService
-          .arcScriptFileService()
-          .checkAllAvailable()
-          .getOrDefault(storageInstance.id(), new ArrayList<>());
+     
       //mainTreeView.arcScriptSelectorTree().addStorage(storageInstance, loadableScripts);
     });
   }
@@ -209,7 +206,8 @@ public class ArcScriptController {
     return showScript(storageInstance, result);
   }
 
-  ArcScriptView loadScript(final StorageInstance storageInstance, final String title) {
+  public ArcScriptView loadScript(final StorageId storageId, final String title) {
+    StorageInstance storageInstance = storageInstanceProvider.get(storageId);
     final var result = userConfigService
         .arcScriptFileService()
         .load(storageInstance.id(), title);

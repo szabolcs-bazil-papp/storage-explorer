@@ -13,19 +13,24 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.tree.model.node;
+package com.aestallon.storageexplorer.swing.ui.storagetree.model.node;
 
 import java.util.List;
+import java.util.TreeMap;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 import javax.swing.tree.DefaultMutableTreeNode;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 
-public final class StorageTypeTreeNode extends DefaultMutableTreeNode {
+public final class StorageSchemaTreeNode extends DefaultMutableTreeNode {
 
-  public StorageTypeTreeNode(String name, List<ObjectEntry> objectEntries,
-                             StorageEntryTrackingService trackingService) {
+  public StorageSchemaTreeNode(String name, List<ObjectEntry> objectEntries,
+                               StorageEntryTrackingService trackingService) {
     super(name, true);
-    objectEntries.forEach(it -> add(new StorageObjectTreeNode(it, trackingService)));
+    objectEntries.stream()
+        .collect(groupingBy(ObjectEntry::typeName, TreeMap::new, toList()))
+        .forEach((type, entries) -> add(new StorageTypeTreeNode(type, entries, trackingService)));
   }
 
 }

@@ -19,6 +19,7 @@ import com.aestallon.storageexplorer.common.util.MsgStrings;
 import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
+import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.HiddenPaneSize;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -33,12 +34,18 @@ public class AppContentView extends JPanel {
   private final BreadCrumbs breadCrumbs;
   private final GraphStateLabel graphStateLabel;
   private final LoadingQueueLabel loadingQueueLabel;
+
+  private final transient SideBarController sideBarController;
+
   private JProgressBar progressBar;
   private HiddenPaneSize hiddenPaneSize;
 
-  public AppContentView(MainView mainView, CommanderView commanderView) {
+  public AppContentView(MainView mainView,
+                        CommanderView commanderView,
+                        SideBarController sideBarController) {
     this.mainView = mainView;
     this.commanderView = commanderView;
+    this.sideBarController = sideBarController;
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
@@ -63,6 +70,12 @@ public class AppContentView extends JPanel {
     add(toolBar);
 
     hiddenPaneSize = new HiddenPaneSize(-1, -1, 500, 5);
+  }
+  
+  public void initSideBar() {
+    JPanel inner = (JPanel) getComponent(0);
+    inner.remove(0);
+    inner.add(new SideBar(), 0);
   }
 
   private JToolBar initToolBar() {
@@ -139,7 +152,7 @@ public class AppContentView extends JPanel {
   public CommanderView commanderView() {
     return commanderView;
   }
-  
+
   public void setLoadingQueueSize(final LoadingQueueSize event) {
     loadingQueueLabel.setNumber(event);
   }
@@ -148,27 +161,29 @@ public class AppContentView extends JPanel {
   public void onBreadCrumbsChanged(final BreadCrumbsChanged e) {
     breadCrumbs.set(e.path().getPath());
   }
-  
+
   @EventListener
   public void onStorageEntryUserDataChanged(final StorageEntryUserDataChanged event) {
     SwingUtilities.invokeLater(() -> {
       breadCrumbs.elements.forEach(BreadCrumbElement::setText);
     });
   }
-  
+
   public void setGraphState(final GraphState state) {
     graphStateLabel.setState(state);
   }
-  
+
   private static final class LoadingQueueLabel extends JLabel {
     private final Map<StorageId, Long> sizes;
+
     public LoadingQueueLabel() {
       sizes = new HashMap<>();
       setNumberInternal(0L);
       setOpaque(true);
       setHorizontalAlignment(SwingConstants.CENTER);
       setFont(getFont().deriveFont(Font.BOLD));
-      setToolTipText("The number of entries waiting to be loaded. The application may become temporarily unresponsive if this number is greater than 0.");
+      setToolTipText(
+          "The number of entries waiting to be loaded. The application may become temporarily unresponsive if this number is greater than 0.");
       setBorder(new EmptyBorder(2, 15, 2, 15));
     }
 
@@ -176,7 +191,7 @@ public class AppContentView extends JPanel {
       sizes.put(size.storageId(), size.size());
       setNumberInternal(sizes.values().stream().reduce(0L, Long::sum));
     }
-    
+
     private void setNumberInternal(final long number) {
       setText(String.valueOf(number));
 
@@ -189,17 +204,18 @@ public class AppContentView extends JPanel {
       }
     }
   }
-  
+
+
   private static final class GraphStateLabel extends JLabel {
     private long nodes;
     private long edges;
-    
+
     private GraphStateLabel() {
       setHorizontalAlignment(SwingConstants.CENTER);
       setBorder(new EmptyBorder(2, 15, 2, 15));
       setTextInternal();
     }
-    
+
     private void setTextInternal() {
       if (nodes < 1L && edges < 1L) {
         setText("");
@@ -209,7 +225,7 @@ public class AppContentView extends JPanel {
         setOpaque(true);
       }
     }
-    
+
     private void setState(GraphState state) {
       nodes = state.nodeCount();
       edges = state.edgeCount();
@@ -271,7 +287,7 @@ public class AppContentView extends JPanel {
 
       addActionListener(this);
     }
-    
+
     private void setText() {
       setText(MsgStrings.trim(node.toString(), textLimit));
     }
@@ -313,7 +329,7 @@ public class AppContentView extends JPanel {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      mainView().mainTreeView().selectNodeSoft(node);
+      sideBarController.treeView("Storage Tree").ifPresent(it -> it.selectNodeSoft(node));
     }
   }
 
@@ -326,26 +342,8 @@ public class AppContentView extends JPanel {
       setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
       setAlignmentY(TOP_ALIGNMENT);
 
-      final var showHideTree = new JToggleButton(IconProvider.TREE);
-      showHideTree.setToolTipText("Show/hide tree displaying storage hierarchy");
-      showHideTree.setFocusPainted(false);
-      showHideTree.setSelected(true);
-      
-      add(showHideTree);
-      
-      final var showHideAs = new JToggleButton(IconProvider.ARC_SCRIPT);
-      showHideAs.setToolTipText("Show/hide scripting facilities");
-      showHideAs.setFocusPainted(false);
-      showHideAs.setSelected(false);
-      showHideTree.addActionListener(e -> {
-        showHideAs.setSelected(false);
-        mainView().showHideTree(showHideTree.isSelected());
-      });
-      showHideAs.addActionListener(e -> {
-        showHideTree.setSelected(false);
-        mainView().showHideAs(showHideAs.isSelected());
-      });
-      
+      sideBarController.getTreeToggles().forEach(SideBar.this::add);
+
       add(Box.createVerticalGlue());
 
       final var showHideCommander = new JToggleButton(IconProvider.TERMINAL);

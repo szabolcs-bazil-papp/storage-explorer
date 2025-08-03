@@ -13,19 +13,19 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.tree.model.node;
+package com.aestallon.storageexplorer.swing.ui.storagetree.model.node;
 
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
-import com.aestallon.storageexplorer.core.model.entry.ListEntry;
+import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
-public final class StorageListTreeNode extends ClickableTreeNode {
+public final class StorageSequenceTreeNode extends ClickableTreeNode {
 
   private final transient StorageEntryTrackingService trackingService;
-  
-  public StorageListTreeNode(final ListEntry listEntry,
-                             final StorageEntryTrackingService trackingService) {
-    super(listEntry);
+
+  public StorageSequenceTreeNode(SequenceEntry sequenceEntry,
+                                 StorageEntryTrackingService trackingService) {
+    super(sequenceEntry);
     this.trackingService = trackingService;
   }
 
@@ -46,11 +46,11 @@ public final class StorageListTreeNode extends ClickableTreeNode {
 
   @Override
   public String toString() {
-    final var listEntry = (ListEntry) userObject;
-    return trackingService.getUserData(listEntry)
+    final var sequenceEntry = (SequenceEntry) userObject;
+    return trackingService.getUserData(sequenceEntry)
         .map(StorageEntryTrackingService.StorageEntryUserData::name)
         .filter(it -> !it.isBlank())
-        .orElseGet(listEntry::displayName);
+        .orElseGet(sequenceEntry::displayName);
   }
 
 }

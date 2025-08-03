@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.tree.model;
+package com.aestallon.storageexplorer.swing.ui.storagetree.model;
 
 import java.util.List;
 import java.util.Objects;
@@ -37,14 +37,14 @@ import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.ClickableTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageInstanceTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageListTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageMapTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageObjectTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageSchemaTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageSequenceTreeNode;
-import com.aestallon.storageexplorer.swing.ui.tree.model.node.StorageTypeTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.ClickableTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageInstanceTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageListTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageMapTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageObjectTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageSchemaTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageSequenceTreeNode;
+import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageTypeTreeNode;
 
 public final class StorageTree extends JTree implements Scrollable, Accessible {
 

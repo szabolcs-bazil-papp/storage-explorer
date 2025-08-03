@@ -33,6 +33,7 @@ import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService
 import com.aestallon.storageexplorer.common.util.Pair;
 import static com.aestallon.storageexplorer.common.util.Streams.enumerationToStream;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
 
 /**
@@ -102,12 +103,14 @@ public abstract class AbstractTreeView
   protected final transient ApplicationEventPublisher eventPublisher;
   protected final transient StorageInstanceProvider storageInstanceProvider;
   protected final transient UserConfigService userConfigService;
+  protected final transient SideBarController sideBarController;
 
   protected boolean propagate = true;
 
   protected AbstractTreeView(ApplicationEventPublisher eventPublisher,
                              StorageInstanceProvider storageInstanceProvider,
                              UserConfigService userConfigService,
+                             SideBarController sideBarController,
                              Consumer<T> prelude) {
     /* ctor prelude runs first to let inheritors set their own private fields: */
     prelude.accept((T) this);
@@ -115,6 +118,7 @@ public abstract class AbstractTreeView
     this.eventPublisher = eventPublisher;
     this.storageInstanceProvider = storageInstanceProvider;
     this.userConfigService = userConfigService;
+    this.sideBarController = sideBarController;
 
     setLayout(new GridLayout(1, 1));
     setMinimumSize(new Dimension(100, 500));
@@ -130,6 +134,7 @@ public abstract class AbstractTreeView
     treePathsByLeaf = new HashMap<>();
 
     add(scrollPane);
+    sideBarController.registerTreeView(this);
   }
 
   protected abstract TREE initTree();
@@ -156,6 +161,7 @@ public abstract class AbstractTreeView
     propagate = true;
   }
 
+  @Override
   public final void selectNodeSoft(DefaultMutableTreeNode node) {
     final var path = new TreePath(node.getPath());
     selectEntryInternal(path);
@@ -189,4 +195,13 @@ public abstract class AbstractTreeView
     }
   }
 
+  @Override
+  public void requestVisibility() {
+    sideBarController.showTreeView(this);
+  }
+
+  @Override
+  public final JComponent asComponent() {
+    return this;
+  }
 }

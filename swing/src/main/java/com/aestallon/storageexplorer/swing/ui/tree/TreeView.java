@@ -15,6 +15,8 @@
 
 package com.aestallon.storageexplorer.swing.ui.tree;
 
+import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 
 /**
@@ -26,6 +28,12 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
  */
 public interface TreeView<ENTITY, USER_DATA_CHANGE_EVENT> {
 
+  String name();
+  
+  ImageIcon icon();
+  
+  String tooltip();
+  
   void incorporateNode(final ENTITY entity);
 
   void importStorage(final StorageInstance storageInstance);
@@ -35,11 +43,15 @@ public interface TreeView<ENTITY, USER_DATA_CHANGE_EVENT> {
   void selectNode(final ENTITY entity);
 
   void selectNodeSoft(final ENTITY entity);
+  
+  void selectNodeSoft(DefaultMutableTreeNode node);
 
   void removeStorage(final StorageInstance storageInstance);
 
   void onUserDataChanged(final USER_DATA_CHANGE_EVENT userDataChangeEvent);
 
   void requestVisibility();
+  
+  JComponent asComponent();
 
 }

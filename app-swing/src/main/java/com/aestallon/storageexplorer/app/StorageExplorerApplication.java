@@ -25,9 +25,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
 import com.aestallon.storageexplorer.client.ff.FeatureFlag;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.swing.ui.AppContentView;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.WelcomePopup;
+import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
 import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme;
 
@@ -63,11 +65,16 @@ public class StorageExplorerApplication {
 
   @Bean
   CommandLineRunner frameLauncher(AppFrame appFrame,
-                                  StorageInstanceProvider storageInstanceProvider) {
+                                  StorageInstanceProvider storageInstanceProvider,
+                                  AppContentView appContentView,
+                                  StorageTreeView storageTreeView) {
     return args -> {
       storageInstanceProvider.fetchAllKnown();
       SwingUtilities.invokeLater(() -> {
+        appContentView.initSideBar();
+        storageTreeView.requestVisibility();
         appFrame.appContentView().mainView().explorerView().reopenTrackedEntryInspectors();
+        
         appFrame.launch();
         if (storageInstanceProvider.provide().findAny().isEmpty()) {
           WelcomePopup.show(appFrame);

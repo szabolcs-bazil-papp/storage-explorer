@@ -30,11 +30,11 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
-import com.aestallon.storageexplorer.client.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.core.event.TreeTouchRequest;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
+import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptSelectorTree;
 import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptView;
 import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
@@ -127,9 +127,19 @@ public class TabContainerView extends JTabbedPane {
       }
     }
   }
-  
-  public void showArcScriptView(final StoredArcScript storedArcScript) {
-    log.info("Showing ArcScriptView for [ {} ]", storedArcScript);
+
+  public void showArcScriptView(final ArcScriptSelectorTree.ArcScriptNodeLocator locator) {
+    final var view = arcScriptController.loadScript(locator.storageId(), locator.path());
+    if (view != null) {
+      String title = view.storedArcScript().title();
+      addTab(title, view);
+      installTabComponent(view.asComponent());
+      setSelectedComponent(view.asComponent());
+      view.asComponent().registerKeyboardAction(
+          e -> discardTabView(view),
+          KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK),
+          JComponent.WHEN_IN_FOCUSED_WINDOW);
+    }
   }
 
   public void discardInspectorViewOfStorageAt(final StorageInstance storageInstance) {
@@ -143,7 +153,7 @@ public class TabContainerView extends JTabbedPane {
 
     viewsOnStorage.forEach(this::discardTabView);
   }
-  
+
   @EventListener
   void onArcScriptViewRenamed(final ArcScriptViewRenamed e) {
     final int idx = indexOfComponent(e.arcScriptView());

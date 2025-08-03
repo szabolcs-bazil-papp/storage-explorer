@@ -134,7 +134,7 @@ public class ExplorerView extends JPanel {
     return graphView;
   }
 
-  public TabContainerView inspectorContainerView() {
+  public TabContainerView tabContainerView() {
     return tabContainerView;
   }
 

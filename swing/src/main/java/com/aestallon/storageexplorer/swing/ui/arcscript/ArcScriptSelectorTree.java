@@ -36,10 +36,14 @@ import com.aestallon.storageexplorer.common.util.Streams;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.tree.AbstractTreeView;
 
 public final class ArcScriptSelectorTree extends JTree implements Scrollable, Accessible {
 
   private static final Logger log = LoggerFactory.getLogger(ArcScriptSelectorTree.class);
+
+
+  public record ArcScriptNodeLocator(StorageId storageId, String path) {}
 
   public static ArcScriptSelectorTree create() {
     final var root = new DefaultMutableTreeNode("ArcScript Selector");
@@ -82,11 +86,11 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
         if (es.length < 2) {
           selectionChangeListener.accept(new Selection.None());
         } else if (es[es.length - 1] instanceof StorageNode storageNode) {
-          selectionChangeListener.accept(new Selection.Storage(storageNode.storageInstace.id()));
+          selectionChangeListener.accept(new Selection.Storage(storageNode.storageInstance.id()));
         } else if (es[es.length - 1] instanceof ScriptNode scriptNode) {
           final var storageNode = (StorageNode) es[es.length - 2];
           selectionChangeListener.accept(new Selection.ScriptFile(
-              storageNode.storageInstace.id(),
+              storageNode.storageInstance.id(),
               scriptNode.getUserObject().toString()));
         }
       }
@@ -115,7 +119,7 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
         .filter(matchesId(storageId))
         .findFirst()
         .ifPresent(it -> model().insertNodeInto(
-            new ScriptNode(loadableScript),
+            new ScriptNode(new ArcScriptNodeLocator(storageId, loadableScript)),
             it,
             it.getChildCount()));
   }
@@ -132,7 +136,7 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
         .filter(matchesId(storageId))
         .findFirst()
         .ifPresent(it -> {
-          it.setUserObject(it.storageInstace.name());
+          it.setUserObject(it.storageInstance.name());
           model().nodeChanged(it);
         });
   }
@@ -176,7 +180,7 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
   }
 
   private Predicate<StorageNode> matchesId(final StorageId storageId) {
-    return it -> storageId.equals(it.storageInstace.id());
+    return it -> storageId.equals(it.storageInstance.id());
   }
 
   private Predicate<ScriptNode> matchesTitle(final String title) {
@@ -187,26 +191,44 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
   // nodes
 
 
-  private static final class StorageNode extends DefaultMutableTreeNode {
+  public static final class StorageNode
+      extends DefaultMutableTreeNode
+      implements AbstractTreeView.StorageInstanceNode {
 
-    private final StorageInstance storageInstace;
+    private final StorageInstance storageInstance;
 
     private StorageNode(final StorageInstance storageInstance, final List<String> loadableScripts) {
       super(storageInstance.name(), true);
-      this.storageInstace = storageInstance;
+      this.storageInstance = storageInstance;
 
       loadableScripts.stream()
+          .map(it -> new ArcScriptNodeLocator(storageInstance.id(), it))
           .map(ScriptNode::new)
           .forEach(this::add);
     }
+
+    @Override
+    public StorageId storageId() {
+      return storageInstance.id();
+    }
+
   }
 
 
-  private static final class ScriptNode extends DefaultMutableTreeNode {
+  public static final class ScriptNode
+      extends DefaultMutableTreeNode
+      implements AbstractTreeView.EntityNode<ArcScriptNodeLocator> {
 
-    private ScriptNode(final String scriptName) {
-      super(scriptName, false);
+
+    private ScriptNode(final ArcScriptNodeLocator locator) {
+      super(locator, false);
     }
+
+    @Override
+    public ArcScriptNodeLocator entity() {
+      return (ArcScriptNodeLocator) getUserObject();
+    }
+
   }
 
   // ----------------------------------------------------------------------------------------------
@@ -246,7 +268,7 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
       super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
       switch (value) {
         case StorageNode storageNode ->
-            setIcon(IconProvider.getIconForStorageInstance(storageNode.storageInstace));
+            setIcon(IconProvider.getIconForStorageInstance(storageNode.storageInstance));
         case ScriptNode scriptNode -> setIcon(IconProvider.ARC_SCRIPT);
         default -> {
         }
