@@ -77,8 +77,7 @@ public class ArcScriptTreeView
   }
 
   @Override
-  public void incorporateNode(
-      ArcScriptSelectorTree.ArcScriptNodeLocator arcScriptNodeLocator) {
+  public void incorporateNode(ArcScriptSelectorTree.ArcScriptNodeLocator arcScriptNodeLocator) {
 
   }
 
@@ -109,6 +108,10 @@ public class ArcScriptTreeView
   @Override
   public void onUserDataChanged(ArcScriptViewRenamed arcScriptViewRenamed) {
     super.onUserDataChanged(arcScriptViewRenamed);
+  }
+  
+  public void expandAll() {
+    tree.expandAll();
   }
 
 }

@@ -13,38 +13,36 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.arcscript.result;
+package com.aestallon.storageexplorer.swing.ui.commander;
 
 import javax.swing.*;
-import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.swing.ui.commander.AbstractCommanderTabbedView;
-import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
-import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
-@Component
-public class ArcScriptResultContainerView
-    extends AbstractCommanderTabbedView
-    implements CommanderView {
+public abstract class AbstractCommanderTabbedView extends JTabbedPane implements CommanderView {
 
-  protected ArcScriptResultContainerView(UserConfigService userConfigService,
-                                         SideBarController sideBarController) {
-    super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT, userConfigService, sideBarController);
+
+  protected final UserConfigService userConfigService;
+  protected final SideBarController sideBarController;
+
+  protected AbstractCommanderTabbedView(int tabPlacement, int tabLayoutPolicy,
+                                        UserConfigService userConfigService,
+                                        SideBarController sideBarController) {
+    super(tabPlacement, tabLayoutPolicy);
+    this.userConfigService = userConfigService;
+    this.sideBarController = sideBarController;
+    sideBarController.registerCommanderView(this);
+  }
+
+
+  @Override
+  public void requestVisibility() {
+
   }
 
   @Override
-  public String name() {
-    return "ArcScript Results";
+  public JComponent asComponent() {
+    return this;
   }
 
-  @Override
-  public ImageIcon icon() {
-    return IconProvider.DATA_TRANSFER;
-  }
-
-  @Override
-  public String tooltip() {
-    return "ArcScript results";
-  }
 }

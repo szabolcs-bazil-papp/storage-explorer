@@ -15,19 +15,33 @@
 
 package com.aestallon.storageexplorer.swing.ui.commander;
 
+import java.awt.*;
 import javax.swing.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
-public interface CommanderView {
-  
-  String name();
-  
-  ImageIcon icon();
-  
-  String tooltip();
-  
-  void requestVisibility();
-  
-  JComponent asComponent();
-  
-  
+@Component
+public class CommanderContainerView extends JPanel {
+
+  private static final Logger log = LoggerFactory.getLogger(CommanderContainerView.class);
+
+  public CommanderContainerView() {
+    setLayout(new GridLayout(1, 1));
+  }
+
+  public void setCommanderView(final CommanderView commanderView) {
+    boolean repaint = false;
+    if (getComponentCount() > 0 && getComponent(0) != commanderView.asComponent()) {
+      remove(0);
+      repaint = true;
+    }
+
+    add(commanderView.asComponent());
+    if (repaint) {
+      revalidate();
+      repaint();
+    }
+  }
+
 }

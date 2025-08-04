@@ -18,17 +18,16 @@ import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDat
 import com.aestallon.storageexplorer.common.util.MsgStrings;
 import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
+import com.aestallon.storageexplorer.swing.ui.commander.CommanderContainerView;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.HiddenPaneSize;
-import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 @Component
 public class AppContentView extends JPanel {
 
   private final MainView mainView;
-  private final CommanderView commanderView;
+  private final CommanderContainerView commanderContainerView;
   private final JSplitPane content;
   private final JToolBar toolBar;
   private final BreadCrumbs breadCrumbs;
@@ -41,10 +40,10 @@ public class AppContentView extends JPanel {
   private HiddenPaneSize hiddenPaneSize;
 
   public AppContentView(MainView mainView,
-                        CommanderView commanderView,
+                        CommanderContainerView commanderContainerView,
                         SideBarController sideBarController) {
     this.mainView = mainView;
-    this.commanderView = commanderView;
+    this.commanderContainerView = commanderContainerView;
     this.sideBarController = sideBarController;
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -71,7 +70,7 @@ public class AppContentView extends JPanel {
 
     hiddenPaneSize = new HiddenPaneSize(-1, -1, 500, 5);
   }
-  
+
   public void initSideBar() {
     JPanel inner = (JPanel) getComponent(0);
     inner.remove(0);
@@ -93,34 +92,46 @@ public class AppContentView extends JPanel {
     return hiddenPaneSize == null;
   }
 
-  public void showHideCommander(final boolean show) {
-    if (show == showingCommander()) {
-      return;
-    }
+  @EventListener
+  public void showHideCommander(final SideBarController.CommanderShowEvent e) {
+    if (!showingCommander()) {
+      switch (e) {
+        case SideBarController.CommanderShowEvent.None none -> {
+          // requested to show nothing and we already do
+        }
+        case SideBarController.CommanderShowEvent.Some(var commanderView) -> {
+          commanderContainerView.setCommanderView(commanderView);
+          if (content.getRightComponent() == null) {
+            content.setRightComponent(commanderContainerView);
+          }
 
-    if (show) {
-      if (content.getRightComponent() == null) {
-        content.setRightComponent(commanderView);
+          content.setDividerLocation(hiddenPaneSize.dividerLocation());
+          content.setDividerSize(hiddenPaneSize.dividerSize());
+          commanderContainerView.setMinimumSize(null);
+          commanderContainerView.setMaximumSize(null);
+          commanderContainerView.setPreferredSize(hiddenPaneSize.toPreferredSize());
+
+          hiddenPaneSize = null;
+        }
       }
-
-      content.setDividerLocation(hiddenPaneSize.dividerLocation());
-      content.setDividerSize(hiddenPaneSize.dividerSize());
-      commanderView.setMinimumSize(null);
-      commanderView.setMaximumSize(null);
-      commanderView.setPreferredSize(hiddenPaneSize.toPreferredSize());
-
-      hiddenPaneSize = null;
     } else {
-      final Dimension preferredSize = commanderView.getPreferredSize();
-      final int dividerLocation = content.getDividerLocation();
-      final int dividerSize = content.getDividerSize();
-      hiddenPaneSize = HiddenPaneSize.of(preferredSize, dividerLocation, dividerSize);
+      switch (e) {
+        case SideBarController.CommanderShowEvent.None none -> {
+          final Dimension preferredSize = commanderContainerView.getPreferredSize();
+          final int dividerLocation = content.getDividerLocation();
+          final int dividerSize = content.getDividerSize();
+          hiddenPaneSize = HiddenPaneSize.of(preferredSize, dividerLocation, dividerSize);
 
-      content.setDividerLocation(1.0);
-      content.setDividerSize(0);
-      commanderView.setMinimumSize(new Dimension(0, 0));
-      commanderView.setMaximumSize(new Dimension(0, 0));
-      content.setRightComponent(null);
+          content.setDividerLocation(1.0);
+          content.setDividerSize(0);
+          commanderContainerView.setMinimumSize(new Dimension(0, 0));
+          commanderContainerView.setMaximumSize(new Dimension(0, 0));
+          content.setRightComponent(null);
+        }
+        case SideBarController.CommanderShowEvent.Some(var commanderView) -> {
+          commanderContainerView.setCommanderView(commanderView);
+        }
+      }
     }
   }
 
@@ -149,8 +160,8 @@ public class AppContentView extends JPanel {
     return mainView;
   }
 
-  public CommanderView commanderView() {
-    return commanderView;
+  public CommanderContainerView commanderView() {
+    return commanderContainerView;
   }
 
   public void setLoadingQueueSize(final LoadingQueueSize event) {
@@ -346,11 +357,7 @@ public class AppContentView extends JPanel {
 
       add(Box.createVerticalGlue());
 
-      final var showHideCommander = new JToggleButton(IconProvider.TERMINAL);
-      showHideCommander.setToolTipText("Show/hide scripting facilities");
-      showHideCommander.setFocusPainted(false);
-      showHideCommander.addActionListener(e -> showHideCommander(showHideCommander.isSelected()));
-      add(showHideCommander);
+      sideBarController.getCommanderToggles().forEach(SideBar.this::add);
     }
 
   }

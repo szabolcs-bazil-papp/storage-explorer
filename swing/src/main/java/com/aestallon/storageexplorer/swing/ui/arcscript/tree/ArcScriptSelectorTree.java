@@ -98,7 +98,6 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
       }
     };
     addTreeSelectionListener(treeSelectionListener);
-
   }
 
   public void addStorage(StorageInstance storageInstance, List<String> loadableScripts) {
@@ -162,6 +161,13 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
         .flatMap(it -> Streams.enumerationToStream(it.children()))
         .map(ScriptNode.class::cast)
         .map(it -> Pair.of(it.entity(), new TreePath(it.getPath())));
+  }
+
+  void expandAll() {
+    storageNodes().stream()
+        .map(StorageNode::getPath)
+        .map(TreePath::new)
+        .forEach(this::expandPath);
   }
 
   // -----------------------------------------------------------------------------------------------

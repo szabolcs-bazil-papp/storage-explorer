@@ -13,38 +13,32 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.arcscript.result;
+package com.aestallon.storageexplorer.swing.ui.commander;
 
 import javax.swing.*;
-import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.swing.ui.commander.AbstractCommanderTabbedView;
-import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
-import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
-@Component
-public class ArcScriptResultContainerView
-    extends AbstractCommanderTabbedView
-    implements CommanderView {
+public abstract class AbstractCommanderPanelView extends JPanel implements CommanderView {
 
-  protected ArcScriptResultContainerView(UserConfigService userConfigService,
-                                         SideBarController sideBarController) {
-    super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT, userConfigService, sideBarController);
+  protected final UserConfigService userConfigService;
+  protected final SideBarController sideBarController;
+
+  protected AbstractCommanderPanelView(UserConfigService userConfigService,
+                                       SideBarController sideBarController) {
+    this.userConfigService = userConfigService;
+    this.sideBarController = sideBarController;
+    sideBarController.registerCommanderView(this);
   }
 
   @Override
-  public String name() {
-    return "ArcScript Results";
+  public void requestVisibility() {
+    sideBarController.showCommanderView(this);
   }
 
   @Override
-  public ImageIcon icon() {
-    return IconProvider.DATA_TRANSFER;
+  public JComponent asComponent() {
+    return this;
   }
 
-  @Override
-  public String tooltip() {
-    return "ArcScript results";
-  }
 }

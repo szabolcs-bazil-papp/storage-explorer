@@ -23,6 +23,7 @@ import java.util.Optional;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
 import com.aestallon.storageexplorer.swing.ui.tree.TreeView;
 
 @Service
@@ -38,15 +39,30 @@ public class SideBarController {
   }
 
 
+  public sealed interface CommanderShowEvent {
+
+    record Some(CommanderView commanderView) implements CommanderShowEvent {}
+
+
+    record None() implements CommanderShowEvent {}
+
+  }
+
+
   private record TreeViewContext(TreeView<?, ?> treeView, JToggleButton toggleButton) {}
 
 
+  private record CommanderViewContext(CommanderView commanderView, JToggleButton toggleButton) {}
+
+
   private final ApplicationEventPublisher eventPublisher;
-  private final Map<String, TreeViewContext> contextByName;
+  private final Map<String, TreeViewContext> treeContextByName;
+  private final Map<String, CommanderViewContext> commanderContextByName;
 
   public SideBarController(ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
-    this.contextByName = new LinkedHashMap<>();
+    this.treeContextByName = new LinkedHashMap<>();
+    this.commanderContextByName = new LinkedHashMap<>();
   }
 
   public void registerTreeView(final TreeView<?, ?> treeView) {
@@ -55,42 +71,90 @@ public class SideBarController {
     toggleButton.setToolTipText(treeView.tooltip());
     toggleButton.setFocusPainted(false);
     toggleButton.setSelected(false);
-    toggleButton.addActionListener(toggleListener(name, toggleButton));
-    contextByName.put(name, new TreeViewContext(treeView, toggleButton));
+    toggleButton.addActionListener(treeToggleListener(name, toggleButton));
+    treeContextByName.put(name, new TreeViewContext(treeView, toggleButton));
   }
 
   public List<JToggleButton> getTreeToggles() {
-    return contextByName.values().stream()
+    return treeContextByName.values().stream()
         .map(TreeViewContext::toggleButton)
         .toList();
   }
 
-  private ActionListener toggleListener(final String id, final JToggleButton toggleButton) {
+  private ActionListener treeToggleListener(final String id, final JToggleButton toggleButton) {
     return e -> {
       final boolean selected = toggleButton.isSelected();
       if (selected) {
-        showTreeViewInternal(contextByName.get(id).treeView);
+        showTreeViewInternal(treeContextByName.get(id).treeView);
       } else {
         eventPublisher.publishEvent(new TreeShowEvent.None());
       }
     };
   }
 
+  public void registerCommanderView(final CommanderView commanderView) {
+    final String name = commanderView.name();
+    final JToggleButton toggleButton = new JToggleButton(commanderView.icon());
+    toggleButton.setToolTipText(commanderView.tooltip());
+    toggleButton.setFocusPainted(false);
+    toggleButton.setSelected(false);
+    toggleButton.addActionListener(commanderToggleListener(name, toggleButton));
+    commanderContextByName.put(name, new CommanderViewContext(commanderView, toggleButton));
+  }
+
+  public List<JToggleButton> getCommanderToggles() {
+    return commanderContextByName.values().stream()
+        .map(CommanderViewContext::toggleButton)
+        .toList();
+  }
+
+
+  private ActionListener commanderToggleListener(final String id,
+                                                 final JToggleButton toggleButton) {
+    return e -> {
+      final boolean selected = toggleButton.isSelected();
+      if (selected) {
+        showCommanderViewInternal(commanderContextByName.get(id).commanderView);
+      } else {
+        eventPublisher.publishEvent(new CommanderShowEvent.None());
+      }
+    };
+  }
+
   public void showTreeView(final TreeView<?, ?> treeView) {
-    contextByName.get(treeView.name()).toggleButton().setSelected(true);
+    treeContextByName.get(treeView.name()).toggleButton().setSelected(true);
     showTreeViewInternal(treeView);
   }
 
   private void showTreeViewInternal(final TreeView<?, ?> treeView) {
     final String name = treeView.name();
-    contextByName.values().stream()
+    treeContextByName.values().stream()
         .filter(ctx -> !name.equals(ctx.treeView.name()))
         .forEach(ctx -> ctx.toggleButton.setSelected(false));
     eventPublisher.publishEvent(new TreeShowEvent.Some(treeView));
   }
 
+  public void showCommanderView(final CommanderView commanderView) {
+    commanderContextByName.get(commanderView.name()).toggleButton().setSelected(true);
+    showCommanderViewInternal(commanderView);
+  }
+
+  private void showCommanderViewInternal(final CommanderView commanderView) {
+    final String name = commanderView.name();
+    commanderContextByName.values().stream()
+        .filter(ctx -> !name.equals(ctx.commanderView.name()))
+        .forEach(ctx -> ctx.toggleButton.setSelected(false));
+    eventPublisher.publishEvent(new CommanderShowEvent.Some(commanderView));
+  }
+
   public Optional<TreeView<?, ?>> treeView(final String name) {
-    return Optional.ofNullable(contextByName.get(name)).map(TreeViewContext::treeView);
+    return Optional.ofNullable(treeContextByName.get(name)).map(TreeViewContext::treeView);
+  }
+
+  public Optional<CommanderView> commanderView(final String name) {
+    return Optional
+        .ofNullable(commanderContextByName.get(name))
+        .map(CommanderViewContext::commanderView);
   }
 
 }

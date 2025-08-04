@@ -8,10 +8,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.swing.ui.commander.AbstractCommanderPanelView;
+import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
+import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
 
 @Component
-public class ConsoleView extends JPanel {
+public class ConsoleView extends AbstractCommanderPanelView implements CommanderView {
 
   private static final Logger log = LoggerFactory.getLogger(ConsoleView.class);
 
@@ -29,7 +34,10 @@ public class ConsoleView extends JPanel {
 
   private final transient MonospaceFontProvider monospaceFontProvider;
 
-  public ConsoleView(MonospaceFontProvider monospaceFontProvider) {
+  public ConsoleView(UserConfigService userConfigService,
+                     SideBarController sideBarController,
+                     MonospaceFontProvider monospaceFontProvider) {
+    super(userConfigService, sideBarController);
     this.monospaceFontProvider = monospaceFontProvider;
     setLayout(new BorderLayout());
 
@@ -93,6 +101,21 @@ public class ConsoleView extends JPanel {
         log.error(e.getMessage(), e);
       }
     });
+  }
+
+  @Override
+  public String name() {
+    return "Console Commander";
+  }
+
+  @Override
+  public ImageIcon icon() {
+    return IconProvider.TERMINAL;
+  }
+
+  @Override
+  public String tooltip() {
+    return "Application logs";
   }
 
 }
