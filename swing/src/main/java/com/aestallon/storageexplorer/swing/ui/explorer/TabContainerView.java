@@ -34,8 +34,8 @@ import com.aestallon.storageexplorer.core.event.TreeTouchRequest;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
-import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
 import com.aestallon.storageexplorer.swing.ui.arcscript.editor.ArcScriptView;
+import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
 import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.inspector.InspectorView;
@@ -129,17 +129,21 @@ public class TabContainerView extends JTabbedPane {
   }
 
   public void showArcScriptView(final ArcScriptSelectorTree.ArcScriptNodeLocator locator) {
-    final var view = arcScriptController.loadScript(locator.storageId(), locator.path());
-    if (view != null) {
-      String title = view.storedArcScript().title();
-      addTab(title, view);
-      installTabComponent(view.asComponent());
-      setSelectedComponent(view.asComponent());
-      view.asComponent().registerKeyboardAction(
-          e -> discardTabView(view),
-          KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK),
-          JComponent.WHEN_IN_FOCUSED_WINDOW);
-    }
+    arcScriptController.find(locator).ifPresentOrElse(
+        it -> setSelectedComponent(it.asComponent()),
+        () -> {
+          final var view = arcScriptController.loadScript(locator.storageId(), locator.path());
+          if (view != null) {
+            String title = view.storedArcScript().title();
+            addTab(title, view);
+            installTabComponent(view.asComponent());
+            setSelectedComponent(view.asComponent());
+            view.asComponent().registerKeyboardAction(
+                e -> discardTabView(view),
+                KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK),
+                JComponent.WHEN_IN_FOCUSED_WINDOW);
+          }
+        });
   }
 
   public void discardInspectorViewOfStorageAt(final StorageInstance storageInstance) {

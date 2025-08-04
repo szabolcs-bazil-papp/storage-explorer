@@ -20,6 +20,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.arcscript.editor.ArcScriptTextareaFactory;
 import com.aestallon.storageexplorer.swing.ui.arcscript.editor.ArcScriptView;
+import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
@@ -91,6 +93,13 @@ public class ArcScriptController {
     arcScriptViews.add(arcScriptView);
   }
 
+  public Optional<ArcScriptView> find(ArcScriptSelectorTree.ArcScriptNodeLocator locator) {
+    return arcScriptViews.stream()
+        .filter(it -> it.storageId().equals(locator.storageId())
+                      && it.storedArcScript().title().equals(locator.path()))
+        .findFirst();
+  }
+
   @EventListener
   public void onFontSizeChanged(
       @SuppressWarnings("unused") MonospaceFontProvider.FontSizeChange fontSizeChange) {
@@ -116,7 +125,7 @@ public class ArcScriptController {
   public void onStorageImported(StorageImportEvent event) {
     SwingUtilities.invokeLater(() -> {
 
-     
+
       //mainTreeView.arcScriptSelectorTree().addStorage(storageInstance, loadableScripts);
     });
   }
@@ -132,9 +141,9 @@ public class ArcScriptController {
 
   @EventListener
   public void onStorageInstanceRenamed(final StorageInstanceRenamed event) {
-//    SwingUtilities.invokeLater(() -> mainTreeView
-//        .arcScriptSelectorTree()
-//        .storageRenamed(event.storageInstance().id()));
+    //    SwingUtilities.invokeLater(() -> mainTreeView
+    //        .arcScriptSelectorTree()
+    //        .storageRenamed(event.storageInstance().id()));
   }
 
   List<StorageInstance> availableStorageInstances() {
@@ -182,6 +191,10 @@ public class ArcScriptController {
         arcScriptView.storedArcScript().title());
   }
 
+  public void renderResult(final ArcScriptResult.Ok result) {
+    // TODO: Implement!
+  }
+
   public ArcScriptView newScript(final StorageInstance storageInstance) {
     final String titleSuggestion = "(%s) New Script-%02d".formatted(
         storageInstance.name(),
@@ -203,10 +216,14 @@ public class ArcScriptController {
   private ArcScriptView showScript(final StorageInstance storageInstance,
                                    final ArcScriptFileService.ArcScriptIoResult result) {
     return switch (result) {
-      case ArcScriptFileService.ArcScriptIoResult.Ok(var sas) -> new ArcScriptView(
-          this,
-          storageInstance,
-          sas);
+      case ArcScriptFileService.ArcScriptIoResult.Ok(var sas) -> {
+        final var view = new ArcScriptView(
+            this,
+            storageInstance,
+            sas);
+        add(view);
+        yield view;
+      }
       case ArcScriptFileService.ArcScriptIoResult.Err(String msg) -> {
         applicationEventPublisher.publishEvent(Msg.err("Could not create ArcScript file", msg));
         yield null;
