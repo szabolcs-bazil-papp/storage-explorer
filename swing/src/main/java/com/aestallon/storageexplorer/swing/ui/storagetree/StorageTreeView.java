@@ -213,11 +213,6 @@ public class StorageTreeView
   }
 
   @Override
-  public void requestVisibility() {
-    // TODO: Implement
-  }
-
-  @Override
   public void removeStorage(final StorageInstance storageInstance) {
     tree.removeStorage(storageInstance);
   }
