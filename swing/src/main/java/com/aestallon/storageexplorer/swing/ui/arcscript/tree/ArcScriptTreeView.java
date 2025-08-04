@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.arcscript;
+package com.aestallon.storageexplorer.swing.ui.arcscript.tree;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +22,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
@@ -88,6 +89,11 @@ public class ArcScriptTreeView
         .checkAllAvailable()
         .getOrDefault(storageInstance.id(), new ArrayList<>());
     tree.addStorage(storageInstance, loadableScripts);
+    memoizeTreePaths();
+  }
+  
+  private void memoizeTreePaths() {
+    treePathsByLeaf.putAll(tree.treePaths().collect(Pair.toMap()));
   }
 
   @Override

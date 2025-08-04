@@ -15,6 +15,6 @@
 
 package com.aestallon.storageexplorer.swing.ui.event;
 
-import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptView;
+import com.aestallon.storageexplorer.swing.ui.arcscript.editor.ArcScriptView;
 
 public record ArcScriptViewRenamed(ArcScriptView arcScriptView, String name) {}

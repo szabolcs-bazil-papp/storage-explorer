@@ -20,7 +20,6 @@ import javax.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptContainerView;
 import com.aestallon.storageexplorer.swing.ui.commander.console.ConsoleView;
 
 @Component
@@ -28,20 +27,18 @@ public class CommanderView extends JPanel {
 
   private static final Logger log = LoggerFactory.getLogger(CommanderView.class);
 
-  private final ArcScriptContainerView arcScriptContainerView;
   private final ConsoleView consoleView;
 
-  public CommanderView(ArcScriptContainerView arcScriptContainerView, ConsoleView consoleView) {
-    this.arcScriptContainerView = arcScriptContainerView;
+  public CommanderView(ConsoleView consoleView) {
     this.consoleView = consoleView;
 
     setLayout(new GridLayout(1, 1));
     setBorder(BorderFactory.createLineBorder(Color.MAGENTA));
 
-    initArcScriptTab();
+    initConsoleView();
   } 
 
-  private void initArcScriptTab() {
+  private void initConsoleView() {
     add(consoleView);
   }
 

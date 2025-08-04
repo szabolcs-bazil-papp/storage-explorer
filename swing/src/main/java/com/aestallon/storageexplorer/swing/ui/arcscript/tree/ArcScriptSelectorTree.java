@@ -13,12 +13,13 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.arcscript;
+package com.aestallon.storageexplorer.swing.ui.arcscript.tree;
 
 import java.awt.*;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import javax.accessibility.Accessible;
 import javax.swing.*;
 import javax.swing.event.TreeSelectionListener;
@@ -32,6 +33,7 @@ import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.common.util.Streams;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
@@ -155,6 +157,13 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
     return storageNodes().isEmpty();
   }
 
+  Stream<Pair<ArcScriptNodeLocator, TreePath>> treePaths() {
+    return storageNodes().stream()
+        .flatMap(it -> Streams.enumerationToStream(it.children()))
+        .map(ScriptNode.class::cast)
+        .map(it -> Pair.of(it.entity(), new TreePath(it.getPath())));
+  }
+
   // -----------------------------------------------------------------------------------------------
   // internal
 
@@ -195,7 +204,7 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
       extends DefaultMutableTreeNode
       implements AbstractTreeView.StorageInstanceNode {
 
-    private final StorageInstance storageInstance;
+    private final transient StorageInstance storageInstance;
 
     private StorageNode(final StorageInstance storageInstance, final List<String> loadableScripts) {
       super(storageInstance.name(), true);
@@ -227,6 +236,11 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
     @Override
     public ArcScriptNodeLocator entity() {
       return (ArcScriptNodeLocator) getUserObject();
+    }
+
+    @Override
+    public String toString() {
+      return entity().path();
     }
 
   }

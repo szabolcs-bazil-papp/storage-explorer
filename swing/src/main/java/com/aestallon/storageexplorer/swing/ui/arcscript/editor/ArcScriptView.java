@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.arcscript;
+package com.aestallon.storageexplorer.swing.ui.arcscript.editor;
 
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
@@ -55,6 +55,7 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.util.Uris;
+import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabView;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -78,7 +79,7 @@ public class ArcScriptView extends JPanel implements TabView {
 
   private ErrorMarker compilationError;
 
-  ArcScriptView(ArcScriptController controller,
+  public ArcScriptView(ArcScriptController controller,
                 StorageInstance storageInstance,
                 StoredArcScript storedArcScript) {
     this.controller = controller;
@@ -187,7 +188,7 @@ public class ArcScriptView extends JPanel implements TabView {
     return storedArcScript;
   }
 
-  void storedArcScript(StoredArcScript storedArcScript) {
+  public void storedArcScript(StoredArcScript storedArcScript) {
     this.storedArcScript = storedArcScript;
   }
 
@@ -329,7 +330,7 @@ public class ArcScriptView extends JPanel implements TabView {
     controller.save(this, editor.getText());
   }
 
-  void disableSave() {
+  public void disableSave() {
     saveAction.setEnabled(false);
   }
 
