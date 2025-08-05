@@ -43,12 +43,10 @@ public final class InspectorTextareaFactory {
   public record Config(Type type, boolean readOnly, boolean track) {}
 
   static JScrollPane textAreaContainerPane(JTextArea objectAsMapTextarea) {
-    final var pane = new JScrollPane(
+    return new JScrollPane(
         objectAsMapTextarea,
         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
         ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-    pane.setPreferredSize(new Dimension(2000, 2000));
-    return pane;
   }
 
   private final StorageEntryInspectorViewFactory inspectorViewFactory;

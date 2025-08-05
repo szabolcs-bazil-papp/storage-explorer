@@ -24,6 +24,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
 import com.aestallon.storageexplorer.swing.ui.dialog.SearchForEntryDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.graphsettings.GraphSettingsController;
 import com.aestallon.storageexplorer.swing.ui.dialog.graphsettings.GraphSettingsDialog;
@@ -33,6 +34,8 @@ import com.aestallon.storageexplorer.swing.ui.dialog.keymap.KeymapController;
 import com.aestallon.storageexplorer.swing.ui.dialog.keymap.KeymapDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryDialog;
+import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptController;
+import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptDialog;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
@@ -44,17 +47,20 @@ public class AppFrame extends JFrame {
   private final StorageInstanceProvider storageInstanceProvider;
   private final UserConfigService userConfigService;
   private final AppContentView appContentView;
+  private final ArcScriptController arcScriptController;
   private final LafService lafService;
 
   public AppFrame(ApplicationEventPublisher eventPublisher,
                   StorageInstanceProvider storageInstanceProvider,
                   UserConfigService userConfigService,
-                  AppContentView appContentView,
+                  AppContentView appContentView, 
+                  ArcScriptController arcScriptController,
                   LafService lafService) {
     this.eventPublisher = eventPublisher;
     this.storageInstanceProvider = storageInstanceProvider;
     this.userConfigService = userConfigService;
     this.appContentView = appContentView;
+    this.arcScriptController = arcScriptController;
     this.lafService = lafService;
 
     setTitle("Storage Explorer");
@@ -105,6 +111,9 @@ public class AppFrame extends JFrame {
     importStorage.addActionListener(new ImportStorageAction());
     commands.add(importStorage);
 
+    final var newScript = createNewScriptMenuItem();
+    commands.add(newScript);
+
     menubar.add(commands);
 
     final var settings = settings();
@@ -112,6 +121,23 @@ public class AppFrame extends JFrame {
     menubar.add(settings);
 
     setJMenuBar(menubar);
+  }
+
+  private JMenuItem createNewScriptMenuItem() {
+    final var newScript = new JMenuItem("New Script...");
+    newScript.addActionListener(e -> {
+      final var controller = NewScriptController.create(
+          userConfigService.getMostRecentStorageInstanceLoad()
+              .map(storageInstanceProvider::get)
+              .orElse(null), 
+          storageInstanceProvider, 
+          arcScriptController);
+      final var dialog = new NewScriptDialog(controller);
+      dialog.pack();
+      dialog.setLocationRelativeTo(AppFrame.this);
+      dialog.setVisible(true);
+    });
+    return newScript;
   }
 
   private JMenu settings() {

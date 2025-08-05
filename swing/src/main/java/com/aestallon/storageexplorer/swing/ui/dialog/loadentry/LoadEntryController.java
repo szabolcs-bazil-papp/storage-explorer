@@ -11,8 +11,6 @@ import com.aestallon.storageexplorer.swing.ui.controller.AbstractDialogControlle
 
 public class LoadEntryController extends AbstractDialogController<LoadEntryDialogModel> {
 
-
-
   public static LoadEntryController create(final StorageInstance storageInstance,
                                            final StorageInstanceProvider storageInstanceProvider,
                                            final UserConfigService userConfigService) {

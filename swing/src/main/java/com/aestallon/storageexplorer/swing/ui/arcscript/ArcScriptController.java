@@ -98,8 +98,13 @@ public class ArcScriptController {
     return applicationEventPublisher;
   }
 
-  void add(ArcScriptView arcScriptView) {
+  ArcScriptView add(ArcScriptView arcScriptView) {
+    if (arcScriptView == null) {
+      return null;
+    }
+
     arcScriptViews.add(arcScriptView);
+    return arcScriptView;
   }
 
   public Optional<ArcScriptView> find(ArcScriptSelectorTree.ArcScriptNodeLocator locator) {
@@ -150,13 +155,15 @@ public class ArcScriptController {
 
   @EventListener
   public void onStorageInstanceRenamed(final StorageInstanceRenamed event) {
+    // TODO: Implement!
     //    SwingUtilities.invokeLater(() -> mainTreeView
     //        .arcScriptSelectorTree()
     //        .storageRenamed(event.storageInstance().id()));
   }
 
-  List<StorageInstance> availableStorageInstances() {
-    return storageInstanceProvider.provide().toList();
+  @EventListener
+  public void onNewScriptRequest(final ArcScriptTreeView.NewScriptRequest event) {
+    newScript(storageInstanceProvider.get(event.storageId()));
   }
 
   public void rename(ArcScriptView arcScriptView, String title) {
@@ -203,6 +210,7 @@ public class ArcScriptController {
     userConfigService.arcScriptFileService().delete(
         arcScriptView.storedArcScript().storageId(),
         arcScriptView.storedArcScript().title());
+    // TODO: Implement: Discard tabView if any. Remove from tree. Remove result table if any
   }
 
   public void renderResult(final String title,
@@ -216,14 +224,26 @@ public class ArcScriptController {
     });
   }
 
-  public ArcScriptView newScript(final StorageInstance storageInstance) {
+  public void newScript(final StorageInstance storageInstance) {
     final String titleSuggestion = "(%s) New Script-%02d".formatted(
         storageInstance.name(),
         ++fCounter);
     final var result = userConfigService
         .arcScriptFileService()
         .saveAsNew(storageInstance.id(), titleSuggestion, "");
-    return showScript(storageInstance, result);
+    final var view = showScript(storageInstance, result);
+    if (view == null) {
+      // if an error occurred, we already signalled it...
+      return;
+    }
+
+    SwingUtilities.invokeLater(() -> {
+      final var locator = ArcScriptSelectorTree.ArcScriptNodeLocator.of(view.storedArcScript());
+      arcScriptTreeView.incorporateNode(locator);
+      arcScriptTreeView.selectNode(locator);
+    });
+
+    userConfigService.setMostRecentStorageInstanceLoad(storageInstance.id());
   }
 
   public ArcScriptView loadScript(final StorageId storageId, final String title) {
@@ -231,20 +251,16 @@ public class ArcScriptController {
     final var result = userConfigService
         .arcScriptFileService()
         .load(storageInstance.id(), title);
-    return showScript(storageInstance, result);
+    return add(showScript(storageInstance, result));
   }
 
   private ArcScriptView showScript(final StorageInstance storageInstance,
                                    final ArcScriptFileService.ArcScriptIoResult result) {
     return switch (result) {
-      case ArcScriptFileService.ArcScriptIoResult.Ok(var sas) -> {
-        final var view = new ArcScriptView(
-            this,
-            storageInstance,
-            sas);
-        add(view);
-        yield view;
-      }
+      case ArcScriptFileService.ArcScriptIoResult.Ok(var sas) -> new ArcScriptView(
+          this,
+          storageInstance,
+          sas);
       case ArcScriptFileService.ArcScriptIoResult.Err(String msg) -> {
         applicationEventPublisher.publishEvent(Msg.err("Could not create ArcScript file", msg));
         yield null;
@@ -254,6 +270,9 @@ public class ArcScriptController {
 
   public void drop(ArcScriptView arcScriptView) {
     arcScriptViews.remove(arcScriptView);
+    log.info("Dropped ArcScriptView {}, size remaining: {}",
+        arcScriptView.storedArcScript().title(),
+        arcScriptViews.size());
   }
 
 

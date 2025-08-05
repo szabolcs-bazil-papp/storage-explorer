@@ -34,6 +34,7 @@ import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.client.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.common.util.Streams;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
@@ -46,7 +47,13 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
   private static final Logger log = LoggerFactory.getLogger(ArcScriptSelectorTree.class);
 
 
-  public record ArcScriptNodeLocator(StorageId storageId, String path) {}
+  public record ArcScriptNodeLocator(StorageId storageId, String path) {
+
+    public static ArcScriptNodeLocator of(final StoredArcScript storedArcScript) {
+      return new ArcScriptNodeLocator(storedArcScript.storageId(), storedArcScript.title());
+    }
+
+  }
 
   public static ArcScriptSelectorTree create() {
     final var root = new DefaultMutableTreeNode("ArcScript Selector");
@@ -214,7 +221,7 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
   }
 
   private Predicate<ScriptNode> matchesTitle(final String title) {
-    return it -> title.equals(it.getUserObject());
+    return it -> title.equals(it.entity().path());
   }
 
   // -----------------------------------------------------------------------------------------------

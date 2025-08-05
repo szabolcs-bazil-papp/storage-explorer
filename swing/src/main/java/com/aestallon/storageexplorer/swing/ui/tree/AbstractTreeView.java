@@ -121,7 +121,7 @@ public abstract class AbstractTreeView
     this.sideBarController = sideBarController;
 
     setLayout(new GridLayout(1, 1));
-    setMinimumSize(new Dimension(100, 500));
+    setMinimumSize(new Dimension(200, 0));
 
     tree = initTree();
     tree.addTreeSelectionListener(e -> {

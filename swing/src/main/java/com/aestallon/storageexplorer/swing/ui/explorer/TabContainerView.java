@@ -16,7 +16,6 @@
 package com.aestallon.storageexplorer.swing.ui.explorer;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -40,7 +39,6 @@ import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.inspector.InspectorView;
 import com.aestallon.storageexplorer.swing.ui.inspector.StorageEntryInspectorViewFactory;
-import com.aestallon.storageexplorer.swing.ui.misc.CloseTabButton;
 
 @Component
 public class TabContainerView extends JTabbedPane implements TabContainer {

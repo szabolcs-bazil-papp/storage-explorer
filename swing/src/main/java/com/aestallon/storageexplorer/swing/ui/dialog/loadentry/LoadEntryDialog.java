@@ -7,9 +7,9 @@ import java.awt.event.WindowEvent;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.plaf.basic.BasicComboBoxRenderer;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.aestallon.storageexplorer.swing.ui.misc.StorageInstanceRenderer;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
@@ -72,32 +72,6 @@ public class LoadEntryDialog extends JDialog {
     }
     comboBoxStorageInstance.setSelectedItem(initialModel.selection());
     comboBoxStorageInstance.setRenderer(new StorageInstanceRenderer());
-  }
-
-  private static class StorageInstanceRenderer extends BasicComboBoxRenderer {
-    @Override
-    public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                  int index, boolean isSelected,
-                                                  boolean cellHasFocus) {
-
-      super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-
-      if (value == null) {
-        setText("None selected");
-        setIcon(null);
-        return this;
-      }
-
-      final StorageInstance instance = (StorageInstance) value;
-      setText(instance.name());
-
-      final ImageIcon icon = IconProvider.getIconForStorageInstance(instance);
-      setIcon(icon);
-
-      setHorizontalTextPosition(SwingConstants.RIGHT);
-      setIconTextGap(10);
-      return this;
-    }
   }
 
   private DocumentListener getSearchFieldListener() {

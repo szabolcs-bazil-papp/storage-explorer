@@ -28,7 +28,7 @@ public class MainView extends JSplitPane {
 
   private static JPanel placeholder() {
     final JPanel panel = new JPanel();
-    panel.setMinimumSize(new Dimension(100, 500));
+    panel.setSize(new Dimension(500, 0));
     return panel;
   }
   private final ExplorerView explorerView;

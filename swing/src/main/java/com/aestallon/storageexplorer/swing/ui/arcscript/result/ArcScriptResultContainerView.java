@@ -35,8 +35,9 @@ public class ArcScriptResultContainerView
 
   protected ArcScriptResultContainerView(UserConfigService userConfigService,
                                          SideBarController sideBarController) {
-    super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT, userConfigService, sideBarController); 
+    super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT, userConfigService, sideBarController);
     addTab("Home", new ArcScriptResultView.Initial());
+    setTabComponentAt(0, new TabComponent("Home", this));
   }
 
   @Override
@@ -53,16 +54,33 @@ public class ArcScriptResultContainerView
   public String tooltip() {
     return "ArcScript results";
   }
-  
+
   public void showResult(String title, ArcScriptResultView.ResultDisplay resultDisplay) {
     final var div = new ArcScriptResultView.ResultDisplayDiv(resultDisplay);
-    addTab(title, div);
-    
-    final int i = indexOfComponent(div);
-    setTabComponentAt(i, new TabComponent(title, this));
-    setSelectedComponent(div);
+    final int idx = indexOfTitle(title);
+    if (idx < 0) {
+      addTab(title, div);
+
+      final int i = indexOfComponent(div);
+      setTabComponentAt(i, new TabComponent(title, this));
+      setSelectedComponent(div);
+    } else {
+      setComponentAt(idx, div);
+      setSelectedComponent(div);
+    }
   }
-  
+
+  private int indexOfTitle(final String title) {
+    for (int i = 0; i < getTabCount(); i++) {
+      final var tab = (TabComponent) getTabComponentAt(i);
+      if (tab.label.getText().equals(title)
+          && getComponentAt(i) instanceof ArcScriptResultView.ResultDisplayDiv) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   @EventListener
   public void onArcScriptViewRenamed(final ArcScriptViewRenamed e) {
     SwingUtilities.invokeLater(() -> {
@@ -86,5 +104,5 @@ public class ArcScriptResultContainerView
   public void discardTabView(TabView tabView) {
     remove(tabView.asComponent());
   }
-  
+
 }

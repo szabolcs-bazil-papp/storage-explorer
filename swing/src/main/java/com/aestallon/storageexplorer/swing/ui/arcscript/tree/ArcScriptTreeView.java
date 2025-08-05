@@ -15,10 +15,12 @@
 
 package com.aestallon.storageexplorer.swing.ui.arcscript.tree;
 
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
-import javax.swing.tree.TreePath;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
@@ -70,7 +72,29 @@ public class ArcScriptTreeView
 
   @Override
   protected ArcScriptSelectorTree initTree() {
-    return ArcScriptSelectorTree.create();
+    final var t = ArcScriptSelectorTree.create();
+    t.addMouseListener(new MouseAdapter() {
+
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        super.mouseClicked(e);
+        if (SwingUtilities.isRightMouseButton(e)) {
+          final var treePath = t.getClosestPathForLocation(e.getX(), e.getY());
+          if (treePath == null) {
+            return;
+          }
+
+          final Object lastPathComponent = treePath.getLastPathComponent();
+          if (!(lastPathComponent instanceof ArcScriptSelectorTree.StorageNode storageNode)) {
+            return;
+          }
+          final var popup = new StorageInstanceNodePopupMenu(storageNode);
+          popup.show(e.getComponent(), e.getX(), e.getY());
+        }
+      }
+
+    });
+    return t;
   }
 
   @Override
@@ -79,8 +103,10 @@ public class ArcScriptTreeView
   }
 
   @Override
-  public void incorporateNode(ArcScriptSelectorTree.ArcScriptNodeLocator arcScriptNodeLocator) {
-
+  public void incorporateNode(ArcScriptSelectorTree.ArcScriptNodeLocator locator) {
+    tree.addScript(locator.storageId(), locator.path());
+    // FIXME: Calling this on every new incorporation is wasteful.
+    memoizeTreePaths();
   }
 
   @Override
@@ -123,6 +149,23 @@ public class ArcScriptTreeView
 
   public void expandAll() {
     tree.expandAll();
+  }
+
+  public record NewScriptRequest(StorageId storageId) {}
+
+
+  private final class StorageInstanceNodePopupMenu extends JPopupMenu {
+
+    private StorageInstanceNodePopupMenu(ArcScriptSelectorTree.StorageNode node) {
+      super(String.valueOf(node.getUserObject()));
+
+      final var newScript = new JMenuItem("New Script", IconProvider.PLUS);
+      newScript.addActionListener(e -> CompletableFuture.runAsync(
+          () -> eventPublisher.publishEvent(new NewScriptRequest(node.storageId()))));
+      newScript.setToolTipText("Create a new script.");
+      add(newScript);
+    }
+
   }
 
 }
