@@ -27,6 +27,7 @@ import com.aestallon.storageexplorer.client.ff.FeatureFlag;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.swing.ui.AppContentView;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
+import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptTreeView;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.WelcomePopup;
 import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
@@ -36,7 +37,6 @@ import com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme;
 @SpringBootApplication(
     exclude = DataSourceAutoConfiguration.class,
     scanBasePackages = {
-        "com.aestallon.storageexplorer.core",
         "com.aestallon.storageexplorer.client",
         "com.aestallon.storageexplorer.swing",
         "com.aestallon.storageexplorer.app.config"
@@ -67,12 +67,14 @@ public class StorageExplorerApplication {
   CommandLineRunner frameLauncher(AppFrame appFrame,
                                   StorageInstanceProvider storageInstanceProvider,
                                   AppContentView appContentView,
-                                  StorageTreeView storageTreeView) {
+                                  StorageTreeView storageTreeView,
+                                  ArcScriptTreeView arcScriptTreeView) {
     return args -> {
       storageInstanceProvider.fetchAllKnown();
       SwingUtilities.invokeLater(() -> {
         appContentView.initSideBar();
         storageTreeView.requestVisibility();
+        arcScriptTreeView.expandAll();
         appFrame.appContentView().mainView().explorerView().reopenTrackedEntryInspectors();
         
         appFrame.launch();
