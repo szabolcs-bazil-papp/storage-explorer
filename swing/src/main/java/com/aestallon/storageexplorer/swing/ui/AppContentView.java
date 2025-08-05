@@ -20,6 +20,7 @@ import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderContainerView;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
+import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.HiddenPaneSize;
 
@@ -175,10 +176,15 @@ public class AppContentView extends JPanel {
 
   @EventListener
   public void onStorageEntryUserDataChanged(final StorageEntryUserDataChanged event) {
-    SwingUtilities.invokeLater(() -> {
-      breadCrumbs.elements.forEach(BreadCrumbElement::setText);
-    });
+    breadCrumbs.refresh();
   }
+  
+  @EventListener
+  public void onArcScriptViewRenamed(final ArcScriptViewRenamed event) {
+    breadCrumbs.refresh();
+  }
+  
+  
 
   public void setGraphState(final GraphState state) {
     graphStateLabel.setState(state);
@@ -272,6 +278,10 @@ public class AppContentView extends JPanel {
         add(element);
       }
       BreadCrumbs.this.revalidate();
+    }
+    
+    private void refresh() {
+      SwingUtilities.invokeLater(() -> elements.forEach(BreadCrumbElement::setText));
     }
 
   }
