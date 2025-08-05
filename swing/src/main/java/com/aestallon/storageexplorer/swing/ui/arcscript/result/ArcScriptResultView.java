@@ -24,6 +24,7 @@ import java.net.URI;
 import java.text.DecimalFormat;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import static java.util.stream.Collectors.joining;
 import javax.swing.*;
@@ -37,21 +38,26 @@ import com.aestallon.storageexplorer.client.asexport.ResultSetExporterFactory;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.util.Uris;
 import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabView;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.TableDisplayMagic;
 
-public sealed interface ArcScriptResultView {
+public sealed interface ArcScriptResultView extends TabView {
 
   Logger log = LoggerFactory.getLogger(ArcScriptResultView.class);
 
   JComponent asComponent();
 
-
-
+  @Override
+  default List<JTextArea> textAreas() {
+    return Collections.emptyList();
+  }
+  
   final class Initial extends JPanel implements ArcScriptResultView {
 
     public Initial() {
@@ -62,6 +68,11 @@ public sealed interface ArcScriptResultView {
     @Override
     public JComponent asComponent() {
       return this;
+    }
+
+    @Override
+    public StorageId storageId() {
+      return null;
     }
 
   }
@@ -83,13 +94,21 @@ public sealed interface ArcScriptResultView {
     public ResultDisplay resultDisplay() {
       return resultDisplay;
     }
-    
+
+    @Override
+    public StorageId storageId() {
+      return resultDisplay.storageId();
+    }
   }
 
   final class ResultDisplay extends JPanel implements ArcScriptResultView {
+    
+    private final transient StorageId storageId;
+    
     public ResultDisplay(ArcScriptResult.Ok result,
                          StorageInstance storageInstance,
                          ArcScriptController controller) {
+      storageId = storageInstance.id();
       setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
       setAlignmentX(LEFT_ALIGNMENT);
 
@@ -108,6 +127,11 @@ public sealed interface ArcScriptResultView {
     @Override
     public JComponent asComponent() {
       return this;
+    }
+    
+    @Override
+    public StorageId storageId() {
+      return storageId;
     }
 
     private static final class IndexResultPanel extends JPanel {

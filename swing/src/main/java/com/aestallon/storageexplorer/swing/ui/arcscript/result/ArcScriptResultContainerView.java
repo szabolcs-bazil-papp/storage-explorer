@@ -23,12 +23,15 @@ import com.aestallon.storageexplorer.swing.ui.commander.AbstractCommanderTabbedV
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabComponent;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabContainer;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabView;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 @Component
 public class ArcScriptResultContainerView
     extends AbstractCommanderTabbedView
-    implements CommanderView {
+    implements CommanderView, TabContainer {
 
   protected ArcScriptResultContainerView(UserConfigService userConfigService,
                                          SideBarController sideBarController) {
@@ -54,6 +57,9 @@ public class ArcScriptResultContainerView
   public void showResult(String title, ArcScriptResultView.ResultDisplay resultDisplay) {
     final var div = new ArcScriptResultView.ResultDisplayDiv(resultDisplay);
     addTab(title, div);
+    
+    final int i = indexOfComponent(div);
+    setTabComponentAt(i, new TabComponent(title, this));
     setSelectedComponent(div);
   }
   
@@ -62,14 +68,23 @@ public class ArcScriptResultContainerView
     SwingUtilities.invokeLater(() -> {
       for (final var component : getComponents()) {
         if (component instanceof ArcScriptResultView.ResultDisplayDiv div) {
-          final var tab = (JLabel) getTabComponentAt(indexOfComponent(div));
-          if (tab.getText().equals(e.from())) {
-            tab.setText(e.to());
+          final var tab = (TabComponent) getTabComponentAt(indexOfComponent(div));
+          if (tab.label.getText().equals(e.from())) {
+            tab.label.setText(e.to());
           }
         }
       }
     });
   }
-  
+
+  @Override
+  public TabView tabViewAt(int idx) {
+    return (TabView) getComponentAt(idx);
+  }
+
+  @Override
+  public void discardTabView(TabView tabView) {
+    remove(tabView.asComponent());
+  }
   
 }

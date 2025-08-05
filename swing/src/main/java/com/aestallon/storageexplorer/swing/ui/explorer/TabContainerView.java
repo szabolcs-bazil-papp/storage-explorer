@@ -43,7 +43,7 @@ import com.aestallon.storageexplorer.swing.ui.inspector.StorageEntryInspectorVie
 import com.aestallon.storageexplorer.swing.ui.misc.CloseTabButton;
 
 @Component
-public class TabContainerView extends JTabbedPane {
+public class TabContainerView extends JTabbedPane implements TabContainer {
 
   private static final Logger log = LoggerFactory.getLogger(TabContainerView.class);
   private final transient ApplicationEventPublisher eventPublisher;
@@ -186,54 +186,15 @@ public class TabContainerView extends JTabbedPane {
     }));
   }
 
-  private final class TabComponent extends JPanel {
-
-    private final JLabel label;
-
-    private TabComponent(final String title) {
-      super(new FlowLayout(FlowLayout.LEFT, 0, 0));
-      setOpaque(false);
-      label = new JLabel(title);
-      add(label);
-      add(new CloseTabButton(e -> {
-        int idx = TabContainerView.this.indexOfTabComponent(TabComponent.this);
-        if (idx < 0) {
-          return;
-        }
-
-        final var tabView = tabViewAt(idx);
-        if (tabView == null) {
-          return;
-        }
-
-        final int alt = ActionEvent.ALT_MASK;
-        if ((e.getModifiers() & alt) == alt) {
-          final int tabCount = getTabCount();
-          if (idx < tabCount - 1) {
-            for (int i = 0; i < tabCount - 1 - idx; i++) {
-              discardTabView(tabViewAt(idx + 1));
-            }
-          }
-          for (int i = 0; i < idx; i++) {
-            discardTabView(tabViewAt(0));
-
-          }
-        } else {
-          discardTabView(tabView);
-        }
-      }));
-    }
-
-  }
-
   private void installTabComponent(JComponent inspectorComponent) {
     final int index = indexOfComponent(inspectorComponent);
     final var title = getTitleAt(index);
-    final var tab = new TabComponent(title);
+    final var tab = new TabComponent(title, this);
     setTabComponentAt(index, tab);
   }
 
-  private void discardTabView(final TabView tabViewToClose) {
+  @Override
+  public void discardTabView(final TabView tabViewToClose) {
     remove(tabViewToClose.asComponent());
     switch (tabViewToClose) {
       case InspectorView<?> inspector -> factory.dropInspector(inspector);
@@ -242,7 +203,8 @@ public class TabContainerView extends JTabbedPane {
     }
   }
 
-  private TabView tabViewAt(final int idx) {
+  @Override
+  public TabView tabViewAt(final int idx) {
     return (TabView) getComponentAt(idx);
   }
 
