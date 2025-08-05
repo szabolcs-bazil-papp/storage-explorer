@@ -42,7 +42,10 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.arcscript.editor.ArcScriptTextareaFactory;
 import com.aestallon.storageexplorer.swing.ui.arcscript.editor.ArcScriptView;
+import com.aestallon.storageexplorer.swing.ui.arcscript.result.ArcScriptResultContainerView;
+import com.aestallon.storageexplorer.swing.ui.arcscript.result.ArcScriptResultView;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
+import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptTreeView;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
@@ -64,18 +67,24 @@ public class ArcScriptController {
   private final MonospaceFontProvider monospaceFontProvider;
   private final ArcScriptTextareaFactory arcScriptTextareaFactory;
   private final ResultSetExporterFactory resultSetExporterFactory;
+  private final ArcScriptResultContainerView resultContainerView;
+  private final ArcScriptTreeView arcScriptTreeView;
   private final List<ArcScriptView> arcScriptViews = new ArrayList<>();
 
   public ArcScriptController(final StorageInstanceProvider storageInstanceProvider,
                              final ApplicationEventPublisher applicationEventPublisher,
                              final UserConfigService userConfigService,
                              final RSyntaxTextAreaThemeProvider themeProvider,
-                             final MonospaceFontProvider monospaceFontProvider) {
+                             final MonospaceFontProvider monospaceFontProvider,
+                             ArcScriptResultContainerView resultContainerView,
+                             ArcScriptTreeView arcScriptTreeView) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.applicationEventPublisher = applicationEventPublisher;
     this.userConfigService = userConfigService;
     this.themeProvider = themeProvider;
     this.monospaceFontProvider = monospaceFontProvider;
+    this.resultContainerView = resultContainerView;
+    this.arcScriptTreeView = arcScriptTreeView;
     this.resultSetExporterFactory = new ResultSetExporterFactory();
 
     arcScriptTextareaFactory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
@@ -156,7 +165,12 @@ public class ArcScriptController {
     switch (result) {
       case ArcScriptFileService.ArcScriptIoResult.Ok(StoredArcScript arcScript) -> {
         arcScriptView.storedArcScript(arcScript);
-        applicationEventPublisher.publishEvent(new ArcScriptViewRenamed(arcScriptView, title));
+        final var event = new ArcScriptViewRenamed(
+            arcScriptView,
+            storedArcScript.title(),
+            arcScript.title());
+        applicationEventPublisher.publishEvent(event);
+        arcScriptTreeView.onUserDataChanged(event);
       }
       case ArcScriptFileService.ArcScriptIoResult.Err(String msg) -> JOptionPane.showMessageDialog(
           arcScriptView,
@@ -191,8 +205,15 @@ public class ArcScriptController {
         arcScriptView.storedArcScript().title());
   }
 
-  public void renderResult(final ArcScriptResult.Ok result) {
-    // TODO: Implement!
+  public void renderResult(final String title,
+                           final StorageInstance storageInstance,
+                           final ArcScriptResult.Ok result) {
+    SwingUtilities.invokeLater(() -> {
+      resultContainerView.showResult(
+          title,
+          new ArcScriptResultView.ResultDisplay(result, storageInstance, this));
+      resultContainerView.requestVisibility();
+    });
   }
 
   public ArcScriptView newScript(final StorageInstance storageInstance) {
@@ -232,7 +253,7 @@ public class ArcScriptController {
   }
 
   public void drop(ArcScriptView arcScriptView) {
-    log.info("Drop requested...");
+    arcScriptViews.remove(arcScriptView);
   }
 
 

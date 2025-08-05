@@ -37,7 +37,7 @@ public abstract class AbstractCommanderTabbedView extends JTabbedPane implements
 
   @Override
   public void requestVisibility() {
-
+    sideBarController.showCommanderView(this);
   }
 
   @Override

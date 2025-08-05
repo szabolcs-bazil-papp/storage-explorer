@@ -16,11 +16,13 @@
 package com.aestallon.storageexplorer.swing.ui.arcscript.result;
 
 import javax.swing.*;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.swing.ui.commander.AbstractCommanderTabbedView;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
+import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 @Component
@@ -30,7 +32,8 @@ public class ArcScriptResultContainerView
 
   protected ArcScriptResultContainerView(UserConfigService userConfigService,
                                          SideBarController sideBarController) {
-    super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT, userConfigService, sideBarController);
+    super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT, userConfigService, sideBarController); 
+    addTab("Home", new ArcScriptResultView.Initial());
   }
 
   @Override
@@ -47,4 +50,26 @@ public class ArcScriptResultContainerView
   public String tooltip() {
     return "ArcScript results";
   }
+  
+  public void showResult(String title, ArcScriptResultView.ResultDisplay resultDisplay) {
+    final var div = new ArcScriptResultView.ResultDisplayDiv(resultDisplay);
+    addTab(title, div);
+    setSelectedComponent(div);
+  }
+  
+  @EventListener
+  public void onArcScriptViewRenamed(final ArcScriptViewRenamed e) {
+    SwingUtilities.invokeLater(() -> {
+      for (final var component : getComponents()) {
+        if (component instanceof ArcScriptResultView.ResultDisplayDiv div) {
+          final var tab = (JLabel) getTabComponentAt(indexOfComponent(div));
+          if (tab.getText().equals(e.from())) {
+            tab.setText(e.to());
+          }
+        }
+      }
+    });
+  }
+  
+  
 }

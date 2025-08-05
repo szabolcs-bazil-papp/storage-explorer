@@ -166,7 +166,7 @@ public class TabContainerView extends JTabbedPane {
     }
 
     final var tab = (TabComponent) getTabComponentAt(idx);
-    tab.label.setText(e.name());
+    tab.label.setText(e.to());
   }
 
   @EventListener

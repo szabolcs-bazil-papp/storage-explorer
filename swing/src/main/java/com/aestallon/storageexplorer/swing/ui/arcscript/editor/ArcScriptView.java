@@ -227,7 +227,11 @@ public class ArcScriptView extends JPanel implements TabView {
         case ArcScriptResult.UnknownError uErr -> showErr("Unknown error", uErr.msg());
         case ArcScriptResult.Ok ok -> {
           controller.eventPublisher().publishEvent(BackgroundWorkCompletedEvent.ok());
-          controller.renderResult(ok);
+          controller.renderResult(storedArcScript.title(), storageInstance, ok);
+          SwingUtilities.invokeLater(() -> {
+            editor.setEnabled(true);
+            playAction.setEnabled(true);
+          });
         }
       }
     });

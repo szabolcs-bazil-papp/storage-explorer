@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.swing.ui.arcscript.tree;
 
 import java.awt.*;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -168,6 +169,20 @@ public final class ArcScriptSelectorTree extends JTree implements Scrollable, Ac
         .map(StorageNode::getPath)
         .map(TreePath::new)
         .forEach(this::expandPath);
+  }
+
+  Optional<Pair<ArcScriptNodeLocator, TreePath>> rename(final StorageId storageId,
+                                                        final String oldName,
+                                                        final String newName) {
+    return scriptNodes(storageId).stream()
+        .filter(matchesTitle(oldName))
+        .findFirst()
+        .map(it -> {
+          final var locator = new ArcScriptNodeLocator(storageId, newName);
+          it.setUserObject(locator);
+          model().nodeChanged(it);
+          return Pair.of(locator, new TreePath(it.getPath()));
+        });
   }
 
   // -----------------------------------------------------------------------------------------------

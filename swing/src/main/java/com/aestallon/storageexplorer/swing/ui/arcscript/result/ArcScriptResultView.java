@@ -66,6 +66,25 @@ public sealed interface ArcScriptResultView {
 
   }
 
+  final class ResultDisplayDiv extends JScrollPane implements ArcScriptResultView {
+
+    private final ResultDisplay resultDisplay;
+
+    public ResultDisplayDiv(ResultDisplay resultDisplay) {
+      super(resultDisplay, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_NEVER);
+      this.resultDisplay = resultDisplay;
+    }
+
+    @Override
+    public JComponent asComponent() {
+      return null;
+    }
+    
+    public ResultDisplay resultDisplay() {
+      return resultDisplay;
+    }
+    
+  }
 
   final class ResultDisplay extends JPanel implements ArcScriptResultView {
     public ResultDisplay(ArcScriptResult.Ok result,

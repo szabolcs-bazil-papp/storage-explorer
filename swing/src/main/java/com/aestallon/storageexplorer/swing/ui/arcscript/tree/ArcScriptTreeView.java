@@ -18,12 +18,14 @@ package com.aestallon.storageexplorer.swing.ui.arcscript.tree;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.tree.TreePath;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -90,7 +92,7 @@ public class ArcScriptTreeView
     tree.addStorage(storageInstance, loadableScripts);
     memoizeTreePaths();
   }
-  
+
   private void memoizeTreePaths() {
     treePathsByLeaf.putAll(tree.treePaths().collect(Pair.toMap()));
   }
@@ -106,10 +108,19 @@ public class ArcScriptTreeView
   }
 
   @Override
-  public void onUserDataChanged(ArcScriptViewRenamed arcScriptViewRenamed) {
-    super.onUserDataChanged(arcScriptViewRenamed);
+  public void onUserDataChanged(ArcScriptViewRenamed e) {
+    final StorageId storageId = e.arcScriptView().storageId();
+    final String oldTitle = e.from();
+    final String newTitle = e.to();
+
+    final var locator = new ArcScriptSelectorTree.ArcScriptNodeLocator(storageId, oldTitle);
+    treePathsByLeaf.remove(locator);
+    tree
+        .rename(storageId, oldTitle, newTitle)
+        .ifPresent(p -> treePathsByLeaf.put(p.a(), p.b()));
+    super.onUserDataChanged(e);
   }
-  
+
   public void expandAll() {
     tree.expandAll();
   }
