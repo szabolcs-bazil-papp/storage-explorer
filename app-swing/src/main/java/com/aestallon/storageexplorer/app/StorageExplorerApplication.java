@@ -52,7 +52,6 @@ public class StorageExplorerApplication {
   public static void main(String[] args) {
     FeatureFlag.parse(args);
 
-    System.setProperty("sun.java2d.uiScale", "100%");
     System.setProperty("org.graphstream.ui", "swing");
     FlatIntelliJLaf.setup();
 

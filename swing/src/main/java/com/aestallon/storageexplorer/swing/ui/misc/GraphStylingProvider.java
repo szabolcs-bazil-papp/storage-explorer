@@ -15,6 +15,7 @@
 
 package com.aestallon.storageexplorer.swing.ui.misc;
 
+import java.awt.*;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
@@ -39,8 +40,25 @@ public class GraphStylingProvider {
       return "";
     }
   }
+  
+  public static String provideLight(Component c) {
+    return provide(c, LIGHT);
+  }
+  
+  public static String provideDark(Component c) {
+    return provide(c, DARK);
+  }
+  
+  private static String provide(Component c, String stylesheet) {
+    final double scale = c
+        .getGraphicsConfiguration()
+        .getDefaultTransform()
+        .getScaleX();
+    final int textSize = (int) (12 * scale);
+    return stylesheet.replace("${text-size}", String.valueOf(textSize));
+  }
 
-  public static final String LIGHT = loadStylesheet("/styles.css");
-  public static final String DARK = loadStylesheet("/styles-dark.css");
+  private static final String LIGHT = loadStylesheet("/styles.css");
+  private static final String DARK = loadStylesheet("/styles-dark.css");
 
 }

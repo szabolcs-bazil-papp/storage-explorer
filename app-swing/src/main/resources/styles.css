@@ -11,7 +11,7 @@ node {
     text-padding: 5px, 4px;
     text-background-mode: rounded-box;
     text-background-color: #e0f9f488;
-    text-size: 8;
+    text-size: ${text-size};
     text-color: black;
     size-mode: fit;
 }
@@ -26,7 +26,7 @@ edge {
     text-background-mode: rounded-box;
     text-background-color: #3c5e5888;
     text-color: white;
-    text-size: 6;
+    text-size: ${text-size};
     text-visibility: 0.7;
     text-visibility-mode: under-zoom;
 }

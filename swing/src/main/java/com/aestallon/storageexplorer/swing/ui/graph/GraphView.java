@@ -21,6 +21,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
+import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -133,8 +134,8 @@ public class GraphView extends JPanel {
     sprites = new SpriteManager(graph);
 
     graph.setAttribute("ui.stylesheet", switch (lafService.getLaf()) {
-      case DARK -> GraphStylingProvider.DARK;
-      case LIGHT -> GraphStylingProvider.LIGHT;
+      case DARK -> GraphStylingProvider.provideDark(this);
+      case LIGHT -> GraphStylingProvider.provideLight(this);
     });
     graph.setAttribute("ui.antialias");
     graph.setAttribute("ui.quality");
@@ -346,7 +347,11 @@ public class GraphView extends JPanel {
     }
 
     private Optional<StorageEntry> getStorageEntry(MouseEvent e) {
-      final GraphicElement node = view.findGraphicElementAt(getManagedTypes(), e.getX(), e.getY());
+      final var transform = getGraphicsConfiguration().getDefaultTransform();
+      final GraphicElement node = view.findGraphicElementAt(
+          getManagedTypes(),
+          e.getX() * transform.getScaleX(),
+          e.getY() * transform.getScaleY());
       if (node == null) {
         return Optional.empty();
       }
@@ -430,8 +435,8 @@ public class GraphView extends JPanel {
     }
 
     SwingUtilities.invokeLater(() -> graph.setAttribute("ui.stylesheet", switch (event.laf()) {
-      case DARK -> GraphStylingProvider.DARK;
-      case LIGHT -> GraphStylingProvider.LIGHT;
+      case DARK -> GraphStylingProvider.provideDark(this);
+      case LIGHT -> GraphStylingProvider.provideLight(this);
     }));
   }
 }
