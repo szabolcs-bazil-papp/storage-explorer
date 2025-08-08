@@ -21,6 +21,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
+import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -133,8 +134,8 @@ public class GraphView extends JPanel {
     sprites = new SpriteManager(graph);
 
     graph.setAttribute("ui.stylesheet", switch (lafService.getLaf()) {
-      case DARK -> GraphStylingProvider.DARK;
-      case LIGHT -> GraphStylingProvider.LIGHT;
+      case DARK -> GraphStylingProvider.provideDark(this);
+      case LIGHT -> GraphStylingProvider.provideLight(this);
     });
     graph.setAttribute("ui.antialias");
     graph.setAttribute("ui.quality");
@@ -269,6 +270,21 @@ public class GraphView extends JPanel {
     graphRenderingService.changeHighlight(graph, currentHighlight, storageEntry);
     currentHighlight = storageEntry;
   }
+  
+  @SuppressWarnings("deprecation")
+  private MouseEvent scaleMouseEvent(final MouseEvent e) {
+    final var transform = getGraphicsConfiguration().getDefaultTransform();
+    return new MouseEvent(
+        (java.awt.Component) e.getSource(), 
+        e.getID(), 
+        e.getWhen(), 
+        e.getModifiers(),
+        (int) (e.getX() * transform.getScaleX()), (int) (e.getY() * transform.getScaleY()), 
+        e.getXOnScreen(), e.getYOnScreen(), 
+        e.getClickCount(), 
+        e.isPopupTrigger(), 
+        e.getButton());
+  }
 
   private final class GraphViewMouseManager
       extends MouseOverMouseManager
@@ -291,6 +307,7 @@ public class GraphView extends JPanel {
 
     @Override
     public void mouseDragged(MouseEvent event) {
+      event = scaleMouseEvent(event);
       if (SwingUtilities.isLeftMouseButton(event)) {
         if (x != -1 && y != -1) {
           final var camera = view.getCamera();
@@ -310,13 +327,17 @@ public class GraphView extends JPanel {
 
     @Override
     public void mouseMoved(MouseEvent event) {
+      event = scaleMouseEvent(event);
       x = -1;
       y = -1;
       super.mouseMoved(event);
     }
+    
+    
 
     @Override
     public void mouseClicked(MouseEvent e) {
+      e = scaleMouseEvent(e);
       super.mouseClicked(e);
 
       if (e.getButton() == MouseEvent.BUTTON1) {
@@ -328,9 +349,10 @@ public class GraphView extends JPanel {
 
     @Override
     public void mousePressed(MouseEvent e) {
-      super.mousePressed(e);
+      final var scaledE = scaleMouseEvent(e);
+      super.mousePressed(scaledE);
 
-      final var entry = getStorageEntry(e);
+      final var entry = getStorageEntry(scaledE);
       if (entry.isEmpty()) {
         return;
       }
@@ -346,7 +368,10 @@ public class GraphView extends JPanel {
     }
 
     private Optional<StorageEntry> getStorageEntry(MouseEvent e) {
-      final GraphicElement node = view.findGraphicElementAt(getManagedTypes(), e.getX(), e.getY());
+      final GraphicElement node = view.findGraphicElementAt(
+          getManagedTypes(),
+          e.getX(),
+          e.getY());
       if (node == null) {
         return Optional.empty();
       }
@@ -430,8 +455,8 @@ public class GraphView extends JPanel {
     }
 
     SwingUtilities.invokeLater(() -> graph.setAttribute("ui.stylesheet", switch (event.laf()) {
-      case DARK -> GraphStylingProvider.DARK;
-      case LIGHT -> GraphStylingProvider.LIGHT;
+      case DARK -> GraphStylingProvider.provideDark(this);
+      case LIGHT -> GraphStylingProvider.provideLight(this);
     }));
   }
 }

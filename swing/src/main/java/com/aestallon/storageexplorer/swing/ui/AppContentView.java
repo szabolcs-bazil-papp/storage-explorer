@@ -18,27 +18,34 @@ import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDat
 import com.aestallon.storageexplorer.common.util.MsgStrings;
 import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
+import com.aestallon.storageexplorer.swing.ui.commander.CommanderContainerView;
+import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
+import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.HiddenPaneSize;
-import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 @Component
 public class AppContentView extends JPanel {
 
   private final MainView mainView;
-  private final CommanderView commanderView;
+  private final CommanderContainerView commanderContainerView;
   private final JSplitPane content;
   private final JToolBar toolBar;
   private final BreadCrumbs breadCrumbs;
   private final GraphStateLabel graphStateLabel;
   private final LoadingQueueLabel loadingQueueLabel;
+
+  private final transient SideBarController sideBarController;
+
   private JProgressBar progressBar;
   private HiddenPaneSize hiddenPaneSize;
 
-  public AppContentView(MainView mainView, CommanderView commanderView) {
+  public AppContentView(MainView mainView,
+                        CommanderContainerView commanderContainerView,
+                        SideBarController sideBarController) {
     this.mainView = mainView;
-    this.commanderView = commanderView;
+    this.commanderContainerView = commanderContainerView;
+    this.sideBarController = sideBarController;
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
@@ -65,6 +72,12 @@ public class AppContentView extends JPanel {
     hiddenPaneSize = new HiddenPaneSize(-1, -1, 500, 5);
   }
 
+  public void initSideBar() {
+    JPanel inner = (JPanel) getComponent(0);
+    inner.remove(0);
+    inner.add(new SideBar(), 0);
+  }
+
   private JToolBar initToolBar() {
     final var tb = new JToolBar(SwingConstants.HORIZONTAL);
     tb.setAlignmentX(LEFT_ALIGNMENT);
@@ -80,34 +93,46 @@ public class AppContentView extends JPanel {
     return hiddenPaneSize == null;
   }
 
-  public void showHideCommander(final boolean show) {
-    if (show == showingCommander()) {
-      return;
-    }
+  @EventListener
+  public void showHideCommander(final SideBarController.CommanderShowEvent e) {
+    if (!showingCommander()) {
+      switch (e) {
+        case SideBarController.CommanderShowEvent.None none -> {
+          // requested to show nothing and we already do
+        }
+        case SideBarController.CommanderShowEvent.Some(var commanderView) -> {
+          commanderContainerView.setCommanderView(commanderView);
+          if (content.getRightComponent() == null) {
+            content.setRightComponent(commanderContainerView);
+          }
 
-    if (show) {
-      if (content.getRightComponent() == null) {
-        content.setRightComponent(commanderView);
+          content.setDividerLocation(hiddenPaneSize.dividerLocation());
+          content.setDividerSize(hiddenPaneSize.dividerSize());
+          commanderContainerView.setMinimumSize(null);
+          commanderContainerView.setMaximumSize(null);
+          commanderContainerView.setPreferredSize(hiddenPaneSize.toPreferredSize());
+
+          hiddenPaneSize = null;
+        }
       }
-
-      content.setDividerLocation(hiddenPaneSize.dividerLocation());
-      content.setDividerSize(hiddenPaneSize.dividerSize());
-      commanderView.setMinimumSize(null);
-      commanderView.setMaximumSize(null);
-      commanderView.setPreferredSize(hiddenPaneSize.toPreferredSize());
-
-      hiddenPaneSize = null;
     } else {
-      final Dimension preferredSize = commanderView.getPreferredSize();
-      final int dividerLocation = content.getDividerLocation();
-      final int dividerSize = content.getDividerSize();
-      hiddenPaneSize = HiddenPaneSize.of(preferredSize, dividerLocation, dividerSize);
+      switch (e) {
+        case SideBarController.CommanderShowEvent.None none -> {
+          final Dimension preferredSize = commanderContainerView.getPreferredSize();
+          final int dividerLocation = content.getDividerLocation();
+          final int dividerSize = content.getDividerSize();
+          hiddenPaneSize = HiddenPaneSize.of(preferredSize, dividerLocation, dividerSize);
 
-      content.setDividerLocation(1.0);
-      content.setDividerSize(0);
-      commanderView.setMinimumSize(new Dimension(0, 0));
-      commanderView.setMaximumSize(new Dimension(0, 0));
-      content.setRightComponent(null);
+          content.setDividerLocation(1.0);
+          content.setDividerSize(0);
+          commanderContainerView.setMinimumSize(new Dimension(0, 0));
+          commanderContainerView.setMaximumSize(new Dimension(0, 0));
+          content.setRightComponent(null);
+        }
+        case SideBarController.CommanderShowEvent.Some(var commanderView) -> {
+          commanderContainerView.setCommanderView(commanderView);
+        }
+      }
     }
   }
 
@@ -116,6 +141,8 @@ public class AppContentView extends JPanel {
     if (progressBar == null) {
       progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
       progressBar.setPreferredSize(new Dimension(300, 20));
+    } else {
+      toolBar.remove(progressBar);
     }
     progressBar.setString(displayName);
     progressBar.setStringPainted(true);
@@ -136,10 +163,10 @@ public class AppContentView extends JPanel {
     return mainView;
   }
 
-  public CommanderView commanderView() {
-    return commanderView;
+  public CommanderContainerView commanderView() {
+    return commanderContainerView;
   }
-  
+
   public void setLoadingQueueSize(final LoadingQueueSize event) {
     loadingQueueLabel.setNumber(event);
   }
@@ -148,27 +175,34 @@ public class AppContentView extends JPanel {
   public void onBreadCrumbsChanged(final BreadCrumbsChanged e) {
     breadCrumbs.set(e.path().getPath());
   }
-  
+
   @EventListener
   public void onStorageEntryUserDataChanged(final StorageEntryUserDataChanged event) {
-    SwingUtilities.invokeLater(() -> {
-      breadCrumbs.elements.forEach(BreadCrumbElement::setText);
-    });
+    breadCrumbs.refresh();
   }
   
+  @EventListener
+  public void onArcScriptViewRenamed(final ArcScriptViewRenamed event) {
+    breadCrumbs.refresh();
+  }
+  
+  
+
   public void setGraphState(final GraphState state) {
     graphStateLabel.setState(state);
   }
-  
+
   private static final class LoadingQueueLabel extends JLabel {
     private final Map<StorageId, Long> sizes;
+
     public LoadingQueueLabel() {
       sizes = new HashMap<>();
       setNumberInternal(0L);
       setOpaque(true);
       setHorizontalAlignment(SwingConstants.CENTER);
       setFont(getFont().deriveFont(Font.BOLD));
-      setToolTipText("The number of entries waiting to be loaded. The application may become temporarily unresponsive if this number is greater than 0.");
+      setToolTipText(
+          "The number of entries waiting to be loaded. The application may become temporarily unresponsive if this number is greater than 0.");
       setBorder(new EmptyBorder(2, 15, 2, 15));
     }
 
@@ -176,7 +210,7 @@ public class AppContentView extends JPanel {
       sizes.put(size.storageId(), size.size());
       setNumberInternal(sizes.values().stream().reduce(0L, Long::sum));
     }
-    
+
     private void setNumberInternal(final long number) {
       setText(String.valueOf(number));
 
@@ -189,17 +223,18 @@ public class AppContentView extends JPanel {
       }
     }
   }
-  
+
+
   private static final class GraphStateLabel extends JLabel {
     private long nodes;
     private long edges;
-    
+
     private GraphStateLabel() {
       setHorizontalAlignment(SwingConstants.CENTER);
       setBorder(new EmptyBorder(2, 15, 2, 15));
       setTextInternal();
     }
-    
+
     private void setTextInternal() {
       if (nodes < 1L && edges < 1L) {
         setText("");
@@ -209,7 +244,7 @@ public class AppContentView extends JPanel {
         setOpaque(true);
       }
     }
-    
+
     private void setState(GraphState state) {
       nodes = state.nodeCount();
       edges = state.edgeCount();
@@ -246,6 +281,10 @@ public class AppContentView extends JPanel {
       }
       BreadCrumbs.this.revalidate();
     }
+    
+    private void refresh() {
+      SwingUtilities.invokeLater(() -> elements.forEach(BreadCrumbElement::setText));
+    }
 
   }
 
@@ -271,7 +310,7 @@ public class AppContentView extends JPanel {
 
       addActionListener(this);
     }
-    
+
     private void setText() {
       setText(MsgStrings.trim(node.toString(), textLimit));
     }
@@ -313,7 +352,7 @@ public class AppContentView extends JPanel {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      mainView().mainTreeView().softSelectNode(node);
+      sideBarController.treeView("Storage Tree").ifPresent(it -> it.selectNodeSoft(node));
     }
   }
 
@@ -326,18 +365,11 @@ public class AppContentView extends JPanel {
       setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
       setAlignmentY(TOP_ALIGNMENT);
 
-      final var showHideTree = new JToggleButton(IconProvider.TREE);
-      showHideTree.setToolTipText("Show/hide tree displaying storage hierarchy");
-      showHideTree.setFocusPainted(false);
-      showHideTree.setSelected(true);
-      showHideTree.addActionListener(e -> mainView().showHideTree(showHideTree.isSelected()));
-      add(showHideTree);
+      sideBarController.getTreeToggles().forEach(SideBar.this::add);
 
-      final var showHideCommander = new JToggleButton(IconProvider.TERMINAL);
-      showHideCommander.setToolTipText("Show/hide scripting facilities");
-      showHideCommander.setFocusPainted(false);
-      showHideCommander.addActionListener(e -> showHideCommander(showHideCommander.isSelected()));
-      add(showHideCommander);
+      add(Box.createVerticalGlue());
+
+      sideBarController.getCommanderToggles().forEach(SideBar.this::add);
     }
 
   }

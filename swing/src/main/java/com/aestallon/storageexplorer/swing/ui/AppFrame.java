@@ -20,11 +20,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import javax.swing.*;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
-import com.aestallon.storageexplorer.swing.ui.dialog.SearchForEntryDialog;
+import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
+import com.aestallon.storageexplorer.swing.ui.dialog.findtab.FindTabController;
 import com.aestallon.storageexplorer.swing.ui.dialog.graphsettings.GraphSettingsController;
 import com.aestallon.storageexplorer.swing.ui.dialog.graphsettings.GraphSettingsDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageController;
@@ -33,6 +33,8 @@ import com.aestallon.storageexplorer.swing.ui.dialog.keymap.KeymapController;
 import com.aestallon.storageexplorer.swing.ui.dialog.keymap.KeymapDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryDialog;
+import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptController;
+import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptDialog;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
@@ -40,22 +42,24 @@ import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 @Component
 public class AppFrame extends JFrame {
 
-  private final ApplicationEventPublisher eventPublisher;
-  private final StorageInstanceProvider storageInstanceProvider;
-  private final UserConfigService userConfigService;
-  private final AppContentView appContentView;
-  private final LafService lafService;
+  private final transient StorageInstanceProvider storageInstanceProvider;
+  private final transient UserConfigService userConfigService;
+  private final transient AppContentView appContentView;
+  private final transient ArcScriptController arcScriptController;
+  private final transient LafService lafService;
+  private final transient FindTabController findTabController;
 
-  public AppFrame(ApplicationEventPublisher eventPublisher,
-                  StorageInstanceProvider storageInstanceProvider,
+  public AppFrame(StorageInstanceProvider storageInstanceProvider,
                   UserConfigService userConfigService,
                   AppContentView appContentView,
-                  LafService lafService) {
-    this.eventPublisher = eventPublisher;
+                  ArcScriptController arcScriptController,
+                  LafService lafService, FindTabController findTabController) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.userConfigService = userConfigService;
     this.appContentView = appContentView;
+    this.arcScriptController = arcScriptController;
     this.lafService = lafService;
+    this.findTabController = findTabController;
 
     setTitle("Storage Explorer");
     setSize(900, 600);
@@ -64,6 +68,7 @@ public class AppFrame extends JFrame {
     initMenu();
     addSearchAction();
     addLoadAction();
+    addNewScriptAction();
     add(appContentView);
   }
 
@@ -77,9 +82,9 @@ public class AppFrame extends JFrame {
         InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
     InputMap im = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
     ActionMap am = getRootPane().getActionMap();
-
-    im.put(ctrlShiftT, "cancel");
-    am.put("cancel", new SearchAction());
+    final String findTabKey = "findTab";
+    im.put(ctrlShiftT, findTabKey);
+    am.put(findTabKey, new SearchAction());
   }
 
   private void addLoadAction() {
@@ -93,17 +98,31 @@ public class AppFrame extends JFrame {
     am.put("load", new LoadAction());
   }
 
+  private void addNewScriptAction() {
+    final var ctrlShiftN = KeyStroke.getKeyStroke(
+        KeyEvent.VK_N,
+        InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
+    InputMap im = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+    ActionMap am = getRootPane().getActionMap();
+
+    im.put(ctrlShiftN, "newScript");
+    am.put("newScript", new NewScriptAction());
+  }
+
   private void initMenu() {
     final var menubar = new JMenuBar();
     final var commands = new JMenu("Commands");
 
-    final var selectNode = new JMenuItem("Select node...");
+    final var selectNode = new JMenuItem("Find tab...");
     selectNode.addActionListener(new SearchAction());
     commands.add(selectNode);
 
     final var importStorage = new JMenuItem("Import storage...");
     importStorage.addActionListener(new ImportStorageAction());
     commands.add(importStorage);
+
+    final var newScript = createNewScriptMenuItem();
+    commands.add(newScript);
 
     menubar.add(commands);
 
@@ -112,6 +131,10 @@ public class AppFrame extends JFrame {
     menubar.add(settings);
 
     setJMenuBar(menubar);
+  }
+
+  private JMenuItem createNewScriptMenuItem() {
+    return new JMenuItem(new NewScriptAction());
   }
 
   private JMenu settings() {
@@ -158,9 +181,7 @@ public class AppFrame extends JFrame {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      final var dialog = new SearchForEntryDialog(storageInstanceProvider, eventPublisher);
-      dialog.setLocationRelativeTo(AppFrame.this);
-      dialog.setVisible(true);
+      findTabController.showFindTabDialog(AppFrame.this);
     }
 
   }
@@ -199,6 +220,28 @@ public class AppFrame extends JFrame {
     public void actionPerformed(ActionEvent e) {
       final ImportStorageDialog dialog = new ImportStorageDialog(
           ImportStorageController.forCreatingNew(storageInstanceProvider));
+      dialog.pack();
+      dialog.setLocationRelativeTo(AppFrame.this);
+      dialog.setVisible(true);
+    }
+  }
+
+
+  private final class NewScriptAction extends AbstractAction {
+    private NewScriptAction() {
+      super("New Script...");
+    }
+
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+      final var controller = NewScriptController.create(
+          userConfigService.getMostRecentStorageInstanceLoad()
+              .map(storageInstanceProvider::get)
+              .orElse(null),
+          storageInstanceProvider,
+          arcScriptController);
+      final var dialog = new NewScriptDialog(controller);
       dialog.pack();
       dialog.setLocationRelativeTo(AppFrame.this);
       dialog.setVisible(true);

@@ -18,15 +18,22 @@ package com.aestallon.storageexplorer.swing.ui.inspector;
 import javax.swing.*;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabView;
 
-public interface InspectorView<T extends StorageEntry> {
+public interface InspectorView<T extends StorageEntry> extends TabView {
 
   T storageEntry();
+
+  default StorageId storageId() {
+    return storageEntry().storageId();
+  }
+
 
   default JComponent asComponent() {
     return (JComponent) this;
   }
-  
+
   void onUserDataChanged(StorageEntryTrackingService.StorageEntryUserData userData);
 
 }

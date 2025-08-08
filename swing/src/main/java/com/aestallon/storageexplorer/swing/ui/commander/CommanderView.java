@@ -15,30 +15,19 @@
 
 package com.aestallon.storageexplorer.swing.ui.commander;
 
-import java.awt.*;
 import javax.swing.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-import com.aestallon.storageexplorer.swing.ui.commander.arcscript.ArcScriptContainerView;
-import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
-@Component
-public class CommanderView extends JTabbedPane {
-
-  private static final Logger log = LoggerFactory.getLogger(CommanderView.class);
-
-  private final ArcScriptContainerView arcScriptContainerView;
-
-  public CommanderView(ArcScriptContainerView arcScriptContainerView) {
-    super(JTabbedPane.LEFT, JTabbedPane.SCROLL_TAB_LAYOUT);
-    this.arcScriptContainerView = arcScriptContainerView;
-
-    initArcScriptTab();
-  }
-
-  private void initArcScriptTab() {
-    addTab(null, IconProvider.ARC_SCRIPT, arcScriptContainerView);
-  }
-
+public interface CommanderView {
+  
+  String name();
+  
+  ImageIcon icon();
+  
+  String tooltip();
+  
+  void requestVisibility();
+  
+  JComponent asComponent();
+  
+  
 }

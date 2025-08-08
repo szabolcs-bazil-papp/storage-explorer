@@ -21,6 +21,8 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import org.fife.rsta.ui.search.FindDialog;
@@ -34,11 +36,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
+import com.aestallon.storageexplorer.swing.ui.tree.TreeEntityLocator;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
 
@@ -50,6 +55,8 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
   protected final transient ObjectEntry objectEntry;
   protected final transient StorageEntryInspectorViewFactory factory;
   private final transient Action openInSystemExplorerAction;
+
+  private final transient List<JTextArea> textAreas = new ArrayList<>();
 
   public ObjectEntryInspectorView(ObjectEntry objectEntry,
                                   StorageEntryInspectorViewFactory factory) {
@@ -72,6 +79,25 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         versionPane.initialise();
       }
     });
+  }
+
+  @Override
+  public List<JTextArea> textAreas() {
+    return textAreas;
+  }
+
+  @Override
+  public TabViewThumbnail thumbnail() {
+    return new TabViewThumbnail(
+        IconProvider.getIconForStorageEntry(storageEntry()),
+        factory.trackingService().getUserData(objectEntry)
+            .map(StorageEntryTrackingService.StorageEntryUserData::name)
+            .filter(it -> !it.isBlank())
+            .orElseGet(() -> StorageEntry.typeNameOf(objectEntry)),
+        "<B>%s</B> (%s)".formatted(
+            factory.storageInstanceProvider().get(storageId()).name(),
+            storageEntry().uri().toString()),
+        new TreeEntityLocator("Storage Tree", storageEntry()));
   }
 
   private void setUpObjectNodeDisplay(ObjectEntryLoadResult.MultiVersion multiVersion) {
@@ -204,10 +230,11 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         };
         toolbar.add(findAction);
         rTextArea.registerKeyboardAction(
-            findAction, 
+            findAction,
             KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK),
             JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
       }
+      ObjectEntryInspectorView.this.textAreas.add(pane.textArea());
       box2.add(pane.scrollPane());
       SwingUtilities.invokeLater(() -> pane.scrollPane().getVerticalScrollBar().setValue(0));
       return box2;
