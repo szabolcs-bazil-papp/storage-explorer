@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.client.storage;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -113,14 +114,16 @@ public class StorageInstanceProvider {
     }
 
     final String name = storageInstance.name();
-    eventPublisher.publishEvent(
-        new BackgroundWorkStartedEvent("Importing storage: " + name + "..."));
+    final UUID workId = UUID.randomUUID();
+    eventPublisher.publishEvent(new BackgroundWorkStartedEvent(
+        workId, 
+        "Importing storage: " + name + "..."));
     initialise(storageInstance);
     storageInstance.refreshIndex();
 
     userConfigService.addStorageLocation(storageInstance.toDto());
     eventPublisher.publishEvent(new StorageImportEvent(storageInstance));
-    eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok());
+    eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok(workId));
   }
 
   public void fetchAllKnown() {
@@ -131,14 +134,14 @@ public class StorageInstanceProvider {
       return;
     }
 
-    eventPublisher.publishEvent(
-        new BackgroundWorkStartedEvent("Importing storages"));
+    final UUID workId = UUID.randomUUID();
+    eventPublisher.publishEvent(new BackgroundWorkStartedEvent(workId, "Importing storages"));
     for (final var dto : storageLocations) {
       final StorageInstance storageInstance = StorageInstance.fromDto(dto);
       initialise(storageInstance);
       eventPublisher.publishEvent(new StorageImportEvent(storageInstance));
     }
-    eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok());
+    eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok(workId));
   }
 
   private void initialise(final StorageInstance storageInstance) {
@@ -176,11 +179,13 @@ public class StorageInstanceProvider {
         return;
       }
 
+      final UUID workId = UUID.randomUUID();
       eventPublisher.publishEvent(new BackgroundWorkStartedEvent(
+          workId,
           "Reindexing storage" + storageInstance.name() + "..."));
       storageInstance.refreshIndex();
       eventPublisher.publishEvent(new StorageReindexed(storageInstance));
-      eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok());
+      eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok(workId));
       eventPublisher.publishEvent(Msg.info(storageInstance.name() + " reindexed!", null));
     });
   }
@@ -213,13 +218,15 @@ public class StorageInstanceProvider {
       final ConfigurableApplicationContext ctx = contextsByInstance.remove(storageInstance);
       tryCloseCtx(ctx, storageInstance);
 
+      final UUID workId = UUID.randomUUID();
       eventPublisher.publishEvent(new BackgroundWorkStartedEvent(
+          workId,
           "Importing storage: " + storageInstance.name() + "..."));
       initialise(storageInstance);
       storageInstance.refreshIndex();
       eventPublisher.publishEvent(new StorageReindexed(storageInstance));
       eventPublisher.publishEvent(new StorageReimportedEvent(storageInstance));
-      eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok());
+      eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok(workId));
     });
   }
 

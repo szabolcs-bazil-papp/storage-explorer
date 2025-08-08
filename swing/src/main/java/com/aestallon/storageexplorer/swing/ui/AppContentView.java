@@ -141,6 +141,8 @@ public class AppContentView extends JPanel {
     if (progressBar == null) {
       progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
       progressBar.setPreferredSize(new Dimension(300, 20));
+    } else {
+      toolBar.remove(progressBar);
     }
     progressBar.setString(displayName);
     progressBar.setStringPainted(true);

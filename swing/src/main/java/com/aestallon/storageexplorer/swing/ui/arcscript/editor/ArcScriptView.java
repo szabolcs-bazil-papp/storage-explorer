@@ -17,9 +17,11 @@ package com.aestallon.storageexplorer.swing.ui.arcscript.editor;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -30,8 +32,6 @@ import org.fife.ui.rsyntaxtextarea.parser.AbstractParser;
 import org.fife.ui.rsyntaxtextarea.parser.DefaultParseResult;
 import org.fife.ui.rsyntaxtextarea.parser.DefaultParserNotice;
 import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
 import com.aestallon.storageexplorer.client.userconfig.service.StoredArcScript;
@@ -48,11 +48,9 @@ import com.aestallon.storageexplorer.swing.ui.tree.TreeEntityLocator;
 
 public class ArcScriptView extends JPanel implements TabView {
 
-  private static final Logger log = LoggerFactory.getLogger(ArcScriptView.class);
-
-  private final ArcScriptController controller;
-  final StorageInstance storageInstance;
-  private StoredArcScript storedArcScript;
+  private final transient ArcScriptController controller;
+  final transient StorageInstance storageInstance;
+  private transient StoredArcScript storedArcScript;
 
   private final JTextArea editor;
 
@@ -60,6 +58,7 @@ public class ArcScriptView extends JPanel implements TabView {
   private final AbstractAction playAction;
 
   private transient ErrorMarker compilationError;
+  private transient UUID workId;
 
   public ArcScriptView(ArcScriptController controller,
                        StorageInstance storageInstance,
@@ -138,7 +137,6 @@ public class ArcScriptView extends JPanel implements TabView {
     b1.add(Box.createGlue());
     add(b1, BorderLayout.NORTH);
     add(arcScriptTextArea.scrollPane(), BorderLayout.CENTER);
-    // updateUI();
   }
 
   @Override
@@ -176,7 +174,7 @@ public class ArcScriptView extends JPanel implements TabView {
   }
 
   private void installPlayAction() {
-    final var ctrlEnter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK);
+    final var ctrlEnter = KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK);
     editor.getInputMap().put(ctrlEnter, "play");
     editor.getActionMap().put("play", new AbstractAction() {
 
@@ -189,7 +187,7 @@ public class ArcScriptView extends JPanel implements TabView {
   }
 
   private void installSaveAction() {
-    final var ctrlS = KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK);
+    final var ctrlS = KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK);
     editor.getInputMap().put(ctrlS, "save");
     editor.getActionMap().put("save", new AbstractAction() {
 
@@ -230,17 +228,18 @@ public class ArcScriptView extends JPanel implements TabView {
     editor.setEnabled(false);
     playAction.setEnabled(false);
     removeCompilationError();
-
+    final UUID uuid = UUID.randomUUID();
+    workId = uuid;
     CompletableFuture.runAsync(() -> {
       controller.eventPublisher().publishEvent(
-          new BackgroundWorkStartedEvent("Running ArcScript on " + storageInstance.name()));
+          new BackgroundWorkStartedEvent(uuid, "Running ArcScript on " + storageInstance.name()));
       switch (Arc.evaluate(editor.getText(), storageInstance)) {
         case ArcScriptResult.CompilationError cErr -> showCompilationError(cErr);
         case ArcScriptResult.ImpermissibleInstruction iErr ->
             showErr("Impermissible instruction", iErr.msg());
         case ArcScriptResult.UnknownError uErr -> showErr("Unknown error", uErr.msg());
         case ArcScriptResult.Ok ok -> {
-          controller.eventPublisher().publishEvent(BackgroundWorkCompletedEvent.ok());
+          controller.eventPublisher().publishEvent(BackgroundWorkCompletedEvent.ok(uuid));
           controller.renderResult(storedArcScript.title(), storageInstance, ok);
           SwingUtilities.invokeLater(() -> {
             editor.setEnabled(true);
@@ -254,8 +253,7 @@ public class ArcScriptView extends JPanel implements TabView {
   private void showCompilationError(ArcScriptResult.CompilationError error) {
     editor.setEnabled(true);
     playAction.setEnabled(true);
-    controller.eventPublisher().publishEvent(new BackgroundWorkCompletedEvent(
-        BackgroundWorkCompletedEvent.BackgroundWorkResult.ERR));
+    controller.eventPublisher().publishEvent(BackgroundWorkCompletedEvent.err(workId));
     SwingUtilities.invokeLater(() -> {
       if (!(editor instanceof RSyntaxTextArea r)) {
         return;
@@ -280,8 +278,7 @@ public class ArcScriptView extends JPanel implements TabView {
   }
 
   private void showErr(String title, String msg) {
-    controller.eventPublisher().publishEvent(new BackgroundWorkCompletedEvent(
-        BackgroundWorkCompletedEvent.BackgroundWorkResult.ERR));
+    controller.eventPublisher().publishEvent(BackgroundWorkCompletedEvent.err(workId));
     SwingUtilities.invokeLater(() -> {
       JOptionPane.showMessageDialog(
           this,
