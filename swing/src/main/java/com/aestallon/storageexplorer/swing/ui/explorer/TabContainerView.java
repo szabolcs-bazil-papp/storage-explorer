@@ -35,7 +35,6 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
 import com.aestallon.storageexplorer.swing.ui.arcscript.editor.ArcScriptView;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
-import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.inspector.InspectorView;
 import com.aestallon.storageexplorer.swing.ui.inspector.StorageEntryInspectorViewFactory;
@@ -64,7 +63,7 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
         case InspectorView<?> inspector -> eventPublisher.publishEvent(
             new TreeTouchRequest(inspector.storageEntry()));
         case ArcScriptView as -> eventPublisher.publishEvent(
-            new ViewController.ArcScriptTreeTouchRequest(as.storedArcScript()));
+            new ArcScriptController.ArcScriptTreeTouchRequest(as.storedArcScript()));
         default -> log.warn("Unknown selected component: [ {} ]", selectedComponent);
       }
     });
@@ -144,7 +143,7 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
         });
   }
 
-  public void discardInspectorViewOfStorageAt(final StorageInstance storageInstance) {
+  public void discardTabViewOfStorageAt(final StorageInstance storageInstance) {
     final List<TabView> viewsOnStorage = new ArrayList<>();
     for (int i = 0; i < getTabCount(); i++) {
       final TabView tabView = tabViewAt(i);
@@ -199,6 +198,11 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
       case ArcScriptView arcScriptView -> arcScriptController.drop(arcScriptView);
       default -> log.warn("Unknown tab view to close: [ {} ]", tabViewToClose);
     }
+  }
+  
+  @EventListener
+  void onArcScriptViewDropped(final ArcScriptController.ArcScriptViewDropped e) {
+    SwingUtilities.invokeLater(() -> discardTabView(e.view()));
   }
 
   @Override

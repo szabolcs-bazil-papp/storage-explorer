@@ -15,10 +15,14 @@
 
 package com.aestallon.storageexplorer.swing.ui.arcscript.result;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javax.swing.*;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.commander.AbstractCommanderTabbedView;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
@@ -103,6 +107,22 @@ public class ArcScriptResultContainerView
   @Override
   public void discardTabView(TabView tabView) {
     remove(tabView.asComponent());
+  }
+  
+  public void discardResultOf(StorageId storageId, String title) {
+    final List<Integer> indices = new ArrayList<>();
+    for (int i = 0; i < getTabCount(); i++) {
+      final var tab = (TabComponent) getTabComponentAt(i);
+      final var view = tabViewAt(i);
+      if (tab.label.getText().equals(title) && view.storageId().equals(storageId)) {
+        indices.add(i);
+      }
+    }
+
+    Collections.reverse(indices);
+    for (final int idx : indices) {
+      discardTabView(tabViewAt(idx));
+    }
   }
 
 }

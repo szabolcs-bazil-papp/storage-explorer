@@ -137,28 +137,27 @@ public class ArcScriptController {
 
   @EventListener
   public void onStorageImported(StorageImportEvent event) {
-    SwingUtilities.invokeLater(() -> {
-
-
-      //mainTreeView.arcScriptSelectorTree().addStorage(storageInstance, loadableScripts);
-    });
+    SwingUtilities.invokeLater(() -> arcScriptTreeView.importStorage(event.storageInstance()));
   }
 
   @EventListener
   public void onStorageDeleted(StorageIndexDiscardedEvent event) {
-    SwingUtilities.invokeLater(() -> {
-      final StorageInstance storageInstance = event.storageInstance();
-      //mainTreeView.arcScriptSelectorTree().removeStorage(storageInstance.id());
-      // cleanup of views are done together elsewhere
-    });
+    SwingUtilities.invokeLater(() -> arcScriptTreeView.removeStorage(event.storageInstance()));
   }
 
   @EventListener
-  public void onStorageInstanceRenamed(final StorageInstanceRenamed event) {
-    // TODO: Implement!
-    //    SwingUtilities.invokeLater(() -> mainTreeView
-    //        .arcScriptSelectorTree()
-    //        .storageRenamed(event.storageInstance().id()));
+  public void onStorageInstanceRenamed(final StorageInstanceRenamed e) {
+    SwingUtilities.invokeLater(() -> arcScriptTreeView.storageRenamed(e.storageInstance().id()));
+  }
+
+  public record ArcScriptTreeTouchRequest(StoredArcScript sas) {}
+
+  @EventListener
+  public void onArcScriptTreeTouchRequested(ArcScriptTreeTouchRequest e) {
+    arcScriptTreeView.selectNodeSoft(new ArcScriptSelectorTree.ArcScriptNodeLocator(
+        e.sas().storageId(),
+        e.sas().title()));
+    arcScriptTreeView.requestVisibility();
   }
 
   @EventListener
@@ -206,11 +205,19 @@ public class ArcScriptController {
     }
   }
 
-  public void delete(ArcScriptView arcScriptView) {
+  public record ArcScriptViewDropped(ArcScriptView view) {}
+
+  public void delete(ArcScriptView view) {
     userConfigService.arcScriptFileService().delete(
-        arcScriptView.storedArcScript().storageId(),
-        arcScriptView.storedArcScript().title());
-    // TODO: Implement: Discard tabView if any. Remove from tree. Remove result table if any
+        view.storedArcScript().storageId(),
+        view.storedArcScript().title());
+    SwingUtilities.invokeLater(() -> {
+      final var storageId = view.storageId();
+      final var title = view.storedArcScript().title();
+      arcScriptTreeView.removeScript(storageId, title);
+      resultContainerView.discardResultOf(storageId, title);
+    });
+    applicationEventPublisher.publishEvent(new ArcScriptViewDropped(view));
   }
 
   public void renderResult(final String title,

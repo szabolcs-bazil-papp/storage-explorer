@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.graph.event.GraphRenderingRequest;
 import com.aestallon.storageexplorer.client.graph.event.GraphSelectionRequest;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
-import com.aestallon.storageexplorer.client.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.common.event.msg.ErrorMsg;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.event.EntryAcquired;
@@ -37,7 +36,6 @@ import com.aestallon.storageexplorer.core.event.StorageReindexed;
 import com.aestallon.storageexplorer.core.event.TreeTouchRequest;
 import com.aestallon.storageexplorer.swing.ui.AppContentView;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
-import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptTreeView;
 import com.aestallon.storageexplorer.swing.ui.explorer.ExplorerView;
 import com.aestallon.storageexplorer.swing.ui.graph.GraphView;
 import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
@@ -55,16 +53,14 @@ public class ViewController {
   private final AppContentView appContentView;
   private final ExplorerView explorerView;
   private final StorageTreeView storageTreeView;
-  private final ArcScriptTreeView arcScriptTreeView;
   private final GraphView graphView;
 
   public ViewController(AppContentView appContentView, ExplorerView explorerView,
-                        StorageTreeView storageTreeView, ArcScriptTreeView arcScriptTreeView,
+                        StorageTreeView storageTreeView,
                         GraphView graphView) {
     this.appContentView = appContentView;
     this.explorerView = explorerView;
     this.storageTreeView = storageTreeView;
-    this.arcScriptTreeView = arcScriptTreeView;
     this.graphView = graphView;
   }
 
@@ -115,7 +111,6 @@ public class ViewController {
   public void onStorageImported(StorageImportEvent e) {
     SwingUtilities.invokeLater(() -> { 
       storageTreeView.importStorage(e.storageInstance()); 
-      arcScriptTreeView.importStorage(e.storageInstance());
     });
   }
 
@@ -130,9 +125,8 @@ public class ViewController {
       if (graphView.displayingStorageAt(e.storageInstance())) {
         explorerView.closeGraphView();
       }
-      explorerView.tabContainerView().discardInspectorViewOfStorageAt(e.storageInstance());
+      explorerView.tabContainerView().discardTabViewOfStorageAt(e.storageInstance());
       storageTreeView.removeStorage(e.storageInstance());
-      arcScriptTreeView.removeStorage(e.storageInstance());
     });
   }
 
@@ -142,7 +136,7 @@ public class ViewController {
       if (graphView.displayingStorageAt(e.storageInstance())) {
         explorerView.closeGraphView();
       }
-      explorerView.tabContainerView().discardInspectorViewOfStorageAt(e.storageInstance());
+      explorerView.tabContainerView().discardTabViewOfStorageAt(e.storageInstance());
     });
   }
 
@@ -171,16 +165,6 @@ public class ViewController {
   @EventListener
   public void onGraphStateChanged(GraphState e) {
     SwingUtilities.invokeLater(() -> appContentView.setGraphState(e));
-  }
-
-  public record ArcScriptTreeTouchRequest(StoredArcScript sas) {}
-
-  @EventListener
-  public void onArcScriptTreeTouchRequested(ArcScriptTreeTouchRequest e) {
-    arcScriptTreeView.selectNodeSoft(new ArcScriptSelectorTree.ArcScriptNodeLocator(
-        e.sas().storageId(),
-        e.sas().title()));
-    arcScriptTreeView.requestVisibility();
   }
 
 }

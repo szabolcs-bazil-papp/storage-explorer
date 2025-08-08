@@ -127,10 +127,18 @@ public class ArcScriptTreeView
   public void reindexStorage(StorageInstance storageInstance) {
     // NO-OP
   }
+  
+  public void storageRenamed(StorageId storageId) {
+    tree.storageRenamed(storageId);
+  }
 
   @Override
   public void removeStorage(StorageInstance storageInstance) {
     tree.removeStorage(storageInstance.id());
+  }
+  
+  public void removeScript(StorageId storageId, String scriptPath) {
+    tree.removeScript(storageId, scriptPath);
   }
 
   @Override

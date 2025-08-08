@@ -88,7 +88,7 @@ public sealed interface ArcScriptResultView extends TabView {
 
     @Override
     public JComponent asComponent() {
-      return null;
+      return this;
     }
     
     public ResultDisplay resultDisplay() {
