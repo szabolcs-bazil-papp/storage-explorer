@@ -21,14 +21,10 @@ import java.awt.event.KeyEvent;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 
 public class FindTabDialog extends JDialog {
 
-  private static final Logger log = LoggerFactory.getLogger(FindTabDialog.class);
-  
   private final transient FindTabController controller;
   private final transient TabViewThumbnail[] total;
 
@@ -77,12 +73,10 @@ public class FindTabDialog extends JDialog {
     final Action transferToListAction = new AbstractAction() {
       @Override
       public void actionPerformed(ActionEvent e) {
-        log.info("Transferring focus to list and selecting first item");
         if (list.getModel().getSize() > 0) {
           list.requestFocusInWindow();
           list.setSelectedIndex(0);
           list.ensureIndexIsVisible(0);
-          log.info("Selected first item");
         }
       }
     };
@@ -119,7 +113,6 @@ public class FindTabDialog extends JDialog {
       @Override
       public void actionPerformed(ActionEvent e) {
         int selectedIndex = list.getSelectedIndex();
-        log.info("index: {}", selectedIndex);
         if (selectedIndex <= 0) { // First item selected or no selection
           query.requestFocusInWindow();
         } else {
