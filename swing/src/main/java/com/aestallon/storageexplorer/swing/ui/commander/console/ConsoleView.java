@@ -20,6 +20,7 @@ public class ConsoleView extends AbstractCommanderPanelView implements Commander
 
   private static final Logger log = LoggerFactory.getLogger(ConsoleView.class);
 
+  private static final int DEFAULT_CAP = 100;
 
   @FunctionalInterface
   public interface LogLevelChanger {
@@ -27,10 +28,12 @@ public class ConsoleView extends AbstractCommanderPanelView implements Commander
   }
 
 
-  private LogLevelChanger logLevelChanger = level -> {};
+  private transient LogLevelChanger logLevelChanger = level -> {};
 
   private final JTextArea logArea;
   private final JScrollPane scrollPane;
+  
+  private volatile int cap = DEFAULT_CAP;
 
   private final transient MonospaceFontProvider monospaceFontProvider;
 
@@ -78,17 +81,30 @@ public class ConsoleView extends AbstractCommanderPanelView implements Commander
       String level = (String) logLevelCombo.getSelectedItem();
       logLevelChanger.updateLogLevel(level);
     });
-
     controlsPanel.add(new JLabel("Log Level:"));
     controlsPanel.add(logLevelCombo);
+    
+    final JComboBox<Integer> capCombo = new JComboBox<>(
+        new Integer[] { 50, DEFAULT_CAP, 200, 500, 1000, 2000 }
+    );
+    capCombo.setSelectedItem(DEFAULT_CAP);
+    capCombo.addActionListener(e -> {
+      final Integer curr = (Integer) capCombo.getSelectedItem();
+      assert curr != null;
+      if (curr != cap) {
+        cap = curr;
+      }
+    });
+    controlsPanel.add(new JLabel("Max lines:"));
+    controlsPanel.add(capCombo);
 
     return controlsPanel;
   }
 
   public void appendLog(String logMessage) {
+    final int max = cap;
     SwingUtilities.invokeLater(() -> {
       try {
-        final int max = 500;
         final int lineCount = logArea.getLineCount();
         if (lineCount >= max) {
           logArea.replaceRange(
