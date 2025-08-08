@@ -13,20 +13,6 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.explorer;
+package com.aestallon.storageexplorer.swing.ui.tree;
 
-import java.util.List;
-import javax.swing.*;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-
-public interface TabView {
-
-  StorageId storageId();
-
-  List<JTextArea> textAreas();
-  
-  JComponent asComponent();
-  
-  TabViewThumbnail thumbnail();
-
-}
+public record TreeEntityLocator(String treeName, Object entityLocator) {}

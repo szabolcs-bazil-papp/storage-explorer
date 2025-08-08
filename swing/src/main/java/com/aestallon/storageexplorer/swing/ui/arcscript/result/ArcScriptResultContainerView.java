@@ -41,7 +41,7 @@ public class ArcScriptResultContainerView
                                          SideBarController sideBarController) {
     super(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT, userConfigService, sideBarController);
     addTab("Home", new ArcScriptResultView.Initial());
-    setTabComponentAt(0, new TabComponent("Home", this));
+    setTabComponentAt(0, new TabComponent("Home", null, this));
   }
 
   @Override
@@ -66,7 +66,7 @@ public class ArcScriptResultContainerView
       addTab(title, div);
 
       final int i = indexOfComponent(div);
-      setTabComponentAt(i, new TabComponent(title, this));
+      setTabComponentAt(i, new TabComponent(title, null, this));
       setSelectedComponent(div);
     } else {
       setComponentAt(idx, div);

@@ -39,6 +39,7 @@ public class NewScriptDialog extends JDialog {
 
   public NewScriptDialog(NewScriptController controller) {
     this.controller = controller;
+    setTitle("New Script...");
     initComboBox(controller.initialModel());
 
     setContentPane(contentPane);

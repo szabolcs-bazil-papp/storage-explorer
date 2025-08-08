@@ -7,9 +7,13 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
+import com.aestallon.storageexplorer.swing.ui.tree.TreeEntityLocator;
 
 public class SequenceEntryInspectorView extends JPanel implements InspectorView<SequenceEntry> {
 
@@ -35,6 +39,20 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
   @Override
   public List<JTextArea> textAreas() {
     return Collections.emptyList();
+  }
+
+  @Override
+  public TabViewThumbnail thumbnail() {
+    return new TabViewThumbnail(
+        IconProvider.getIconForStorageEntry(storageEntry()),
+        factory.trackingService().getUserData(storageEntry())
+            .map(StorageEntryTrackingService.StorageEntryUserData::name)
+            .filter(it -> !it.isBlank())
+            .orElseGet(() -> StorageEntry.typeNameOf(storageEntry())),
+        "<B>%s</B> (%s)".formatted(
+            factory.storageInstanceProvider().get(storageId()).name(),
+            storageEntry().uri().toString()),
+        new TreeEntityLocator("Storage Tree", storageEntry()));
   }
 
   private void initToolbar() {

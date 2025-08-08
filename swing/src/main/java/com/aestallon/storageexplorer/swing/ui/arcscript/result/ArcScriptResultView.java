@@ -42,6 +42,7 @@ import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.util.Uris;
 import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabView;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
@@ -56,6 +57,10 @@ public sealed interface ArcScriptResultView extends TabView {
   @Override
   default List<JTextArea> textAreas() {
     return Collections.emptyList();
+  }
+  
+  default TabViewThumbnail thumbnail() {
+    return null;
   }
   
   final class Initial extends JPanel implements ArcScriptResultView {

@@ -24,16 +24,16 @@ import com.aestallon.storageexplorer.swing.ui.explorer.TabView;
 public interface InspectorView<T extends StorageEntry> extends TabView {
 
   T storageEntry();
-  
+
   default StorageId storageId() {
     return storageEntry().storageId();
   }
-  
+
 
   default JComponent asComponent() {
     return (JComponent) this;
   }
-  
+
   void onUserDataChanged(StorageEntryTrackingService.StorageEntryUserData userData);
 
 }

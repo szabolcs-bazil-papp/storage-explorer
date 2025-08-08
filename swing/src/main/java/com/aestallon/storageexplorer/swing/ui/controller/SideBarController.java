@@ -24,6 +24,7 @@ import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
+import com.aestallon.storageexplorer.swing.ui.tree.TreeEntityLocator;
 import com.aestallon.storageexplorer.swing.ui.tree.TreeView;
 
 @Service
@@ -155,6 +156,14 @@ public class SideBarController {
     return Optional
         .ofNullable(commanderContextByName.get(name))
         .map(CommanderViewContext::commanderView);
+  }
+  
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  public void select(TreeEntityLocator locator) {
+    Optional.ofNullable(treeContextByName.get(locator.treeName()))
+        .map(TreeViewContext::treeView)
+        .map(it -> (TreeView) it)
+        .ifPresent(tree -> tree.selectNode(locator.entityLocator()));
   }
 
 }

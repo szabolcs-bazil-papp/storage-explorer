@@ -15,18 +15,7 @@
 
 package com.aestallon.storageexplorer.swing.ui.explorer;
 
-import java.util.List;
 import javax.swing.*;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.swing.ui.tree.TreeEntityLocator;
 
-public interface TabView {
-
-  StorageId storageId();
-
-  List<JTextArea> textAreas();
-  
-  JComponent asComponent();
-  
-  TabViewThumbnail thumbnail();
-
-}
+public record TabViewThumbnail(ImageIcon icon, String title, String description, TreeEntityLocator locator) {}

@@ -38,6 +38,7 @@ import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTr
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.inspector.InspectorView;
 import com.aestallon.storageexplorer.swing.ui.inspector.StorageEntryInspectorViewFactory;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
 @Component
 public class TabContainerView extends JTabbedPane implements TabContainer {
@@ -114,7 +115,7 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
             .filter(it -> !it.isBlank())
             .orElseGet(storageEntry::toString);
         addTab(title, inspector);
-        installTabComponent(inspector);
+        installTabComponent(inspector, IconProvider.getIconForStorageEntry(storageEntry));
         setSelectedComponent(inspector);
 
         inspector.registerKeyboardAction(
@@ -133,7 +134,7 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
           if (view != null) {
             String title = view.storedArcScript().title();
             addTab(title, view);
-            installTabComponent(view.asComponent());
+            installTabComponent(view.asComponent(), IconProvider.ARC_SCRIPT);
             setSelectedComponent(view.asComponent());
             view.asComponent().registerKeyboardAction(
                 e -> discardTabView(view),
@@ -183,10 +184,10 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
     }));
   }
 
-  private void installTabComponent(JComponent inspectorComponent) {
+  private void installTabComponent(JComponent inspectorComponent, ImageIcon icon) {
     final int index = indexOfComponent(inspectorComponent);
     final var title = getTitleAt(index);
-    final var tab = new TabComponent(title, this);
+    final var tab = new TabComponent(title, icon, this);
     setTabComponentAt(index, tab);
   }
 

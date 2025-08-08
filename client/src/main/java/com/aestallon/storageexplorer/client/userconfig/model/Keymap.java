@@ -28,7 +28,7 @@ public final class Keymap {
 
   public static Map<String, Keymap> defaultKeymaps() {
     return Map.of(
-        "Search Indices",
+        "Find Tab",
         new Keymap(
             asInt(KeyStroke
                 .getKeyStroke(KeyEvent.VK_T,
@@ -59,7 +59,14 @@ public final class Keymap {
         new Keymap(KeyEvent.VK_F12, -1),
         
         "Close Tab",
-        new Keymap(asInt(KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK)), -1)
+        new Keymap(asInt(KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK)), -1),
+
+        "New Script",
+        new Keymap(
+            asInt(KeyStroke
+                .getKeyStroke(KeyEvent.VK_N,
+                    InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK)),
+            -1)
 
     );
   }

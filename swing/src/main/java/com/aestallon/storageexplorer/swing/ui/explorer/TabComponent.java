@@ -24,10 +24,12 @@ public class TabComponent extends JPanel {
 
   public final JLabel label;
 
-  public <T extends JTabbedPane & TabContainer> TabComponent(final String title, T container) {
+  public <T extends JTabbedPane & TabContainer> TabComponent(final String title, 
+                                                             final ImageIcon icon,
+                                                             final T container) {
     super(new FlowLayout(FlowLayout.LEFT, 0, 0));
     setOpaque(false);
-    label = new JLabel(title);
+    label = new JLabel(title, icon, SwingConstants.LEFT);
     add(label);
     add(new CloseTabButton(e -> {
       int idx = container.indexOfTabComponent(this);
