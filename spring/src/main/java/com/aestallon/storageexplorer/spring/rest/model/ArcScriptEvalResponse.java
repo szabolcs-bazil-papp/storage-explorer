@@ -15,16 +15,14 @@
 
 package com.aestallon.storageexplorer.spring.rest.model;
 
-import java.util.Objects;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-
-
 import jakarta.annotation.Generated;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * ArcScriptEvalResponse
@@ -32,6 +30,9 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.8.0")
 public class ArcScriptEvalResponse {
+
+  @Valid
+  private List<@Valid ArcScriptColumnDescriptor> columns = new ArrayList<>();
 
   @Valid
   private List<Object> resultSet = new ArrayList<>();
@@ -45,8 +46,38 @@ public class ArcScriptEvalResponse {
   /**
    * Constructor with only required parameters
    */
-  public ArcScriptEvalResponse(List<Object> resultSet) {
+  public ArcScriptEvalResponse(List<@Valid ArcScriptColumnDescriptor> columns, 
+                               List<Object> resultSet) {
+    this.columns = columns;
     this.resultSet = resultSet;
+  }
+
+  public ArcScriptEvalResponse columns(List<@Valid ArcScriptColumnDescriptor> columns) {
+    this.columns = columns;
+    return this;
+  }
+
+  public ArcScriptEvalResponse addColumnsItem(ArcScriptColumnDescriptor columnsItem) {
+    if (this.columns == null) {
+      this.columns = new ArrayList<>();
+    }
+    this.columns.add(columnsItem);
+    return this;
+  }
+
+  /**
+   * Get columns
+   * @return columns
+   */
+  @Valid 
+  @Schema(name = "columns", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("columns")
+  public List<@Valid ArcScriptColumnDescriptor> getColumns() {
+    return columns;
+  }
+
+  public void setColumns(List<@Valid ArcScriptColumnDescriptor> columns) {
+    this.columns = columns;
   }
 
   public ArcScriptEvalResponse resultSet(List<Object> resultSet) {
@@ -106,19 +137,21 @@ public class ArcScriptEvalResponse {
       return false;
     }
     ArcScriptEvalResponse arcScriptEvalResponse = (ArcScriptEvalResponse) o;
-    return Objects.equals(this.resultSet, arcScriptEvalResponse.resultSet) &&
+    return Objects.equals(this.columns, arcScriptEvalResponse.columns) &&
+        Objects.equals(this.resultSet, arcScriptEvalResponse.resultSet) &&
         Objects.equals(this.err, arcScriptEvalResponse.err);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(resultSet, err);
+    return Objects.hash(columns, resultSet, err);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("class ArcScriptEvalResponse {\n");
+    sb.append("    columns: ").append(toIndentedString(columns)).append("\n");
     sb.append("    resultSet: ").append(toIndentedString(resultSet)).append("\n");
     sb.append("    err: ").append(toIndentedString(err)).append("\n");
     sb.append("}");

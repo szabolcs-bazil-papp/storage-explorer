@@ -1,8 +1,0 @@
-.ins-scroll-panel {
-  height: 100%;
-  display: flex;
-}
-.ins {
-  display: flex;
-  max-height: fit-content;
-}

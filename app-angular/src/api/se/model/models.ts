@@ -1,3 +1,7 @@
+export * from './arcScriptColumnDescriptor';
+export * from './arcScriptEvalError';
+export * from './arcScriptEvalRequest';
+export * from './arcScriptEvalResponse';
 export * from './entryAcquisitionRequest';
 export * from './entryAcquisitionResult';
 export * from './entryLoadRequest';

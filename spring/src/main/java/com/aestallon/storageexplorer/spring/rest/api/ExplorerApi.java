@@ -20,6 +20,12 @@
  */
 package com.aestallon.storageexplorer.spring.rest.api;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalRequest;
 import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalResponse;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionRequest;
@@ -29,18 +35,14 @@ import com.aestallon.storageexplorer.spring.rest.model.EntryLoadResult;
 import com.aestallon.storageexplorer.spring.rest.model.StorageIndexDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
 import jakarta.annotation.Generated;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.8.0")
 @Validated

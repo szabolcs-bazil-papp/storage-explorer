@@ -1,5 +1,4 @@
 .gitignore
-.openapi-generator-ignore
 README.md
 api.module.ts
 api/api.ts
@@ -8,6 +7,10 @@ configuration.ts
 encoder.ts
 git_push.sh
 index.ts
+model/arcScriptColumnDescriptor.ts
+model/arcScriptEvalError.ts
+model/arcScriptEvalRequest.ts
+model/arcScriptEvalResponse.ts
 model/entryAcquisitionRequest.ts
 model/entryAcquisitionResult.ts
 model/entryLoadRequest.ts

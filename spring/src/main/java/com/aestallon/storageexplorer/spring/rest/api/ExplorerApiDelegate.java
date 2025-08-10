@@ -15,6 +15,11 @@
 
 package com.aestallon.storageexplorer.spring.rest.api;
 
+import java.util.Optional;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.context.request.NativeWebRequest;
 import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalRequest;
 import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalResponse;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionRequest;
@@ -22,12 +27,6 @@ import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionResult;
 import com.aestallon.storageexplorer.spring.rest.model.EntryLoadRequest;
 import com.aestallon.storageexplorer.spring.rest.model.EntryLoadResult;
 import com.aestallon.storageexplorer.spring.rest.model.StorageIndexDto;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.context.request.NativeWebRequest;
-
-import java.util.Optional;
 import jakarta.annotation.Generated;
 
 /**
@@ -53,7 +52,7 @@ public interface ExplorerApiDelegate {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"err\" : { \"msg\" : \"msg\", \"col\" : 6, \"line\" : 0 }, \"resultSet\" : [ \"{}\", \"{}\" ] }";
+                    String exampleString = "{ \"err\" : { \"msg\" : \"msg\", \"col\" : 6, \"line\" : 0 }, \"columns\" : [ { \"column\" : \"column\", \"alias\" : \"alias\" }, { \"column\" : \"column\", \"alias\" : \"alias\" } ], \"resultSet\" : [ \"{}\", \"{}\" ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

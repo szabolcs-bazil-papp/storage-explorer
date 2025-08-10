@@ -6,6 +6,9 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.stream.Collectors.toList;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
@@ -31,6 +34,7 @@ import com.aestallon.storageexplorer.core.service.FileSystemStorageIndex;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
 import com.aestallon.storageexplorer.core.service.RelationalDatabaseStorageIndex;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.spring.rest.model.ArcScriptColumnDescriptor;
 import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalError;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionRequest;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionResult;
@@ -44,8 +48,6 @@ import com.aestallon.storageexplorer.spring.rest.model.StorageEntryDto;
 import com.aestallon.storageexplorer.spring.rest.model.StorageEntryType;
 import com.aestallon.storageexplorer.spring.rest.model.StorageIndexDto;
 import com.aestallon.storageexplorer.spring.util.IndexingMethod;
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toList;
 
 public class StorageIndexService {
 
@@ -143,8 +145,8 @@ public class StorageIndexService {
     index.refresh(IndexingStrategy.STRATEGY_ON_DEMAND);
     final var entries = uris.stream().map(index::getOrCreate)
         .flatMap(it -> switch (it) {
-          case StorageIndex.EntryAcquisitionResult.New n -> Stream.of(n.entry());
-          case StorageIndex.EntryAcquisitionResult.Present p -> Stream.of(p.entry());
+          case StorageIndex.EntryAcquisitionResult.New(var e) -> Stream.of(e);
+          case StorageIndex.EntryAcquisitionResult.Present(var e) -> Stream.of(e);
           case StorageIndex.EntryAcquisitionResult.Fail f -> Stream.empty();
         })
         .toList();
@@ -161,8 +163,8 @@ public class StorageIndexService {
     final var result = index.getOrCreate(uri);
 
     final StorageEntry entry = switch (result) {
-      case StorageIndex.EntryAcquisitionResult.New n -> n.entry();
-      case StorageIndex.EntryAcquisitionResult.Present p -> p.entry();
+      case StorageIndex.EntryAcquisitionResult.New(var e) -> e;
+      case StorageIndex.EntryAcquisitionResult.Present(var e) -> e;
       case StorageIndex.EntryAcquisitionResult.Fail f -> null;
     };
     if (entry == null) {
@@ -199,8 +201,8 @@ public class StorageIndexService {
             versions = Collections.singletonList(convertVersionToDto(sv));
             loadResultType = EntryLoadResultType.SINGLE;
           }
-          case ObjectEntryLoadResult.MultiVersion mv -> {
-            versions = mv.versions().stream().map(this::convertVersionToDto).toList();
+          case ObjectEntryLoadResult.MultiVersion(var vs) -> {
+            versions = vs.stream().map(this::convertVersionToDto).toList();
             loadResultType = EntryLoadResultType.MULTI;
           }
         }
@@ -228,7 +230,8 @@ public class StorageIndexService {
 
   public sealed interface ArcScriptQueryEvalResult {
 
-    record Ok(List<Object> resultSet) implements ArcScriptQueryEvalResult {}
+    record Ok(List<ArcScriptColumnDescriptor> columns, List<Object> resultSet)
+        implements ArcScriptQueryEvalResult {}
 
 
     record Err(ArcScriptEvalError err) implements ArcScriptQueryEvalResult {}
@@ -236,7 +239,7 @@ public class StorageIndexService {
   }
 
   public ArcScriptQueryEvalResult evalArcScript(final String script) {
-    final StorageIndex index = indexProvider.provide();
+    final StorageIndex<?> index = indexProvider.provide();
 
     final StorageInstanceDto temp = new StorageInstanceDto();
     switch (index) {
@@ -269,18 +272,19 @@ public class StorageIndexService {
           .findFirst()
           .map(ArcScriptResult.QueryPerformed::resultSet)
           .map(this::unwrapResultSet)
-          .map(ArcScriptQueryEvalResult.Ok::new)
-          .orElseGet(() -> new ArcScriptQueryEvalResult.Ok(new ArrayList<>()));
+          .orElseGet(() -> new ArcScriptQueryEvalResult.Ok(
+              Collections.emptyList(),
+              Collections.emptyList()));
     };
   }
 
-  private List<Object> unwrapResultSet(final ArcScriptResult.ResultSet resultSet) {
+  private ArcScriptQueryEvalResult.Ok unwrapResultSet(final ArcScriptResult.ResultSet resultSet) {
     final var rowCreator = RowCreator.newInstance(resultSet.meta());
-    final var ret = new ArrayList<>();
+    final var rows = new ArrayList<>();
     for (final var row : resultSet.rows()) {
-      ret.add(rowCreator.getRow(row));
+      rows.add(rowCreator.getRow(row));
     }
-    return ret;
+    return new ArcScriptQueryEvalResult.Ok(rowCreator.getColumnDescriptors(), rows);
   }
 
   private sealed interface RowCreator {
@@ -290,8 +294,10 @@ public class StorageIndexService {
           ? new Default()
           : new Custom(meta);
     }
-    
+
     Map<String, Object> getRow(ArcScriptResult.QueryResultRow row);
+
+    List<ArcScriptColumnDescriptor> getColumnDescriptors();
 
 
     final class Custom implements RowCreator {
@@ -326,6 +332,13 @@ public class StorageIndexService {
         return ret;
       }
 
+      @Override
+      public List<ArcScriptColumnDescriptor> getColumnDescriptors() {
+        return IntStream.range(0, headers.length)
+            .mapToObj(i -> new ArcScriptColumnDescriptor().column(props[i]).alias(headers[i]))
+            .toList();
+      }
+
     }
 
 
@@ -334,6 +347,11 @@ public class StorageIndexService {
       @Override
       public Map<String, Object> getRow(ArcScriptResult.QueryResultRow row) {
         return Map.of("uri", row.entry().uri().toString());
+      }
+
+      @Override
+      public List<ArcScriptColumnDescriptor> getColumnDescriptors() {
+        return Collections.singletonList(new ArcScriptColumnDescriptor().column("uri"));
       }
 
     }

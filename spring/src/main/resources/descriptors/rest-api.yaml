@@ -237,14 +237,26 @@ components:
           type: integer
           format: int32
       required: [ msg, line, col ]
+    ArcScriptColumnDescriptor:
+      type: object
+      properties:
+        column:
+          type: string
+        alias:
+          type: string
+      required: [ column ]
     ArcScriptEvalResponse:
       type: object
       properties:
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArcScriptColumnDescriptor'
         resultSet:
           type: array
           items:
             type: object
         err:
           $ref: '#/components/schemas/ArcScriptEvalError'
-      required: [ resultSet ]
+      required: [ columns, resultSet ]
       

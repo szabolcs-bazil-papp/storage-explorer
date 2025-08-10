@@ -15,12 +15,9 @@
 
 package com.aestallon.storageexplorer.spring.rest.model;
 
-import com.fasterxml.jackson.annotation.JsonValue;
-
-
-import jakarta.annotation.Generated;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import jakarta.annotation.Generated;
 
 /**
  * Gets or Sets EntryLoadResultType

@@ -1,16 +1,48 @@
-@import "primeicons/primeicons.css";
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
-@import "prismjs/themes/prism.css";
+@import 'primeicons/primeicons.css';
+@import 'prismjs/themes/prism-okaidia.css';
 
-html, body {
+html {
+  height: 100%;
+  font-size: 14px;
+
+  --primary-color: var(--p-primary-color, #29b3b3);
+  --primary-contrast-color: var(--p-primary-contrast-color);
+  --text-color: var(--p-text-color);
+  --text-color-secondary: var(--p-text-muted-color);
+  --surface-border: var(--p-content-border-color);
+  --surface-card: var(--p-content-background);
+  --surface-hover: var(--p-content-hover-background);
+  --surface-overlay: var(--p-overlay-popover-background);
+  --transition-duration: var(--p-transition-duration);
+  --maskbg: var(--p-mask-background);
+  --content-border-radius: var(--p-content-border-radius);
+  --layout-section-transition-duration: 0.2s;
+  --element-transition-duration: var(--p-transition-duration);
+  --focus-ring-width: var(--p-focus-ring-width);
+  --focus-ring-style: var(--p-focus-ring-style);
+  --focus-ring-color: var(--p-focus-ring-color);
+  --focus-ring-offset: var(--p-focus-ring-offset);
+  --focus-ring-shadow: var(--p-focus-ring-shadow);
+
+  --surface-ground: var(--p-surface-100);
+}
+
+body {
+  font-family: 'Lato', sans-serif;
+  color: var(--text-color);
+  background-color: var(--p-surface-ground);
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
-  font-family: 'Roboto', sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  height: 100%;
-  color: #333; /* Neutral color, works with both light and dark themes */
-  background-color: #f9f9f9; /* Soft background */
-  scroll-behavior: smooth;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.2;
+}
+
+a {
+  text-decoration: none;
+}
+
+.spacer {
+  flex: 1;
 }
