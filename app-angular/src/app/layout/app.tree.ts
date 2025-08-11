@@ -20,6 +20,9 @@ import {RouterLink, RouterLinkActive} from '@angular/router';
 import {Avatar} from 'primeng/avatar';
 import {Tooltip} from 'primeng/tooltip';
 import {AppService, entry2url} from '../app.service';
+import {DialogService} from 'primeng/dynamicdialog';
+import {LoadEntry} from '../components/load.entry';
+import {DialogModule} from 'primeng/dialog';
 
 export enum TreeItemType { ICO = "ICO", IMG = "IMG" }
 
@@ -126,8 +129,10 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
           variant="text"
           (onClick)="toggleVerticalExpansion()"
           pTooltip="Expand/Collapse"></p-button>
-        <p-button icon="pi pi-spinner-dotted" variant="text"
-                  pTooltip="Load Entry"></p-button>
+        <p-button icon="pi pi-spinner-dotted"
+                  variant="text"
+                  pTooltip="Load Entry"
+                  (onClick)="loadEntry()"></p-button>
       </div>
       <div [class]="expandedHoriz() ? 'separator' : undefined"></div>
       <div class="my-tree">
@@ -220,8 +225,9 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
     RouterLink,
     RouterLinkActive,
     Avatar,
-    Tooltip
+    Tooltip,
   ],
+  providers: [DialogService],
   styles: `
     .tree-container {
       display: flex;
@@ -373,6 +379,20 @@ export class AppTree {
   ];
 
   service = inject(AppService);
+  dialogService = inject(DialogService);
+
+  loadEntry() {
+    const ref = this.dialogService.open(LoadEntry, {
+      modal: true,
+      position: 'center',
+      header: 'Load Entry'
+    });
+    ref.onClose.subscribe(data => {
+      if (data) {
+        this.service.performAcquire(data as string);
+      }
+    })
+  }
 
   collectionRoots = computed(() => {
     const entries = this.service.entries();
@@ -464,7 +484,7 @@ export class AppTree {
         });
       }
     }
-    const result=  Array.from(nodesByName.values()).sort((a, b) => a.label.localeCompare(b.label));
+    const result = Array.from(nodesByName.values()).sort((a, b) => a.label.localeCompare(b.label));
     console.log('Calculated schema nodes: ', result);
     return result;
   });
@@ -481,4 +501,5 @@ export class AppTree {
   toggleVerticalExpansion() {
     this.expandedVert.update(it => !it);
   }
+
 }

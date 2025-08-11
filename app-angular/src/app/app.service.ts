@@ -23,6 +23,7 @@ import {
 } from '../api/se';
 import {lastValueFrom} from 'rxjs';
 import {Router} from '@angular/router';
+import {AbstractControl, ValidatorFn} from '@angular/forms';
 
 const MARKER_STORED_LIST = '/storedlist';
 const MARKER_STORED_MAP = '/storedmap';
@@ -63,6 +64,11 @@ export function isUriValid(uri: string): boolean {
   }
 
   return (containsStoredCollectionIdentifier(uri) || containsTimestamp(uri));
+}
+
+export const validatorUri: ValidatorFn = (control: AbstractControl) => {
+  const val = control.value as string;
+  return isUriValid(val) ? null : {invalidUri: "Invalid URI"};
 }
 
 /**
