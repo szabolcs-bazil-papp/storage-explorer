@@ -153,8 +153,6 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
           </div>
         }
 
-        <div [class]="expandedHoriz() ? 'separator' : undefined"></div>
-
         @for (root of collectionRoots(); track root.id) {
           <div class="my-tree-root-container">
             <a [routerLink]="root.route" class="tree-link tree-root" routerLinkActive="active">
@@ -178,42 +176,42 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
                 <span>{{ root.label }}</span>
               }
             </div>
-            @if (expandedVert()) {
-
-              @for (t of root.children; track t.id) {
-                <div class="tree-link tree-type">
-                  <p-avatar shape="circle" class="avatar-border"
-                            [image]="t.image"
-                            [label]="t.image.length < 1 ? t.label.charAt(0) : undefined"></p-avatar>
-                  @if (expandedHoriz()) {
-                    <span>{{ t.label }}</span>
-                  }
-                </div>
-                @for (o of t.children; track o.id) {
-                  <a [routerLink]="o.route" class="tree-link tree-object" routerLinkActive="active">
-                    <p-avatar shape="circle" class="avatar-border"
-                              [image]="o.image"
-                              [label]="o.image.length < 1 ? o.image.charAt(0) : undefined"></p-avatar>
-                    @if (expandedHoriz()) {
-                      <span>{{ o.label }}</span>
-                    }
-                  </a>
+            @for (t of root.children; track t.id) {
+              <div
+                [class]="expandedVert() ? 'tree-link tree-type' : 'tree-link tree-type hidden'">
+                <p-avatar shape="circle" class="avatar-border"
+                          [image]="t.image"
+                          [label]="t.image.length < 1 ? t.label.charAt(0) : undefined"></p-avatar>
+                @if (expandedHoriz()) {
+                  <span>{{ t.label }}</span>
                 }
+              </div>
+              @for (o of t.children; track o.id) {
+                <a [routerLink]="o.route"
+                   [class]="expandedVert() ? 'tree-link tree-object' : 'tree-link tree-object hidden'"
+                   routerLinkActive="active">
+                  <p-avatar shape="circle" class="avatar-border"
+                            [image]="o.image"
+                            [label]="o.image.length < 1 ? o.image.charAt(0) : undefined"></p-avatar>
+                  @if (expandedHoriz()) {
+                    <span>{{ o.label }}</span>
+                  }
+                </a>
               }
             }
           </div>
-          <span class="spacer"></span>
-          <div [class]="expandedHoriz() ?'separator' : undefined"></div>
-          <div class="expansion-control">
-            <p-button variant="text"
-                      [label]="expandedHoriz() ? 'Collapse' : undefined"
-                      [icon]="expandedHoriz() ? 'pi pi-chevron-left' : 'pi pi-chevron-right'"
-                      iconPos="right"
-                      (onClick)="toggleHorizontalExpansion()">
-
-            </p-button>
-          </div>
         }
+        <span class="spacer"></span>
+        <div [class]="expandedHoriz() ?'separator' : undefined"></div>
+        <div class="expansion-control">
+          <p-button variant="text"
+                    [label]="expandedHoriz() ? 'Collapse' : undefined"
+                    [icon]="expandedHoriz() ? 'pi pi-chevron-left' : 'pi pi-chevron-right'"
+                    iconPos="right"
+                    (onClick)="toggleHorizontalExpansion()">
+
+          </p-button>
+        </div>
       </div>
     </div>
   `,
@@ -308,6 +306,10 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
 
     .tree-object {
       padding-left: 2.5rem;
+    }
+
+    .hidden {
+      display: none;
     }
 
     .my-app-dark .my-tree-root-container:has(a.tree-link.active) {
