@@ -37,7 +37,12 @@ export class AbstractInspector {
     const entries = this.service.entries();
     const uri = url2uri(id);
     console.log('Getting entry for URI: ', uri);
-    return entries[uri];
+    const cachedEntry = entries[uri];
+    if (!cachedEntry) {
+      this.service.performAcquire(uri);
+    }
+
+    return cachedEntry;
   });
 
   constructor() {
