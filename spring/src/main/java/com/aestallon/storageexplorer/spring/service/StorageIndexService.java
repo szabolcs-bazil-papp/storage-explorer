@@ -6,12 +6,14 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
+import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -29,6 +31,7 @@ import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyTyp
 import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.FileSystemStorageIndex;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
@@ -142,19 +145,36 @@ public class StorageIndexService {
     }
 
     final var index = indexProvider.provide();
-    index.refresh(IndexingStrategy.STRATEGY_ON_DEMAND);
-    final var entries = uris.stream().map(index::getOrCreate)
+    // TODO: Should think hard about this: allow customisation of the provider!
+    // index.refresh(IndexingStrategy.STRATEGY_ON_DEMAND);
+    // entries.forEach(it -> index.accept(it.uri(), it));
+    return uris.stream().map(index::getOrCreate)
         .flatMap(it -> switch (it) {
           case StorageIndex.EntryAcquisitionResult.New(var e) -> Stream.of(e);
           case StorageIndex.EntryAcquisitionResult.Present(var e) -> Stream.of(e);
           case StorageIndex.EntryAcquisitionResult.Fail f -> Stream.empty();
         })
-        .toList();
-    index.revalidate(entries);
-    return entries.stream()
+        .map(it -> Pair.of(
+            it,
+            it instanceof ObjectEntry o ? Optional.of(o) : Optional.<ObjectEntry>empty()))
+        .map(p -> Pair.of(p.a(), p.b().map(ObjectEntry::tryLoad)))
+        .collect(collectingAndThen(toList(), ps -> {
+          // we collect first so every - potentially background queued - load request would be 
+          // submitted:
+          final List<StorageEntry> result = new ArrayList<>();
+          for (final var p : ps) {
+            if (p.b().isPresent() && p.b().get().get() instanceof ObjectEntryLoadResult.Err) {
+              // if the entry needed a load to verify its validity and the load failed, we skip it:
+              continue;
+            }
+            result.add(p.a());
+          }
+          return result;
+        }))
+        .stream()
+        // TODO: The valid entries should be offered to the index first.
         .flatMap(it -> entryToDto(it, true))
         .collect(collectingAndThen(toList(), new EntryAcquisitionResult()::entries));
-
   }
 
   public EntryLoadResult load(final EntryLoadRequest loadRequest) {
