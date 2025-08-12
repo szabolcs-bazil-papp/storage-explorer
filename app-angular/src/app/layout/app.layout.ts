@@ -14,7 +14,7 @@
  */
 
 
-import {Component, signal, WritableSignal} from '@angular/core';
+import {Component, inject} from '@angular/core';
 import {Splitter} from 'primeng/splitter';
 import {RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
 import {ScriptResult} from './script.result';
@@ -22,6 +22,7 @@ import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
 import {AppTree} from './app.tree';
 import {NgOptimizedImage} from '@angular/common';
+import {AppService, KEY_DARK_MODE} from '../app.service';
 
 @Component({
   selector: 'app-layout',
@@ -37,7 +38,7 @@ import {NgOptimizedImage} from '@angular/common';
     NgOptimizedImage
   ],
   template: `
-    <div [class]="{ 'layout-wrapper': true, 'my-app-dark': isDark() }">
+    <div [class]="{ 'layout-wrapper': true, 'my-app-dark': service.isDark() }">
 
       <header class="layout-header">
         <a routerLink="/" class="logo-link">
@@ -52,7 +53,7 @@ import {NgOptimizedImage} from '@angular/common';
           </a>
         </nav>
         <div class="header-actions">
-          <p-button [icon]="isDark() ? 'pi pi-sun' : 'pi pi-moon'"
+          <p-button [icon]="service.isDark() ? 'pi pi-sun' : 'pi pi-moon'"
                     class="dark-mode-toggle"
                     severity="secondary"
                     (onClick)="toggleDarkMode()"
@@ -260,24 +261,13 @@ import {NgOptimizedImage} from '@angular/common';
 })
 export class AppLayout {
 
-  isDark: WritableSignal<boolean>;
-
-  result: any;
-
-  constructor() {
-    const _isDark = localStorage.getItem('darkmode') === 'true';
-    if (_isDark) {
-      document.documentElement.classList.add('my-app-dark');
-    }
-
-    this.isDark = signal(_isDark);
-  }
+  readonly service = inject(AppService);
 
   toggleDarkMode() {
-    this.isDark.update(it => {
+    this.service.isDark.update(it => {
       const newVal = !it;
       document.documentElement.classList.toggle('my-app-dark');
-      localStorage.setItem('darkMode', newVal.toString());
+      localStorage.setItem(KEY_DARK_MODE, newVal.toString());
       return newVal;
     })
   }

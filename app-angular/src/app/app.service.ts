@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {inject, Injectable, signal} from '@angular/core';
+import {inject, Injectable, signal, WritableSignal} from '@angular/core';
 import {
   ArcScriptEvalResponse,
   EntryLoadResult,
@@ -127,6 +127,8 @@ export function url2uri(url: string) {
   return url.replace('\~', ':').replaceAll('\~', '/');
 }
 
+export const KEY_DARK_MODE = 'darkMode';
+
 @Injectable({providedIn: 'root'})
 export class AppService {
 
@@ -141,8 +143,19 @@ export class AppService {
   /** The list of inspectors currently open. */
   openInspectors = signal<Array<StorageEntryDto>>([]);
 
+  isDark: WritableSignal<boolean>;
+
   private readonly api = inject(ExplorerService);
   private readonly router = inject(Router);
+
+  constructor() {
+    const _isDark = localStorage.getItem(KEY_DARK_MODE) === 'true';
+    if (_isDark) {
+      document.documentElement.classList.add('my-app-dark');
+    }
+
+    this.isDark = signal(_isDark);
+  }
 
   /**
    * Performs an ArcScript evaluation with the current script text and updates the application state

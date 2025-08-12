@@ -58,6 +58,7 @@ function legacy(parser: StreamParser<unknown>): LanguageSupport {
         </ng-template>
         <code-editor [(ngModel)]="service.scriptText"
                      [languages]="_languages"
+                     [theme]="service.isDark() ? 'dark' : 'light'"
                      [language]="'Groovy'"
                      [disabled]="inProgress()"></code-editor>
       </p-fieldset>

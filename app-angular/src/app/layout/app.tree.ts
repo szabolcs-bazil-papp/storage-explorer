@@ -228,22 +228,6 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
   ],
   providers: [DialogService],
   styles: `
-    .tree-container {
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--p-primary-color);
-      gap: 1rem;
-      background-color: var(--p-surface-50);
-      overflow: auto;
-      height: 100%;
-      min-width: 8em;
-      max-height: calc(100vh - 100px);
-    }
-
-    .my-app-dark .tree-container {
-      background-color: var(--p-surface-800);
-    }
-
     .wide {
       width: 20em;
     }
@@ -278,24 +262,8 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
       margin-bottom: 0.5rem;
     }
 
-    .tree-link {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-      transition: all 0.2s ease;
-      gap: 0.5rem;
-      color: black;
-      padding: 0.5rem 1rem;
-    }
-
     .my-tree-root-container {
       border-left: 5px solid rgba(from var(--p-primary-color) r g b / 0);
-    }
-
-    .my-tree-root-container:has(a.tree-link.active) {
-      background-color: var(--p-surface-200);
-
-      border-left: 5px solid rgba(from var(--p-primary-color) r g b / 0.6);
     }
 
     .my-tree-root-container:has(a.tree-link.active) > .tree-root {
@@ -316,23 +284,6 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
 
     .hidden {
       display: none;
-    }
-
-    .my-app-dark .my-tree-root-container:has(a.tree-link.active) {
-      background-color: var(--p-surface-700);
-    }
-
-    .tree-link.active {
-      background-color: var(--p-primary-200);
-      border-left: 5px solid var(--p-primary-color);
-    }
-
-    .my-app-dark .tree-link.active {
-      background-color: var(--p-primary-700);
-    }
-
-    .my-app-dark .tree-link {
-      color: white
     }
 
     .tree-root {

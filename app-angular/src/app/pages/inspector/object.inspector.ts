@@ -14,22 +14,18 @@
  */
 
 import {AbstractInspector} from './abstract.inspector';
-import {
-  AfterViewInit,
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  signal,
-  viewChild
-} from '@angular/core';
+import {Component, computed, effect, signal} from '@angular/core';
 import {EntryLoadResult, EntryLoadResultType} from '../../../api/se';
-import * as Prism from 'prismjs';
-import 'prismjs/components/index'
-import 'prismjs/components/prism-json';
+import {LanguageDescription} from '@codemirror/language';
+import {CodeEditor} from '@acrodata/code-editor';
+import {FormsModule} from '@angular/forms';
 
 @Component({
   selector: 'object-inspector',
+  imports: [
+    CodeEditor,
+    FormsModule
+  ],
   template: `
     <div class="object-inspector-container">
       @if (entry()) {
@@ -38,11 +34,23 @@ import 'prismjs/components/prism-json';
       @if (loadResult().type === EntryLoadResultType.FAILED) {
         <i>Entry is currently not available...</i>
       }
-      <pre><code class="language-json" #oam> {{ oamStr() }}</code></pre>
+      <code-editor [ngModel]="oamStr()"
+                   [languages]="_languages"
+                   [language]="'JSON'"
+                   [theme]="service.isDark() ? 'dark' : 'light'"
+                   [disabled]="true"></code-editor>
     </div>`
 })
-export class ObjectInspector extends AbstractInspector implements AfterViewInit {
+export class ObjectInspector extends AbstractInspector {
 
+  _languages: Array<LanguageDescription> = [LanguageDescription.of({
+    name: "JSON",
+    alias: ["json5"],
+    extensions: ["json","map"],
+    load() {
+      return import("@codemirror/lang-json").then(m => m.json())
+    }
+  })];
 
   loadResult = signal<EntryLoadResult>({type: EntryLoadResultType.FAILED, versions: []});
 
@@ -52,10 +60,8 @@ export class ObjectInspector extends AbstractInspector implements AfterViewInit 
     const versions = this.loadResult()?.versions;
     const version = this.v();
     if (versions && version < versions.length) {
-      console.log('printing oam')
       return JSON.stringify(versions[version].objectAsMap, null, 2);
     } else {
-      console.log('no oam, ', versions,  version);
       return '';
     }
   })
@@ -73,19 +79,8 @@ export class ObjectInspector extends AbstractInspector implements AfterViewInit 
         this.v.set(res.versions.length - 1);
       });
     });
-    effect(() => {
-      const vStr = this.oamStr();
-      console.log('OAM changed: ', vStr);
-      this.oam().nativeElement.textContent = vStr;
-      Prism.highlightElement(this.oam().nativeElement);
-    });
   }
 
   protected readonly EntryLoadResultType = EntryLoadResultType;
 
-  oam = viewChild.required('oam', {read: ElementRef});
-
-  ngAfterViewInit(): void {
-    Prism.highlightElement(this.oam().nativeElement);
-  }
 }
