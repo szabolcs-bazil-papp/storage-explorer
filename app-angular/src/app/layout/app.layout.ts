@@ -40,30 +40,26 @@ import {NgOptimizedImage} from '@angular/common';
     <div [class]="{ 'layout-wrapper': true, 'my-app-dark': isDark() }">
 
       <header class="layout-header">
-        <div class="header-content">
-          <a routerLink="/" class="logo-link">
-            <img class="logo-icon" ngSrc="favicon.png" [width]="32" [height]="32" />
-            <span class="logo-text">Storage Explorer</span>
+        <a routerLink="/" class="logo-link">
+          <img class="logo-icon" ngSrc="favicon.png" [width]="32" [height]="32"/>
+          <span class="logo-text">Storage Explorer</span>
+        </a>
+        <span class="spacer"></span>
+        <nav class="main-nav">
+          <a routerLink="/" class="nav-link" routerLinkActive="active">
+            <i class="pi pi-home"></i>
+            <span>Dashboard</span>
           </a>
-          <span class="spacer"></span>
-          <nav class="main-nav">
-            <a routerLink="/" class="nav-link" routerLinkActive="active">
-              <i class="pi pi-home"></i>
-              <span>Dashboard</span>
-            </a>
-          </nav>
-          <div class="header-actions">
-            <p-button [icon]="isDark() ? 'pi pi-sun' : 'pi pi-moon'"
-                      class="dark-mode-toggle"
-                      severity="secondary"
-                      (onClick)="toggleDarkMode()"
-                      pTooltip="asd">
+        </nav>
+        <div class="header-actions">
+          <p-button [icon]="isDark() ? 'pi pi-sun' : 'pi pi-moon'"
+                    class="dark-mode-toggle"
+                    severity="secondary"
+                    (onClick)="toggleDarkMode()"
+                    pTooltip="asd">
 
-            </p-button>
-          </div>
+          </p-button>
         </div>
-
-
       </header>
 
       <main class="app-main">
@@ -104,15 +100,15 @@ import {NgOptimizedImage} from '@angular/common';
     }
 
     .layout-header {
-      background-color: rgba(from var(--primary-color) r g b / 0.3);
+      display: flex;
+      align-items: center;
+      background-color: rgba(from var(--primary-color) r g b / 0.6);
       backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--primary-color);
       color: white;
       padding: 0 2rem;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      height: 60px;
     }
 
     .logo-link {
@@ -129,12 +125,6 @@ import {NgOptimizedImage} from '@angular/common';
       display: flex;
       align-items: center;
       font-size: 1.5rem;
-    }
-
-    .header-content {
-      display: flex;
-      align-items: center;
-      height: 60px;
     }
 
     .main-nav {
@@ -196,17 +186,20 @@ import {NgOptimizedImage} from '@angular/common';
       flex: 1;
       margin: 0 auto;
       width: 100%;
+      height: 100%;
+      max-height: calc(100vh - 100px);
     }
 
     .layout-splitter {
       flex: 1;
-      max-height: calc(100vh - 20px);
+      height: calc(100vh - 100px);
     }
 
     .app-footer {
       background-color: var(--p-surface-card);
       padding: 1rem 2rem;
       border-top: 1px solid var(--p-surface-border);
+      height: 40px;
     }
 
     .footer-content {
@@ -216,7 +209,6 @@ import {NgOptimizedImage} from '@angular/common';
       margin: 0 auto;
       color: var(--p-text-color-secondary);
       font-size: 0.9rem;
-      height: 20px;
     }
 
     .footer-links {

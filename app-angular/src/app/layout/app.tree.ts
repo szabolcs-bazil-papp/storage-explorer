@@ -22,7 +22,6 @@ import {Tooltip} from 'primeng/tooltip';
 import {AppService, entry2url} from '../app.service';
 import {DialogService} from 'primeng/dynamicdialog';
 import {LoadEntry} from '../components/load.entry';
-import {DialogModule} from 'primeng/dialog';
 
 export enum TreeItemType { ICO = "ICO", IMG = "IMG" }
 
@@ -118,7 +117,7 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
 @Component({
   selector: 'app-tree',
   template: `
-    <div [class]="expandedHoriz() ? 'tree-container wide' : 'tree-container narrow'">
+    <div class="tree-container" [class]="expandedHoriz() ? 'wide' : 'narrow'">
       <div class="tree-controls">
         @if (expandedHoriz()) {
           <span>Tree</span>
@@ -237,7 +236,8 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
       background-color: var(--p-surface-50);
       overflow: auto;
       height: 100%;
-      max-height: calc(100vh - 80px);
+      min-width: 8em;
+      max-height: calc(100vh - 100px);
     }
 
     .my-app-dark .tree-container {
@@ -249,7 +249,7 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
     }
 
     .narrow {
-      width: 6em;
+      width: 8em;
     }
 
     .my-tree {
@@ -341,6 +341,8 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
 
     .tree-controls {
       display: flex;
+      position: sticky;
+      top: 0;
       align-items: center;
       padding-top: 1rem;
       font-weight: 700;
@@ -484,9 +486,7 @@ export class AppTree {
         });
       }
     }
-    const result = Array.from(nodesByName.values()).sort((a, b) => a.label.localeCompare(b.label));
-    console.log('Calculated schema nodes: ', result);
-    return result;
+    return Array.from(nodesByName.values()).sort((a, b) => a.label.localeCompare(b.label));
   });
 
   expandedHoriz = signal<boolean>(true);

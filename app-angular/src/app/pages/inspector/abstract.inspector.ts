@@ -33,10 +33,8 @@ export class AbstractInspector {
       return;
     }
 
-    console.log('Getting entry for id: ', id);
     const entries = this.service.entries();
     const uri = url2uri(id);
-    console.log('Getting entry for URI: ', uri);
     const cachedEntry = entries[uri];
     if (!cachedEntry) {
       this.service.performAcquire(uri);
@@ -46,19 +44,15 @@ export class AbstractInspector {
   });
 
   constructor() {
-    console.log('Inspector constructor called');
     this.subscribeToParamsChanged();
     effect(() => {
-      console.log('Entry changed for adding to inspector');
       const _entry = this.entry();
       if (!_entry) {
         return;
       }
 
       const openInspectors = this.service.openInspectors();
-      console.log('Open inspectors: ', openInspectors);
       if (openInspectors.length === 0 || !openInspectors.some(e => e.uri === _entry.uri)) {
-        console.log('New entry added to open inspectors: ', _entry);
         this.service.openInspectors.update(it => [...it, _entry]);
       }
     })
@@ -73,7 +67,6 @@ export class AbstractInspector {
   protected subscribeToParamsChanged() {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(params => {
       this.identifier.update(it => {
-        console.log('Params changed.');
         const id = params.get('id');
         return id!;
       });

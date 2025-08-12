@@ -39,11 +39,11 @@ import {Avatar} from 'primeng/avatar';
     <p-scroll-panel
       [style]="{ height: '100%', width: '100%', 'padding-left': '1rem', 'padding-right': '1rem'}">
       <p-fieldset legend="Inspectors">
-        <p-tabs value="/app/inspect" scrollable class="tabz">
-          <p-tablist>
+        <p-tabs [value]="tabVal" scrollable class="tabz">
+          <p-tablist >
             @for (entry of service.openInspectors(); track entry.uri) {
-              <p-tab [value]="entry.uri"
-                     [routerLink]="entry2url(entry).substring('/app/inspect/'.length)"
+              <p-tab [value]="entry2url(entry)"
+                     [routerLink]="entry2url(entry)"
                      class="inspector-tab"
                      routerLinkActive="active">
                 <p-avatar shape="circle" class="avatar-border"
@@ -60,13 +60,25 @@ import {Avatar} from 'primeng/avatar';
   styles: `
     .tabz {
       max-width: 60vw;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
+
     .inspector-tab {
 
     }
 
     .active {
+      background: var(--p-tabs-tab-active-background);
+      border-color: var(--p-tabs-tab-active-border-color);
+      color: var(--p-tabs-tab-active-color);
+    }
 
+    ::ng-deep .p-tab-active {
+      background: unset;
+      border-color: unset;
+      color: unset;
     }
   `
 })
@@ -74,6 +86,7 @@ export class InspectorContainer {
 
   protected readonly entry2url = entry2url;
 
+  tabVal = '/app/inspect';
   readonly route = inject(ActivatedRoute);
   readonly router = inject(Router);
 

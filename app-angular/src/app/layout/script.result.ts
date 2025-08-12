@@ -42,7 +42,7 @@ import {AppService} from '../app.service';
 
                  sortMode="multiple">
           <ng-template #header let-columns>
-            <tr>
+            <tr class="res-header">
               @for (col of columns; track col.column) {
                 <th pSortableColumn="{{col.alias ?? col.column}}">
                   <div class="">
@@ -71,10 +71,10 @@ import {AppService} from '../app.service';
     </p-scroll-panel>
   `,
   styles: `
-    :host ::ng-deep th {
+    .res-header {
       position: sticky;
       top: 0;
-      z-index: 200;
+      z-index: 1000;
     }`
 })
 export class ScriptResult {
