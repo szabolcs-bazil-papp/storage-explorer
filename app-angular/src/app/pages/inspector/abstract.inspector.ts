@@ -55,12 +55,7 @@ export class AbstractInspector {
       if (openInspectors.length === 0 || !openInspectors.some(e => e.uri === _entry.uri)) {
         this.service.openInspectors.update(it => [...it, _entry]);
       }
-    })
-    effect(() => {
-      const id = this.identifier();
-      if (id) {
-        this.service.lastInspector.set('/' + this.route.snapshot.pathFromRoot.map(it => it.url.join('/')).join('/'));
-      }
+      this.service.lastInspector.set(_entry);
     });
   }
 

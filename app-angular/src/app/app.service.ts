@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {inject, Injectable, signal, WritableSignal} from '@angular/core';
+import {effect, inject, Injectable, signal, WritableSignal} from '@angular/core';
 import {
   ArcScriptEvalResponse,
   EntryLoadResult,
@@ -139,7 +139,7 @@ export class AppService {
   /** The result of the last ArcScript evaluation. */
   scriptResult = signal<ArcScriptEvalResponse | undefined>(undefined);
   /** The last inspector URL that was opened. */
-  lastInspector = signal<string | undefined>(undefined);
+  lastInspector = signal<StorageEntryDto | undefined>(undefined);
   /** The list of inspectors currently open. */
   openInspectors = signal<Array<StorageEntryDto>>([]);
 
@@ -155,6 +155,11 @@ export class AppService {
     }
 
     this.isDark = signal(_isDark);
+    effect(() => {
+      if (this.openInspectors().length === 0) {
+        this.lastInspector.set(undefined);
+      }
+    });
   }
 
   /**
@@ -236,6 +241,5 @@ export class AppService {
         // TODO: Toast Err
       });
   }
-
 
 }
