@@ -92,6 +92,10 @@ export interface TypeTreeItem {
   label: string;
 }
 
+interface ExpansionState {
+  [key: string]: boolean | undefined;
+}
+
 export interface ObjectTreeItem {
   type: TreeItemType.IMG,
   image: 'object.png',
@@ -179,20 +183,28 @@ export type CollectionTreeItem = ListTreeItem | MapTreeItem | SequenceTreeItem;
               @if (expandedHoriz()) {
                 <span>{{ root.label }}</span>
               }
+              <span class="spacer"></span>
+              <p-button variant="text"
+                        [icon]="(expandedVert() && !!expansionState()[root.id]) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+                        (onClick)="toggleNodeExpansion($event, root.id)"></p-button>
             </div>
             @for (t of root.children; track t.id) {
               <div
-                [class]="expandedVert() ? 'tree-link tree-type' : 'tree-link tree-type hidden'">
+                [class]="getNodeExpansion([root.id]) ? 'tree-link tree-type' : 'tree-link tree-type hidden'">
                 <p-avatar shape="circle" class="avatar-border"
                           [image]="t.image"
                           [label]="t.image.length < 1 ? t.label.charAt(0) : undefined"></p-avatar>
                 @if (expandedHoriz()) {
                   <span>{{ t.label }}</span>
                 }
+                <span class="spacer"></span>
+                <p-button variant="text"
+                          [icon]="(!!expansionState()[t.id]) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+                          (onClick)="toggleNodeExpansion($event, t.id)"></p-button>
               </div>
               @for (o of t.children; track o.id) {
                 <a [routerLink]="o.route"
-                   [class]="expandedVert() ? 'tree-link tree-object' : 'tree-link tree-object hidden'"
+                   [class]="getNodeExpansion([root.id, t.id]) ? 'tree-link tree-object' : 'tree-link tree-object hidden'"
                    routerLinkActive="active">
                   <p-avatar shape="circle" class="avatar-border"
                             [image]="o.image"
@@ -443,6 +455,8 @@ export class AppTree {
   expandedHoriz = signal<boolean>(true);
   expandedVert = signal<boolean>(true);
 
+  expansionState = signal<ExpansionState>({});
+
   protected readonly TreeItemType = TreeItemType;
 
   toggleHorizontalExpansion() {
@@ -451,6 +465,43 @@ export class AppTree {
 
   toggleVerticalExpansion() {
     this.expandedVert.update(it => !it);
+    const globalState = this.expandedVert();
+    this.expansionState.update(it => {
+      const newState = {...it};
+      for (const k in newState) {
+        newState[k] = globalState;
+      }
+      return newState;
+    })
+  }
+
+  getNodeExpansion(ids: Array<string>): boolean {
+    const state = this.expansionState();
+    const globalState = this.expandedVert();
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      const nodeState = state[id] ?? globalState;
+      if (!nodeState) {
+        return false;
+      }
+
+      if (i == ids.length - 1) {
+        return nodeState;
+      }
+    }
+    return globalState;
+  }
+
+  toggleNodeExpansion(event: MouseEvent, id: string) {
+    event.stopPropagation();
+
+    this.expansionState.update(it => {
+      const newState = {...it};
+      const currNodeState = newState[id] ?? this.expandedVert();
+      newState[id] = !currNodeState;
+      console.log(`Node ${id} is now ${newState[id]}`);
+      return newState;
+    })
   }
 
 }
