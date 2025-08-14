@@ -36,6 +36,7 @@ import {AppService} from '../app.service';
                  [scrollable]="true"
                  scrollHeight="flex"
                  size="small"
+                 selectionMode="single"
                  paginator
                  [rowsPerPageOptions]="[10, 20, 50, 100, 200]"
                  [rows]="10"
@@ -54,7 +55,7 @@ import {AppService} from '../app.service';
             </tr>
           </ng-template>
           <ng-template #body let-rowData let-columns="columns">
-            <tr>
+            <tr (dblclick)="onRowInteraction($event, rowData)">
               @for (col of columns; track col.column) {
                 <td>{{ rowData[col.alias ?? col.column] }}</td>
               }
@@ -84,5 +85,16 @@ export class ScriptResult {
   cols = computed<Array<ArcScriptColumnDescriptor>>(() => {
     return this.service.scriptResult()?.columns ?? [ { column: 'uri', alias: 'URI' }];
   });
+
+  onRowInteraction(event: MouseEvent, rowData: any) {
+    event.stopPropagation();
+
+    const uri = rowData['uri'];
+    if (uri) {
+      this.service.performAcquire(uri)
+    } else {
+      // TODO: Show toast
+    }
+  }
 
 }
