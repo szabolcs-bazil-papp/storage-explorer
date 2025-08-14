@@ -14,7 +14,7 @@
  */
 
 
-import {Component, inject} from '@angular/core';
+import {Component, inject, model, signal} from '@angular/core';
 import {Splitter} from 'primeng/splitter';
 import {RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
 import {ScriptResult} from './script.result';
@@ -23,6 +23,8 @@ import {Tooltip} from 'primeng/tooltip';
 import {AppTree} from './app.tree';
 import {NgOptimizedImage} from '@angular/common';
 import {AppService, KEY_DARK_MODE} from '../app.service';
+import {Drawer} from 'primeng/drawer';
+import {InspectorDrawer} from '../components/inspector.drawer';
 
 @Component({
   selector: 'app-layout',
@@ -35,7 +37,9 @@ import {AppService, KEY_DARK_MODE} from '../app.service';
     Button,
     Tooltip,
     AppTree,
-    NgOptimizedImage
+    NgOptimizedImage,
+    Drawer,
+    InspectorDrawer,
   ],
   template: `
     <div [class]="{ 'layout-wrapper': true, 'my-app-dark': service.isDark() }">
@@ -53,6 +57,8 @@ import {AppService, KEY_DARK_MODE} from '../app.service';
           </a>
         </nav>
         <div class="header-actions">
+          <p-button icon="pi pi-search" severity="secondary"
+                    (onClick)="toggleOpenInspectorDrawer(true)"></p-button>
           <p-button [icon]="service.isDark() ? 'pi pi-sun' : 'pi pi-moon'"
                     class="dark-mode-toggle"
                     severity="secondary"
@@ -91,7 +97,13 @@ import {AppService, KEY_DARK_MODE} from '../app.service';
         </div>
 
       </footer>
-    </div>`,
+    </div>
+    <p-drawer [(visible)]="drawerVisible" position="right">
+      <ng-template #header>
+        <h2>Open Inspectors</h2>
+      </ng-template>
+      <inspector-drawer (closeRequest)="toggleOpenInspectorDrawer(false)"></inspector-drawer>
+    </p-drawer>`,
   styles: `
     .layout-wrapper {
       display: flex;
@@ -262,6 +274,7 @@ import {AppService, KEY_DARK_MODE} from '../app.service';
 export class AppLayout {
 
   readonly service = inject(AppService);
+  readonly drawerVisible = model<boolean>(false);
 
   toggleDarkMode() {
     this.service.isDark.update(it => {
@@ -270,6 +283,10 @@ export class AppLayout {
       localStorage.setItem(KEY_DARK_MODE, newVal.toString());
       return newVal;
     })
+  }
+
+  toggleOpenInspectorDrawer(value: boolean) {
+    this.drawerVisible.set(value);
   }
 
 }

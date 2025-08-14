@@ -94,3 +94,7 @@ a {
 .my-app-dark .tree-link {
   color: white
 }
+
+.p-drawer-right {
+  width: unset !important;
+}
