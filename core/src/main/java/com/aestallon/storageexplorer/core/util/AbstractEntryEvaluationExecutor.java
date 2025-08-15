@@ -19,11 +19,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -96,13 +95,13 @@ public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends A
 
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
       final var semaphore = useSemaphore ? new Semaphore(5) : null;
-      final var counter = new AtomicInteger(0);
+      final var counter = new CountDownLatch(entries.size());
       for (final StorageEntry entry : entries) {
         executor.submit(() -> {
           if (doNotExecute()) {
             // this is our guard condition: if upon execution start the work is no longer required,
             // we can return immediately:
-            counter.incrementAndGet();
+            counter.countDown();
             return;
           }
 
@@ -127,16 +126,15 @@ public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends A
             if (semaphore != null) {
               semaphore.release();
             }
-            counter.incrementAndGet();
+            counter.countDown();
           }
         });
       }
 
-      int count = 0;
-      while ((count = counter.get()) < entries.size()) {
-        // do nothing
-        log.debug("Awaiting termination of executor... ( {} / {}", count, entries.size());
-      }
+      log.debug("Awaiting termination of executor...");
+      counter.await();
+      log.debug("Executor terminated.");
+
     } catch (Exception e) {
       log.warn(e.getMessage(), e);
       Thread.currentThread().interrupt();
