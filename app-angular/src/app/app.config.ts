@@ -17,19 +17,47 @@ import {provideAnimationsAsync} from '@angular/platform-browser/animations/async
 import {BASE_PATH} from '../api/se';
 
 const Theme = definePreset(Aura, {
+  primitive: {
+    cyan: {
+      50: '#f4ffff',
+      100: '#d7f6f6',
+      200: '#bdeeee',
+      300: '#a3e5e5',
+      400: '#88dddd',
+      500: '#6ed6d6',
+      600: '#54cccc',
+      700: '#3ac4c4',
+      800: '#1fbbbb',
+      900: '#05b3b3',
+      950: '#059999',
+    },
+    slate: {
+      50: '#f4ffff',
+      100: '#dce3e3',
+      200: '#c4d2d2',
+      300: '#afc3c3',
+      400: '#99b3b3',
+      500: '#84a4a4',
+      600: '#6e9595',
+      700: '#598585',
+      800: '#437676',
+      900: '#2e6666',
+      950: '#185757'
+    }
+  },
   semantic: {
     primary: {
-      50: '{teal.50}',
-      100: '{teal.100}',
-      200: '{teal.200}',
-      300: '{teal.300}',
-      400: '{teal.400}',
-      500: '{teal.500}',
-      600: '{teal.600}',
-      700: '{teal.700}',
-      800: '{teal.800}',
-      900: '{teal.900}',
-      950: '{teal.950}'
+      50: '{cyan.50}',
+      100: '{cyan.100}',
+      200: '{cyan.200}',
+      300: '{cyan.300}',
+      400: '{cyan.400}',
+      500: '{cyan.500}',
+      600: '{cyan.600}',
+      700: '{cyan.700}',
+      800: '{cyan.800}',
+      900: '{cyan.900}',
+      950: '{cyan.950}'
     }
   }
 })

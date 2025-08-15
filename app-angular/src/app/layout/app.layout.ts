@@ -14,9 +14,9 @@
  */
 
 
-import {Component, inject, model, signal} from '@angular/core';
+import {Component, inject, model} from '@angular/core';
 import {Splitter} from 'primeng/splitter';
-import {RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
+import {RouterLink, RouterOutlet} from '@angular/router';
 import {ScriptResult} from './script.result';
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
@@ -33,7 +33,6 @@ import {InspectorDrawer} from '../components/inspector.drawer';
     RouterOutlet,
     ScriptResult,
     RouterLink,
-    RouterLinkActive,
     Button,
     Tooltip,
     AppTree,
@@ -114,7 +113,7 @@ import {InspectorDrawer} from '../components/inspector.drawer';
     .layout-header {
       display: flex;
       align-items: center;
-      background-color: rgba(from var(--primary-color) r g b / 0.6);
+      background-color: var(--primary-color);
       backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--primary-color);
       color: white;
@@ -198,6 +197,7 @@ import {InspectorDrawer} from '../components/inspector.drawer';
     .layout-splitter {
       flex: 1;
       height: calc(100vh - 100px);
+      border-radius: unset;
     }
 
     .app-footer {
@@ -233,7 +233,7 @@ import {InspectorDrawer} from '../components/inspector.drawer';
 
     /* Dark Mode Styles */
     .my-app-dark .app-header {
-      background-color: rgba(from var(--p-primary-800) r g b / 0.6);
+      background-color: var(--p-primary-800);
     }
 
     .my-app-dark .nav-link {
