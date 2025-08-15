@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {Component, computed, inject, signal} from '@angular/core';
+import {Component, computed, HostListener, inject, signal} from '@angular/core';
 import {StorageEntryType} from '../../api/se';
 import {Button} from 'primeng/button';
 import {RouterLink, RouterLinkActive} from '@angular/router';
@@ -502,6 +502,12 @@ export class AppTree {
       console.log(`Node ${id} is now ${newState[id]}`);
       return newState;
     })
+  }
+
+
+  @HostListener('window:keydown.control.shift.l', ['$event'])
+  onCtrlShiftL(e: Event) {
+    this.loadEntry();
   }
 
 }

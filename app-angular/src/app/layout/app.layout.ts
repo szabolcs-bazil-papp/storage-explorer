@@ -14,7 +14,7 @@
  */
 
 
-import {Component, inject, model} from '@angular/core';
+import {Component, HostListener, inject, model} from '@angular/core';
 import {Splitter} from 'primeng/splitter';
 import {RouterLink, RouterOutlet} from '@angular/router';
 import {ScriptResult} from './script.result';
@@ -279,6 +279,11 @@ export class AppLayout {
 
   toggleOpenInspectorDrawer(value: boolean) {
     this.drawerVisible.set(value);
+  }
+
+  @HostListener('window:keydown.control.shift.t', ['$event'])
+  onControlShiftT(e: Event) {
+    this.toggleOpenInspectorDrawer(true);
   }
 
 }

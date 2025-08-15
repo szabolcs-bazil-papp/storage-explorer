@@ -64,7 +64,7 @@ a {
 }
 
 .my-tree-root-container:has(a.tree-link.active) {
-  background-color: var(--p-surface-200);
+  background-color: var(--p-surface-100);
 
   border-left: 5px solid rgba(from var(--p-primary-color) r g b / 0.6);
 }

@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {Component, inject, signal, viewChild} from '@angular/core';
+import {Component, HostListener, inject, signal, viewChild} from '@angular/core';
 import {ScrollPanel} from 'primeng/scrollpanel';
 import {Fieldset} from 'primeng/fieldset';
 import {FormsModule} from '@angular/forms';
@@ -95,6 +95,15 @@ export class ArcScript {
     this.service.performExecuteScript().then(ok => {
       this.inProgress.set(false);
     });
+  }
+
+  @HostListener('window:keydown.control.enter', ['$event'])
+  onControlEnter(event: Event) {
+    event.stopPropagation();
+    const e = event as KeyboardEvent;
+    if (e.key === 'Enter' && e.ctrlKey) {
+      this.onPlayClicked();
+    }
   }
 
 }
