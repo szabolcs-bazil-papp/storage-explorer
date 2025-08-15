@@ -51,19 +51,18 @@ import {InspectorDrawer} from '../components/inspector.drawer';
         </a>
         <span class="spacer"></span>
         <nav class="main-nav">
-          <a routerLink="/" class="nav-link" routerLinkActive="active">
-            <i class="pi pi-home"></i>
-            <span>Dashboard</span>
-          </a>
+          <!-- Settings and other meta nav actions go here. -->
         </nav>
         <div class="header-actions">
           <p-button icon="pi pi-search" severity="secondary"
-                    (onClick)="toggleOpenInspectorDrawer(true)"></p-button>
+                    (onClick)="toggleOpenInspectorDrawer(true)"
+                    pTooltip="Find an open inspector"
+                    tooltipPosition="left"></p-button>
           <p-button [icon]="service.isDark() ? 'pi pi-sun' : 'pi pi-moon'"
                     class="dark-mode-toggle"
                     severity="secondary"
                     (onClick)="toggleDarkMode()"
-                    pTooltip="asd">
+                    pTooltip="Switch theme">
 
           </p-button>
         </div>
@@ -174,12 +173,6 @@ import {InspectorDrawer} from '../components/inspector.drawer';
       display: flex;
       gap: 1rem;
       align-items: center;
-    }
-
-    .dark-mode-toggle {
-      background-color: rgba(255, 255, 255, 0.1) !important;
-      border: none !important;
-      color: white !important;
       margin-left: 2rem;
     }
 
@@ -187,7 +180,6 @@ import {InspectorDrawer} from '../components/inspector.drawer';
       background-color: rgba(255, 255, 255, 0.1) !important;
       border: none !important;
       color: white !important;
-      margin-left: 2rem;
     }
 
     .dark-mode-toggle:hover {

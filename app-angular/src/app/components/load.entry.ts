@@ -6,6 +6,7 @@ import {InputText} from 'primeng/inputtext';
 import {FormBuilder, FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {Message} from 'primeng/message';
 import {DynamicDialogRef} from 'primeng/dynamicdialog';
+import {AutoFocus} from 'primeng/autofocus';
 
 @Component({
   selector: 'load-entry',
@@ -15,7 +16,8 @@ import {DynamicDialogRef} from 'primeng/dynamicdialog';
     InputText,
     FormsModule,
     ReactiveFormsModule,
-    Message
+    Message,
+    AutoFocus
   ],
   template: `
     <div class="load-entry-wrapper">
@@ -25,7 +27,8 @@ import {DynamicDialogRef} from 'primeng/dynamicdialog';
                  id="load_entry_uri"
                  formControlName="uri"
                  [invalid]="isInvalid('uri')"
-                 autocomplete="off"/>
+                 autocomplete="off"
+                 [pAutoFocus]="true"/>
           <label for="load_entry_uri">URI</label>
         </p-floatlabel>
         @if (isInvalid('uri')) {

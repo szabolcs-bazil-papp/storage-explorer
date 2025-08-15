@@ -20,17 +20,18 @@ import {IconField} from 'primeng/iconfield';
   ],
   template: `
     <div class="drawer-wrapper">
-      <p-icon-field>
-        <p-inputicon class="pi pi-search"></p-inputicon>
-        <p-floatlabel class="drawer-query">
+      <p-floatlabel class="drawer-query">
+        <p-icon-field>
+          <p-inputicon class="pi pi-search"></p-inputicon>
           <input id="inspector_query" pInputText [(ngModel)]="query" class="drawer-query-input">
-          <label for="inspector_query">Search for Inspector</label>
-        </p-floatlabel>
-      </p-icon-field>
+        </p-icon-field>
+        <label for="inspector_query">Search for Inspector</label>
+      </p-floatlabel>
 
-      <p-listbox class="drawer-list" [options]="items()" optionLabel="URI" (onDblClick)="onRowDblClick($event)">
+      <p-listbox class="drawer-list" [options]="items()" optionLabel="URI"
+                 (onDblClick)="onRowDblClick($event)">
         <ng-template #item let-entry>
-            <span>{{ entry.uri }}</span>
+          <span>{{ entry.uri }}</span>
         </ng-template>
       </p-listbox>
     </div>`,
@@ -41,7 +42,7 @@ import {IconField} from 'primeng/iconfield';
     gap: 1rem;
   }
   .drawer-query {
-
+    margin: 1.5rem 0;
   }
 
   ::ng-deep .drawer-list div.p-listbox-list-container {
