@@ -49,7 +49,7 @@ import {StorageEntryDto} from '../../../api/se';
                      class="inspector-tab">
                 <p-avatar shape="circle" class="avatar-border"
                           [image]="entry2icon(entry)"></p-avatar>
-                <span>{{ entry.typeName }}</span>
+                <span>{{ entry.typeName ?? (entry.schema + '/' + entry.name) }}</span>
               </p-tab>
               <p-button class="close-btn"  variant="text" icon="pi pi-times"
                         (onClick)="closeTab($event, entry)"></p-button>

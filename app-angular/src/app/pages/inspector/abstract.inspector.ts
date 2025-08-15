@@ -17,7 +17,7 @@ import {computed, Directive, effect, inject, signal} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {AppService, url2uri} from '../../app.service';
-import {StorageEntryDto} from "../../../api/se";
+import {EntryLoadResult, EntryLoadResultType, StorageEntryDto} from "../../../api/se";
 
 @Directive({})
 export class AbstractInspector {
@@ -43,6 +43,10 @@ export class AbstractInspector {
     return cachedEntry;
   });
 
+  readonly loadResult = signal<EntryLoadResult>({type: EntryLoadResultType.FAILED, versions: []});
+
+  readonly v = signal(0);
+
   constructor() {
     this.subscribeToParamsChanged();
     effect(() => {
@@ -56,6 +60,17 @@ export class AbstractInspector {
         this.service.openInspectors.update(it => [...it, _entry]);
       }
       this.service.lastInspector.set(_entry);
+    });
+    effect(() => {
+      const entry = this.entry();
+      if (!entry) {
+        return;
+      }
+
+      this.service.load(entry).then(res => {
+        this.loadResult.set(res);
+        this.v.set(res.versions.length - 1);
+      });
     });
   }
 

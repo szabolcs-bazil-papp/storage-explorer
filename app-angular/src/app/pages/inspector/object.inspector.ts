@@ -14,8 +14,8 @@
  */
 
 import {AbstractInspector} from './abstract.inspector';
-import {Component, computed, effect, signal} from '@angular/core';
-import {EntryLoadResult, EntryLoadResultType} from '../../../api/se';
+import {Component, computed} from '@angular/core';
+import {EntryLoadResultType} from '../../../api/se';
 import {LanguageDescription} from '@codemirror/language';
 import {CodeEditor} from '@acrodata/code-editor';
 import {FormsModule} from '@angular/forms';
@@ -52,10 +52,6 @@ export class ObjectInspector extends AbstractInspector {
     }
   })];
 
-  loadResult = signal<EntryLoadResult>({type: EntryLoadResultType.FAILED, versions: []});
-
-  v = signal(0);
-
   oamStr = computed(() => {
     const versions = this.loadResult()?.versions;
     const version = this.v();
@@ -64,22 +60,7 @@ export class ObjectInspector extends AbstractInspector {
     } else {
       return '';
     }
-  })
-
-  constructor() {
-    super();
-    effect(() => {
-      const entry = this.entry();
-      if (!entry) {
-        return;
-      }
-
-      this.service.load(entry).then(res => {
-        this.loadResult.set(res);
-        this.v.set(res.versions.length - 1);
-      });
-    });
-  }
+  });
 
   protected readonly EntryLoadResultType = EntryLoadResultType;
 
