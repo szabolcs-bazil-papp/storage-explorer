@@ -17,48 +17,46 @@ import {Component, computed} from '@angular/core';
 import {AbstractInspector} from './abstract.inspector';
 import {TableModule} from 'primeng/table';
 import {EntryLoadResultType, Reference} from '../../../api/se';
+import {UriTable} from './components/uri.table';
+
+export function extractIndex(ref: Reference): string {
+  return ref.pos?.toString() ?? 'Unknown Index';
+}
 
 @Component({
   selector: 'list-inspector',
   imports: [
-    TableModule
+    TableModule,
+    UriTable
   ],
   template: `
     <div class="list-inspector-wrapper">
       <h2>{{ entry()?.uri ?? 'Unknown URI' }}</h2>
-      <p-table [value]="elements()">
-        <ng-template #header>
-          <tr>
-            <th>Index</th>
-            <th>URI</th>
-          </tr>
-        </ng-template>
-        <ng-template #body let-reference>
-          <tr>
-            <td>{{ reference.pos }}</td>
-            <td (dblclick)="onRowDblClick($event, reference)">{{ reference.uri }}</td>
-          </tr>
-        </ng-template>
-      </p-table>
+      <uri-table firstColHeader="Index"
+                 [firstColValue]="extractIndex"
+                 (onDblClick)="onRowDblClick($event.e, $event.ref)"
+                 [elements]="elements()">
+      </uri-table>
     </div>`
 })
 export class ListInspector extends AbstractInspector {
 
-
   elements = computed<Array<Reference>>(() => {
     const _loadResult = this.loadResult();
-    if (EntryLoadResultType.FAILED ===  _loadResult.type) {
+    if (EntryLoadResultType.FAILED === _loadResult.type) {
       return [];
     }
 
     const res = (this.entry()?.references ?? []).sort((a, b) => (a.pos ?? 0) - (b.pos ?? 0));
     console.log(res);
     return res;
-  })
+  });
 
   onRowDblClick(event: MouseEvent, reference: Reference) {
     event.stopPropagation();
     this.service.performAcquire(reference.uri);
   }
-}
 
+  protected readonly extractIndex = extractIndex;
+
+}
