@@ -17,14 +17,18 @@ import {AbstractInspector} from './abstract.inspector';
 import {Component, computed} from '@angular/core';
 import {EntryLoadResultType} from '../../../api/se';
 import {LanguageDescription} from '@codemirror/language';
-import {CodeEditor} from '@acrodata/code-editor';
 import {FormsModule} from '@angular/forms';
+import {CodeEditor} from '@acrodata/code-editor';
+import {Tab, TabList, Tabs} from 'primeng/tabs';
 
 @Component({
   selector: 'object-inspector',
   imports: [
+    FormsModule,
     CodeEditor,
-    FormsModule
+    Tabs,
+    TabList,
+    Tab
   ],
   template: `
     <div class="object-inspector-container">
@@ -33,13 +37,32 @@ import {FormsModule} from '@angular/forms';
       }
       @if (loadResult().type === EntryLoadResultType.FAILED) {
         <i>Entry is currently not available...</i>
+      } @else {
+
+        @if ((loadResult().type === EntryLoadResultType.SINGLE)) {
+          <h3>Single Version</h3>
+        } @else if (loadResult().type === EntryLoadResultType.MULTI) {
+          <p-tabs [(value)]="v" scrollable class="version-tabs">
+            <p-tablist>
+              @for (version of loadResult().versions; let idx = $index; track idx) {
+                <p-tab [value]="idx">{{ idx }}</p-tab>
+              }
+            </p-tablist>
+          </p-tabs>
+        }
+
+        <code-editor [ngModel]="oamStr()"
+                     [languages]="_languages"
+                     [language]="'JSON'"
+                     [theme]="service.isDark() ? 'dark' : 'light'"
+                     [disabled]="true">
+        </code-editor>
       }
-      <code-editor [ngModel]="oamStr()"
-                   [languages]="_languages"
-                   [language]="'JSON'"
-                   [theme]="service.isDark() ? 'dark' : 'light'"
-                   [disabled]="true"></code-editor>
-    </div>`
+    </div>`,
+  styles: `
+    .version-tabs {
+      width: 80vw;
+    }`
 })
 export class ObjectInspector extends AbstractInspector {
 
@@ -53,12 +76,25 @@ export class ObjectInspector extends AbstractInspector {
   })];
 
   oamStr = computed(() => {
-    const versions = this.loadResult()?.versions;
-    const version = this.v();
-    if (versions && version < versions.length) {
-      return JSON.stringify(versions[version].objectAsMap, null, 2);
-    } else {
+    const _loadResult = this.loadResult();
+    if (!_loadResult.type) {
       return '';
+    }
+
+    switch (_loadResult.type) {
+      case EntryLoadResultType.FAILED:
+        return '';
+      case EntryLoadResultType.SINGLE:
+        return JSON.stringify(_loadResult.versions[0].objectAsMap, null, 2);
+      case EntryLoadResultType.MULTI: {
+        const versions = _loadResult.versions;
+        const version = this.v();
+        if (versions && version < versions.length) {
+          return JSON.stringify(versions[version].objectAsMap, null, 2);
+        } else {
+          return '';
+        }
+      }
     }
   });
 

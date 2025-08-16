@@ -62,7 +62,7 @@ import {StorageEntryDto} from '../../../api/se';
   `,
   styles: `
     .tabz {
-      max-width: 60vw;
+      width: 80vw;
       position: sticky;
       top: 0;
       z-index: 100;

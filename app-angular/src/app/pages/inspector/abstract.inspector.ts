@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {computed, Directive, effect, inject, signal} from '@angular/core';
+import {computed, Directive, effect, inject, model, signal} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {AppService, url2uri} from '../../app.service';
@@ -45,7 +45,7 @@ export class AbstractInspector {
 
   readonly loadResult = signal<EntryLoadResult>({type: EntryLoadResultType.FAILED, versions: []});
 
-  readonly v = signal(0);
+  readonly v = model(0);
 
   constructor() {
     this.subscribeToParamsChanged();
