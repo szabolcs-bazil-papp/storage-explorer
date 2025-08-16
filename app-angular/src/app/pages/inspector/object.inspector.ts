@@ -14,12 +14,13 @@
  */
 
 import {AbstractInspector} from './abstract.inspector';
-import {Component, computed} from '@angular/core';
+import {Component, computed, HostListener, viewChild} from '@angular/core';
 import {EntryLoadResultType} from '../../../api/se';
 import {LanguageDescription} from '@codemirror/language';
 import {FormsModule} from '@angular/forms';
 import {CodeEditor} from '@acrodata/code-editor';
 import {Tab, TabList, Tabs} from 'primeng/tabs';
+import {isUriValid} from '../../app.service';
 
 @Component({
   selector: 'object-inspector',
@@ -33,7 +34,7 @@ import {Tab, TabList, Tabs} from 'primeng/tabs';
   template: `
     <div class="object-inspector-container">
       @if (entry()) {
-        <p>{{ entry()!.uri }}</p>
+        <h2>{{ entry()!.uri }}</h2>
       }
       @if (loadResult().type === EntryLoadResultType.FAILED) {
         <i>Entry is currently not available...</i>
@@ -100,4 +101,23 @@ export class ObjectInspector extends AbstractInspector {
 
   protected readonly EntryLoadResultType = EntryLoadResultType;
 
+  editor = viewChild(CodeEditor);
+  @HostListener('window:keydown.alt.i', ['$event'])
+  onControlShifttI(event: Event) {
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    const selection = this.editor()?.view?.state.selection.main;
+    if (!selection) {
+      return;
+    }
+
+    const selectionText = this.oamStr().substring(selection.from, selection.to);
+    if (isUriValid(selectionText)) {
+      this.service.performAcquire(selectionText);
+    } else {
+      // TODO: Handle this case
+      console.log('Not a valid URI: ', selectionText);
+    }
+  }
 }
