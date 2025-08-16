@@ -14,13 +14,41 @@
  */
 
 import {AbstractInspector} from './abstract.inspector';
-import {Component} from '@angular/core';
+import {Component, computed} from '@angular/core';
+import {EntryLoadResultType} from '../../../api/se';
+import {Fieldset} from 'primeng/fieldset';
 
 @Component({
   selector: 'sequence-inspector',
+  imports: [
+    Fieldset
+  ],
   template: `
-    <p>Hello Sequence Inspector: {{ identifier() }}</p>`
+    <p-fieldset>
+      <ng-template #header>
+        <h2>{{ entry()?.uri ?? 'Unknown URI' }}</h2>
+      </ng-template>
+      <div class="sequence-card">
+        <h2>Current value:</h2>
+        <h1>{{ currVal() }}</h1>
+      </div>
+    </p-fieldset>`,
+  styles: `
+    .sequence-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }`
 })
 export class SequenceInspector extends AbstractInspector {
+
+  currVal = computed<string>(() => {
+    const _loadResult = this.loadResult();
+    if (EntryLoadResultType.FAILED === _loadResult.type) {
+      return 'Value currently not available.';
+    }
+
+    return this.entry()?.seqVal?.toString() ?? 'Unknown Value';
+  });
 
 }
