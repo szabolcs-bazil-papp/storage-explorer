@@ -17,6 +17,7 @@ import {AbstractInspector} from './abstract.inspector';
 import {Component, computed} from '@angular/core';
 import {EntryLoadResultType, Reference} from '../../../api/se';
 import {UriTable} from './components/uri.table';
+import {Fieldset} from 'primeng/fieldset';
 
 export function extractPropName(ref: Reference) {
   return ref.propName ?? '<<Unknown Key>>';
@@ -25,17 +26,20 @@ export function extractPropName(ref: Reference) {
 @Component({
   selector: 'map-inspector',
   imports: [
-    UriTable
+    UriTable,
+    Fieldset
   ],
   template: `
-    <div class="map-inspector-wrapper">
-      <h2>{{ entry()?.uri ?? 'Unknown URI' }}</h2>
+    <p-fieldset class="map-inspector-wrapper">
+      <ng-template #header>
+        <h2>{{ entry()?.uri ?? 'Unknown URI' }}</h2>
+      </ng-template>
       <uri-table firstColHeader="Key"
                  [firstColValue]="extractPropName"
                  (onDblClick)="onRowDblClick($event.e, $event.ref)"
                  [elements]="elements()">
       </uri-table>
-    </div>`
+    </p-fieldset>`
 })
 export class MapInspector extends AbstractInspector {
 

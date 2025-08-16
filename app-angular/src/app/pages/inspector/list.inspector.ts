@@ -18,6 +18,7 @@ import {AbstractInspector} from './abstract.inspector';
 import {TableModule} from 'primeng/table';
 import {EntryLoadResultType, Reference} from '../../../api/se';
 import {UriTable} from './components/uri.table';
+import {Fieldset} from 'primeng/fieldset';
 
 export function extractIndex(ref: Reference): string {
   return ref.pos?.toString() ?? 'Unknown Index';
@@ -27,17 +28,20 @@ export function extractIndex(ref: Reference): string {
   selector: 'list-inspector',
   imports: [
     TableModule,
-    UriTable
+    UriTable,
+    Fieldset
   ],
   template: `
-    <div class="list-inspector-wrapper">
-      <h2>{{ entry()?.uri ?? 'Unknown URI' }}</h2>
+    <p-fieldset class="list-inspector-wrapper">
+      <ng-template #header>
+        <h2>{{ entry()?.uri ?? 'Unknown URI' }}</h2>
+      </ng-template>
       <uri-table firstColHeader="Index"
                  [firstColValue]="extractIndex"
                  (onDblClick)="onRowDblClick($event.e, $event.ref)"
                  [elements]="elements()">
       </uri-table>
-    </div>`
+    </p-fieldset>`
 })
 export class ListInspector extends AbstractInspector {
 
