@@ -98,3 +98,13 @@ a {
 .p-drawer-right {
   width: unset !important;
 }
+
+.code-block {
+  background-color: var(--p-surface-100);
+  padding: 0.1em;
+  border-radius: 0.4em;
+}
+
+.my-app-dark .code-block {
+  background-color: var(--p-surface-800);
+}
