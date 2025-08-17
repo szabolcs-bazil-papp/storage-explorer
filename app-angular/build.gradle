@@ -1,2 +1,10 @@
-group = 'hu.aestallon.storageexplorer'
-version = '0.2.0'
+plugins {
+  id 'org.siouan.frontend-jdk21' version '10.0.0'
+}
+
+frontend {
+  nodeDistributionProvided = true
+  nodeVersion = '22.18.0'
+  assembleScript = 'run build'
+  verboseModeEnabled = true
+}

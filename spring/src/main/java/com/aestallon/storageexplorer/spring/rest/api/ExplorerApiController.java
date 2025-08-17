@@ -24,7 +24,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.8.0")
 @Controller
-@RequestMapping("${openapi.storageExplorerEmbeddedRESTful.base-path:}")
+@RequestMapping("${storage-explorer.api-path}")
 public class ExplorerApiController implements ExplorerApi {
 
     private final ExplorerApiDelegate delegate;
