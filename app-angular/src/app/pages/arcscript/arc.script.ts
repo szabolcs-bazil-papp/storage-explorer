@@ -92,9 +92,13 @@ export class ArcScript {
 
   onPlayClicked() {
     this.inProgress.set(true)
-    this.service.performExecuteScript().then(ok => {
-      this.inProgress.set(false);
-    });
+    this.service.performExecuteScript()
+      .then(ok => {
+        this.inProgress.set(false);
+      })
+      .catch(() => {
+        this.inProgress.set(false);
+      });
   }
 
   @HostListener('window:keydown.control.enter', ['$event'])

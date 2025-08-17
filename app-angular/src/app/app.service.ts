@@ -17,6 +17,7 @@ import {effect, inject, Injectable, signal, WritableSignal} from '@angular/core'
 import {
   ArcScriptEvalResponse,
   EntryLoadResult,
+  EntryLoadResultType,
   ExplorerService,
   StorageEntryDto,
   StorageEntryType
@@ -24,6 +25,7 @@ import {
 import {lastValueFrom} from 'rxjs';
 import {Router} from '@angular/router';
 import {AbstractControl, ValidatorFn} from '@angular/forms';
+import {MessageService} from 'primeng/api';
 
 const MARKER_STORED_LIST = '/storedlist';
 const MARKER_STORED_MAP = '/storedmap';
@@ -129,6 +131,13 @@ export function url2uri(url: string) {
 
 export const KEY_DARK_MODE = 'darkMode';
 
+export interface Msg {
+  summary: string;
+  detail: string;
+}
+
+const MSG_LIFETIME = 3_000;
+
 @Injectable({providedIn: 'root'})
 export class AppService {
 
@@ -147,6 +156,7 @@ export class AppService {
 
   private readonly api = inject(ExplorerService);
   private readonly router = inject(Router);
+  private readonly messageService = inject(MessageService);
 
   constructor() {
     const _isDark = localStorage.getItem(KEY_DARK_MODE) === 'true';
@@ -167,9 +177,23 @@ export class AppService {
    * accordingly.
    */
   async performExecuteScript() {
-    const resp = await lastValueFrom(this.api.eval({script: this.scriptText}));
+    let resp: ArcScriptEvalResponse;
+    try {
+      resp = await lastValueFrom(this.api.eval({script: this.scriptText}));
+    } catch (error: any) {
+      resp = (error.error as ArcScriptEvalResponse);
+      resp.err ??= {
+        msg: (error as any)?.message ?? 'Unknown error occurred.',
+        col: 0,
+        line: 0,
+      };
+    }
+
     if (resp.err) {
-      console.error(resp.err);
+      this.msgErr({
+        summary: 'Script Evaluation Error',
+        detail: (resp.err.msg ?? 'Unknown error occurred.') + '\n' + resp.err.line + ':' + resp.err.col,
+      });
     } else {
       const uris = resp.resultSet.flatMap(it => {
         const uri = (it as any)['uri'];
@@ -191,6 +215,12 @@ export class AppService {
             }
             return cache;
           });
+        })
+        .catch(() => {
+          this.msgWarn({
+            summary: 'Failed to fetch entries.',
+            detail: 'Some entries may not be available.'
+          })
         });
 
       this.scriptResult.update(() => resp);
@@ -203,7 +233,15 @@ export class AppService {
    * @param entry a storage entry to load
    */
   async load(entry: StorageEntryDto): Promise<EntryLoadResult> {
-    return await lastValueFrom(this.api.loadStorageEntry({uri: entry.uri}));
+    return await lastValueFrom(this.api.loadStorageEntry({uri: entry.uri}))
+      .catch(err => {
+        this.msgErr({summary: 'Failed to load entry', detail: err.message});
+        return {
+          type: EntryLoadResultType.FAILED,
+          entry,
+          versions: []
+        };
+      });
   }
 
   /**
@@ -214,13 +252,17 @@ export class AppService {
    */
   async performAcquire(uri: string) {
     if (!isUriValid(uri)) {
+      this.msgErr({summary: 'Invalid URI!', detail: uri})
       return;
     }
 
     await lastValueFrom(this.api.getStorageEntry({uris: [uri]}))
       .then(res => {
         if ((res.entries?.length ?? 0) !== 1) {
-          // TODO: Toast Err
+          this.msgErr({
+            summary: 'Entry not found',
+            detail: `Entry with URI '${uri}' not found.`
+          });
           return null;
         } else {
           const entry = res.entries![0];
@@ -238,8 +280,55 @@ export class AppService {
         }
       })
       .catch(err => {
-        // TODO: Toast Err
+        this.msgErr({summary: 'Failed to acquire entry', detail: err.message});
       });
+  }
+
+  // -----------------------------------------------------------------------------------------------
+  // Toast
+
+  msgInfo(msg: Msg) {
+    const {summary, detail} = msg;
+    this.messageService.add({
+      severity: 'info',
+      summary,
+      detail,
+      life: MSG_LIFETIME,
+      closable: true
+    });
+  }
+
+  msgWarn(msg: Msg) {
+    const {summary, detail} = msg;
+    this.messageService.add({
+      severity: 'warn',
+      summary,
+      detail,
+      life: MSG_LIFETIME,
+      closable: true
+    });
+  }
+
+  msgErr(msg: Msg) {
+    const {summary, detail} = msg;
+    this.messageService.add({
+      severity: 'error',
+      summary,
+      detail,
+      life: MSG_LIFETIME,
+      closable: true
+    });
+  }
+
+  msgSuccess(msg: Msg) {
+    const {summary, detail} = msg;
+    this.messageService.add({
+      severity: 'success',
+      summary,
+      detail,
+      life: MSG_LIFETIME,
+      closable: true
+    });
   }
 
 }

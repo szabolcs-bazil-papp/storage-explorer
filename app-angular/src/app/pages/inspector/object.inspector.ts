@@ -70,7 +70,7 @@ export class ObjectInspector extends AbstractInspector {
   _languages: Array<LanguageDescription> = [LanguageDescription.of({
     name: "JSON",
     alias: ["json5"],
-    extensions: ["json","map"],
+    extensions: ["json", "map"],
     load() {
       return import("@codemirror/lang-json").then(m => m.json())
     }
@@ -102,8 +102,9 @@ export class ObjectInspector extends AbstractInspector {
   protected readonly EntryLoadResultType = EntryLoadResultType;
 
   editor = viewChild(CodeEditor);
+
   @HostListener('window:keydown.alt.i', ['$event'])
-  onControlShifttI(event: Event) {
+  onControlShiftI(event: Event) {
     event.stopPropagation();
     event.stopImmediatePropagation();
 
@@ -116,8 +117,10 @@ export class ObjectInspector extends AbstractInspector {
     if (isUriValid(selectionText)) {
       this.service.performAcquire(selectionText);
     } else {
-      // TODO: Handle this case
-      console.log('Not a valid URI: ', selectionText);
+      this.service.msgWarn({
+        summary: 'Selection is not a valid URI',
+        detail: 'Please select a valid URI to load it.'
+      })
     }
   }
 }

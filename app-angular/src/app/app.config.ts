@@ -10,11 +10,18 @@ import {
 } from '@angular/router';
 import {routes} from './app.routes';
 import Aura from '@primeuix/themes/aura';
-import {provideHttpClient} from '@angular/common/http';
+import {
+  HttpHandlerFn,
+  HttpRequest,
+  provideHttpClient,
+  withInterceptors
+} from '@angular/common/http';
 import {providePrimeNG} from 'primeng/config';
 import {definePreset} from '@primeuix/themes';
 import {provideAnimationsAsync} from '@angular/platform-browser/animations/async';
-import {BASE_PATH} from '../api/se';
+import {MessageService} from 'primeng/api';
+
+declare const STORAGE_EXPLORER_API_PATH: string;
 
 const Theme = definePreset(Aura, {
   primitive: {
@@ -62,6 +69,13 @@ const Theme = definePreset(Aura, {
   }
 })
 
+export function apiRequestInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn) {
+  req = req.clone({
+    url: req.url.replace('http://localhost', STORAGE_EXPLORER_API_PATH)
+  });
+  return next(req);
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAnimationsAsync(),
@@ -71,8 +85,8 @@ export const appConfig: ApplicationConfig = {
       anchorScrolling: 'enabled',
       scrollPositionRestoration: 'enabled'
     }), withEnabledBlockingInitialNavigation()),
-    provideHttpClient(),
+    provideHttpClient(withInterceptors([apiRequestInterceptor])),
     providePrimeNG({theme: {preset: Theme, options: {darkModeSelector: '.my-app-dark'}}}),
-    {provide: BASE_PATH, useValue: 'http://localhost:8080/storageexplorer'}
+    MessageService
   ]
 };

@@ -25,6 +25,7 @@ import {NgOptimizedImage} from '@angular/common';
 import {AppService, KEY_DARK_MODE} from '../app.service';
 import {Drawer} from 'primeng/drawer';
 import {InspectorDrawer} from '../components/inspector.drawer';
+import {Toast} from 'primeng/toast';
 
 @Component({
   selector: 'app-layout',
@@ -39,9 +40,11 @@ import {InspectorDrawer} from '../components/inspector.drawer';
     NgOptimizedImage,
     Drawer,
     InspectorDrawer,
+    Toast,
   ],
   template: `
     <div [class]="{ 'layout-wrapper': true, 'my-app-dark': service.isDark() }">
+      <p-toast/>
 
       <header class="layout-header">
         <a routerLink="/" class="logo-link">

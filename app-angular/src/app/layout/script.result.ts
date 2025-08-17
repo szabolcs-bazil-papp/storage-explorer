@@ -28,7 +28,8 @@ import {AppService} from '../app.service';
     Fieldset
   ],
   template: `
-    <p-scroll-panel [style]="{height: '100%', width: '100%', 'padding-left': '1rem', 'padding-right': '1rem'}">
+    <p-scroll-panel
+      [style]="{height: '100%', width: '100%', 'padding-left': '1rem', 'padding-right': '1rem'}">
       <p-fieldset legend="Query Results">
         <p-table [value]="service.scriptResult()?.resultSet || []"
                  [columns]="cols()"
@@ -83,7 +84,7 @@ export class ScriptResult {
   service = inject(AppService);
 
   cols = computed<Array<ArcScriptColumnDescriptor>>(() => {
-    return this.service.scriptResult()?.columns ?? [ { column: 'uri', alias: 'URI' }];
+    return this.service.scriptResult()?.columns ?? [{column: 'uri', alias: 'URI'}];
   });
 
   onRowInteraction(event: MouseEvent, rowData: any) {
@@ -93,7 +94,10 @@ export class ScriptResult {
     if (uri) {
       this.service.performAcquire(uri)
     } else {
-      // TODO: Show toast
+      this.service.msgErr({
+        summary: 'Cannot inspect row',
+        detail: 'No URI could be identified from the row data.'
+      });
     }
   }
 
