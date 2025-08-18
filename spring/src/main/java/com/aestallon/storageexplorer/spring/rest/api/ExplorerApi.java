@@ -32,6 +32,8 @@ import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionRequest;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionResult;
 import com.aestallon.storageexplorer.spring.rest.model.EntryLoadRequest;
 import com.aestallon.storageexplorer.spring.rest.model.EntryLoadResult;
+import com.aestallon.storageexplorer.spring.rest.model.LoginData;
+import com.aestallon.storageexplorer.spring.rest.model.LoginResult;
 import com.aestallon.storageexplorer.spring.rest.model.StorageIndexDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -177,6 +179,38 @@ public interface ExplorerApi {
         @Parameter(name = "EntryLoadRequest", description = "", required = true) @Valid @RequestBody EntryLoadRequest entryLoadRequest
     ) throws Exception {
         return getDelegate().loadStorageEntry(entryLoadRequest);
+    }
+
+
+    /**
+     * POST /verify : Verifies the credentials of the user.
+     * ... 
+     *
+     * @param loginData  (required)
+     * @return Ok (status code 200)
+     */
+    @Operation(
+        operationId = "verify",
+        summary = "Verifies the credentials of the user.",
+        description = "... ",
+        tags = { "Explorer" },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Ok", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = LoginResult.class))
+            })
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.POST,
+        value = "/verify",
+        produces = { "application/json" },
+        consumes = { "application/json" }
+    )
+    
+    default ResponseEntity<LoginResult> verify(
+        @Parameter(name = "LoginData", description = "", required = true) @Valid @RequestBody LoginData loginData
+    ) throws Exception {
+        return getDelegate().verify(loginData);
     }
 
 }

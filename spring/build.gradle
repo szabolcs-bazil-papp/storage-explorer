@@ -10,6 +10,7 @@ dependencies {
 
   compileOnly 'org.smartbit4all.platform:api'
   compileOnly 'org.springframework.boot:spring-boot-starter-web'
+  compileOnly 'org.springframework.boot:spring-boot-starter-security'
 
   compileOnly 'org.smartbit4all.platform:sql'
   compileOnly 'org.springframework.boot:spring-boot-starter-jdbc'

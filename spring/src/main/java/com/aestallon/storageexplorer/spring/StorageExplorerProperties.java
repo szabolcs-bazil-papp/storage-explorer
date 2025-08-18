@@ -23,7 +23,7 @@ public class StorageExplorerProperties {
   /**
    * The path to the REST API.
    */
-  private String apiPath = "/storageexplorer";
+  private String apiPath;
 
   /**
    * Whether to enable the UI.
@@ -33,7 +33,11 @@ public class StorageExplorerProperties {
   /**
    * The path to the UI.
    */
-  private String uiPath = "/storageexplorer-ui";
+  private String uiPath = "/se-ui/";
+
+  private String username = "";
+
+  private String password = "";
 
   private Settings settings = new Settings();
 
@@ -59,6 +63,22 @@ public class StorageExplorerProperties {
 
   public void setUiPath(String uiPath) {
     this.uiPath = uiPath;
+  }
+
+  public String getUsername() {
+    return username;
+  }
+
+  public void setUsername(String username) {
+    this.username = username;
+  }
+
+  public String getPassword() {
+    return password;
+  }
+
+  public void setPassword(String password) {
+    this.password = password;
   }
 
   public Settings getSettings() {

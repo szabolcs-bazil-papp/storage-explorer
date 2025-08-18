@@ -10,28 +10,20 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import com.aestallon.storageexplorer.spring.StorageExplorerProperties;
-import com.aestallon.storageexplorer.spring.rest.api.ExplorerApiController;
-import com.aestallon.storageexplorer.spring.rest.api.ExplorerApiDelegate;
-import com.aestallon.storageexplorer.spring.rest.impl.ExplorerApiDelegateImpl;
 import com.aestallon.storageexplorer.spring.service.StorageIndexProvider;
 import com.aestallon.storageexplorer.spring.service.StorageIndexService;
 import com.aestallon.storageexplorer.spring.service.impl.FileSystemStorageIndexProvider;
 import com.aestallon.storageexplorer.spring.service.impl.RelationalDatabaseStorageIndexProvider;
-import com.aestallon.storageexplorer.spring.servlet.SpaServlet;
 
 @AutoConfiguration
-@ConditionalOnBean(ObjectApi.class)
-@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@ConditionalOnBean({ ObjectApi.class, CollectionApi.class })
 @EnableConfigurationProperties(StorageExplorerProperties.class)
-@ConditionalOnProperty("storage-explorer.api-path")
 public class EmbeddedStorageExplorerAutoConfiguration {
 
   private final StorageExplorerProperties properties;
@@ -60,15 +52,6 @@ public class EmbeddedStorageExplorerAutoConfiguration {
       return new StorageIndexService(storageIndexProvider);
     }
 
-    @Bean
-    public ExplorerApiDelegate explorerApiDelegate(StorageIndexService storageIndexService) {
-      return new ExplorerApiDelegateImpl(storageIndexService);
-    }
-
-    @Bean
-    public ExplorerApiController explorerApiController(ExplorerApiDelegate explorerApiDelegate) {
-      return new ExplorerApiController(explorerApiDelegate);
-    }
   }
 
 
@@ -97,31 +80,6 @@ public class EmbeddedStorageExplorerAutoConfiguration {
       return new StorageIndexService(storageIndexProvider);
     }
 
-    @Bean
-    public ExplorerApiDelegate explorerApiDelegate(StorageIndexService storageIndexService) {
-      return new ExplorerApiDelegateImpl(storageIndexService);
-    }
-
-    @Bean
-    public ExplorerApiController explorerApiController(ExplorerApiDelegate explorerApiDelegate) {
-      return new ExplorerApiController(explorerApiDelegate);
-    }
-  }
-
-
-  @Bean
-  @ConditionalOnProperty(prefix = "storage-explorer", name = "ui-enabled", havingValue = "true")
-  ServletRegistrationBean<SpaServlet> webStorageExplorer() {
-    final String contextPath =
-        properties.getUiPath() + (properties.getUiPath().endsWith("/") ? "*" : "/*");
-    final String uiContextPath = properties.getUiPath().endsWith("/")
-        ? properties.getUiPath().substring(0, properties.getUiPath().length())
-        : properties.getUiPath();
-    final String apiPath = properties.getApiPath();
-    final boolean allowOthers = properties.getSettings().getWebAllowOthers();
-    return new ServletRegistrationBean<>(
-        new SpaServlet(allowOthers, uiContextPath, apiPath),
-        contextPath);
   }
 
 }

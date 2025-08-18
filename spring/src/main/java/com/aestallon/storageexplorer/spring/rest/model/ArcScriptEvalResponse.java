@@ -34,6 +34,8 @@ public class ArcScriptEvalResponse {
   @Valid
   private List<@Valid ArcScriptColumnDescriptor> columns = new ArrayList<>();
 
+  private String entryUriKey;
+
   @Valid
   private List<Object> resultSet = new ArrayList<>();
 
@@ -46,9 +48,9 @@ public class ArcScriptEvalResponse {
   /**
    * Constructor with only required parameters
    */
-  public ArcScriptEvalResponse(List<@Valid ArcScriptColumnDescriptor> columns, 
-                               List<Object> resultSet) {
+  public ArcScriptEvalResponse(List<@Valid ArcScriptColumnDescriptor> columns, String entryUriKey, List<Object> resultSet) {
     this.columns = columns;
+    this.entryUriKey = entryUriKey;
     this.resultSet = resultSet;
   }
 
@@ -69,8 +71,8 @@ public class ArcScriptEvalResponse {
    * Get columns
    * @return columns
    */
-  @Valid 
-  @Schema(name = "columns", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @NotNull @Valid 
+  @Schema(name = "columns", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("columns")
   public List<@Valid ArcScriptColumnDescriptor> getColumns() {
     return columns;
@@ -78,6 +80,26 @@ public class ArcScriptEvalResponse {
 
   public void setColumns(List<@Valid ArcScriptColumnDescriptor> columns) {
     this.columns = columns;
+  }
+
+  public ArcScriptEvalResponse entryUriKey(String entryUriKey) {
+    this.entryUriKey = entryUriKey;
+    return this;
+  }
+
+  /**
+   * Get entryUriKey
+   * @return entryUriKey
+   */
+  @NotNull 
+  @Schema(name = "entryUriKey", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("entryUriKey")
+  public String getEntryUriKey() {
+    return entryUriKey;
+  }
+
+  public void setEntryUriKey(String entryUriKey) {
+    this.entryUriKey = entryUriKey;
   }
 
   public ArcScriptEvalResponse resultSet(List<Object> resultSet) {
@@ -138,13 +160,14 @@ public class ArcScriptEvalResponse {
     }
     ArcScriptEvalResponse arcScriptEvalResponse = (ArcScriptEvalResponse) o;
     return Objects.equals(this.columns, arcScriptEvalResponse.columns) &&
+        Objects.equals(this.entryUriKey, arcScriptEvalResponse.entryUriKey) &&
         Objects.equals(this.resultSet, arcScriptEvalResponse.resultSet) &&
         Objects.equals(this.err, arcScriptEvalResponse.err);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(columns, resultSet, err);
+    return Objects.hash(columns, entryUriKey, resultSet, err);
   }
 
   @Override
@@ -152,6 +175,7 @@ public class ArcScriptEvalResponse {
     StringBuilder sb = new StringBuilder();
     sb.append("class ArcScriptEvalResponse {\n");
     sb.append("    columns: ").append(toIndentedString(columns)).append("\n");
+    sb.append("    entryUriKey: ").append(toIndentedString(entryUriKey)).append("\n");
     sb.append("    resultSet: ").append(toIndentedString(resultSet)).append("\n");
     sb.append("    err: ").append(toIndentedString(err)).append("\n");
     sb.append("}");

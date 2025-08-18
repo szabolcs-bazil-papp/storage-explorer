@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Import;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE })
 @Documented
-@Import(EmbeddedStorageExplorerAutoConfiguration.class)
-public @interface EnableStorageExplorer {
-}
+@Import({
+    EmbeddedStorageExplorerAutoConfiguration.class,
+    EmbeddedStorageExplorerWebAutoConfiguration.class
+})
+public @interface EnableStorageExplorer {}

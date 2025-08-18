@@ -9,6 +9,8 @@ export * from './entryLoadResult';
 export * from './entryLoadResultType';
 export * from './entryMeta';
 export * from './entryVersionDto';
+export * from './loginData';
+export * from './loginResult';
 export * from './reference';
 export * from './storageEntryDto';
 export * from './storageEntryType';

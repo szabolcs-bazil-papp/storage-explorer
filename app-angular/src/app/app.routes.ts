@@ -7,12 +7,15 @@ import {ListInspector} from './pages/inspector/list.inspector';
 import {MapInspector} from './pages/inspector/map.inspector';
 import {SequenceInspector} from './pages/inspector/sequence.inspector';
 import {ObjectInspector} from './pages/inspector/object.inspector';
+import {AUTH_GUARD, AUTH_REDIRECT, Login} from './auth/auth';
 
 export const routes: Routes = [
-  {path: '', redirectTo: '/app/dashboard', pathMatch: 'full'},
+  {path: '', redirectTo: AUTH_REDIRECT, pathMatch: 'full'},
+  {path: 'login', component: Login},
   {
     path: 'app',
     component: AppLayout,
+    canActivate: [AUTH_GUARD],
 
     children: [
 

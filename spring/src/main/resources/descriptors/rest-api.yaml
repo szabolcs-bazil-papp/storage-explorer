@@ -10,6 +10,27 @@ info:
 tags:
   - name: Explorer
 paths:
+  /verify:
+    post:
+      operationId: verify
+      summary: Verifies the credentials of the user.
+      description: |
+        ...
+      tags: [ Explorer ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginData'
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResult'
+  
   /storageIndex:
     get:
       operationId: getStorageIndex
@@ -94,6 +115,22 @@ paths:
 
 components:
   schemas:
+    LoginData:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [ username, password ]
+    LoginResult:
+      type: object
+      properties:
+        token:
+          type: string
+        err:
+          type: string
+    
     StorageIndexDto:
       type: object
       properties:
@@ -252,11 +289,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ArcScriptColumnDescriptor'
+        entryUriKey:
+          type: string
         resultSet:
           type: array
           items:
             type: object
         err:
           $ref: '#/components/schemas/ArcScriptEvalError'
-      required: [ columns, resultSet ]
+      required: [ columns, entryUriKey, resultSet ]
       

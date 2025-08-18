@@ -16,7 +16,7 @@
 
 import {Component, HostListener, inject, model} from '@angular/core';
 import {Splitter} from 'primeng/splitter';
-import {RouterLink, RouterOutlet} from '@angular/router';
+import {Router, RouterLink, RouterOutlet} from '@angular/router';
 import {ScriptResult} from './script.result';
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
@@ -26,6 +26,7 @@ import {AppService, KEY_DARK_MODE} from '../app.service';
 import {Drawer} from 'primeng/drawer';
 import {InspectorDrawer} from '../components/inspector.drawer';
 import {Toast} from 'primeng/toast';
+import {onLogOut} from '../auth/auth';
 
 @Component({
   selector: 'app-layout',
@@ -65,7 +66,10 @@ import {Toast} from 'primeng/toast';
                     severity="secondary"
                     (onClick)="toggleDarkMode()"
                     pTooltip="Switch theme">
-
+          </p-button>
+          <p-button icon="pi pi-sign-out" severity="warn"
+                    (onClick)="logOut()"
+                    pTooltip="Log Out">
           </p-button>
         </div>
       </header>
@@ -270,6 +274,7 @@ export class AppLayout {
 
   readonly service = inject(AppService);
   readonly drawerVisible = model<boolean>(false);
+  readonly router = inject(Router);
 
   toggleDarkMode() {
     this.service.isDark.update(it => {
@@ -287,6 +292,10 @@ export class AppLayout {
   @HostListener('window:keydown.control.shift.t', ['$event'])
   onControlShiftT(e: Event) {
     this.toggleOpenInspectorDrawer(true);
+  }
+
+  logOut() {
+    onLogOut(this.router);
   }
 
 }

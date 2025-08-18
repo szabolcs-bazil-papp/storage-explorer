@@ -20,6 +20,7 @@ import {providePrimeNG} from 'primeng/config';
 import {definePreset} from '@primeuix/themes';
 import {provideAnimationsAsync} from '@angular/platform-browser/animations/async';
 import {MessageService} from 'primeng/api';
+import {tokenInterceptor} from './auth/auth';
 
 declare const STORAGE_EXPLORER_API_PATH: string;
 
@@ -85,7 +86,7 @@ export const appConfig: ApplicationConfig = {
       anchorScrolling: 'enabled',
       scrollPositionRestoration: 'enabled'
     }), withEnabledBlockingInitialNavigation()),
-    provideHttpClient(withInterceptors([apiRequestInterceptor])),
+    provideHttpClient(withInterceptors([apiRequestInterceptor, tokenInterceptor])),
     providePrimeNG({theme: {preset: Theme, options: {darkModeSelector: '.my-app-dark'}}}),
     MessageService
   ]

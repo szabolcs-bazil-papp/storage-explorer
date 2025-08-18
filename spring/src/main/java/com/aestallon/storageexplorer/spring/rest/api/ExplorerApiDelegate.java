@@ -26,6 +26,8 @@ import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionRequest;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionResult;
 import com.aestallon.storageexplorer.spring.rest.model.EntryLoadRequest;
 import com.aestallon.storageexplorer.spring.rest.model.EntryLoadResult;
+import com.aestallon.storageexplorer.spring.rest.model.LoginData;
+import com.aestallon.storageexplorer.spring.rest.model.LoginResult;
 import com.aestallon.storageexplorer.spring.rest.model.StorageIndexDto;
 import jakarta.annotation.Generated;
 
@@ -52,7 +54,7 @@ public interface ExplorerApiDelegate {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"err\" : { \"msg\" : \"msg\", \"col\" : 6, \"line\" : 0 }, \"columns\" : [ { \"column\" : \"column\", \"alias\" : \"alias\" }, { \"column\" : \"column\", \"alias\" : \"alias\" } ], \"resultSet\" : [ \"{}\", \"{}\" ] }";
+                    String exampleString = "{ \"entryUriKey\" : \"entryUriKey\", \"err\" : { \"msg\" : \"msg\", \"col\" : 6, \"line\" : 0 }, \"columns\" : [ { \"column\" : \"column\", \"alias\" : \"alias\" }, { \"column\" : \"column\", \"alias\" : \"alias\" } ], \"resultSet\" : [ \"{}\", \"{}\" ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -119,6 +121,28 @@ public interface ExplorerApiDelegate {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
                     String exampleString = "{ \"entry\" : { \"schema\" : \"schema\", \"seqVal\" : 0, \"references\" : [ { \"pos\" : 6, \"propName\" : \"propName\", \"uri\" : \"https://openapi-generator.tech\" }, { \"pos\" : 6, \"propName\" : \"propName\", \"uri\" : \"https://openapi-generator.tech\" } ], \"name\" : \"name\", \"typeName\" : \"typeName\", \"scopeHost\" : \"https://openapi-generator.tech\", \"type\" : \"LIST\", \"uri\" : \"https://openapi-generator.tech\" }, \"versions\" : [ { \"meta\" : { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"lastModifiedAt\" : 6, \"qualifiedName\" : \"qualifiedName\", \"storageSchema\" : \"storageSchema\", \"uri\" : \"https://openapi-generator.tech\", \"versionNr\" : 0 }, \"objectAsMap\" : { \"key\" : \"{}\" } }, { \"meta\" : { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"lastModifiedAt\" : 6, \"qualifiedName\" : \"qualifiedName\", \"storageSchema\" : \"storageSchema\", \"uri\" : \"https://openapi-generator.tech\", \"versionNr\" : 0 }, \"objectAsMap\" : { \"key\" : \"{}\" } } ], \"type\" : \"FAILED\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+    /**
+     * POST /verify : Verifies the credentials of the user.
+     * ... 
+     *
+     * @param loginData  (required)
+     * @return Ok (status code 200)
+     * @see ExplorerApi#verify
+     */
+    default ResponseEntity<LoginResult> verify(LoginData loginData) throws Exception {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"err\" : \"err\", \"token\" : \"token\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

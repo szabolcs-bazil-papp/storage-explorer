@@ -18,6 +18,8 @@ model/entryLoadResult.ts
 model/entryLoadResultType.ts
 model/entryMeta.ts
 model/entryVersionDto.ts
+model/loginData.ts
+model/loginResult.ts
 model/models.ts
 model/reference.ts
 model/storageEntryDto.ts

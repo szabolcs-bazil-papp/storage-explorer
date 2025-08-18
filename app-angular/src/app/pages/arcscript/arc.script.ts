@@ -17,7 +17,6 @@ import {Component, HostListener, inject, signal, viewChild} from '@angular/core'
 import {ScrollPanel} from 'primeng/scrollpanel';
 import {Fieldset} from 'primeng/fieldset';
 import {FormsModule} from '@angular/forms';
-import 'prismjs/components/index';
 import {CodeEditor} from '@acrodata/code-editor';
 import {
   LanguageDescription,
