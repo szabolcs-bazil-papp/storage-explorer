@@ -28,10 +28,7 @@ import {Avatar} from 'primeng/avatar';
   template: `
     <p-scroll-panel
       [style]="{ height: '100%', width: '100%', 'padding-left': '1rem', 'padding-right': '1rem'}">
-      <p-fieldset>
-        <ng-template #header>
-          <h2>Dashboard</h2>
-        </ng-template>
+      <p-fieldset legend="Dashboard">
         <h3>Query the Storage</h3>
         <p>Using the
           <p-avatar icon="pi pi-code" shape="circle"></p-avatar>

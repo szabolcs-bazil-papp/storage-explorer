@@ -205,6 +205,7 @@ import {onLogOut} from '../auth/auth';
       flex: 1;
       height: calc(100vh - 100px);
       border-radius: unset;
+      border: unset;
     }
 
     .app-footer {
