@@ -87,10 +87,22 @@ export class ScriptResult {
     return this.service.scriptResult()?.columns ?? [{column: 'uri', alias: 'URI'}];
   });
 
+  entryUriKey = computed<string | undefined>(() => {
+    return this.service.scriptResult()?.entryUriKey;
+  });
+
   onRowInteraction(event: MouseEvent, rowData: any) {
     event.stopPropagation();
+    const key = this.entryUriKey();
+    if (!key) {
+      this.service.msgErr({
+        summary: 'Cannot inspect row',
+        detail: 'Result set does not contain meta-key for navigation.'
+      });
+      return;
+    }
 
-    const uri = rowData['uri'];
+    const uri = rowData[key];
     if (uri) {
       this.service.performAcquire(uri)
     } else {

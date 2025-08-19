@@ -55,8 +55,8 @@ public class ExplorerApiDelegateImpl implements ExplorerApiDelegate {
   public ResponseEntity<ArcScriptEvalResponse> eval(ArcScriptEvalRequest arcScriptEvalRequest)
       throws Exception {
     return switch (storageIndexService.evalArcScript(arcScriptEvalRequest.getScript())) {
-      case StorageIndexService.ArcScriptQueryEvalResult.Ok(var cols, var resultSet) ->
-          ResponseEntity.ok(new ArcScriptEvalResponse(cols, "uri", resultSet));
+      case StorageIndexService.ArcScriptQueryEvalResult.Ok(var cols, var k, var resultSet) ->
+          ResponseEntity.ok(new ArcScriptEvalResponse(cols, k, resultSet));
       case StorageIndexService.ArcScriptQueryEvalResult.Err(ArcScriptEvalError err) ->
           ResponseEntity.badRequest().body(new ArcScriptEvalResponse().err(err));
     };

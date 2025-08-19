@@ -250,7 +250,7 @@ public class StorageIndexService {
 
   public sealed interface ArcScriptQueryEvalResult {
 
-    record Ok(List<ArcScriptColumnDescriptor> columns, List<Object> resultSet)
+    record Ok(List<ArcScriptColumnDescriptor> columns, String entryUriKey, List<Object> resultSet)
         implements ArcScriptQueryEvalResult {}
 
 
@@ -294,6 +294,7 @@ public class StorageIndexService {
           .map(this::unwrapResultSet)
           .orElseGet(() -> new ArcScriptQueryEvalResult.Ok(
               Collections.emptyList(),
+              "uri",
               Collections.emptyList()));
     };
   }
@@ -304,7 +305,11 @@ public class StorageIndexService {
     for (final var row : resultSet.rows()) {
       rows.add(rowCreator.getRow(row));
     }
-    return new ArcScriptQueryEvalResult.Ok(rowCreator.getColumnDescriptors(), rows);
+
+    return new ArcScriptQueryEvalResult.Ok(
+        rowCreator.getColumnDescriptors(),
+        rowCreator.entryUriKey(),
+        rows);
   }
 
   private sealed interface RowCreator {
@@ -318,6 +323,8 @@ public class StorageIndexService {
     Map<String, Object> getRow(ArcScriptResult.QueryResultRow row);
 
     List<ArcScriptColumnDescriptor> getColumnDescriptors();
+
+    String entryUriKey();
 
 
     final class Custom implements RowCreator {
@@ -349,6 +356,7 @@ public class StorageIndexService {
             ret.put(header, cell.value());
           }
         }
+        ret.put(entryUriKey(), row.entry().uri().toString());
         return ret;
       }
 
@@ -359,6 +367,10 @@ public class StorageIndexService {
             .toList();
       }
 
+      @Override
+      public String entryUriKey() {
+        return "__uri";
+      }
     }
 
 
@@ -374,6 +386,10 @@ public class StorageIndexService {
         return Collections.singletonList(new ArcScriptColumnDescriptor().column("uri"));
       }
 
+      @Override
+      public String entryUriKey() {
+        return "uri";
+      }
     }
   }
 
