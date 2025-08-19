@@ -3,7 +3,7 @@ plugins {
 }
 
 frontend {
-  nodeDistributionProvided = true
+  //nodeDistributionProvided = true
   nodeVersion = '22.18.0'
   assembleScript = 'run build'
   verboseModeEnabled = true
