@@ -38,10 +38,15 @@ public final class FileSystemStorageIndex extends StorageIndex<FileSystemStorage
       StorageId storageId,
       ObjectApi objectApi,
       CollectionApi collectionApi,
-      Path pathToStorage) {
+      Path pathToStorage,
+      boolean trustPlatformBeans) {
     super(storageId, objectApi, collectionApi);
     this.pathToStorage = pathToStorage;
-    this.objectEntryLoadingService = new ObjectEntryLoadingService.FileSystem(this);
+    this.objectEntryLoadingService = new ObjectEntryLoadingService.FileSystem(
+        this,
+        trustPlatformBeans
+            ? StorageInteractionStrategy.FileSystem.Trusting::new
+            : StorageInteractionStrategy.FileSystem.Autonomous::new);
     this.storageEntryFactory = StorageEntryFactory.builder(this, objectApi, collectionApi)
         .pathToStorage(pathToStorage)
         .build();

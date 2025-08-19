@@ -85,7 +85,7 @@ final class StorageIndexFactory {
         this.springContext = springContext;
       }
 
-      StorageIndex storageIndex() {
+      StorageIndex storageIndex()  {
         return storageIndex;
       }
 
@@ -165,7 +165,7 @@ final class StorageIndexFactory {
     final ObjectApi objectApi = ctx.getBean(ObjectApi.class);
     final CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
 
-    final var index = new FileSystemStorageIndex(storageId, objectApi, collectionApi, path);
+    final var index = new FileSystemStorageIndex(storageId, objectApi, collectionApi, path, false);
     return new StorageIndexCreationResult.Ok(index, ctx);
   }
 
@@ -236,7 +236,8 @@ final class StorageIndexFactory {
         objectApi,
         collectionApi,
         jdbcClient,
-        targetSchema);
+        targetSchema,
+        false);
     return new StorageIndexCreationResult.Ok(index, ctx);
   }
 

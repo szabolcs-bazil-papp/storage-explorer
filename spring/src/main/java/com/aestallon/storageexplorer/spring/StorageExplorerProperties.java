@@ -96,6 +96,12 @@ public class StorageExplorerProperties {
      */
     private boolean webAllowOthers = false;
 
+    /**
+     * Whether to trust Object and Collection APIs provided by the application's smartbit4all
+     * platform for every storage access operation.
+     */
+    private boolean trustPlatformBeans = false;
+
     public boolean getWebAllowOthers() {
       return webAllowOthers;
     }
@@ -103,6 +109,15 @@ public class StorageExplorerProperties {
     public void setWebAllowOthers(boolean webAllowOthers) {
       this.webAllowOthers = webAllowOthers;
     }
+
+    public boolean getTrustPlatformBeans() {
+      return trustPlatformBeans;
+    }
+
+    public void setTrustPlatformBeans(boolean trustPlatformBeans) {
+      this.trustPlatformBeans = trustPlatformBeans;
+    }
+
   }
 
 }

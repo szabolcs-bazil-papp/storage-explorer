@@ -37,13 +37,21 @@ public class EmbeddedStorageExplorerAutoConfiguration {
   @ConditionalOnBean({ ObjectApi.class, CollectionApi.class, StorageFS.class })
   static class FileSystemConfiguration {
 
+    private final StorageExplorerProperties properties;
+
+    public FileSystemConfiguration(StorageExplorerProperties properties) {
+      this.properties = properties;
+    }
+
     @Bean
     @ConditionalOnMissingBean(StorageIndexProvider.class)
     public StorageIndexProvider fileSystemStorageIndexProvider(
         ObjectApi objectApi,
         CollectionApi collectionApi,
         @Value("${fs.base.directory}") String fsBaseDirectory) {
-      return new FileSystemStorageIndexProvider(objectApi, collectionApi, Path.of(fsBaseDirectory));
+      return new FileSystemStorageIndexProvider(
+          objectApi, collectionApi, Path.of(fsBaseDirectory),
+          properties.getSettings().getTrustPlatformBeans());
     }
 
     @Bean
@@ -59,6 +67,12 @@ public class EmbeddedStorageExplorerAutoConfiguration {
   @ConditionalOnBean({ ObjectApi.class, CollectionApi.class, JdbcTemplate.class, StorageSQL.class })
   static class RelationalDatabaseConfiguration {
 
+    private final StorageExplorerProperties properties;
+
+    public RelationalDatabaseConfiguration(StorageExplorerProperties properties) {
+      this.properties = properties;
+    }
+
     @Bean
     @ConditionalOnMissingBean({ JdbcClient.class })
     public JdbcClient jdbcClient(JdbcTemplate jdbcTemplate) {
@@ -71,7 +85,9 @@ public class EmbeddedStorageExplorerAutoConfiguration {
         ObjectApi objectApi,
         CollectionApi collectionApi,
         JdbcClient jdbcClient) {
-      return new RelationalDatabaseStorageIndexProvider(objectApi, collectionApi, jdbcClient);
+      return new RelationalDatabaseStorageIndexProvider(
+          objectApi, collectionApi, jdbcClient,
+          properties.getSettings().getTrustPlatformBeans());
     }
 
     @Bean
