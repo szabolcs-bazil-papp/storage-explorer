@@ -1,15 +1,13 @@
 package com.aestallon.storageexplorer.springstarter;
 
-import java.nio.file.Path;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.sql.storage.StorageSQL;
 import org.smartbit4all.storage.fs.StorageFS;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,7 +31,6 @@ public class EmbeddedStorageExplorerAutoConfiguration {
   }
 
   @Configuration(proxyBeanMethods = false)
-  @ConditionalOnProperty(name = "fs.base.directory")
   @ConditionalOnBean({ ObjectApi.class, CollectionApi.class, StorageFS.class })
   static class FileSystemConfiguration {
 
@@ -48,9 +45,9 @@ public class EmbeddedStorageExplorerAutoConfiguration {
     public StorageIndexProvider fileSystemStorageIndexProvider(
         ObjectApi objectApi,
         CollectionApi collectionApi,
-        @Value("${fs.base.directory}") String fsBaseDirectory) {
+        StorageFS storageFS) {
       return new FileSystemStorageIndexProvider(
-          objectApi, collectionApi, Path.of(fsBaseDirectory),
+          objectApi, collectionApi, storageFS.getRootFolder().toPath().toAbsolutePath(),
           properties.getSettings().getTrustPlatformBeans());
     }
 
@@ -64,6 +61,7 @@ public class EmbeddedStorageExplorerAutoConfiguration {
 
 
   @Configuration(proxyBeanMethods = false)
+  @ConditionalOnClass({ JdbcTemplate.class, StorageSQL.class })
   @ConditionalOnBean({ ObjectApi.class, CollectionApi.class, JdbcTemplate.class, StorageSQL.class })
   static class RelationalDatabaseConfiguration {
 
