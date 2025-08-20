@@ -7,21 +7,18 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
 public class DemoSecurityConfig {
 
   @Bean
-  public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                 CorsConfigurationSource corsConfigurationSource)
-      throws Exception {
-    http
+  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    return http
         .authorizeHttpRequests(it -> it.anyRequest().permitAll())
         .csrf(AbstractHttpConfigurer::disable)
-        .cors(Customizer.withDefaults());
-    return http.build();
+        .cors(Customizer.withDefaults())
+        .build();
   }
 
 }
