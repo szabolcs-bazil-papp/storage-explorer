@@ -10,17 +10,12 @@ import {
 } from '@angular/router';
 import {routes} from './app.routes';
 import Aura from '@primeuix/themes/aura';
-import {
-  HttpHandlerFn,
-  HttpRequest,
-  provideHttpClient,
-  withInterceptors
-} from '@angular/common/http';
+import {HttpInterceptorFn, provideHttpClient, withInterceptors} from '@angular/common/http';
 import {providePrimeNG} from 'primeng/config';
 import {definePreset} from '@primeuix/themes';
 import {provideAnimationsAsync} from '@angular/platform-browser/animations/async';
 import {MessageService} from 'primeng/api';
-import {tokenInterceptor} from './auth/auth';
+import {INTERCEPTOR_RESPONSE, INTERCEPTOR_TOKEN} from './auth/auth';
 
 declare const STORAGE_EXPLORER_API_PATH: string;
 
@@ -70,12 +65,12 @@ const Theme = definePreset(Aura, {
   }
 })
 
-export function apiRequestInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn) {
+export const INTERCEPTOR_API_REQUEST: HttpInterceptorFn = (req, next) => {
   req = req.clone({
     url: req.url.replace('http://localhost', STORAGE_EXPLORER_API_PATH)
   });
   return next(req);
-}
+};
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -86,7 +81,7 @@ export const appConfig: ApplicationConfig = {
       anchorScrolling: 'enabled',
       scrollPositionRestoration: 'enabled'
     }), withEnabledBlockingInitialNavigation()),
-    provideHttpClient(withInterceptors([apiRequestInterceptor, tokenInterceptor])),
+    provideHttpClient(withInterceptors([INTERCEPTOR_API_REQUEST, INTERCEPTOR_TOKEN, INTERCEPTOR_RESPONSE])),
     providePrimeNG({theme: {preset: Theme, options: {darkModeSelector: '.my-app-dark'}}}),
     MessageService
   ]

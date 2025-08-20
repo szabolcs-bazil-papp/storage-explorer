@@ -68,7 +68,7 @@ export function isUriValid(uri: string): boolean {
   return (containsStoredCollectionIdentifier(uri) || containsTimestamp(uri));
 }
 
-export const validatorUri: ValidatorFn = (control: AbstractControl) => {
+export const VALIDATOR_URI: ValidatorFn = (control: AbstractControl) => {
   const val = control.value as string;
   return isUriValid(val) ? null : {invalidUri: "Invalid URI"};
 }

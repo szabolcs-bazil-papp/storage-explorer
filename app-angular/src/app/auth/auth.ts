@@ -14,12 +14,12 @@
  */
 
 import {CanActivateFn, RedirectFunction, Router} from '@angular/router';
-import {HttpEvent, HttpEventType, HttpHandlerFn, HttpRequest} from '@angular/common/http';
+import {HttpEventType, HttpInterceptorFn} from '@angular/common/http';
 import {Component, HostListener, inject, signal} from '@angular/core';
 import {ExplorerService} from '../../api/se';
 import {Fieldset} from 'primeng/fieldset';
 import {FormBuilder, ReactiveFormsModule} from '@angular/forms';
-import {lastValueFrom, Observable, tap} from 'rxjs';
+import {lastValueFrom, tap} from 'rxjs';
 import {FloatLabel} from 'primeng/floatlabel';
 import {InputText} from 'primeng/inputtext';
 import {AutoFocus} from 'primeng/autofocus';
@@ -31,14 +31,14 @@ const TOKEN_KEY = 'storage-explorer-token';
 export const AUTH_REDIRECT: RedirectFunction = activatedRouteSnapshot => {
   const token = sessionStorage.getItem(TOKEN_KEY);
   return (!!token && token.length > 0) ? 'app/dashboard' : 'login'
-}
+};
 
 export const AUTH_GUARD: CanActivateFn = (route, state) => {
   const token = sessionStorage.getItem(TOKEN_KEY);
   return (!!token && token.length > 0) ? true : inject(Router).parseUrl('login');
-}
+};
 
-export function tokenInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn) {
+export const INTERCEPTOR_TOKEN: HttpInterceptorFn = (req, next) => {
   const token = sessionStorage.getItem(TOKEN_KEY);
   if (!token || token.length < 1) {
     return next(req);
@@ -50,15 +50,25 @@ export function tokenInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn)
     }
   });
   return next(req);
-}
+};
 
-export function responseInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> {
+export const INTERCEPTOR_RESPONSE: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(tap(event => {
-    if (event.type === HttpEventType.Response && (event.status === 401 || event.status === 403)) {
-      inject(Router).navigateByUrl('login');
+    if (event.type === HttpEventType.Response) {
+
+      if (event.status === 401 || event.status === 403) {
+        sessionStorage.removeItem(TOKEN_KEY);
+        inject(Router).navigateByUrl('login');
+      } else if (event.headers.has('StorageExplorer-Token-Changed')) {
+        const newToken = event.headers.get('StorageExplorer-Token-Changed');
+        if (newToken) {
+          sessionStorage.setItem(TOKEN_KEY, newToken);
+        }
+      }
+
     }
-  }))
-}
+  }));
+};
 
 export function onLogOut(router: Router) {
   sessionStorage.removeItem(TOKEN_KEY);

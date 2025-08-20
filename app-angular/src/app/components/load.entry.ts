@@ -1,5 +1,5 @@
 import {Component, inject} from '@angular/core';
-import {AppService, validatorUri} from '../app.service';
+import {AppService, VALIDATOR_URI} from '../app.service';
 import {Button} from 'primeng/button';
 import {FloatLabel} from 'primeng/floatlabel';
 import {InputText} from 'primeng/inputtext';
@@ -77,7 +77,7 @@ export class LoadEntry {
   formBuilder = inject(FormBuilder);
   formSubmitted = false;
   form = this.formBuilder.group({
-    uri: ['', [validatorUri]],
+    uri: ['', [VALIDATOR_URI]],
   });
 
   constructor(private readonly ref: DynamicDialogRef) {
