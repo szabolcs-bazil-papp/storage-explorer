@@ -15,13 +15,10 @@
 
 package com.aestallon.storageexplorer.core.service;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,14 +33,12 @@ import static java.util.stream.Collectors.toList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
-import com.aestallon.storageexplorer.common.util.IO;
 import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.util.Uris;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
 
 public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>> {
 
@@ -126,8 +121,12 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
 
   static final class FileSystem extends ObjectEntryLoadingService<FileSystemStorageIndex> {
 
-    FileSystem(FileSystemStorageIndex storageIndex) {
+    private final StorageInteractionStrategy.FileSystem interactionStrategy;
+
+    FileSystem(FileSystemStorageIndex storageIndex,
+               StorageInteractionStrategy.Factory<FileSystemStorageIndex, FileSystem, StorageInteractionStrategy.FileSystem> strategyFactory) {
       super(storageIndex);
+      this.interactionStrategy = strategyFactory.create(this);
     }
 
     @Override
@@ -150,40 +149,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
     }
 
     private ObjectNode loadObjectNode(ObjectEntry entry) {
-      if (Uris.isSingleVersion(entry.uri())) {
-        // We have to do this...
-        return tryDeserialise(entry)
-            .map(it -> storageIndex.objectApi.create(null, it))
-            .orElse(null);
-      }
-      try {
-        return storageIndex.objectApi.loadLatest(entry.uri());
-      } catch (final Exception e) {
-        log.error(e.getMessage(), e);
-        return null;
-      }
-    }
-
-    private Optional<Map<?, ?>> tryDeserialise(final ObjectEntry entry) {
-      final var entryPath = entry.path();
-      // ObjectEntry::path is never null here, because FileSystemStorageIndex guarantees it!
-      assert entryPath != null;
-      final String rawContent = IO.read(entryPath);
-      if (Strings.isNullOrEmpty(rawContent)) {
-        log.error("Empty content found during deserialisation attempt of [ {} ]", entry.uri());
-        return Optional.empty();
-      }
-
-      try {
-        final Map<?, ?> res = storageIndex.objectApi
-            .getDefaultSerializer()
-            .fromString(rawContent, LinkedHashMap.class);
-        return Optional.of(res);
-      } catch (IOException e) {
-        log.error("Error during deserialisation attempt of [ {} ]", entry.uri());
-        log.error(e.getMessage(), e);
-        return Optional.empty();
-      }
+      return interactionStrategy.loadObjectNode(entry);
     }
 
   }
@@ -213,9 +179,12 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final AtomicReference<RelationalDatabaseLoadingServiceParameters> params;
     private final AtomicInteger timeoutMillis;
+    private final StorageInteractionStrategy.RelationalDatabase interactionStrategy;
 
-    RelationalDatabase(RelationalDatabaseStorageIndex storageIndex) {
+    RelationalDatabase(RelationalDatabaseStorageIndex storageIndex,
+                       StorageInteractionStrategy.Factory<RelationalDatabaseStorageIndex, RelationalDatabase, StorageInteractionStrategy.RelationalDatabase> interactionFactory) {
       super(storageIndex);
+      interactionStrategy = interactionFactory.create(this);
       this.pendingRequests = new ConcurrentHashMap<>();
       this.queue = new LinkedBlockingQueue<>();
       params = new AtomicReference<>(RelationalDatabaseLoadingServiceParameters.DEFAULT);
@@ -240,7 +209,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
 
     @Override
     public ObjectEntryLoadResult.SingleVersion.Eager loadExact(URI uri, long version) {
-      return storageIndex.loadSingle(uri, version);
+      return interactionStrategy.loadExact(uri, version);
     }
 
     @Override
@@ -279,7 +248,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
         final List<ObjectEntryLoadResult> results = batch.stream()
             .map(LoadingTask::objectEntry)
             .map(ObjectEntry::uri)
-            .collect(collectingAndThen(toList(), storageIndex::loadBatch));
+            .collect(collectingAndThen(toList(), interactionStrategy::loadBatch));
         for (int i = 0; i < results.size(); i++) {
           final LoadingTask task = batch.get(i);
           final ObjectEntry e = task.objectEntry();

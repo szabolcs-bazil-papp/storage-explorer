@@ -15,10 +15,9 @@
 
 package com.aestallon.storageexplorer.spring.rest.api;
 
-import org.springframework.web.context.request.NativeWebRequest;
-
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.springframework.web.context.request.NativeWebRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class ApiUtil {
     public static void setExampleResponse(NativeWebRequest req, String contentType, String example) {

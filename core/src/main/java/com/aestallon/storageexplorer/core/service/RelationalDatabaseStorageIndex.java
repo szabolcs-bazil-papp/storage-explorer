@@ -128,11 +128,16 @@ public final class RelationalDatabaseStorageIndex
       ObjectApi objectApi,
       CollectionApi collectionApi,
       JdbcClient db,
-      String targetSchema) {
+      String targetSchema,
+      boolean trustPlatformBeans) {
     super(storageId, objectApi, collectionApi);
     this.db = db;
     this.targetSchema = targetSchema;
-    this.loader = new ObjectEntryLoadingService.RelationalDatabase(this);
+    this.loader = new ObjectEntryLoadingService.RelationalDatabase(
+        this,
+        trustPlatformBeans
+            ? StorageInteractionStrategy.RelationalDatabase.Trusting::new
+            : StorageInteractionStrategy.RelationalDatabase.Autonomous::new);
     this.storageEntryFactory = StorageEntryFactory.builder(this, objectApi, collectionApi).build();
     this.cache = StorageIndexCache.inMemory();
   }

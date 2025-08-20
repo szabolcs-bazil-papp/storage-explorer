@@ -1,8 +1,8 @@
-# AppAngular
+# Storage Explorer Angular Client
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.6.
+This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.1.5.
 
-## Development server
+## Development Server
 
 To start a local development server, run:
 
@@ -10,50 +10,42 @@ To start a local development server, run:
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Development Backend
 
-## Code scaffolding
+The project is set up to use a local backend for development. The backend is expected to run on
+`http://localhost:8080` and provide the Storage Explorer REST API at
+`http://Localhost:8080/storageexplorer`.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+This repository provides such a backend server for convenience: the `app-demo` subproject. To use it:
 
-```bash
-ng generate component component-name
-```
+1. Build the `spring-boot-starter` subproject by executing `./gradlew spring-boot-starter:build` in the repository root.
+2. Refresh your Gradle project in your IDE.
+3. Specify the following properties in `app-demo`'s `application.properties`:
+    ```properties
+      storage-explorer.api-path=/storageexplorer
+      fs.base.directory=[[[Path to your local smartbit4all file system storage to be used by the demo backend]]]
+    ```
+4. Declare dependency to your newly build `spring-boot-starter` subproject in `app-demo`'s `build.gradle`:
+    ```groovy
+       implementation files('../spring-boot-starter/build/libs/spring-boot-starter-[[[The current SemVer]]].jar')
+    ```
+5. Run the `app-demo` subproject.
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+You may set the username and password property values as you wish.
 
-```bash
-ng generate --help
-```
+## Development Considerations
 
-## Building
+### Access to the Backend
 
-To build the project run:
+Please never commit changes to `index.html`, `proxy.conf.json` and the routing-related parts
+of `app.config.ts`. Client code may never hardcode any path information relating to accessing
+the backend.
 
-```bash
-ng build
-```
+### Component Styles
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+- Components are written using the single-file component (SFC) format: never declare separate template and stylesheet files.
+- Components always present on the main layout go into the `layout` folder. Simple (dumb) components and dialogues related to the main layout go into the `components` folder.
+- Components representing routes within the main layout go into the `pages` folder. Every such "page" sits in its own folder, surrounded by it's related subcomponents.
+- Certain aspects of application logic may warrant the definition of a service. One `.ts` file may contain only one service, but this file should also contain the related top level functions and constants related to the aspect.
 
-## Running unit tests
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

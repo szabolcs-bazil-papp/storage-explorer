@@ -16,15 +16,13 @@
 package com.aestallon.storageexplorer.spring.rest.model;
 
 import java.net.URI;
-import java.util.Objects;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import org.springframework.format.annotation.DateTimeFormat;
-import jakarta.validation.Valid;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-
-
 import jakarta.annotation.Generated;
+import jakarta.validation.Valid;
 
 /**
  * EntryMeta

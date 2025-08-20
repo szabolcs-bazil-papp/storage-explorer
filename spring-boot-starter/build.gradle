@@ -13,6 +13,10 @@ dependencies {
 
   compileOnly 'org.smartbit4all.platform:sql'
   compileOnly 'org.springframework.boot:spring-boot-starter-jdbc'
+
+  compileOnly 'org.springframework.boot:spring-boot-starter-security'
+
+  annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 }
 
 jar {
@@ -22,6 +26,24 @@ jar {
     project(':spring').sourceSets.main.output,
     project(':arc-script').sourceSets.main.output // FIXME: Put ArcScript in separate lib!
   )
+}
+
+def pfr = tasks.register('processFrontendResources', Copy) {
+  def src = file("${project.rootDir}/app-angular/dist/app-angular/browser")
+  def dest = file("${project.rootDir}/spring-boot-starter/build/resources/main/storage-explorer")
+
+  group = 'Frontend'
+  description = 'Process Frontend Resources'
+  dependsOn project(':app-angular').tasks.named('assembleFrontend')
+
+  println("From $src to $dest")
+
+  from src
+  into dest
+}
+
+tasks.named('processResources') {
+  dependsOn('processFrontendResources')
 }
 
 medivhPublisher {

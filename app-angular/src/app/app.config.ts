@@ -1,31 +1,88 @@
-import {ApplicationConfig, importProvidersFrom, provideZoneChangeDetection} from '@angular/core';
-import {provideRouter} from '@angular/router';
-
+import {
+  ApplicationConfig,
+  provideBrowserGlobalErrorListeners,
+  provideZoneChangeDetection
+} from '@angular/core';
+import {
+  provideRouter,
+  withEnabledBlockingInitialNavigation,
+  withInMemoryScrolling
+} from '@angular/router';
 import {routes} from './app.routes';
-import {provideAnimationsAsync} from '@angular/platform-browser/animations/async';
+import Aura from '@primeuix/themes/aura';
+import {HttpInterceptorFn, provideHttpClient, withInterceptors} from '@angular/common/http';
 import {providePrimeNG} from 'primeng/config';
-import Aura from '@primeng/themes/aura';
-import Lara from '@primeng/themes/lara';
-import {provideHttpClient} from '@angular/common/http';
-import {BASE_PATH, ExplorerService} from '../api/se';
-import {StorageIndexService} from './services/storage-index.service';
-import {TabsModule} from 'primeng/tabs';
-import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
+import {definePreset} from '@primeuix/themes';
+import {provideAnimationsAsync} from '@angular/platform-browser/animations/async';
+import {MessageService} from 'primeng/api';
+import {INTERCEPTOR_RESPONSE, INTERCEPTOR_TOKEN} from './auth/auth';
+
+declare const STORAGE_EXPLORER_API_PATH: string;
+
+const Theme = definePreset(Aura, {
+  primitive: {
+    cyan: {
+      50: '#f4ffff',
+      100: '#d7f6f6',
+      200: '#bdeeee',
+      300: '#a3e5e5',
+      400: '#88dddd',
+      500: '#6ed6d6',
+      600: '#54cccc',
+      700: '#3ac4c4',
+      800: '#1fbbbb',
+      900: '#05b3b3',
+      950: '#059999',
+    },
+    slate: {
+      50: '#f4ffff',
+      100: '#dce3e3',
+      200: '#c4d2d2',
+      300: '#afc3c3',
+      400: '#99b3b3',
+      500: '#84a4a4',
+      600: '#6e9595',
+      700: '#598585',
+      800: '#437676',
+      900: '#2e6666',
+      950: '#185757'
+    }
+  },
+  semantic: {
+    primary: {
+      50: '{cyan.50}',
+      100: '{cyan.100}',
+      200: '{cyan.200}',
+      300: '{cyan.300}',
+      400: '{cyan.400}',
+      500: '{cyan.500}',
+      600: '{cyan.600}',
+      700: '{cyan.700}',
+      800: '{cyan.800}',
+      900: '{cyan.900}',
+      950: '{cyan.950}'
+    }
+  }
+})
+
+export const INTERCEPTOR_API_REQUEST: HttpInterceptorFn = (req, next) => {
+  req = req.clone({
+    url: req.url.replace('http://localhost', STORAGE_EXPLORER_API_PATH)
+  });
+  return next(req);
+};
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZoneChangeDetection({eventCoalescing: true}),
-    provideRouter(routes),
     provideAnimationsAsync(),
-    providePrimeNG({
-      inputStyle: 'outlined',
-      ripple: true,
-      theme: {
-        preset: Aura,
-      },
-    }),
-    { provide: BASE_PATH, useValue: 'http://localhost:8080/storageexplorer' },
-    provideHttpClient(),
-    ExplorerService,
-  ],
+    provideBrowserGlobalErrorListeners(),
+    provideZoneChangeDetection({eventCoalescing: true}),
+    provideRouter(routes, withInMemoryScrolling({
+      anchorScrolling: 'enabled',
+      scrollPositionRestoration: 'enabled'
+    }), withEnabledBlockingInitialNavigation()),
+    provideHttpClient(withInterceptors([INTERCEPTOR_API_REQUEST, INTERCEPTOR_TOKEN, INTERCEPTOR_RESPONSE])),
+    providePrimeNG({theme: {preset: Theme, options: {darkModeSelector: '.my-app-dark'}}}),
+    MessageService
+  ]
 };

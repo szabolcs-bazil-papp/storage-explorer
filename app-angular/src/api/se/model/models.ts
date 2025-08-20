@@ -1,3 +1,7 @@
+export * from './arcScriptColumnDescriptor';
+export * from './arcScriptEvalError';
+export * from './arcScriptEvalRequest';
+export * from './arcScriptEvalResponse';
 export * from './entryAcquisitionRequest';
 export * from './entryAcquisitionResult';
 export * from './entryLoadRequest';
@@ -5,6 +9,8 @@ export * from './entryLoadResult';
 export * from './entryLoadResultType';
 export * from './entryMeta';
 export * from './entryVersionDto';
+export * from './loginData';
+export * from './loginResult';
 export * from './reference';
 export * from './storageEntryDto';
 export * from './storageEntryType';
