@@ -1,0 +1,43 @@
+plugins {
+  id 'buildlogic.java-conventions'
+  id 'org.smartbit4all.platform.gradle.java' version '0.5.3'
+  id 'org.springframework.boot' version '3.3.4'
+}
+
+dependencies {
+  implementation project(':client')
+  implementation 'org.springframework.boot:spring-boot-starter'
+  implementation 'org.springframework.shell:spring-shell-starter'
+
+  implementation 'org.smartbit4all.platform:api'
+  // implementation 'org.springframework.boot:spring-boot-starter-web'
+
+  implementation 'org.smartbit4all.platform:sql'
+  implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+
+  runtimeOnly('com.oracle.database.jdbc:ojdbc8:12.2.0.1') {
+    exclude group: 'com.oracle.database.ha', module: 'ons'
+    exclude group: 'com.oracle.database.ha', module: 'simplefan'
+  }
+  runtimeOnly 'org.postgresql:postgresql:42.7.4'
+}
+
+dependencyManagement {
+  imports {
+    mavenBom "org.springframework.shell:spring-shell-dependencies:3.3.4"
+  }
+}
+
+// this only disables the plain jar creation, not the executable bootJar
+// see: https://docs.spring.io/spring-boot/gradle-plugin/packaging.html#packaging-executable.and-plain-archives
+tasks.named('jar') {
+  enabled = false
+}
+
+tasks.named('bootJar') {
+  manifest {
+    attributes(
+      'Implementation-Title': project.name,
+      'Implementation-Version': project.version)
+  }
+}
