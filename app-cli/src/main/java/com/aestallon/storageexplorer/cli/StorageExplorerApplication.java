@@ -15,19 +15,36 @@
 
 package com.aestallon.storageexplorer.cli;
 
+import org.jline.utils.AttributedString;
+import org.jline.utils.AttributedStyle;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.shell.command.annotation.CommandScan;
+import org.springframework.shell.jline.PromptProvider;
+import com.aestallon.storageexplorer.cli.service.StorageInstanceContext;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 
 @SpringBootApplication(
     exclude = DataSourceAutoConfiguration.class,
     scanBasePackages = {
         "com.aestallon.storageexplorer.client",
+        "com.aestallon.storageexplorer.cli"
     })
+@CommandScan
 public class StorageExplorerApplication {
 
   public static void main(String[] args) {
     SpringApplication.run(StorageExplorerApplication.class, args);
+  }
+  
+  @Bean
+  PromptProvider promptProvider(StorageInstanceContext storageInstanceContext) {
+    return () -> new AttributedString(
+        "[%s]:>".formatted(storageInstanceContext.current().map(StorageInstance::name).orElse("UNBOUND")),
+        AttributedStyle.DEFAULT.foreground(AttributedStyle.YELLOW)
+    );
   }
 
 }
