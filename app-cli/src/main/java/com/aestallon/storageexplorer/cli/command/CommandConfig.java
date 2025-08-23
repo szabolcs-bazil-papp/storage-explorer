@@ -15,13 +15,20 @@
 
 package com.aestallon.storageexplorer.cli.command;
 
-public final class CommandConstants {
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.shell.Availability;
+import org.springframework.shell.AvailabilityProvider;
+import com.aestallon.storageexplorer.cli.service.StorageInstanceContext;
 
-  private CommandConstants() {}
+@Configuration
+public class CommandConfig {
 
-  public static final String COMMAND_GROUP_UNCONDITIONAL = "Unconditional Commands";
-  public static final String COMMAND_GROUP_STORAGE = "Storage Commands";
-
-  public static final String REQUIRES_STORAGE = "avProvRequiresStorage";
+  @Bean(CommandConstants.REQUIRES_STORAGE)
+  AvailabilityProvider avProvRequiresStorage(StorageInstanceContext storageInstanceContext) {
+    return () -> storageInstanceContext.current().isPresent()
+        ? Availability.available()
+        : Availability.unavailable("No storage instance selected.");
+  }
 
 }
