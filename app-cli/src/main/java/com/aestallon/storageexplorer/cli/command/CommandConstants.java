@@ -23,5 +23,8 @@ public final class CommandConstants {
   public static final String COMMAND_GROUP_STORAGE = "Storage Commands";
 
   public static final String REQUIRES_STORAGE = "avProvRequiresStorage";
+  
+  public static final String COMPLETION_PROPOSAL_URI = "cmProvUris";
+  public static final String COMPLETION_PROPOSAL_VERSION = "cmProvVersions";
 
 }

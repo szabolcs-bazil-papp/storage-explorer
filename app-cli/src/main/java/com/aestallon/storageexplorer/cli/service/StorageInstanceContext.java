@@ -15,7 +15,11 @@
 
 package com.aestallon.storageexplorer.cli.service;
 
+import java.net.URI;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
@@ -28,10 +32,14 @@ public class StorageInstanceContext {
   private final UserConfigService userConfigService;
   private final StorageInstanceProvider storageInstanceProvider;
 
+  private final Set<URI> completionSet;
+
   public StorageInstanceContext(UserConfigService userConfigService,
                                 StorageInstanceProvider storageInstanceProvider) {
     this.userConfigService = userConfigService;
     this.storageInstanceProvider = storageInstanceProvider;
+    this.completionSet = new HashSet<>();
+
     storageInstanceProvider.fetchAllKnown();
     curr = userConfigService.getMostRecentStorageInstanceLoad()
         .flatMap(it -> storageInstanceProvider.provide()
@@ -49,6 +57,7 @@ public class StorageInstanceContext {
     if (storageInstance != null) {
       userConfigService.setMostRecentStorageInstanceLoad(storageInstance.id());
     }
+    completionSet.clear();
   }
 
   public UserConfigService userConfigService() {
@@ -57,6 +66,14 @@ public class StorageInstanceContext {
 
   public StorageInstanceProvider storageInstanceProvider() {
     return storageInstanceProvider;
+  }
+  
+  public Set<URI> completionSet() {
+    return completionSet;
+  }
+  
+  public void offerCompletion(Collection<URI> uris) {
+    completionSet.addAll(uris);
   }
 
 }

@@ -23,6 +23,7 @@ import org.springframework.shell.command.CommandRegistration;
 import org.springframework.shell.command.annotation.Command;
 import org.springframework.shell.command.annotation.CommandAvailability;
 import org.springframework.shell.command.annotation.Option;
+import org.springframework.shell.command.annotation.OptionValues;
 import org.springframework.shell.table.BorderStyle;
 import org.springframework.shell.table.CellMatchers;
 import org.springframework.shell.table.NoWrapSizeConstraints;
@@ -61,7 +62,8 @@ public class LoadCommand {
                        required = true,
                        arity = CommandRegistration.OptionArity.EXACTLY_ONE,
                        arityMin = 1,
-                       arityMax = 1) String uriStr,
+                       arityMax = 1)
+                   @OptionValues(provider = CommandConstants.COMPLETION_PROPOSAL_URI) String uriStr,
                    @Option(
                        longNames = "version",
                        shortNames = 'v',
@@ -69,7 +71,9 @@ public class LoadCommand {
                        arity = CommandRegistration.OptionArity.ZERO_OR_ONE,
                        defaultValue = "LATEST",
                        arityMin = 0,
-                       arityMax = 1) String version) {
+                       arityMax = 1)
+                   @OptionValues(
+                       provider = CommandConstants.COMPLETION_PROPOSAL_VERSION) String version) {
     final var storageInstance = storageInstanceContext
         .current()
         .orElseThrow(() -> new IllegalStateException(
@@ -90,6 +94,10 @@ public class LoadCommand {
             "Could not acquire entry corresponding to URI: [%s]! Check if your URI is correct!".formatted(
                 uriStr)));
     StorageEntryInspectorWriter.of(storageEntry, targetVersion).write(ctx);
+    storageInstanceContext.offerCompletion(storageEntry
+        .uriProperties().stream()
+        .map(UriProperty::uri)
+        .toList());
   }
 
   private sealed interface TargetVersion {
