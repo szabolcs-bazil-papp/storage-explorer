@@ -63,11 +63,14 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     this.storageId = storageId;
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
-    // TODO: pass as ctor param
   }
 
   public final StorageId id() {
     return storageId;
+  }
+  
+  public final Set<URI> uris() {
+    return cache.knownUris();
   }
 
   public int refresh(IndexingStrategy strategy) {

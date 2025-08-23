@@ -121,7 +121,7 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
 
       });
     }
-    
+
     private void save(final StorageEntry storageEntry) {
       queue.offer(storageEntry);
     }
@@ -154,14 +154,14 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
         log.error("Error saving storage entry! {}", storageEntry.uri(), e);
       }
     }
-    
+
     private void abort() {
       future.cancel(true);
       executor.shutdownNow();
     }
   }
-  
-  
+
+
 
   private static void initSqliteCacheDirectory(final String dbFolderStr) {
     final Path dbFolder = Path.of(dbFolderStr);
@@ -316,6 +316,11 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
         .query((r, i) -> URI.create(r.getString(1)))
         .list();
     return inner.getAll(uris).values().stream().map(ScopedEntry.class::cast);
+  }
+
+  @Override
+  public Set<URI> knownUris() {
+    return inner.asMap().keySet();
   }
 
 }
