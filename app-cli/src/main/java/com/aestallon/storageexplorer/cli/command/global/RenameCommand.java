@@ -42,7 +42,10 @@ public class RenameCommand {
                          arity = CommandRegistration.OptionArity.EXACTLY_ONE) String newName) {
     storageInstanceContext.storageInstanceProvider().provide()
         .filter(it -> it.name().equals(name))
-        .forEach(it -> it.setName(newName));
+        .forEach(it -> {
+          it.setName(newName);
+          storageInstanceContext.userConfigService().updateStorageLocation(it.toDto());
+        });
   }
 
 }
