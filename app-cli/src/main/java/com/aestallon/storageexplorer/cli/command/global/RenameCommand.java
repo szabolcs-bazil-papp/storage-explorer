@@ -19,6 +19,7 @@ import org.springframework.shell.command.CommandRegistration;
 import org.springframework.shell.command.annotation.Command;
 import org.springframework.shell.command.annotation.Option;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.cli.command.CommandConstants;
 import com.aestallon.storageexplorer.cli.service.StorageInstanceContext;
 
 @Component
@@ -31,7 +32,10 @@ public class RenameCommand {
     this.storageInstanceContext = storageInstanceContext;
   }
 
-  @Command(command = "rename", description = "Rename a storage instance.")
+  @Command(
+      command = "rename",
+      description = "Rename a storage instance.",
+      group = CommandConstants.COMMAND_GROUP_UNCONDITIONAL)
   public void rename(@Option(longNames = "from", required = true,
                          arity = CommandRegistration.OptionArity.EXACTLY_ONE) String name,
                      @Option(longNames = "to", required = true,
