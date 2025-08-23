@@ -48,4 +48,12 @@ public class StorageInstanceContext {
     this.curr = storageInstance;
   }
 
+  public UserConfigService userConfigService() {
+    return userConfigService;
+  }
+
+  public StorageInstanceProvider storageInstanceProvider() {
+    return storageInstanceProvider;
+  }
+
 }

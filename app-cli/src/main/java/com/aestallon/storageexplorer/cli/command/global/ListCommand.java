@@ -13,9 +13,8 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.cli.command;
+package com.aestallon.storageexplorer.cli.command.global;
 
-import java.util.List;
 import org.springframework.shell.command.annotation.Command;
 import org.springframework.shell.table.BorderStyle;
 import org.springframework.shell.table.CellMatchers;
@@ -24,6 +23,7 @@ import org.springframework.shell.table.Table;
 import org.springframework.shell.table.TableBuilder;
 import org.springframework.shell.table.TableModel;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.cli.command.CommandConstants;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
@@ -31,15 +31,19 @@ import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 
 @Component
 @Command
-public class GlobalCommands {
+public class ListCommand {
 
   private final StorageInstanceProvider storageInstanceProvider;
 
-  public GlobalCommands(StorageInstanceProvider storageInstanceProvider) {
+  public ListCommand(StorageInstanceProvider storageInstanceProvider) {
     this.storageInstanceProvider = storageInstanceProvider;
   }
 
-  @Command(command = "list", description = "List all available storages", group = "Unconditional Commands")
+  @Command(
+      command = "list",
+      alias = "ls",
+      description = "List all available storages",
+      group = CommandConstants.COMMAND_GROUP_UNCONDITIONAL)
   public Table list() {
     final var model = new StorageInstanceTableModel(storageInstanceProvider.provide().toList());
     return new TableBuilder(model)
@@ -50,9 +54,9 @@ public class GlobalCommands {
 
   private static final class StorageInstanceTableModel extends TableModel {
 
-    private final List<StorageInstance> storageInstances;
+    private final java.util.List<StorageInstance> storageInstances;
 
-    private StorageInstanceTableModel(List<StorageInstance> storageInstances) {
+    private StorageInstanceTableModel(java.util.List<StorageInstance> storageInstances) {
       this.storageInstances = storageInstances;
     }
 
