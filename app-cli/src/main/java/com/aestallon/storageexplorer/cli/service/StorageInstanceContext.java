@@ -46,6 +46,9 @@ public class StorageInstanceContext {
 
   public void current(final StorageInstance storageInstance) {
     this.curr = storageInstance;
+    if (storageInstance != null) {
+      userConfigService.setMostRecentStorageInstanceLoad(storageInstance.id());
+    }
   }
 
   public UserConfigService userConfigService() {
