@@ -57,18 +57,6 @@ import {Avatar} from 'primeng/avatar';
         <i>
           <h3>Known quirks</h3>
           <ul>
-            <li>
-              <p>If you specify <code>show</code> commands in a query, you must</p>
-              <ol>
-                <li>Specify the <code>URI</code> property explicitly, such as <code
-                  class="code-block">show 'uri' as
-                  'uri'</code></li>
-                <li>Always specify an alias ( <code class="code-block">as</code> ) for your
-                  properties - these aliases
-                  must not contain dots.
-                </li>
-              </ol>
-            </li>
             <li>Sometimes the scrollbars on
               <p-avatar icon="pi pi-compass" shape="circle"></p-avatar>
               <b>Inspector</b> tabs glitch out and will not appear. This is a side effect of how

@@ -6,7 +6,7 @@ import {
 import {
   provideRouter,
   withEnabledBlockingInitialNavigation,
-  withInMemoryScrolling
+  withInMemoryScrolling, withViewTransitions
 } from '@angular/router';
 import {routes} from './app.routes';
 import Aura from '@primeuix/themes/aura';
@@ -80,7 +80,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withInMemoryScrolling({
       anchorScrolling: 'enabled',
       scrollPositionRestoration: 'enabled'
-    }), withEnabledBlockingInitialNavigation()),
+    }), withEnabledBlockingInitialNavigation(), withViewTransitions()),
     provideHttpClient(withInterceptors([INTERCEPTOR_API_REQUEST, INTERCEPTOR_TOKEN, INTERCEPTOR_RESPONSE])),
     providePrimeNG({theme: {preset: Theme, options: {darkModeSelector: '.my-app-dark'}}}),
     MessageService
