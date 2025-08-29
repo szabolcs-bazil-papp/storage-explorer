@@ -59,6 +59,8 @@ public class SideBarController {
   private final ApplicationEventPublisher eventPublisher;
   private final Map<String, TreeViewContext> treeContextByName;
   private final Map<String, CommanderViewContext> commanderContextByName;
+  
+  private volatile boolean treeMayShow = true;
 
   public SideBarController(ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
@@ -85,6 +87,7 @@ public class SideBarController {
   private ActionListener treeToggleListener(final String id, final JToggleButton toggleButton) {
     return e -> {
       final boolean selected = toggleButton.isSelected();
+      treeMayShow = selected;
       if (selected) {
         showTreeViewInternal(treeContextByName.get(id).treeView);
       } else {
@@ -123,6 +126,10 @@ public class SideBarController {
   }
 
   public void showTreeView(final TreeView<?, ?> treeView) {
+    if (!treeMayShow) {
+      return;
+    }
+    
     treeContextByName.get(treeView.name()).toggleButton().setSelected(true);
     showTreeViewInternal(treeView);
   }
