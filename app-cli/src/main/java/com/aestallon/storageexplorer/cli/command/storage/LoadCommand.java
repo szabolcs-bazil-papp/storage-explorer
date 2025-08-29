@@ -40,7 +40,11 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryMeta;
+import com.aestallon.storageexplorer.core.service.ObjectEntryLoadingService;
+import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 import com.aestallon.storageexplorer.core.util.Uris;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.base.Strings;
 
 @Component
 @Command
@@ -73,7 +77,14 @@ public class LoadCommand {
                        arityMin = 0,
                        arityMax = 1)
                    @OptionValues(
-                       provider = CommandConstants.COMPLETION_PROPOSAL_VERSION) String version) {
+                       provider = CommandConstants.COMPLETION_PROPOSAL_VERSION) String version,
+                   @Option(
+                       longNames = "zoom",
+                       shortNames = 'z',
+                       required = false,
+                       arity = CommandRegistration.OptionArity.ZERO_OR_ONE,
+                       arityMin = 0,
+                       arityMax = 1) String zoom) {
     final var storageInstance = storageInstanceContext
         .current()
         .orElseThrow(() -> new IllegalStateException(
@@ -93,7 +104,7 @@ public class LoadCommand {
         .orElseThrow(() -> new IllegalArgumentException(
             "Could not acquire entry corresponding to URI: [%s]! Check if your URI is correct!".formatted(
                 uriStr)));
-    StorageEntryInspectorWriter.of(storageEntry, targetVersion).write(ctx);
+    StorageEntryInspectorWriter.of(storageEntry, targetVersion, zoom).write(ctx);
     storageInstanceContext.offerCompletion(storageEntry
         .uriProperties().stream()
         .map(UriProperty::uri)
@@ -140,9 +151,10 @@ public class LoadCommand {
   private abstract static sealed class StorageEntryInspectorWriter<T extends StorageEntry> {
 
     static StorageEntryInspectorWriter<? extends StorageEntry> of(StorageEntry storageEntry,
-                                                                  TargetVersion targetVersion) {
+                                                                  TargetVersion targetVersion,
+                                                                  String targetProp) {
       return switch (storageEntry) {
-        case ObjectEntry oe -> new ObjectEntryInspectorWriter(oe, targetVersion);
+        case ObjectEntry oe -> new ObjectEntryInspectorWriter(oe, targetVersion, targetProp);
         case SequenceEntry se -> new SequenceEntryInspectorWriter(se);
         case ListEntry le -> new ListEntryInspectorWriter(le);
         case MapEntry me -> new MapEntryInspectorWriter(me);
@@ -184,10 +196,14 @@ public class LoadCommand {
         extends StorageEntryInspectorWriter<ObjectEntry> {
 
       private final TargetVersion targetVersion;
+      private final String targetProp;
 
-      public ObjectEntryInspectorWriter(ObjectEntry storageEntry, TargetVersion targetVersion) {
+      public ObjectEntryInspectorWriter(ObjectEntry storageEntry,
+                                        TargetVersion targetVersion,
+                                        String targetProp) {
         super(storageEntry);
         this.targetVersion = targetVersion;
+        this.targetProp = targetProp;
       }
 
       @Override
@@ -210,7 +226,6 @@ public class LoadCommand {
                                             EntryMetaTableModel tableModel) {
         writeTable(ctx, tableModel);
         writeOamStr(ctx, sv);
-        writeTable(ctx, tableModel);
         flush(ctx);
       }
 
@@ -251,7 +266,29 @@ public class LoadCommand {
       }
 
       private void writeOamStr(CommandContext ctx, ObjectEntryLoadResult.SingleVersion sv) {
-        ctx.getTerminal().writer().println(sv.oamStr());
+        final String str = Strings.isNullOrEmpty(targetProp) ? sv.oamStr() : getSubStr(sv);
+        if (!Strings.isNullOrEmpty(str)) {
+          ctx.getTerminal().writer().println(str);
+        }
+      }
+
+      private String getSubStr(ObjectEntryLoadResult.SingleVersion sv) {
+        return switch (new StorageInstanceExaminer(uri -> Optional.empty()).discoverInlineProperty(
+            storageEntry, targetProp, sv)) {
+          case StorageInstanceExaminer.None none -> switch (none) {
+            case StorageInstanceExaminer.NotFound(String err) -> err;
+            case StorageInstanceExaminer.NoValue noValue -> "";
+          };
+          case StorageInstanceExaminer.Some some -> {
+            try {
+              yield ObjectEntryLoadingService.OBJECT_MAPPER
+                  .writerWithDefaultPrettyPrinter()
+                  .writeValueAsString(some.val());
+            } catch (JsonProcessingException e) {
+              yield e.getMessage();
+            }
+          }
+        };
       }
 
       // +------------------------------------+
