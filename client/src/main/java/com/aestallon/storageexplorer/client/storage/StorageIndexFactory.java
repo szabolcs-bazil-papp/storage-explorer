@@ -296,6 +296,8 @@ final class StorageIndexFactory {
       config.setIdleTimeout(600_000L);
       config.setMaxLifetime(1_800_000L);
       config.setLeakDetectionThreshold(5_000L);
+      config.addDataSourceProperty("oracle.jdbc.fanEnabled", "false");
+      config.addDataSourceProperty("useFetchSizeWithLongColumn", "true");
 
       final var schema = connectionData.getTargetSchema();
       if (schema != null && !schema.isEmpty()) {
@@ -307,7 +309,11 @@ final class StorageIndexFactory {
   }
 
   private Supplier<JdbcTemplate> getJdbcTemplateFactory(final ApplicationContext ctx) {
-    return () -> new JdbcTemplate(ctx.getBean(DataSource.class));
+    return () -> {
+      final var template = new JdbcTemplate(ctx.getBean(DataSource.class));
+      template.setFetchSize(1000);
+      return template;
+    };
   }
 
 }

@@ -96,7 +96,7 @@ public interface IndexingStrategy {
 
     @Override
     public Map<URI, StorageEntry> processEntries(Stream<URI> uris, StorageEntryCreator creator) {
-      final var map = uris.parallel()
+      final var map = uris/* .parallel() */
           .map(uri -> Pair.of(uri, creator.apply(uri)))
           .flatMap(Pair.streamOnB())
           .map(Pair.onB(StorageEntry.class::cast))
