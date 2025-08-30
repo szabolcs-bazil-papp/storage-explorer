@@ -103,8 +103,8 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
 
   private Supplier<ObjectEntryLoadResult.SingleVersion> singleVersionSupplier() {
     return switch (storageEntry) {
-      case ListEntry l -> l::asSingleVersion;
-      case MapEntry m -> m::asSingleVersion;
+      case ListEntry l -> () -> l.asSingleVersion().orElse(null);
+      case MapEntry m -> () -> m.asSingleVersion().orElse(null);
       default -> null;
     };
   }
