@@ -22,12 +22,15 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.http.HttpHeaders;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public final class SpaServlet extends HttpServlet {
+
+  private static final String INDEX = "index.html";
 
   private static final Map<String, byte[]> RESOURCES = new ConcurrentHashMap<>();
 
@@ -47,9 +50,15 @@ public final class SpaServlet extends HttpServlet {
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
     req.setCharacterEncoding("utf-8");
+
+    if (!isReqAllowed(req)) {
+      resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+      return;
+    }
+
     String pathInfo = req.getPathInfo();
     if (pathInfo == null || pathInfo.isEmpty()) {
-      pathInfo = "index.html";
+      pathInfo = INDEX;
     } else if (pathInfo.startsWith("/")) {
       pathInfo = pathInfo.substring(1);
     }
@@ -62,6 +71,12 @@ public final class SpaServlet extends HttpServlet {
 
     resp.setContentLength(data.length);
     resp.setContentType(contentType(pathInfo));
+    if (cacheable(pathInfo)) {
+      resp.setHeader(HttpHeaders.CACHE_CONTROL, "public, max-age=31536000");
+    } else {
+      resp.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
+    }
+
     resp.getOutputStream().write(data);
   }
 
@@ -87,6 +102,10 @@ public final class SpaServlet extends HttpServlet {
     }
   }
 
+  private boolean cacheable(final String pathInfo) {
+    return !pathInfo.endsWith(".js");
+  }
+
   private boolean isReqAllowed(final HttpServletRequest req) {
     return allowOthers || isLocalReq(req);
   }
@@ -102,12 +121,14 @@ public final class SpaServlet extends HttpServlet {
   }
 
   private void sendIndex(HttpServletResponse resp) throws IOException {
-    final byte[] indexFile = getResource("index.html");
+    final byte[] indexFile = getResource(INDEX);
+    assert indexFile != null;
+
     resp.setContentType("text/html");
     resp.setContentLength(indexFile.length);
-    resp.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    resp.setHeader("Pragma", "no-cache");
-    resp.setDateHeader("Expires", 0);
+    resp.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
+    resp.setHeader(HttpHeaders.PRAGMA, "no-cache");
+    resp.setDateHeader(HttpHeaders.EXPIRES, 0);
     resp.getOutputStream().write(indexFile);
   }
 
@@ -143,7 +164,7 @@ public final class SpaServlet extends HttpServlet {
   @Override
   public void init() throws ServletException {
     try {
-      final byte[] data = getResource("index.html");
+      final byte[] data = getResource(INDEX);
       final String string = new String(data, StandardCharsets.UTF_8);
       final byte[] amendedData = string.replace(
               "var STORAGE_EXPLORER_API_PATH = '/storageexplorer';",
@@ -164,4 +185,5 @@ public final class SpaServlet extends HttpServlet {
     RESOURCES.clear();
     super.destroy();
   }
+
 }
