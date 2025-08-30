@@ -18,6 +18,7 @@ package com.aestallon.storageexplorer.core.service.cache;
 import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -54,4 +55,7 @@ public interface StorageIndexCache {
   Stream<ObjectEntry> objectEntries();
 
   Stream<ScopedEntry> scopedEntries();
+  
+  Set<URI> knownUris();
+  
 }

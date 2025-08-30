@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.OptionalInt;
 import org.springframework.util.Assert;
+import com.aestallon.storageexplorer.core.util.Uris;
 
 public final class UriProperty implements Comparable<UriProperty> {
 
@@ -141,7 +142,7 @@ public final class UriProperty implements Comparable<UriProperty> {
 
   private UriProperty(Segment[] segments, URI uri) {
     this.segments = segments;
-    this.uri = uri;
+    this.uri = Uris.latest(uri);
     this.position = findLastInt(segments).orElse(-1);
   }
 

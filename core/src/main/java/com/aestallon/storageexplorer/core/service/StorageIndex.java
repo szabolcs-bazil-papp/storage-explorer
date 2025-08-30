@@ -63,11 +63,14 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     this.storageId = storageId;
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
-    // TODO: pass as ctor param
   }
 
   public final StorageId id() {
     return storageId;
+  }
+  
+  public final Set<URI> uris() {
+    return cache.knownUris();
   }
 
   public int refresh(IndexingStrategy strategy) {
@@ -85,22 +88,11 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
       return 0;
     }
 
-    final var res = strategy.processEntries(fetchEntries(target), storageEntryFactory::create);
-    // we need a bit more sophisticated work here:
-    // If entry was absent from cache -> put it in.
-    // If entry was present in the cache, and the indexing strategy was FULL -> refresh the entry 
-    // with the UriProperties found in the newly indexed one.
-    // We should emit an event for each (!) refreshed entry, so UIs may update (inspectors, graph)
-    //    res.forEach((uri, entry) -> cache.compute(uri, (k, v) -> {
-    //      if (v == null) {
-    //        return entry;
-    //      }
-    //
-    //      v.accept(entry);
-    //      return v;
-    //    }));
-    res.forEach(cache::merge);
-    return res.size();
+    try (final var uris = fetchEntries(target)) {
+      final var res = strategy.processEntries(uris, storageEntryFactory::create);
+      res.forEach(cache::merge);
+      return res.size();
+    }
   }
 
   public void clear() {

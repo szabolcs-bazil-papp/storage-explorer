@@ -14,6 +14,8 @@ import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.common.util.Pair;
 import static com.aestallon.storageexplorer.common.util.Streams.reverse;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -23,6 +25,9 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 
 public class StorageInstanceExaminer {
+
+  private static final Logger log = LoggerFactory.getLogger(StorageInstanceExaminer.class);
+
 
   public static final class ObjectEntryLookupTable {
 
@@ -47,6 +52,12 @@ public class StorageInstanceExaminer {
 
   public StorageInstanceExaminer(final Function<URI, Optional<StorageEntry>> discoverer) {
     this.discoverer = discoverer;
+  }
+
+  public PropertyDiscoveryResult discoverInlineProperty(final StorageEntry entry,
+                                                        final String propQuery,
+                                                        final ObjectEntryLoadResult.SingleVersion sv) {
+    return new InlinePropertyDiscoverer(entry, new PropQuery(propQuery)).discover(sv.objectAsMap());
   }
 
   public PropertyDiscoveryResult discoverProperty(final PropertyDiscoveryResult medial,
@@ -165,6 +176,11 @@ public class StorageInstanceExaminer {
       this.cursor = propQuery.cursor();
     }
 
+    private InlinePropertyDiscoverer(final InlinePropertyDiscoverer original) {
+      this.host = original.host;
+      this.cursor = original.cursor.copy();
+    }
+
     private PropertyDiscoveryResult discover(final Object root) {
       final List<UriProperty.Segment> segments = new ArrayList<>();
       return inObject(root, segments);
@@ -220,15 +236,15 @@ public class StorageInstanceExaminer {
             final Object o = list.get(i);
             final var segmentsI = new ArrayList<>(segments);
             segmentsI.add(new UriProperty.Segment.Idx(i));
-            // We do not increment the cursor here!!!
-            final PropertyDiscoveryResult res = inObject(o, segmentsI);
+            final var res = new InlinePropertyDiscoverer(this).inObject(o, segmentsI);
             ret.add(res);
           }
           yield ListFound.of(ret, UriProperty.Segment.asString(segments));
         }
         case UriProperty.Segment.Idx idx -> {
           if (idx.value() < 0) {
-            yield new NotFound("Index value [ %d ] is not a valid index number.".formatted(idx.value()));
+            yield new NotFound(
+                "Index value [ %d ] is not a valid index number.".formatted(idx.value()));
           }
 
           if (idx.value() >= list.size()) {
@@ -358,6 +374,7 @@ public class StorageInstanceExaminer {
       String path)
       implements Some {
 
+    @SuppressWarnings({ "unchecked" })
     static ListFound of(final List<?> list, final StorageEntry host, String path) {
       final List<PropertyDiscoveryResult> ret = new ArrayList<>(list.size());
       for (int i = 0; i < list.size(); i++) {
@@ -601,8 +618,15 @@ public class StorageInstanceExaminer {
       public String toString() {
         return UriProperty.Segment.asString(segments, ptr);
       }
-    }
-  }
 
+      public Cursor copy() {
+        final var copy = new Cursor(segments);
+        copy.ptr = ptr;
+        return copy;
+      }
+
+    }
+
+  }
 
 }

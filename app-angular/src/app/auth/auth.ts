@@ -106,7 +106,8 @@ const taglines: Array<string> = [
                      id="login_form_username"
                      formControlName="username"
                      autocomplete="off"
-                     [pAutoFocus]="true"/>
+                     [pAutoFocus]="true"
+                     pSize="large"/>
               <label for="login_form_username">Username</label>
             </p-floatlabel>
             <p-floatlabel variant="on">
@@ -114,7 +115,8 @@ const taglines: Array<string> = [
                      id="login_form_username"
                      formControlName="password"
                      type="password"
-                     autocomplete="off"/>
+                     autocomplete="off"
+                     pSize="large"/>
               <label for="login_form_username">Password</label>
             </p-floatlabel>
             @if (errMsg()) {
@@ -186,8 +188,8 @@ const taglines: Array<string> = [
     .login-form {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-      padding: 0 1rem 1rem;
+      gap: 1rem;
+      padding: 1rem 1rem 1rem;
     }
 
     .login-form-controls {

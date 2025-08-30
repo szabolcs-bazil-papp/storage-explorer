@@ -2,7 +2,7 @@ plugins {
   id 'java'
 }
 
-group = 'hu.aestallon.storageexplorer'
+group = 'com.aestallon.storageexplorer'
 version = '0.4.1'
 
 repositories {

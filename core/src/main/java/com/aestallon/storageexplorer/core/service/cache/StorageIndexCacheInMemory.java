@@ -18,6 +18,7 @@ package com.aestallon.storageexplorer.core.service.cache;
 import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
@@ -78,6 +79,11 @@ public final class StorageIndexCacheInMemory implements StorageIndexCache {
   @Override
   public Stream<ScopedEntry> scopedEntries() {
     return stream().filter(ScopedEntry.class::isInstance).map(ScopedEntry.class::cast);
+  }
+
+  @Override
+  public Set<URI> knownUris() {
+    return map.keySet();
   }
 
 }

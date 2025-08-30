@@ -157,7 +157,7 @@ public final class RelationalDatabaseStorageIndex
     return db
         .sql(buildQuery(target))
         .query((r, i) -> r.getString("URI"))
-        .list().stream()
+        .stream()
         .filter(it -> !Strings.isNullOrEmpty(it))
         .map(URI::create);
   }
