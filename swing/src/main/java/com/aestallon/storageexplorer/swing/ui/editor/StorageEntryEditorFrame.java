@@ -50,7 +50,7 @@ public class StorageEntryEditorFrame extends JFrame {
   
   private JLabel initHeader() {
     final var header = new JLabel("Declare Your Intent");
-    header.setFont(LafService.wrap(UIManager.getFont("h1.font")));
+    header.setFont(LafService.font(LafService.FontToken.H1_SEMIBOLD));
     return header;
   }
   

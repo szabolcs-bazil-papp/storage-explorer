@@ -75,7 +75,7 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
         .filter(it -> !it.isBlank())
         .map(it -> it + " - " + sequenceEntry.toString())
         .orElseGet(sequenceEntry::toString));
-    labelName.setFont(LafService.wrap(UIManager.getFont("h3.font")));
+    labelName.setFont(LafService.font(LafService.FontToken.H3_SEMIBOLD));
     labelName.setAlignmentX(Component.LEFT_ALIGNMENT);
     panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, labelName.getPreferredSize().height));
     panel.add(labelName);
@@ -95,12 +95,12 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
 
   private void initValue() {
     final var label = new JLabel("Current value:");
-    label.setFont(LafService.wrap(UIManager.getFont("h4.font")));
+    label.setFont(LafService.font(LafService.FontToken.H4));
     label.setAlignmentX(LEFT_ALIGNMENT);
     add(label);
     
     final var value = new JLabel(String.valueOf(sequenceEntry.current()));
-    value.setFont(LafService.wrap(UIManager.getFont("h2.font")));
+    value.setFont(LafService.font(LafService.FontToken.H2_SEMIBOLD));
     value.setAlignmentX(LEFT_ALIGNMENT);
     add(value);
   }

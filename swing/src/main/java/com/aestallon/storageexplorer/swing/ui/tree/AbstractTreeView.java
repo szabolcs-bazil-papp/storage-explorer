@@ -35,6 +35,7 @@ import static com.aestallon.storageexplorer.common.util.Streams.enumerationToStr
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
+import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
 /**
  * Skeleton implementation for "static" lifecycle trees.
@@ -120,7 +121,7 @@ public abstract class AbstractTreeView
     this.userConfigService = userConfigService;
     this.sideBarController = sideBarController;
 
-    setLayout(new GridLayout(1, 1));
+    setLayout(new BorderLayout(0, 5));
     setMinimumSize(new Dimension(200, 0));
 
     tree = initTree();
@@ -133,7 +134,13 @@ public abstract class AbstractTreeView
     scrollPane = new JScrollPane(tree);
     treePathsByLeaf = new HashMap<>();
 
-    add(scrollPane);
+    add(scrollPane, BorderLayout.CENTER);
+    
+    final JLabel title = new JLabel(name());
+    title.setFont(LafService.font(LafService.FontToken.SEMIBOLD));
+    title.setIcon(icon());
+    add(title, BorderLayout.NORTH);
+    
     sideBarController.registerTreeView(this);
   }
 

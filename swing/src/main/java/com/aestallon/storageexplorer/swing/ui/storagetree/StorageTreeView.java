@@ -82,6 +82,8 @@ public class StorageTreeView
 
   private static final Logger log = LoggerFactory.getLogger(StorageTreeView.class);
 
+  public static final String TREE_NAME_STORAGES = "Storages";
+  
   private transient StorageEntryTrackingService trackingService;
 
   public StorageTreeView(ApplicationEventPublisher eventPublisher,
@@ -97,7 +99,7 @@ public class StorageTreeView
 
   @Override
   public String name() {
-    return "Storage Tree";
+    return TREE_NAME_STORAGES;
   }
 
   @Override

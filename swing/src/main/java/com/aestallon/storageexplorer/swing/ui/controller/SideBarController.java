@@ -24,6 +24,7 @@ import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
+import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
 import com.aestallon.storageexplorer.swing.ui.tree.TreeEntityLocator;
 import com.aestallon.storageexplorer.swing.ui.tree.TreeView;
 
@@ -57,8 +58,8 @@ public class SideBarController {
 
 
   private final ApplicationEventPublisher eventPublisher;
-  private final Map<String, TreeViewContext> treeContextByName;
-  private final Map<String, CommanderViewContext> commanderContextByName;
+  private final LinkedHashMap<String, TreeViewContext> treeContextByName;
+  private final LinkedHashMap<String, CommanderViewContext> commanderContextByName;
   
   private volatile boolean treeMayShow = true;
 
@@ -75,6 +76,9 @@ public class SideBarController {
     toggleButton.setFocusPainted(false);
     toggleButton.setSelected(false);
     toggleButton.addActionListener(treeToggleListener(name, toggleButton));
+    if (StorageTreeView.TREE_NAME_STORAGES.equals(name)) {
+      treeContextByName.putFirst(name, new TreeViewContext(treeView, toggleButton));
+    }
     treeContextByName.put(name, new TreeViewContext(treeView, toggleButton));
   }
 

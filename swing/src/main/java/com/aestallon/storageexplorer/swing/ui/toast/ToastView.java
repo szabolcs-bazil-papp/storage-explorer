@@ -38,7 +38,7 @@ public class ToastView {
 
     this.title.setIcon(icon);
     this.title.setText(title);
-    this.title.setFont(LafService.wrap(UIManager.getFont("medium.font")));
+    this.title.setFont(LafService.font(LafService.FontToken.MEDIUM));
     mainPanel.setBorder(border);
     this.message.setText(message);
   }

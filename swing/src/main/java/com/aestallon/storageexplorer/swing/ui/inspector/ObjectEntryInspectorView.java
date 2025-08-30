@@ -176,17 +176,17 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
           .filter(it -> !it.isBlank())
           .map(it -> it + " - " + objectEntry.getDisplayName(version))
           .orElseGet(() -> objectEntry.getDisplayName(version)));
-      labelName.setFont(LafService.wrap(UIManager.getFont("h3.font")));
+      labelName.setFont(LafService.font(LafService.FontToken.H3_SEMIBOLD));
       labelName.setAlignmentX(Component.LEFT_ALIGNMENT);
       box.add(labelName);
 
       Box box1 = new Box(BoxLayout.X_AXIS);
       final var creationLabel = new JLabel("Created at:");
-      creationLabel.setFont(LafService.wrap(UIManager.getFont("h4.font")));
+      creationLabel.setFont(LafService.font(LafService.FontToken.H4));
       creationLabel.setBorder(new EmptyBorder(0, 0, 0, 5));
 
       final var creationValue = new JLabel(getNodeCreationValue(version));
-      creationValue.setFont(LafService.wrap(UIManager.getFont("h4.font")));
+      creationValue.setFont(LafService.font(LafService.FontToken.H4));
       box1.add(creationLabel);
       box1.add(creationValue);
 
@@ -264,7 +264,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
     final var label = new JLabel(
         (objectEntry == null ? "" : objectEntry + " ") + "LOADING ERROR");
-    label.setFont(LafService.wrap(UIManager.getFont("h3.font")));
+    label.setFont(LafService.font(LafService.FontToken.H3_SEMIBOLD));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     container.add(label);
