@@ -118,7 +118,7 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
         .filter(it -> !it.isBlank())
         .map(it -> it + " - " + storageEntry.toString())
         .orElseGet(storageEntry::toString));
-    labelName.setFont(LafService.wrap(UIManager.getFont("h3.font")));
+    labelName.setFont(LafService.font(LafService.FontToken.H3_SEMIBOLD));
     labelName.setAlignmentX(Component.LEFT_ALIGNMENT);
     panel.setMaximumSize(new Dimension(
         Integer.MAX_VALUE,

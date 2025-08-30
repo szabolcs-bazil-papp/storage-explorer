@@ -75,9 +75,9 @@ public class ObjectEntryDiffView
       final var titlePanel = new JPanel();
       titlePanel.setLayout(new GridLayout(1, 2));
       final var label1 = new JLabel("Comparing v" + versionNr +"...");
-      label1.setFont(LafService.wrap(UIManager.getFont("h2.font")));
+      label1.setFont(LafService.font(LafService.FontToken.H2_SEMIBOLD));
       final var label2 = new JLabel("to v" + baseVersionNr);
-      label2.setFont(LafService.wrap(UIManager.getFont("h2.font")));
+      label2.setFont(LafService.font(LafService.FontToken.H2_SEMIBOLD));
       
       titlePanel.add(label1);
       titlePanel.add(label2);

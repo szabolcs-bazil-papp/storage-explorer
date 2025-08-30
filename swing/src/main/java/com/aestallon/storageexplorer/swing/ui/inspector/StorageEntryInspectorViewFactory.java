@@ -242,7 +242,7 @@ public class StorageEntryInspectorViewFactory {
     textareaDescription.setLineWrap(true);
     textareaDescription.setEditable(false);
     textareaDescription.setOpaque(false);
-    textareaDescription.setFont(LafService.wrap(UIManager.getFont("medium.font")));
+    textareaDescription.setFont(LafService.font(LafService.FontToken.MEDIUM));
     textareaDescription.setBorder(BorderFactory.createEmptyBorder() /* BorderFactory.createLineBorder(Color.RED, 1) */);
     textareaDescription.setColumns(0);
   }
