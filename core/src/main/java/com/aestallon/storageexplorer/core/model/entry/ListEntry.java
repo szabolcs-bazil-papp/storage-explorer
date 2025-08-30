@@ -93,16 +93,16 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
     return name;
   }
 
-  public ObjectEntryLoadResult.SingleVersion asSingleVersion() {
+  public Optional<ObjectEntryLoadResult.SingleVersion> asSingleVersion() {
     final var list = impl();
     try {
-      return storageIndex.get().loader().loadExact(list.getUri(), 0);
+      return Optional.of(storageIndex.get().loader().loadExact(list.getUri(), 0));
     } catch (Exception e) {
       log.error(e.getMessage(), e);
-      return null;
+      return Optional.empty();
     }
   }
-  
+
   protected StoredListStorageImpl impl() {
     return (StoredListStorageImpl) collectionApi.list(schema, name);
   }
@@ -128,7 +128,7 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
         return;
       }
 
-      final var list = asUriList(asSingleVersion());
+      final var list = asSingleVersion().map(this::asUriList).orElseGet(Collections::emptyList);
       final var uriProperties = new HashSet<UriProperty>();
       for (int i = 0; i < list.size(); i++) {
         uriProperties.add(

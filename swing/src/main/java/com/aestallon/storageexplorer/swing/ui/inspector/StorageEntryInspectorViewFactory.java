@@ -109,11 +109,11 @@ public class StorageEntryInspectorViewFactory {
     final var storageEntry = inspector.storageEntry();
     dropInspector(storageEntry);
   }
-  
+
   ApplicationEventPublisher eventPublisher() {
     return eventPublisher;
   }
-  
+
   StorageInstanceProvider storageInstanceProvider() {
     return storageInstanceProvider;
   }
@@ -243,7 +243,8 @@ public class StorageEntryInspectorViewFactory {
     textareaDescription.setEditable(false);
     textareaDescription.setOpaque(false);
     textareaDescription.setFont(LafService.font(LafService.FontToken.MEDIUM));
-    textareaDescription.setBorder(BorderFactory.createEmptyBorder() /* BorderFactory.createLineBorder(Color.RED, 1) */);
+    textareaDescription.setBorder(
+        BorderFactory.createEmptyBorder() /* BorderFactory.createLineBorder(Color.RED, 1) */);
     textareaDescription.setColumns(0);
   }
 
@@ -328,8 +329,8 @@ public class StorageEntryInspectorViewFactory {
       }
     });
   }
-  
-  void addDiffAction(final ObjectEntry objectEntry, 
+
+  void addDiffAction(final ObjectEntry objectEntry,
                      final ObjectEntryLoadResult.SingleVersion singleVersion,
                      final long versionNr,
                      final JToolBar toolbar,
@@ -372,10 +373,17 @@ public class StorageEntryInspectorViewFactory {
           headVersion = null;
           headVersionNr = -1L;
         }
-        controller.launch(
-            storageEntry,
-            versionSupplier.get(), versionNr,
-            headVersion, headVersionNr);
+
+        final var version = versionSupplier.get();
+        if (version == null) {
+          JOptionPane.showMessageDialog(
+              toolbar,
+              "Entry not available!",
+              "Check whether the entry is still present in storage!",
+              JOptionPane.ERROR_MESSAGE);
+          return;
+        }
+        controller.launch(storageEntry, version, versionNr, headVersion, headVersionNr);
       }
     });
   }

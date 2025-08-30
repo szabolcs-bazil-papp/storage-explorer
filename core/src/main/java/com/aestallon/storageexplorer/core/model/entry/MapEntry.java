@@ -21,10 +21,13 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.toSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.collection.StoredMapStorageImpl;
 import org.smartbit4all.core.object.ObjectApi;
@@ -35,6 +38,8 @@ import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.util.Uris;
 
 public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
+
+  private static final Logger log = LoggerFactory.getLogger(MapEntry.class);
 
   private final WeakReference<StorageIndex<?>> storageIndex;
   private final StorageId id;
@@ -49,7 +54,8 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
-  MapEntry(final StorageIndex<?> storageIndex, StorageId id, Path path, URI uri, ObjectApi objectApi, CollectionApi collectionApi) {
+  MapEntry(final StorageIndex<?> storageIndex, StorageId id, Path path, URI uri,
+           ObjectApi objectApi, CollectionApi collectionApi) {
     this.storageIndex = new WeakReference<>(storageIndex);
     this.id = id;
     this.path = path;
@@ -88,13 +94,18 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
     return name;
   }
 
-  public ObjectEntryLoadResult.SingleVersion asSingleVersion() {
+  public Optional<ObjectEntryLoadResult.SingleVersion> asSingleVersion() {
     final var map = impl();
-    return storageIndex.get().loader().loadExact(map.getUri(), 0);
+    try {
+      return Optional.of(storageIndex.get().loader().loadExact(map.getUri(), 0));
+    } catch (final Exception e) {
+      log.error(e.getMessage(), e);
+      return Optional.empty();
+    }
   }
-  
+
   protected StoredMapStorageImpl impl() {
-    return  (StoredMapStorageImpl) collectionApi.map(schema, name);
+    return (StoredMapStorageImpl) collectionApi.map(schema, name);
   }
 
   @Override
@@ -115,7 +126,10 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
     refreshLock.lock();
     try {
 
-      this.uriProperties = asUriMap(asSingleVersion()).entrySet().stream()
+      this.uriProperties = asSingleVersion()
+          .map(this::asUriMap)
+          .orElseGet(Collections::emptyMap)
+          .entrySet().stream()
           .map(e -> UriProperty.of(
               new UriProperty.Segment[] { UriProperty.Segment.key(e.getKey()) },
               e.getValue()))
