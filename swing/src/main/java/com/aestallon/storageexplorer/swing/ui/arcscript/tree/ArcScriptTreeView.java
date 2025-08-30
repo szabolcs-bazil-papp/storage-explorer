@@ -46,6 +46,9 @@ public class ArcScriptTreeView
         ArcScriptTreeView>
     implements TreeView<ArcScriptSelectorTree.ArcScriptNodeLocator, ArcScriptViewRenamed> {
 
+  public static final String TREE_NAME_ARC_SCRIPTS = "Script Files";
+
+
   protected ArcScriptTreeView(ApplicationEventPublisher eventPublisher,
                               StorageInstanceProvider storageInstanceProvider,
                               UserConfigService userConfigService,
@@ -57,7 +60,7 @@ public class ArcScriptTreeView
 
   @Override
   public String name() {
-    return "ArcScript Tree";
+    return TREE_NAME_ARC_SCRIPTS;
   }
 
   @Override
@@ -127,7 +130,7 @@ public class ArcScriptTreeView
   public void reindexStorage(StorageInstance storageInstance) {
     // NO-OP
   }
-  
+
   public void storageRenamed(StorageId storageId) {
     tree.storageRenamed(storageId);
   }
@@ -136,7 +139,7 @@ public class ArcScriptTreeView
   public void removeStorage(StorageInstance storageInstance) {
     tree.removeStorage(storageInstance.id());
   }
-  
+
   public void removeScript(StorageId storageId, String scriptPath) {
     tree.removeScript(storageId, scriptPath);
   }
