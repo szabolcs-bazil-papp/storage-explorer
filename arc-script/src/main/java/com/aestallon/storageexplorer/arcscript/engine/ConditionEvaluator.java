@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.arcscript.engine;
 
 import java.util.List;
+import java.util.function.Function;
 import com.aestallon.storageexplorer.arcscript.internal.query.Assertion;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryConditionImpl;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -23,24 +24,36 @@ import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 
 final class ConditionEvaluator {
 
+  @FunctionalInterface
+  interface ProjectionAccessor extends Function<String, StorageInstanceExaminer.PropertyDiscoveryResult> {}
+
   private final StorageInstanceExaminer examiner;
   private final StorageEntry entry;
   private final StorageInstanceExaminer.ObjectEntryLookupTable cache;
   private final QueryConditionImpl.AssertionIterator iterator;
   private final StorageInstanceExaminer.PropertyDiscoveryResult medial;
+  private final ProjectionAccessor projectionAccessor;
+
+  ConditionEvaluator(final CachedExaminer cExaminer,
+                     final DataRow row,
+                     final QueryConditionImpl c,
+                     final ProjectionAccessor projectionAccessor) {
+    this(cExaminer.examiner(), row instanceof EntryRow e ? e.entry() : null, cExaminer.cache(), c, null, projectionAccessor);
+  }
 
   ConditionEvaluator(final StorageInstanceExaminer examiner,
                      final StorageEntry entry,
                      final StorageInstanceExaminer.ObjectEntryLookupTable cache,
                      final QueryConditionImpl c) {
-    this(examiner, entry, cache, c, null);
+    this(examiner, entry, cache, c, null, null);
   }
 
   private ConditionEvaluator(final StorageInstanceExaminer examiner,
                              final StorageEntry entry,
                              final StorageInstanceExaminer.ObjectEntryLookupTable cache,
                              final QueryConditionImpl c,
-                             final StorageInstanceExaminer.PropertyDiscoveryResult medial) {
+                             final StorageInstanceExaminer.PropertyDiscoveryResult medial,
+                             final ProjectionAccessor projectionAccessor) {
     this.examiner = examiner;
     this.entry = entry;
     this.cache = cache;
@@ -48,17 +61,18 @@ final class ConditionEvaluator {
         ? c.assertionIterator()
         : QueryConditionImpl.AssertionIterator.empty();
     this.medial = medial;
+    this.projectionAccessor = projectionAccessor;
   }
 
   private ConditionEvaluator(final ConditionEvaluator orig,
                              final QueryConditionImpl c) {
-    this(orig.examiner, orig.entry, orig.cache, c, orig.medial);
+    this(orig.examiner, orig.entry, orig.cache, c, orig.medial, orig.projectionAccessor);
   }
 
   private ConditionEvaluator(final ConditionEvaluator orig,
                              final QueryConditionImpl c,
                              final StorageInstanceExaminer.PropertyDiscoveryResult medial) {
-    this(orig.examiner, orig.entry, orig.cache, c, medial);
+    this(orig.examiner, orig.entry, orig.cache, c, medial, orig.projectionAccessor);
   }
 
   boolean evaluate() {
@@ -120,7 +134,7 @@ final class ConditionEvaluator {
 
   private boolean evalAssertion(final Assertion assertion) {
     final var val = (medial == null)
-        ? examiner.discoverProperty(entry, assertion.prop(), cache)
+        ? discoverOnRoot(assertion)
         : examiner.discoverProperty(medial, assertion.prop(), cache);
     if (assertion.isSingle()) {
       return assertion.check(val);
@@ -165,6 +179,13 @@ final class ConditionEvaluator {
       }
       default -> false;
     };
+  }
+
+  private StorageInstanceExaminer.PropertyDiscoveryResult discoverOnRoot(Assertion assertion) {
+    final String arc = assertion.prop();
+    return (projectionAccessor == null)
+        ? examiner.discoverProperty(entry, arc, cache)
+        : projectionAccessor.apply(arc);
   }
 
 }
