@@ -46,6 +46,16 @@ record ProjectionDef(ColumnDef[] cols) {
     return -1;
   }
 
+  int indexOfIdentifier(String identifer)  {
+    for (int i = 0; i < cols.length; i++) {
+      final var col = cols[i];
+      if (col.alias().equals(identifer) || col.arc().equals(identifer)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
 }
 
 sealed class BufferedDataStream implements DataStream {
