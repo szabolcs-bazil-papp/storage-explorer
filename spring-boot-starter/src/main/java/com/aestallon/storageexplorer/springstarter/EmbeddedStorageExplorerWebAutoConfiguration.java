@@ -64,7 +64,9 @@ public class EmbeddedStorageExplorerWebAutoConfiguration {
   @ConditionalOnMissingBean(ExplorerApiOncePerRequestFilterFactory.class)
   public ExplorerApiOncePerRequestFilterFactory explorerApiOncePerRequestFilter(
       AuthService authService) {
-    return () -> new DefaultExplorerApiOncePerRequestFilter(authService);
+    return () -> new DefaultExplorerApiOncePerRequestFilter(
+        authService,
+        properties.getSettings().getWebAllowOthers());
   }
 
 
