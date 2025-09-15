@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextImpl;
 import com.aestallon.storageexplorer.spring.auth.AuthService;
 import com.aestallon.storageexplorer.spring.auth.ExplorerApiOncePerRequestFilter;
+import com.aestallon.storageexplorer.spring.util.HttpRequests;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,14 +31,28 @@ import jakarta.servlet.http.HttpServletResponse;
 public class DefaultExplorerApiOncePerRequestFilter extends ExplorerApiOncePerRequestFilter {
 
   private final AuthService authService;
+  private final boolean allowOthers;
 
-  public DefaultExplorerApiOncePerRequestFilter(AuthService authService) {
+  public DefaultExplorerApiOncePerRequestFilter(AuthService authService, boolean allowOthers) {
     this.authService = authService;
+    this.allowOthers = allowOthers;
   }
 
   @Override
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                   FilterChain filterChain) throws ServletException, IOException {
+
+    if (!isReqAllowed(request)) {
+      response.sendError(HttpServletResponse.SC_FORBIDDEN);
+      return;
+    }
+
+    final var uri = request.getRequestURI();
+    if (uri != null && uri.endsWith("/verify")) {
+      filterChain.doFilter(request, response);
+      return;
+    }
+
     final String authorization = request.getHeader("Authorization");
     if (authService.validateToken(authorization)) {
       SecurityContextHolder.setContext(
@@ -51,10 +66,8 @@ public class DefaultExplorerApiOncePerRequestFilter extends ExplorerApiOncePerRe
     }
   }
 
-  @Override
-  protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-    final var uri = request.getRequestURI();
-    return uri != null && uri.endsWith("/verify");
+  private boolean isReqAllowed(final HttpServletRequest req) {
+    return allowOthers || HttpRequests.isLocalReq(req);
   }
 
 }

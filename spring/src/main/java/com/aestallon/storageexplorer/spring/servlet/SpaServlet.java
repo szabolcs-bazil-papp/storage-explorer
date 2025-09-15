@@ -17,12 +17,11 @@ package com.aestallon.storageexplorer.spring.servlet;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.http.HttpHeaders;
+import com.aestallon.storageexplorer.spring.util.HttpRequests;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -107,17 +106,7 @@ public final class SpaServlet extends HttpServlet {
   }
 
   private boolean isReqAllowed(final HttpServletRequest req) {
-    return allowOthers || isLocalReq(req);
-  }
-
-  private boolean isLocalReq(final HttpServletRequest req) {
-    final String address = req.getRemoteAddr();
-    try {
-      final InetAddress inetAddress = InetAddress.getByName(address);
-      return inetAddress.isLoopbackAddress();
-    } catch (UnknownHostException | NoClassDefFoundError e) {
-      return false;
-    }
+    return allowOthers || HttpRequests.isLocalReq(req);
   }
 
   private void sendIndex(HttpServletResponse resp) throws IOException {
