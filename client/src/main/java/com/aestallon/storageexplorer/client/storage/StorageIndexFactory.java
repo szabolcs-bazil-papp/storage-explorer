@@ -64,7 +64,7 @@ import com.zaxxer.hikari.HikariDataSource;
 
 final class StorageIndexFactory {
 
-  static abstract sealed class StorageIndexCreationResult permits
+  abstract static sealed class StorageIndexCreationResult permits
       StorageIndexFactory.StorageIndexCreationResult.Ok,
       StorageIndexFactory.StorageIndexCreationResult.Err {
 
@@ -74,18 +74,18 @@ final class StorageIndexFactory {
       this.availability = availability;
     }
 
-    static final class Ok extends StorageIndexCreationResult {
+    static final class Ok<T extends StorageIndex<T>> extends StorageIndexCreationResult {
 
-      private final StorageIndex storageIndex;
+      private final StorageIndex<T> storageIndex;
       private final AnnotationConfigApplicationContext springContext;
 
-      Ok(final StorageIndex storageIndex, AnnotationConfigApplicationContext springContext) {
+      Ok(final StorageIndex<T> storageIndex, AnnotationConfigApplicationContext springContext) {
         super(Availability.AVAILABLE);
         this.storageIndex = storageIndex;
         this.springContext = springContext;
       }
 
-      StorageIndex storageIndex()  {
+      StorageIndex<T> storageIndex()  {
         return storageIndex;
       }
 
@@ -146,6 +146,7 @@ final class StorageIndexFactory {
     props.put("applicationruntime.maintain.enabled", "false");
     props.put("invocationregistry.refresh.enabled", "false");
     props.put("application.setup.enabled", "false");
+    props.put("dataseries.mgmt.enabled", "false");
     return props;
   }
 
@@ -166,7 +167,7 @@ final class StorageIndexFactory {
     final CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
 
     final var index = new FileSystemStorageIndex(storageId, objectApi, collectionApi, path, false);
-    return new StorageIndexCreationResult.Ok(index, ctx);
+    return new StorageIndexCreationResult.Ok<>(index, ctx);
   }
 
 
