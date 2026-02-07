@@ -43,6 +43,7 @@ import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
+import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
 import com.aestallon.storageexplorer.swing.ui.tree.TreeEntityLocator;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
@@ -97,7 +98,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         "<B>%s</B> (%s)".formatted(
             factory.storageInstanceProvider().get(storageId()).name(),
             storageEntry().uri().toString()),
-        new TreeEntityLocator("Storage Tree", storageEntry()));
+        new TreeEntityLocator(StorageTreeView.TREE_NAME_STORAGES, storageEntry()));
   }
 
   private void setUpObjectNodeDisplay(ObjectEntryLoadResult.MultiVersion multiVersion) {

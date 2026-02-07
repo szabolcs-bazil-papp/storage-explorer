@@ -169,6 +169,32 @@ public abstract class AbstractTreeView
   }
 
   @Override
+  public boolean hasNode(final DefaultMutableTreeNode node) {
+    final var model = tree.getModel();
+    final var root = model.getRoot();
+    if (!(root instanceof DefaultMutableTreeNode rootNode)) {
+      return false;
+    }
+
+    return isNodeInSubtree(rootNode, node);
+  }
+
+  private boolean isNodeInSubtree(final DefaultMutableTreeNode current,
+                                  final DefaultMutableTreeNode target) {
+    if (current == target) {
+      return true;
+    }
+
+    for (int i = 0; i < current.getChildCount(); i++) {
+      if (isNodeInSubtree((DefaultMutableTreeNode) current.getChildAt(i), target)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  @Override
   public final void selectNodeSoft(DefaultMutableTreeNode node) {
     final var path = new TreePath(node.getPath());
     selectEntryInternal(path);
