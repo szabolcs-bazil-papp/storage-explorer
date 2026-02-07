@@ -26,7 +26,6 @@ import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.toSet;
-import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
@@ -37,6 +36,7 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.util.ObjectMaps;
 import com.aestallon.storageexplorer.core.util.Uris;
+import jakarta.annotation.Nullable;
 
 public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntry {
 
