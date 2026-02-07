@@ -30,6 +30,7 @@ import com.aestallon.storageexplorer.swing.ui.AppFrame;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptTreeView;
 import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.WelcomePopup;
+import com.aestallon.storageexplorer.swing.ui.splash.SplashScreen;
 import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
 import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme;
@@ -43,6 +44,38 @@ import com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme;
     })
 public class StorageExplorerApplication {
 
+  private static volatile SplashScreen splashScreen;
+
+  private static void initSplashScreen() {
+    final String version = "0.5.0";
+    SwingUtilities.invokeLater(() -> {
+      splashScreen = SplashScreen
+          .create(version, "/splash/splash_1280x789.png")
+          .orElse(null);
+      if (splashScreen != null) {
+        splashScreen.setAlwaysOnTop(true);
+        splashScreen.setVisible(true);
+      }
+    });
+  }
+
+  private static void setSplashStatus(String status) {
+    if (splashScreen == null) {
+      return;
+    }
+
+    splashScreen.setStatus(status);
+  }
+
+  private static void disposeSplashScreen() {
+    if (splashScreen == null) {
+      return;
+    }
+
+    splashScreen.dispose();
+    splashScreen = null;
+  }
+
   private final AppFrame frame;
 
   public StorageExplorerApplication(AppFrame frame) {
@@ -50,6 +83,7 @@ public class StorageExplorerApplication {
   }
 
   public static void main(String[] args) {
+    initSplashScreen();
     FeatureFlag.parse(args);
 
     System.setProperty("org.graphstream.ui", "swing");
@@ -69,13 +103,17 @@ public class StorageExplorerApplication {
                                   StorageTreeView storageTreeView,
                                   ArcScriptTreeView arcScriptTreeView) {
     return args -> {
+      SwingUtilities.invokeLater(() -> setSplashStatus("Loading storage instances..."));
       storageInstanceProvider.fetchAllKnown();
       SwingUtilities.invokeLater(() -> {
+        setSplashStatus("Initialising UI...");
         appContentView.initSideBar();
         storageTreeView.requestVisibility();
         arcScriptTreeView.expandAll();
+        setSplashStatus("Loading settings...");
         appFrame.appContentView().mainView().explorerView().reopenTrackedEntryInspectors();
-        
+
+        disposeSplashScreen();
         appFrame.launch();
         if (storageInstanceProvider.provide().findAny().isEmpty()) {
           WelcomePopup.show(appFrame);
