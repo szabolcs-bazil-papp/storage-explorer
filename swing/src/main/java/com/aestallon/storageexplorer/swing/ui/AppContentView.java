@@ -352,7 +352,9 @@ public class AppContentView extends JPanel {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      sideBarController.treeView("Storage Tree").ifPresent(it -> it.selectNodeSoft(node));
+      sideBarController
+          .treeViewContaining(node)
+          .ifPresent(it -> it.selectNodeSoft(node));
     }
   }
 

@@ -18,9 +18,9 @@ package com.aestallon.storageexplorer.swing.ui.controller;
 import java.awt.event.ActionListener;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
@@ -161,6 +161,13 @@ public class SideBarController {
 
   public Optional<TreeView<?, ?>> treeView(final String name) {
     return Optional.ofNullable(treeContextByName.get(name)).map(TreeViewContext::treeView);
+  }
+
+  public Optional<? extends TreeView<?, ?>> treeViewContaining(final DefaultMutableTreeNode node) {
+    return treeContextByName.values().stream()
+        .map(TreeViewContext::treeView)
+        .filter(it -> it.hasNode(node))
+        .findFirst();
   }
 
   public Optional<CommanderView> commanderView(final String name) {

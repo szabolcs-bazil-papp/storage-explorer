@@ -43,8 +43,10 @@ public interface TreeView<ENTITY, USER_DATA_CHANGE_EVENT> {
   void selectNode(final ENTITY entity);
 
   void selectNodeSoft(final ENTITY entity);
-  
-  void selectNodeSoft(DefaultMutableTreeNode node);
+
+  boolean hasNode(final DefaultMutableTreeNode node);
+
+  void selectNodeSoft(final DefaultMutableTreeNode node);
 
   void removeStorage(final StorageInstance storageInstance);
 
