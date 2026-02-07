@@ -22,6 +22,7 @@ import com.aestallon.storageexplorer.swing.ui.commander.CommanderContainerView;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
+import com.aestallon.storageexplorer.swing.ui.event.TreeSelectionCeased;
 import com.aestallon.storageexplorer.swing.ui.misc.HiddenPaneSize;
 
 @Component
@@ -177,6 +178,11 @@ public class AppContentView extends JPanel {
   }
 
   @EventListener
+  public void onTreeSelectionCeased(final TreeSelectionCeased e) {
+    SwingUtilities.invokeLater(() -> breadCrumbs.set(null));
+  }
+
+  @EventListener
   public void onStorageEntryUserDataChanged(final StorageEntryUserDataChanged event) {
     breadCrumbs.refresh();
   }
@@ -266,6 +272,7 @@ public class AppContentView extends JPanel {
       elements.forEach(this::remove);
       elements.clear();
       if (path == null || path.length < 2) {
+        BreadCrumbs.this.revalidate();
         return;
       }
 

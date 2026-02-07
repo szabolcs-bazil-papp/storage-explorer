@@ -133,7 +133,11 @@ public class SideBarController {
     if (!treeMayShow) {
       return;
     }
-    
+
+    if (treeContextByName.get(treeView.name()).toggleButton().isSelected()) {
+      return;
+    }
+
     treeContextByName.get(treeView.name()).toggleButton().setSelected(true);
     showTreeViewInternal(treeView);
   }
@@ -183,5 +187,12 @@ public class SideBarController {
         .map(it -> (TreeView) it)
         .ifPresent(tree -> tree.selectNode(locator.entityLocator()));
   }
+
+//  @EventListener
+//  public void clearTreeSelections(TreeSelectionCeased e) {
+//    SwingUtilities.invokeLater(() ->treeContextByName
+//        .values()
+//        .forEach(ctx -> ctx.treeView.clearSelection()));
+//  }
 
 }

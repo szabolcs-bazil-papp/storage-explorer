@@ -36,6 +36,7 @@ import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
 import com.aestallon.storageexplorer.swing.ui.arcscript.editor.ArcScriptView;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
+import com.aestallon.storageexplorer.swing.ui.event.TreeSelectionCeased;
 import com.aestallon.storageexplorer.swing.ui.inspector.InspectorView;
 import com.aestallon.storageexplorer.swing.ui.inspector.StorageEntryInspectorViewFactory;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -61,6 +62,7 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
     addChangeListener(e -> {
       final TabView selectedComponent = (TabView) getSelectedComponent();
       switch (selectedComponent) {
+        case null -> eventPublisher.publishEvent(new TreeSelectionCeased());
         case InspectorView<?> inspector -> eventPublisher.publishEvent(
             new TreeTouchRequest(inspector.storageEntry()));
         case ArcScriptView as -> eventPublisher.publishEvent(
