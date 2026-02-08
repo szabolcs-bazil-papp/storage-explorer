@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.common.util.Pair;
+import com.aestallon.storageexplorer.core.model.entry.GodObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -109,6 +110,7 @@ public interface IndexingStrategy {
 
       map.values().stream()
           .filter(ObjectEntry.class::isInstance)
+          .filter(it -> !(it instanceof GodObjectEntry))
           .map(ObjectEntry.class::cast)
           .forEach(it -> {
             final var scopedChildren = scopedEntries.get(it.uri().getPath());

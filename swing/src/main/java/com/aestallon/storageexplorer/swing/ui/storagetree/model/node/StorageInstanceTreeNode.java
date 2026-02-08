@@ -23,6 +23,7 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 import javax.swing.tree.DefaultMutableTreeNode;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
+import com.aestallon.storageexplorer.core.model.entry.GodObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -46,26 +47,25 @@ public final class StorageInstanceTreeNode
     final var collections = storageInstance.entities()
         .filter(it -> !(it instanceof ScopedEntry))
         .filter(it -> it instanceof ListEntry
-                      || it instanceof MapEntry
-                      || it instanceof SequenceEntry)
-        .map(it -> it instanceof ListEntry list
-            ? new StorageListTreeNode(list, trackingService)
-            : it instanceof MapEntry map
-                ? new StorageMapTreeNode(map, trackingService)
-                : new StorageSequenceTreeNode((SequenceEntry) it, trackingService))
-        .sorted((a, b) -> (a instanceof StorageListTreeNode)
-            ? -1
-            : (b instanceof StorageListTreeNode)
-                ? 1
-                : 0)
+            || it instanceof MapEntry
+            || it instanceof SequenceEntry
+            || it instanceof GodObjectEntry)
+        .map(it -> switch (it) {
+          case ListEntry list -> new StorageListTreeNode(list, trackingService);
+          case MapEntry map -> new StorageMapTreeNode(map, trackingService);
+          case SequenceEntry seq -> new StorageSequenceTreeNode(seq, trackingService);
+          case GodObjectEntry god -> new StorageGodObjectTreeNode(god, trackingService);
+          default -> throw new AssertionError("Unexpected value [ " + it + " ] passed check!");
+        })
         .collect(groupingBy(Object::getClass));
     sortAndAdd(collections.getOrDefault(StorageListTreeNode.class, new ArrayList<>()));
     sortAndAdd(collections.getOrDefault(StorageMapTreeNode.class, new ArrayList<>()));
     sortAndAdd(collections.getOrDefault(StorageSequenceTreeNode.class, new ArrayList<>()));
+    sortAndAdd(collections.getOrDefault(StorageGodObjectTreeNode.class, new ArrayList<>()));
 
     storageInstance.entities()
         .filter(ObjectEntry.class::isInstance)
-        .filter(it -> !(it instanceof ScopedEntry))
+        .filter(it -> !(it instanceof ScopedEntry) && !(it instanceof GodObjectEntry))
         .map(ObjectEntry.class::cast)
         .collect(groupingBy(it -> it.uri().getScheme(), TreeMap::new, toList()))
         .forEach((schema, entries) -> add(new StorageSchemaTreeNode(

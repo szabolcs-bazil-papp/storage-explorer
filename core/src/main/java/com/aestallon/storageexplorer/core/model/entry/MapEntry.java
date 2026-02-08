@@ -15,7 +15,6 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -37,14 +36,13 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.util.Uris;
 
-public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
+public sealed class MapEntry
+    extends AbstractStorageEntry
+    implements StorageEntry
+    permits ScopedMapEntry {
 
   private static final Logger log = LoggerFactory.getLogger(MapEntry.class);
 
-  private final WeakReference<StorageIndex<?>> storageIndex;
-  private final StorageId id;
-  private final Path path;
-  private final URI uri;
   private final ObjectApi objectApi;
   protected final CollectionApi collectionApi;
   private final String schema;
@@ -54,12 +52,10 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
-  MapEntry(final StorageIndex<?> storageIndex, StorageId id, Path path, URI uri,
-           ObjectApi objectApi, CollectionApi collectionApi) {
-    this.storageIndex = new WeakReference<>(storageIndex);
-    this.id = id;
-    this.path = path;
-    this.uri = uri;
+  MapEntry(StorageIndex<?> storageIndex, Path path, URI uri,
+           ObjectApi objectApi,
+           CollectionApi collectionApi) {
+    super(storageIndex, path, uri);
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
 
@@ -184,23 +180,6 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   public void setUriProperties(Set<UriProperty> uriProperties) {
     this.uriProperties = uriProperties;
     this.valid = true;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    MapEntry mapEntry = (MapEntry) o;
-    return Uris.equalIgnoringVersion(uri, mapEntry.uri);
-  }
-
-  @Override
-  public int hashCode() {
-    return uri.hashCode();
   }
 
   @Override
