@@ -3,13 +3,10 @@ package com.aestallon.storageexplorer.arcscript.engine;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.swing.text.DefaultEditorKit;
-import org.codehaus.groovy.classgen.ReturnAdder;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 
@@ -41,11 +38,15 @@ public sealed interface ArcScriptResult {
   }
 
   static ArcScriptResult ok(final List<InstructionResult> elements) {
-    return new Ok(elements);
+    return ok(elements, false);
+  }
+
+  static ArcScriptResult ok(final List<InstructionResult> elements, boolean verbose) {
+    return new Ok(elements, verbose);
   }
 
   static ArcScriptResult empty() {
-    return new Ok(Collections.emptyList());
+    return ok(Collections.emptyList());
   }
 
   static ArcScriptResult impermissible(String message, Instruction instruction) {
@@ -131,6 +132,6 @@ public sealed interface ArcScriptResult {
   }
 
 
-  record Ok(List<InstructionResult> elements) implements ArcScriptResult {}
+  record Ok(List<InstructionResult> elements, boolean verbose) implements ArcScriptResult {}
 
 }

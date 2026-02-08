@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.toSet;
@@ -60,9 +61,9 @@ public sealed class ObjectEntry
   private final Set<ScopedEntry> scopedEntries = new HashSet<>();
 
   private final Lock refreshLock = new ReentrantLock(true);
-  private boolean valid = false;
+  private volatile boolean valid = false;
   private Versioning versioning;
-  private Set<UriProperty> uriProperties;
+  private final Set<UriProperty> uriProperties = new ConcurrentSkipListSet<>();
 
   ObjectEntry(final StorageIndex<?> storageIndex, final Path path, final URI uri) {
     super(storageIndex, path, uri);
@@ -90,7 +91,7 @@ public sealed class ObjectEntry
 
   @Override
   public Set<UriProperty> uriProperties() {
-    if (!valid) {
+    if (!valid || uriProperties == null) {
       refresh();
     }
 
@@ -147,19 +148,19 @@ public sealed class ObjectEntry
   }
 
   public void refresh(final Map<String, Object> objectAsMap, final long version) {
-    if (valid) {
-      return;
-    }
+      if (valid && uriProperties != null) {
+        return;
+      }
 
-    if (objectAsMap == null) {
-      uriProperties = new HashSet<>();
-      return;
-    }
+      uriProperties.clear();
+      if (objectAsMap == null) {
+        return;
+      }
 
-    uriProperties = initUriProperties(objectAsMap);
-    valid = true;
-    versioning = version < 0 ? new Versioning.Single() : new Versioning.Multi(version);
-    storageIndex.get().notifyRefresh(this);
+      uriProperties.addAll(initUriProperties(objectAsMap));
+      valid = true;
+      versioning = version < 0 ? new Versioning.Single() : new Versioning.Multi(version);
+      storageIndex.get().notifyRefresh(this);
   }
 
   private Set<UriProperty> initUriProperties(final Map<String, Object> objectAsMap) {
@@ -208,7 +209,8 @@ public sealed class ObjectEntry
     try {
 
       if (Objects.requireNonNull(storageEntry) instanceof ObjectEntry that && that.valid) {
-        uriProperties = that.uriProperties;
+        uriProperties.clear();
+        uriProperties.addAll(that.uriProperties);
         valid = true;
       }
 
@@ -252,8 +254,14 @@ public sealed class ObjectEntry
 
   @Override
   public void setUriProperties(Set<UriProperty> uriProperties) {
-    this.uriProperties = uriProperties;
-    this.valid = true;
+    refreshLock.lock();
+    try {
+      this.uriProperties.clear();
+      this.uriProperties.addAll(uriProperties);
+      this.valid = true;
+    } finally {
+      refreshLock.unlock();
+    }
   }
 
   @Override

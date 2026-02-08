@@ -102,13 +102,11 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
       case ObjectEntryLoadResult.MultiVersion mv -> mv.head();
       default -> throw new AssertionError("Unexpected head load result " + headLoadResult);
     };
-    if (!objectEntry.valid()) {
       objectEntry.refresh(
           head.objectAsMap(),
           headLoadResult instanceof ObjectEntryLoadResult.MultiVersion(var versions)
               ? versions.size()
               : -1L);
-    }
 
     if (headLoadResult instanceof ObjectEntryLoadResult.SingleVersion sv) {
       return sv;

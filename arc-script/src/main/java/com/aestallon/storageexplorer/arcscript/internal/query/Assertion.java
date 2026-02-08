@@ -1,6 +1,7 @@
 package com.aestallon.storageexplorer.arcscript.internal.query;
 
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
+import com.aestallon.storageexplorer.arcscript.internal.ArcLiteral;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 import groovy.lang.Closure;
 
@@ -67,9 +68,17 @@ public final class Assertion implements QueryElement {
     return _predicate.test(val);
   }
 
+  public ArcLiteral propertyMissing(String name) {
+    return new ArcLiteral(name);
+  }
+
   public AssertionOperation.AssertionOperationStr str(final String prop) {
     this.prop = prop;
     return new AssertionOperation.AssertionOperationStr(this);
+  }
+
+  public AssertionOperation.AssertionOperationStr str(final ArcLiteral al) {
+    return str(al.toString());
   }
 
   public AssertionOperation.AssertionOperationBool bool(final String prop) {
@@ -77,9 +86,17 @@ public final class Assertion implements QueryElement {
     return new AssertionOperation.AssertionOperationBool(this);
   }
 
+  public AssertionOperation.AssertionOperationBool bool(final ArcLiteral al) {
+    return bool(al.toString());
+  }
+
   public AssertionOperation.AssertionOperationNum num(final String prop) {
     this.prop = prop;
     return new AssertionOperation.AssertionOperationNum(this);
+  }
+
+  public AssertionOperation.AssertionOperationNum num(final ArcLiteral al) {
+    return num(al.toString());
   }
 
   public AssertionOperation.AssertionOperationJson json(final String prop) {
@@ -87,9 +104,17 @@ public final class Assertion implements QueryElement {
     return new AssertionOperation.AssertionOperationJson(this);
   }
 
+  public AssertionOperation.AssertionOperationJson json(final ArcLiteral al) {
+    return json(al.toString());
+  }
+
   public AssertionOperation.AssertionOperationList list(final String prop) {
     this.prop = prop;
     return new AssertionOperation.AssertionOperationList(this);
+  }
+
+  public AssertionOperation.AssertionOperationList list(final ArcLiteral al) {
+    return list(al.toString());
   }
 
   public boolean isSingle() {
