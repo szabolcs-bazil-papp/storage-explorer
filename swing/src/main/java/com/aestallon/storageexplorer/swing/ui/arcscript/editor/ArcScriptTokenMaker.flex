@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program.
  * If not, see <http://www.gnu.org/licenses/>.
  */
-package com.aestallon.storageexplorer.swing.ui.commander.arcscript;
+package com.aestallon.storageexplorer.swing.ui.arcscript.editor;
 
 import java.io.*;
 import javax.swing.text.Segment;
@@ -414,6 +414,13 @@ URL						= (((https?|f(tp|ile))"://"|"www.")({URLCharacters}{URLEndCharacter})?)
   "index"  |
   "update" |
   "insert" |
+  "yield"  |
+  "order"  |
+  "by"     |
+  "asc"    |
+  "desc"   |
+  "limit"  |
+  "col"    |
   "a"      |
   "an"     |
   "every"  |
@@ -431,10 +438,19 @@ URL						= (((https?|f(tp|ile))"://"|"www.")({URLCharacters}{URLEndCharacter})?)
   "is"  |  // generic for all types
   "not" |
   "in"  |
+  "is_empty"   |
+  "is_present" |
   
   "overlaps" |   // json only
   
-  "contains" |   // string only
+  "contains" |   // string and lists
+
+  "has_size"                      |   // lists
+  "contains_exactly"              |
+  "contains_exactly_in_any_order" |
+  "all_match"                     |
+  "any_match"                     |
+  "none_match"                    |
   
   "starts_with"              | // string and nums
   "ends_with"                |
