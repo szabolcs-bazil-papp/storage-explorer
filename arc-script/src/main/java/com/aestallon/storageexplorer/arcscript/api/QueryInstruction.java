@@ -27,6 +27,10 @@ public interface QueryInstruction {
   QueryCondition expr(Closure closure);
   
   QueryCondition expr(QueryCondition condition);
+
+  QueryCondition e(Closure closure);
+
+  QueryCondition e(QueryCondition condition);
   
   Column show(String property);
   

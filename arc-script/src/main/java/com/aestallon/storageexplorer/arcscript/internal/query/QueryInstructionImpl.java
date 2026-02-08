@@ -56,6 +56,10 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
     }
   }
 
+  public String propertyMissing(final String name) {
+    return name;
+  }
+
   @Override
   public QueryCondition where(Closure closure) {
     QueryConditionImpl condition = new QueryConditionImpl();
@@ -79,6 +83,16 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
   @Override
   public QueryCondition expr(QueryCondition condition) {
     return condition;
+  }
+
+  @Override
+  public QueryCondition e(Closure closure) {
+    return expr(closure);
+  }
+
+  @Override
+  public QueryCondition e(QueryCondition condition) {
+    return expr(condition);
   }
 
   @Override

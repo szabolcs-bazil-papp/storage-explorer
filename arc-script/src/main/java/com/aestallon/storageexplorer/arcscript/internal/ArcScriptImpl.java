@@ -19,7 +19,7 @@ public abstract class ArcScriptImpl extends Script implements ArcScript {
   @Override
   public QueryInstruction query(Closure closure) {
     final QueryInstructionImpl q = new QueryInstructionImpl();
-    final Closure code = closure.rehydrate(q, this, this);
+    final Closure code = closure.rehydrate(q, q, q);
     code.setResolveStrategy(Closure.DELEGATE_ONLY);
     code.call();
     instructions.add(q);
