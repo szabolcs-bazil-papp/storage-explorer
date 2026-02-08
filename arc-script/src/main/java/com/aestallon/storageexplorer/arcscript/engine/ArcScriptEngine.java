@@ -112,12 +112,8 @@ public class ArcScriptEngine {
             final var sorter = new StorageEntrySorter(examiner, cache, sortKeys);
             sortedIndices = sorter.sort(res);
             if (limit > 0 && sortedIndices.size() > limit) {
-              final var temp = sortedIndices.entrySet().stream()
-                  .filter(it -> it.getValue().longValue() < limit)
-                  .map(Map.Entry::getKey)
-                  .collect(Collectors.toSet());
-              res.retainAll(temp);
-
+              sortedIndices.values().removeIf(it -> it >= limit);
+              res.retainAll(sortedIndices.keySet());
             }
           } else {
             sortedIndices = Collections.emptyMap();
