@@ -15,7 +15,6 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -38,7 +37,10 @@ import com.aestallon.storageexplorer.core.util.ObjectMaps;
 import com.aestallon.storageexplorer.core.util.Uris;
 import jakarta.annotation.Nullable;
 
-public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntry {
+public sealed class ObjectEntry
+    extends AbstractStorageEntry
+    implements StorageEntry
+    permits ScopedObjectEntry, GodObjectEntry {
 
   public sealed interface Versioning {
 
@@ -52,10 +54,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
 
-  private final WeakReference<StorageIndex<?>> storageIndex;
-  private final StorageId id;
-  private final Path path;
-  private final URI uri;
+
   private final String typeName;
   private final String uuid;
   private final Set<ScopedEntry> scopedEntries = new HashSet<>();
@@ -65,13 +64,8 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   private Versioning versioning;
   private Set<UriProperty> uriProperties;
 
-  ObjectEntry(final StorageIndex<?> storageIndex,
-              final Path path,
-              final URI uri) {
-    this.storageIndex = new WeakReference<>(storageIndex);
-    this.id = storageIndex.id();
-    this.path = path;
-    this.uri = uri;
+  ObjectEntry(final StorageIndex<?> storageIndex, final Path path, final URI uri) {
+    super(storageIndex, path, uri);
     this.typeName = Uris.getTypeName(uri);
     this.uuid = Uris.getUuid(uri);
   }
@@ -119,8 +113,8 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   @Override
   public boolean references(StorageEntry that) {
-    return StorageEntry.super.references(that)
-           || ((that instanceof ScopedEntry se) && scopedEntries.contains(se));
+    return super.references(that)
+        || ((that instanceof ScopedEntry se) && scopedEntries.contains(se));
   }
 
   @Override
@@ -184,12 +178,12 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     if (!heuristicName.isEmpty()) {
       sb.append(" (").append(heuristicName).append(")");
     }
-    
+
     final var entryId = version.meta().entryId();
     if (entryId != null && !entryId.isEmpty()) {
       sb.append(" (ID: ").append(entryId).append(")");
     }
-    
+
     return sb.toString();
   }
 
@@ -260,23 +254,6 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   public void setUriProperties(Set<UriProperty> uriProperties) {
     this.uriProperties = uriProperties;
     this.valid = true;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ObjectEntry that = (ObjectEntry) o;
-    return Uris.equalIgnoringVersion(uri, that.uri);
-  }
-
-  @Override
-  public int hashCode() {
-    return uri.hashCode();
   }
 
   @Override

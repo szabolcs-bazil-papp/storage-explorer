@@ -15,7 +15,6 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -36,13 +35,12 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.util.Uris;
 
-public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
+public sealed class ListEntry
+    extends AbstractStorageEntry
+    implements StorageEntry
+    permits ScopedListEntry {
 
   private static final Logger log = LoggerFactory.getLogger(ListEntry.class);
-  private final WeakReference<StorageIndex<?>> storageIndex;
-  private final StorageId id;
-  private final Path path;
-  private final URI uri;
   private final ObjectApi objectApi;
   protected final CollectionApi collectionApi;
   private final String schema;
@@ -52,13 +50,10 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
-  ListEntry(final StorageIndex<?> storageIndex, StorageId id, Path path, URI uri,
+  ListEntry(StorageIndex<?> storageIndex, Path path, URI uri,
             ObjectApi objectApi,
             CollectionApi collectionApi) {
-    this.storageIndex = new WeakReference<>(storageIndex);
-    this.id = id;
-    this.path = path;
-    this.uri = uri;
+    super(storageIndex, path, uri);
     this.objectApi = objectApi;
     this.collectionApi = collectionApi;
 
@@ -181,25 +176,8 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
     }
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ListEntry listEntry = (ListEntry) o;
-    return Uris.equalIgnoringVersion(uri, listEntry.uri);
-  }
-
   public String displayName() {
     return schema + " / " + name;
-  }
-
-  @Override
-  public int hashCode() {
-    return uri.hashCode();
   }
 
   @Override

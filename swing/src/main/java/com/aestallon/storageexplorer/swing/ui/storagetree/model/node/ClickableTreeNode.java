@@ -23,15 +23,14 @@ import com.aestallon.storageexplorer.swing.ui.tree.AbstractTreeView;
 public abstract sealed class ClickableTreeNode
     extends DefaultMutableTreeNode
     implements AbstractTreeView.EntityNode<StorageEntry>
-    permits
-    StorageListTreeNode, StorageMapTreeNode,
+    permits StorageGodObjectTreeNode, StorageListTreeNode, StorageMapTreeNode,
     StorageObjectTreeNode, StorageSequenceTreeNode {
-  
-  
+
+
   protected ClickableTreeNode(StorageEntry storageEntry) {
     super(storageEntry, false);
   }
-  
+
   protected ClickableTreeNode(ObjectEntry objectEntry, boolean allowsChildren) {
     super(objectEntry, allowsChildren);
   }
