@@ -2,6 +2,7 @@ package com.aestallon.storageexplorer.arcscript.internal;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.aestallon.storageexplorer.arcscript.api.ArcInterpreterFlag;
 import com.aestallon.storageexplorer.arcscript.api.ArcScript;
 import com.aestallon.storageexplorer.arcscript.api.IndexInstruction;
 import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
@@ -15,7 +16,18 @@ import groovy.lang.Script;
 public abstract class ArcScriptImpl extends Script implements ArcScript {
   
   public final List<Instruction> instructions = new ArrayList<>();
-  
+
+  private final List<ArcInterpreterFlag> flags = new ArrayList<>();
+
+  @Override
+  public void pragma(ArcInterpreterFlag flag) {
+    flags.add(flag);
+  }
+
+  public boolean isFlagSet(ArcInterpreterFlag flag) {
+    return flags.contains(flag);
+  }
+
   @Override
   public QueryInstruction query(Closure closure) {
     final QueryInstructionImpl q = new QueryInstructionImpl();

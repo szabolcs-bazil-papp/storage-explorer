@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.aestallon.storageexplorer.arcscript.api.ArcInterpreterFlag;
 import com.aestallon.storageexplorer.arcscript.api.ArcScript;
 import com.aestallon.storageexplorer.arcscript.api.SortInstruction;
 import com.aestallon.storageexplorer.arcscript.internal.ArcScriptImpl;
@@ -45,6 +46,7 @@ public class ArcScriptEngine {
       return ArcScriptResult.empty();
     }
 
+    final boolean verbose = as.isFlagSet(ArcInterpreterFlag.VERBOSE);
     // we must find missing or incomplete indexing instructions and amend them...
     record IndexInsert(int idx, ImplicitIndexInstruction instruction) {}
     final List<IndexInsert> inserts = new ArrayList<>();
@@ -170,7 +172,7 @@ public class ArcScriptEngine {
       }
     }
 
-    return new ArcScriptResult.Ok(instructionResults);
+    return ArcScriptResult.ok(instructionResults, verbose);
   }
 
   private List<ArcScriptResult.QueryResultRow> returnSorted(
