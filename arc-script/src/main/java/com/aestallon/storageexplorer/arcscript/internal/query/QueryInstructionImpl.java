@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
+import com.aestallon.storageexplorer.arcscript.api.SortInstruction;
 import com.aestallon.storageexplorer.arcscript.api.YieldInstruction;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import groovy.lang.Closure;
@@ -16,6 +17,7 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
   public final Set<String> _types = new HashSet<>();
   public final Set<String> _schemas = new HashSet<>();
   public final List<ShowColumn> _columns = new ArrayList<>();
+  public final List<SortInstruction.SortKey> _sortKeys = new ArrayList<>();
 
   public long _limit = -1L;
   public QueryConditionImpl condition;
@@ -139,6 +141,20 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
     return yieldIns;
   }
 
+  @Override
+  public SortInstruction order(Closure closure) {
+    if (!_sortKeys.isEmpty()) {
+      throw new IllegalArgumentException("Only one order clause is allowed!");
+    }
+
+    final var sort = new SortInstructionImpl();
+    final var code = closure.rehydrate(sort, sort, sort);
+    code.call();
+
+    _sortKeys.addAll(sort._ops.stream().map(SortInstructionImpl.SortOpImpl::asSortKey).toList());
+    return null;
+  }
+
   public static final class ShowColumn implements Column {
     private final String property;
     private String displayName;
@@ -195,6 +211,13 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
     }
     sb.append("where ").append(conditionStr);
 
+    if (!_sortKeys.isEmpty()) {
+      sb.append(" order by ");
+      final var sortList = _sortKeys.stream()
+          .map(it -> it.target() + " " + (it.asc() ? "asc" : "desc")).collect(
+          Collectors.joining(", "));
+      sb.append(sortList);
+    }
     if (_limit > 0) {
       sb.append(" limit ").append(_limit);
     }

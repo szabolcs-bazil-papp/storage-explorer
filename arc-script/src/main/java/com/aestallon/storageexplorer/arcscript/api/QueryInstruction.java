@@ -32,11 +32,15 @@ public interface QueryInstruction {
 
   QueryCondition e(QueryCondition condition);
 
+  @Deprecated(since = "0.6.0", forRemoval = true)
   Column show(String property);
 
+  @Deprecated(since = "0.6.0", forRemoval = true)
   void show(String property, String... properties);
 
   YieldInstruction yield(Closure closure);
+
+  SortInstruction order(Closure closure);
 
   interface Column {
 

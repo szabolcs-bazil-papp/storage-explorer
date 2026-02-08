@@ -35,6 +35,15 @@ static void main(String[] args) {
       
       show 'xx', 'yyy'
       show 'aaaa' as "B"
+      
+      order {
+        by name desc
+        by 'username' asc
+        by 'foo.bar' desc
+        by x.y asc
+        by y.z desc        
+        by email
+      }
     }""")
   def qs = Arc.evaluate arcScript
   println qs
