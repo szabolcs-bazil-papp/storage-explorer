@@ -227,6 +227,44 @@ public abstract sealed class AssertionOperation<T> permits
         }
       };
     }
+
+    public void is_greater_than(Number value) {
+      assertion.set("is_greater_than", value, it -> {
+        if (!(it instanceof StorageInstanceExaminer.NumberFound n)) {
+          return false;
+        }
+
+        final Number actual = n.number();
+        if (actual instanceof Float || actual instanceof Double) {
+          final double actualDouble = actual.doubleValue();
+          final double expectedDouble = value.doubleValue();
+          return Double.compare(actualDouble, expectedDouble) > 0;
+        } else {
+          final long actualLong = actual.longValue();
+          final long expectedLong = value.longValue();
+          return actualLong > expectedLong;
+        }
+      });
+    }
+
+    public void is_lesser_than(Number value) {
+      assertion.set("is_lesser_than", value, it -> {
+        if (!(it instanceof StorageInstanceExaminer.NumberFound n)) {
+          return false;
+        }
+
+        final Number actual = n.number();
+        if (actual instanceof Float || actual instanceof Double) {
+          final double actualDouble = actual.doubleValue();
+          final double expectedDouble = value.doubleValue();
+          return Double.compare(actualDouble, expectedDouble) < 0;
+        } else {
+          final long actualLong = actual.longValue();
+          final long expectedLong = value.longValue();
+          return actualLong < expectedLong;
+        }
+      });
+    }
   }
 
 
