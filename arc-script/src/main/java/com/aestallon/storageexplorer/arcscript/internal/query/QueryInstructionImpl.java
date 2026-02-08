@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
+import com.aestallon.storageexplorer.arcscript.api.YieldInstruction;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import groovy.lang.Closure;
 
@@ -127,6 +129,16 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
     }
   }
 
+  @Override
+  public YieldInstruction yield(Closure closure) {
+    final YieldInstructionImpl yieldIns = new YieldInstructionImpl();
+    closure = closure.rehydrate(yieldIns, yieldIns, yieldIns);
+    closure.call();
+
+    this._columns.addAll(yieldIns._columns);
+    return yieldIns;
+  }
+
   public static final class ShowColumn implements Column {
     private final String property;
     private String displayName;
@@ -185,6 +197,14 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
 
     if (_limit > 0) {
       sb.append(" limit ").append(_limit);
+    }
+
+    if (!_columns.isEmpty()) {
+      sb.append(" yield columns ( ");
+      final String columnList = _columns.stream()
+          .map(ShowColumn::displayNameInternal)
+          .collect(Collectors.joining(", "));
+      sb.append(columnList).append( " )");
     }
 
     return sb.toString();

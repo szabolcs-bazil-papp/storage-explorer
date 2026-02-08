@@ -24,6 +24,17 @@ static void main(String[] args) {
       ) or (e
         { str name contains 'Baz' } or { json attributes overlaps { builtIn true } }
       )
+      yield {
+        col name as "Name"
+        col username.shortVersion as "Username"
+        col foo, bar
+        col a.b.c, d.e.f
+        col "bla"
+        col "blabala", "asdff"
+      }
+      
+      show 'xx', 'yyy'
+      show 'aaaa' as "B"
     }""")
   def qs = Arc.evaluate arcScript
   println qs
