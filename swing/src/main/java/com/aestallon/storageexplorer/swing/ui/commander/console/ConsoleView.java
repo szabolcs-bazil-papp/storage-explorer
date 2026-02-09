@@ -114,7 +114,8 @@ public class ConsoleView extends AbstractCommanderPanelView implements Commander
         }
         logArea.append(logMessage);
       } catch (final BadLocationException e) {
-        log.error(e.getMessage(), e);
+        log.error("Failure to append GUI log: {}", e.getMessage());
+        log.debug(e.getMessage(), e);
       }
     });
   }

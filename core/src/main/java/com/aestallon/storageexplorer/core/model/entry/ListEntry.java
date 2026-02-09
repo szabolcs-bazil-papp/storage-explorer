@@ -93,7 +93,9 @@ public sealed class ListEntry
     try {
       return Optional.of(storageIndex.get().loader().loadExact(list.getUri(), 0));
     } catch (Exception e) {
-      log.error(e.getMessage(), e);
+      log.error("Cannot load list [ {} ] as a single object version: [ {} ]",
+          list.getUri(), e.getMessage());
+      log.debug(e.getMessage(), e);
       return Optional.empty();
     }
   }

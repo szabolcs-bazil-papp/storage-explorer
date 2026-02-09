@@ -20,6 +20,7 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
 import javax.swing.tree.TreePath;
@@ -31,6 +32,8 @@ import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.graph.service.GraphExportService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
+import com.aestallon.storageexplorer.client.userconfig.model.Problem;
+import com.aestallon.storageexplorer.client.userconfig.service.ProblemService;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
@@ -85,16 +88,19 @@ public class StorageTreeView
   public static final String TREE_NAME_STORAGES = "Storages";
 
   private transient StorageEntryTrackingService trackingService;
+  private final transient ProblemService problemService;
 
   public StorageTreeView(ApplicationEventPublisher eventPublisher,
                          StorageInstanceProvider storageInstanceProvider,
                          UserConfigService userConfigService,
                          SideBarController sideBarController,
-                         StorageEntryTrackingService trackingService) {
+                         StorageEntryTrackingService trackingService,
+                         ProblemService problemService) {
     super(
         eventPublisher, storageInstanceProvider, userConfigService,
         sideBarController,
         self -> self.trackingService = trackingService);
+    this.problemService = problemService;
   }
 
   @Override
@@ -301,6 +307,8 @@ public class StorageTreeView
             new GraphExportService().export(sitn.storageInstance(), target);
           } catch (IOException ex) {
             eventPublisher.publishEvent(Msg.err("Graph Export Failed", ex.getMessage()));
+            CompletableFuture.runAsync(
+                () -> problemService.add(Problem.of("Failed to export graph!")));
           }
         }
       });

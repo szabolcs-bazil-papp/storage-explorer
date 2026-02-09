@@ -158,7 +158,8 @@ public final class StorageInstance {
             entry.refresh();
           }
         } catch (final Exception e) {
-          log.error(e.getMessage(), e);
+          log.error("Could not verify newly acquired entry [ {} ]: {}", uri, e.getMessage());
+          log.debug(e.getMessage(), e);
           publishEvent(new EntryAcquisitionFailed(this, uri));
           yield Optional.empty();
         }

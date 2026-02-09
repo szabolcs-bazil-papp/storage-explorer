@@ -43,7 +43,8 @@ public final class IO {
       final var s = sb.insert(sb.indexOf("/"), ':').delete(sb.length() - 2, sb.length()).toString();
       return URI.create(s);
     } catch (Exception e) {
-      log.error(e.getMessage(), e);
+      log.error("Cannot convert path [ {} ] to URI!", path);
+      log.debug(e.getMessage(), e);
       return null;
     }
   }
@@ -68,14 +69,16 @@ public final class IO {
       try (var in = binaryData.getFirst().inputStream()) {
         return "{\"uri\":\"" + StreamUtils.copyToString(in, StandardCharsets.UTF_8);
       } catch (IOException e) {
-        log.error(e.getMessage(), e);
+        log.error("Error during manual parsing of object file: {}", e.getMessage());
+        log.debug(e.getMessage(), e);
         return StringConstant.EMPTY;
       }
     }
     try (var in = binaryData.getLast().inputStream()) {
       return StreamUtils.copyToString(in, StandardCharsets.UTF_8);
     } catch (IOException e) {
-      log.error(e.getMessage(), e);
+      log.error("Error during stringifying object file content: {}", e.getMessage());
+      log.debug(e.getMessage(), e);
       return StringConstant.EMPTY;
     }
   }

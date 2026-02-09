@@ -29,12 +29,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Predicate;
+import static java.util.stream.Collectors.toSet;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.common.util.IO;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
-import static java.util.stream.Collectors.toSet;
 
 /**
  * Hand-rolled File System Storage Walker, which is 2.6-6.8 times faster than the legacy FileVisitor
@@ -102,7 +102,9 @@ public final class FileSystemStorageWalker {
           .map(it -> new SchemaWalker(pathToStorage, it.getFileName()))
           .toList();
     } catch (IOException e) {
-      log.error(e.getMessage(), e);
+      log.error("Error during walking File System Storage at [ root: {} ] for target: [ {} ]: {}",
+          pathToStorage, target, e.getMessage());
+      log.debug(e.getMessage(), e);
       return Collections.emptyList();
     }
   }
@@ -113,8 +115,8 @@ public final class FileSystemStorageWalker {
     private List<TypeWalker> typeWalkers(final IndexingTarget target,
                                          LinkedBlockingQueue<URI> queue) {
       final Predicate<Path> p = it -> it.toFile().isDirectory()
-                                      && (target.types().isEmpty()) || target.types().stream()
-                                          .anyMatch(t -> it.toString().endsWith(t));
+          && (target.types().isEmpty()) || target.types().stream()
+          .anyMatch(t -> it.toString().endsWith(t));
       try (final var childrenStream = Files.list(root.resolve(schemaFolder))) {
         final List<Path> children = childrenStream.toList();
         final var typesWalkers = children.stream()
@@ -133,7 +135,9 @@ public final class FileSystemStorageWalker {
         }
         return typesWalkers;
       } catch (IOException e) {
-        log.error(e.getMessage(), e);
+        log.error("Error during walking schema [ {} ] of File System Storage: {}",
+            schemaFolder, e.getMessage());
+        log.debug(e.getMessage(), e);
         return Collections.emptyList();
       }
     }
@@ -186,7 +190,9 @@ public final class FileSystemStorageWalker {
         }
 
       } catch (IOException e) {
-        log.error(e.getMessage(), e);
+        log.error("Error processing directory [ {} ] of File System Storage: {}",
+            dir, e.getMessage());
+        log.debug(e.getMessage(), e);
       }
     });
   }
@@ -201,7 +207,8 @@ public final class FileSystemStorageWalker {
       try {
         f.accept(e);
       } catch (final Exception ex) {
-        log.error(ex.getMessage(), ex);
+        log.error("Unexpected error: {}", ex.getMessage());
+        log.debug(ex.getMessage(), ex);
       }
     }
   }

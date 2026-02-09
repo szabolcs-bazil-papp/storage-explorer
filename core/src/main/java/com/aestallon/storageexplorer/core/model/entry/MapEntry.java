@@ -95,7 +95,9 @@ public sealed class MapEntry
     try {
       return Optional.of(storageIndex.get().loader().loadExact(map.getUri(), 0));
     } catch (final Exception e) {
-      log.error(e.getMessage(), e);
+      log.error("Cannot load map [ {} ] as a single object version: {}",
+          map.getUri(), e.getMessage());
+      log.debug(e.getMessage(), e);
       return Optional.empty();
     }
   }

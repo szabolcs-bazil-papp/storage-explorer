@@ -121,7 +121,9 @@ public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends A
             log.warn(e.getMessage(), e);
             Thread.currentThread().interrupt();
           } catch (final Exception e) {
-            log.error(e.getMessage(), e);
+            log.error("Error occurred during evaluation of [ {} ]: {}",
+                entry.uri(), e.getMessage());
+            log.debug(e.getMessage(), e);
           } finally {
             if (semaphore != null) {
               semaphore.release();

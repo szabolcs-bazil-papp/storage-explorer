@@ -78,7 +78,9 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
         try {
           return loadingService.storageIndex.objectApi.loadLatest(entry.uri());
         } catch (final Exception e) {
-          log.error(e.getMessage(), e);
+          log.error("Failure loading [ entry: {} ] in autonomous mode: {}",
+              entry.uri(), e.getMessage());
+          log.debug(e.getMessage(), e);
           return null;
         }
       }
@@ -100,7 +102,7 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
           return Optional.of(res);
         } catch (IOException e) {
           log.error("Error during deserialisation attempt of [ {} ]", entry.uri());
-          log.error(e.getMessage(), e);
+          log.debug(e.getMessage(), e);
           return Optional.empty();
         }
       }
@@ -119,7 +121,9 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
         try {
           return loadingService.storageIndex.objectApi.load(entry.uri());
         } catch (final Exception e) {
-          log.error(e.getMessage(), e);
+          log.error("Failure loading [ entry: {} ] in trusting mode: {}",
+              entry.uri(), e.getMessage());
+          log.debug(e.getMessage(), e);
           return null;
         }
       }
@@ -173,7 +177,9 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
               node.getObjectAsMap(),
               ObjectEntryLoadingService.OBJECT_MAPPER);
         } catch (final Exception e) {
-          log.error(e.getMessage(), e);
+          log.error("Failure loading exact version [ uri: {}, version: {} ] in trusting mode: {}",
+              uri, version, e.getMessage());
+          log.debug(e.getMessage(), e);
           return new ObjectEntryLoadResult.SingleVersion.Eager(
               new ObjectEntryMeta(uri, null, null, version, null, null, null),
               Collections.emptyMap(),

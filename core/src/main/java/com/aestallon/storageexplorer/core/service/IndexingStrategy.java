@@ -138,7 +138,7 @@ public interface IndexingStrategy {
     public Map<URI, StorageEntry> processEntries(Stream<URI> uris, StorageEntryCreator creator) {
       final var map = super.processEntries(uris, creator);
       log.info("Indexing strategy FULL: {} entries indexed", map.size());
-      log.info("Refreshing {} entries...", map.size());
+      log.debug("Refreshing {} entries...", map.size());
       new EntryProcessor.Builder(null, new HashSet<>(map.values()))
           .build()
           .execute()

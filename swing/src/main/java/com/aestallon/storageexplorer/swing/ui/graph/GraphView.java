@@ -21,7 +21,6 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
-import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -54,9 +53,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.graph.layout.forceatlas2.ForceAtlas2;
 import com.aestallon.storageexplorer.client.graph.service.GraphRenderingService;
-import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.GraphConfigChanged;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
@@ -183,10 +182,11 @@ public class GraphView extends JPanel {
     if (rendering != null) {
       switch (rendering.state()) {
         case RUNNING -> {
+          log.info("Aborting graph rendering!");
           rendering.cancel(true);
         }
         case null, default -> {
-          log.info("No rendering in progress!");
+          log.info("No graph rendering in progress!");
         }
       }
     }
@@ -422,7 +422,8 @@ public class GraphView extends JPanel {
         try {
           img.writeAll(graph, "./screens/" + DTF.format(LocalDateTime.now()) + ".png");
         } catch (IOException ex) {
-          log.error(ex.getMessage(), ex);
+          log.error("Failed to write screenshot: {}", ex.getMessage());
+          log.debug(ex.getMessage(), ex);
         }
       }
     }
