@@ -30,6 +30,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import com.aestallon.storageexplorer.client.userconfig.model.Problem;
+import com.aestallon.storageexplorer.client.userconfig.service.ProblemService;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkCompletedEvent;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkStartedEvent;
@@ -77,14 +79,17 @@ public class StorageInstanceProvider {
 
   private final ApplicationEventPublisher eventPublisher;
   private final UserConfigService userConfigService;
+  private final ProblemService problemService;
   private final Map<StorageId, StorageInstance> storageInstancesById;
   private final Map<StorageInstance, ConfigurableApplicationContext> contextsByInstance;
   private final ExecutorService executorService;
 
   public StorageInstanceProvider(ApplicationEventPublisher eventPublisher,
-                                 UserConfigService userConfigService) {
+                                 UserConfigService userConfigService,
+                                 ProblemService problemService) {
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
+    this.problemService = problemService;
     storageInstancesById = new HashMap<>();
     contextsByInstance = new HashMap<>();
     executorService = Executors.newSingleThreadExecutor(new HighPriorityThreadFactory());
@@ -116,7 +121,7 @@ public class StorageInstanceProvider {
     final String name = storageInstance.name();
     final UUID workId = UUID.randomUUID();
     eventPublisher.publishEvent(new BackgroundWorkStartedEvent(
-        workId, 
+        workId,
         "Importing storage: " + name + "..."));
     initialise(storageInstance);
     storageInstance.refreshIndex();
@@ -161,6 +166,8 @@ public class StorageInstanceProvider {
         eventPublisher.publishEvent(Msg.err(
             "Failed to initialize " + storageInstance.name(),
             "Storage instance is unavailable: " + err.errorMessage()));
+        problemService.add(Problem.ofStorage(storageInstance.id(),
+            "Failed to init Storage " + storageInstance.name() + ": " + err.errorMessage()));
         log.error("Failed to initialise Storage instance [ {} ]: {}",
             storageInstance.name(),
             err.errorMessage());
@@ -235,6 +242,9 @@ public class StorageInstanceProvider {
     try {
       ctx.close();
     } catch (final Throwable t) {
+      problemService.add(Problem.ofStorage(
+          storageInstance.id(),
+          "Failed to close service context for Storage " + storageInstance.name() + "!"));
       log.error("Cannot close application context [ {} ] belonging to storage at [ {} ]!!!",
           ctx, storageInstance);
       log.debug(t.getMessage(), t);

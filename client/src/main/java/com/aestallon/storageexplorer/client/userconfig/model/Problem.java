@@ -58,6 +58,15 @@ public class Problem {
         .message(message);
   }
 
+  public static Problem ofStorageEntry(StorageId storageId, URI uri, String message) {
+    return new Problem()
+        .id(UUID.randomUUID())
+        .timestamp(LocalDateTime.now())
+        .type(ProblemType.ENTRY)
+        .storageId(storageId.uuid())
+        .uri(uri)
+        .message(message); }
+
   public enum ProblemType {
 
     GENERIC("GENERIC"),

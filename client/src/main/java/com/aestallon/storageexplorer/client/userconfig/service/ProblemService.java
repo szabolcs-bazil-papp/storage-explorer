@@ -25,9 +25,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.userconfig.event.ProblemEncountered;
 import com.aestallon.storageexplorer.client.userconfig.model.Problem;
+import com.aestallon.storageexplorer.core.event.EntryAcquisitionFailed;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 @Service
@@ -50,6 +52,14 @@ public class ProblemService {
         TRACKED_PROBLEMS,
         new TypeReference<>() {},
         ArrayList::new));
+  }
+
+  @EventListener(EntryAcquisitionFailed.class)
+  public void onEntryAcquisitionFailed(EntryAcquisitionFailed event) {
+    add(Problem.ofStorageEntry(
+        event.storageInstance().id(),
+        event.uri(),
+        "Failed to acquire entry in Storage " + event.storageInstance().name() + "."));
   }
 
   public List<Problem> problems() {
