@@ -39,12 +39,19 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.util.Uris;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>> {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntryLoadingService.class);
 
-  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  public static final ObjectMapper OBJECT_MAPPER;
+
+  static {
+    final var mapper = new ObjectMapper();
+    mapper.registerModule(new JavaTimeModule());
+    OBJECT_MAPPER = mapper;
+  }
 
   protected final T storageIndex;
 
