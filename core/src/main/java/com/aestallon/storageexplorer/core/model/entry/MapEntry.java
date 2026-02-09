@@ -27,9 +27,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.toSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.api.collection.CollectionApi;
-import org.smartbit4all.api.collection.StoredMapStorageImpl;
-import org.smartbit4all.core.object.ObjectApi;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
@@ -43,8 +40,6 @@ public sealed class MapEntry
 
   private static final Logger log = LoggerFactory.getLogger(MapEntry.class);
 
-  private final ObjectApi objectApi;
-  protected final CollectionApi collectionApi;
   private final String schema;
   private final String name;
 
@@ -52,12 +47,8 @@ public sealed class MapEntry
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
-  MapEntry(StorageIndex<?> storageIndex, Path path, URI uri,
-           ObjectApi objectApi,
-           CollectionApi collectionApi) {
+  MapEntry(StorageIndex<?> storageIndex, Path path, URI uri) {
     super(storageIndex, path, uri);
-    this.objectApi = objectApi;
-    this.collectionApi = collectionApi;
 
     final String fullScheme = uri.getScheme();
     this.schema = fullScheme.substring(0, fullScheme.lastIndexOf('-'));
@@ -91,19 +82,14 @@ public sealed class MapEntry
   }
 
   public Optional<ObjectEntryLoadResult.SingleVersion> asSingleVersion() {
-    final var map = impl();
     try {
-      return Optional.of(storageIndex.get().loader().loadExact(map.getUri(), 0));
+      return Optional.of(storageIndex.get().loader().loadExact(uri, 0));
     } catch (final Exception e) {
       log.error("Cannot load map [ {} ] as a single object version: {}",
-          map.getUri(), e.getMessage());
+          uri, e.getMessage());
       log.debug(e.getMessage(), e);
       return Optional.empty();
     }
-  }
-
-  protected StoredMapStorageImpl impl() {
-    return (StoredMapStorageImpl) collectionApi.map(schema, name);
   }
 
   @Override

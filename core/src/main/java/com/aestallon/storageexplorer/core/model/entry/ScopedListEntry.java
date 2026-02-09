@@ -17,26 +17,15 @@ package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
-import org.smartbit4all.api.collection.CollectionApi;
-import org.smartbit4all.api.collection.StoredListStorageImpl;
-import org.smartbit4all.core.object.ObjectApi;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 
 public final class ScopedListEntry extends ListEntry implements ScopedEntry, StorageEntry {
 
   private final URI scopeUri;
 
-  ScopedListEntry(StorageIndex<?> storageIndex, Path path, URI uri,
-                  ObjectApi objectApi,
-                  CollectionApi collectionApi,
-                  URI scopeUri) {
-    super(storageIndex, path, uri, objectApi, collectionApi);
+  ScopedListEntry(StorageIndex<?> storageIndex, Path path, URI uri, URI scopeUri) {
+    super(storageIndex, path, uri);
     this.scopeUri = scopeUri;
-  }
-
-  @Override
-  protected StoredListStorageImpl impl() {
-    return (StoredListStorageImpl) collectionApi.list(scopeUri, schema(), name());
   }
 
   @Override
