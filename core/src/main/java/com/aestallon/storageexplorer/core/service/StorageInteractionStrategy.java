@@ -124,6 +124,11 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
       }
 
       private Optional<Map<String, Object>> tryDeserialise(final URI uri, final Path path) {
+        if (uri.toString().contains("org_smartbit4all_api_binarydata_BinaryDataObject")) {
+          log.warn("Skipping deserialisation of binary data at {}", uri);
+          return Optional.empty();
+        }
+
         final String rawContent = IO.read(path);
         if (Strings.isNullOrEmpty(rawContent)) {
           log.error("Empty content found during deserialisation attempt of [ {} ]", uri);
@@ -132,10 +137,9 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
 
         try {
           @SuppressWarnings("unchecked")
-          final Map<String, Object> res =
-              (Map<String, Object>) loadingService.storageIndex.objectApi
-                  .getDefaultSerializer()
-                  .fromString(rawContent, LinkedHashMap.class);
+          final Map<String, Object> res = loadingService.storageIndex.objectApi
+              .getDefaultSerializer()
+              .fromString(rawContent, LinkedHashMap.class);
           return Optional.of(res);
         } catch (IOException e) {
           log.error("Error during deserialisation attempt of [ {} ]", uri);
