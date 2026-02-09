@@ -85,7 +85,7 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
           objectEntry.uri(),
           t.getMessage());
       log.error(msg);
-      log.error(t.getMessage(), t);
+      log.debug(t.getMessage(), t);
 
       return ObjectEntryLoadResult.err(msg);
     }

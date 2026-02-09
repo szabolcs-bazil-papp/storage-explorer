@@ -277,7 +277,7 @@ public class ArcScriptController {
 
   public void drop(ArcScriptView arcScriptView) {
     arcScriptViews.remove(arcScriptView);
-    log.info("Dropped ArcScriptView {}, size remaining: {}",
+    log.debug("Dropped ArcScriptView {}, size remaining: {}",
         arcScriptView.storedArcScript().title(),
         arcScriptViews.size());
   }

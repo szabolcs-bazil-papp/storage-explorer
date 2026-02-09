@@ -36,7 +36,8 @@ public class GraphStylingProvider {
 
       return StreamUtils.copyToString(in, StandardCharsets.UTF_8);
     } catch (IOException e) {
-      log.error(e.getMessage(), e);
+      log.error("Failed to load stylesheet [ {} ]: {}", loc, e.getMessage());
+      log.debug(e.getMessage(), e);
       return "";
     }
   }

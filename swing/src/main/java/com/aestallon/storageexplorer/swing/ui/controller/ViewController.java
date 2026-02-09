@@ -143,9 +143,9 @@ public class ViewController {
   @EventListener
   public void onEntryAcquired(EntryAcquired e) {
     SwingUtilities.invokeLater(() -> {
-      log.info("Entry acquired: {}", e.storageEntry());
+      log.debug("Entry acquired: {}", e.storageEntry());
       storageTreeView.incorporateNode(e.storageEntry());
-      log.info("Selecting entry: {}", e.storageEntry());
+      log.debug("Selecting entry: {}", e.storageEntry());
       storageTreeView.selectNode(e.storageEntry());
     });
   }

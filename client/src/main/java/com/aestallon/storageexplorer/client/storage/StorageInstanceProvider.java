@@ -149,7 +149,7 @@ public class StorageInstanceProvider {
 
     final var factory = StorageIndexFactory.of(storageInstance.id());
     switch (factory.create(storageInstance.location())) {
-      case StorageIndexFactory.StorageIndexCreationResult.Ok ok -> {
+      case StorageIndexFactory.StorageIndexCreationResult.Ok<?> ok -> {
         final var index = ok.storageIndex();
         final var ctx = ok.springContext();
 
@@ -170,7 +170,7 @@ public class StorageInstanceProvider {
 
   public void reindex(final StorageInstance storageInstance) {
     executorService.submit(() -> {
-      final StorageIndex storageIndex = storageInstance.index();
+      final StorageIndex<?> storageIndex = storageInstance.index();
       if (storageIndex == null) {
         eventPublisher.publishEvent(Msg.err(
             "Cannot reindex " + storageInstance.name() + "!",
@@ -234,10 +234,10 @@ public class StorageInstanceProvider {
                            final StorageInstance storageInstance) {
     try {
       ctx.close();
-    } catch (Throwable t) {
+    } catch (final Throwable t) {
       log.error("Cannot close application context [ {} ] belonging to storage at [ {} ]!!!",
           ctx, storageInstance);
-      log.error(t.getMessage(), t);
+      log.debug(t.getMessage(), t);
     }
   }
 

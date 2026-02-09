@@ -97,7 +97,8 @@ public final class SequenceEntry extends AbstractStorageEntry implements Storage
       final Long currentBoxed = sequence.current();
       current = (currentBoxed != null) ? currentBoxed : -1L;
     } catch (Exception e) {
-      log.error(e.getMessage(), e);
+      log.error("Cannot determine the current value of sequence [ {} ]: {}", uri, e.getMessage());
+      log.debug(e.getMessage(), e);
       current = -1L;
     }
 
