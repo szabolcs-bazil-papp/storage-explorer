@@ -138,7 +138,7 @@ public final class RelationalDatabaseStorageIndex
         trustPlatformBeans
             ? StorageInteractionStrategy.RelationalDatabase.Trusting::new
             : StorageInteractionStrategy.RelationalDatabase.Autonomous::new);
-    this.storageEntryFactory = StorageEntryFactory.builder(this, objectApi, collectionApi).build();
+    this.storageEntryFactory = StorageEntryFactory.builder(this).build();
     this.cache = StorageIndexCache.inMemory();
   }
 

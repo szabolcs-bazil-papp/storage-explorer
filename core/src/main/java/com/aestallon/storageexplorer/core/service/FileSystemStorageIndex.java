@@ -47,7 +47,7 @@ public final class FileSystemStorageIndex extends StorageIndex<FileSystemStorage
         trustPlatformBeans
             ? StorageInteractionStrategy.FileSystem.Trusting::new
             : StorageInteractionStrategy.FileSystem.Autonomous::new);
-    this.storageEntryFactory = StorageEntryFactory.builder(this, objectApi, collectionApi)
+    this.storageEntryFactory = StorageEntryFactory.builder(this)
         .pathToStorage(pathToStorage)
         .build();
     this.cache = StorageIndexCache.inMemory();
@@ -66,6 +66,10 @@ public final class FileSystemStorageIndex extends StorageIndex<FileSystemStorage
   @Override
   protected Stream<URI> fetchEntries(IndexingTarget target) {
     return FileSystemStorageWalker.of(pathToStorage).walk(target);
+  }
+
+  Path pathToStorage() {
+    return pathToStorage;
   }
 
 }

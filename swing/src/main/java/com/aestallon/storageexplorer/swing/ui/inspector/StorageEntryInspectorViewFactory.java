@@ -133,7 +133,7 @@ public class StorageEntryInspectorViewFactory {
     openedDialogs.remove(storageEntry);
     openedInspectors.remove(storageEntry);
     textAreas.remove(storageEntry);
-    trackingService.removeTrackedInspector(storageEntry);
+    trackingService.removeTrackedInspector(storageEntry, false);
   }
 
   public enum InspectorRendering { TAB, DIALOG, NONE }

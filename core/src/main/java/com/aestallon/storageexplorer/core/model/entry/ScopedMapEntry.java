@@ -17,24 +17,14 @@ package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
-import org.smartbit4all.api.collection.CollectionApi;
-import org.smartbit4all.api.collection.StoredMapStorageImpl;
-import org.smartbit4all.core.object.ObjectApi;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 
 public final class ScopedMapEntry extends MapEntry implements ScopedEntry, StorageEntry {
   private final URI scopeUri;
 
-  ScopedMapEntry(final StorageIndex<?> storageIndex, Path path, URI uri, ObjectApi objectApi,
-                 CollectionApi collectionApi,
-                 URI scopeUri) {
-    super(storageIndex, path, uri, objectApi, collectionApi);
+  ScopedMapEntry(final StorageIndex<?> storageIndex, Path path, URI uri, URI scopeUri) {
+    super(storageIndex, path, uri);
     this.scopeUri = scopeUri;
-  }
-
-  @Override
-  protected StoredMapStorageImpl impl() {
-    return (StoredMapStorageImpl) collectionApi.map(scopeUri, schema(), name());
   }
 
   @Override

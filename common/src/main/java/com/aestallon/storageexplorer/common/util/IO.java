@@ -49,6 +49,11 @@ public final class IO {
     }
   }
 
+  public static Path uriToPath(final Path root, final URI uri) {
+    final var relPath = Path.of(uri.getScheme() + uri.getPath() + ".o");
+    return root.resolve(relPath);
+  }
+
   public static Optional<URI> findObjectUri(String s) {
     if (Strings.isNullOrEmpty(s)) {
       return Optional.empty();

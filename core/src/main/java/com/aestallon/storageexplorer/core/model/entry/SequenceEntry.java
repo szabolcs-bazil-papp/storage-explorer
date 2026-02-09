@@ -7,8 +7,6 @@ import java.util.Objects;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.api.collection.CollectionApi;
-import org.smartbit4all.api.collection.StoredSequence;
 import org.smartbit4all.core.utility.StringConstant;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
@@ -17,16 +15,14 @@ public final class SequenceEntry extends AbstractStorageEntry implements Storage
 
   private static final Logger log = LoggerFactory.getLogger(SequenceEntry.class);
 
-  private final CollectionApi collectionApi;
   private final String schema;
   private final String name;
 
   private boolean valid = false;
   private long current = -1L;
 
-  SequenceEntry(StorageIndex<?> index, Path path, URI uri, CollectionApi collectionApi) {
+  SequenceEntry(StorageIndex<?> index, Path path, URI uri) {
     super(index, path, uri);
-    this.collectionApi = collectionApi;
 
     final String fullScheme = uri.getScheme();
     this.schema = fullScheme.substring(0, fullScheme.lastIndexOf('-'));
@@ -92,10 +88,12 @@ public final class SequenceEntry extends AbstractStorageEntry implements Storage
       return;
     }
 
-    final StoredSequence sequence = collectionApi.sequence(schema, name);
     try {
-      final Long currentBoxed = sequence.current();
-      current = (currentBoxed != null) ? currentBoxed : -1L;
+      current = Long.parseLong(String.valueOf(storageIndex.get()
+          .loader()
+          .loadExact(uri, 0)
+          .objectAsMap()
+          .get("current")));
     } catch (Exception e) {
       log.error("Cannot determine the current value of sequence [ {} ]: {}", uri, e.getMessage());
       log.debug(e.getMessage(), e);
