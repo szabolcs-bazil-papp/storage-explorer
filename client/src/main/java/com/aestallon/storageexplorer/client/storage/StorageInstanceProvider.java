@@ -43,6 +43,7 @@ import com.aestallon.storageexplorer.core.event.StorageReindexed;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 
 @Service
@@ -129,6 +130,15 @@ public class StorageInstanceProvider {
     userConfigService.addStorageLocation(storageInstance.toDto());
     eventPublisher.publishEvent(new StorageImportEvent(storageInstance));
     eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok(workId));
+  }
+
+  public boolean isKnownStorageInstance(StorageId storageId) {
+    return userConfigService
+        .storageLocationSettings()
+        .getImportedStorageLocations()
+        .stream()
+        .map(StorageInstanceDto::getId)
+        .anyMatch(storageId.uuid()::equals);
   }
 
   public void fetchAllKnown() {

@@ -26,7 +26,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -34,7 +33,7 @@ import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.client.userconfig.model.FavouriteStorageEntry;
-import com.aestallon.storageexplorer.client.userconfig.model.TrackedInspector;
+import com.aestallon.storageexplorer.client.userconfig.model.TrackedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -54,98 +53,137 @@ public class StorageEntryTrackingService {
   private final UserConfigPersistenceService persistenceService;
   private final ApplicationEventPublisher eventPublisher;
   private final StorageInstanceProvider storageInstanceProvider;
+  private final ProblemService problemService;
 
   private final AtomicReference<Map<URI, FavouriteStorageEntry>> favouriteStorageEntries;
-  private final AtomicReference<List<TrackedInspector>> trackedInspectors;
+  private final AtomicReference<List<TrackedEntry>> trackedEntries;
   private final Lock trackLock = new ReentrantLock(true);
 
   public StorageEntryTrackingService(UserConfigPersistenceService persistenceService,
                                      ApplicationEventPublisher eventPublisher,
-                                     StorageInstanceProvider storageInstanceProvider) {
+                                     StorageInstanceProvider storageInstanceProvider,
+                                     ProblemService problemService) {
     this.persistenceService = persistenceService;
     this.eventPublisher = eventPublisher;
     this.storageInstanceProvider = storageInstanceProvider;
+    this.problemService = problemService;
 
     favouriteStorageEntries = new AtomicReference<>(persistenceService.readSettingsAt(
         FAVOURITE_STORAGE_ENTRIES,
         new TypeReference<>() {},
         HashMap::new));
-    trackedInspectors = new AtomicReference<>(persistenceService.readSettingsAt(
+    trackedEntries = new AtomicReference<>(persistenceService.readSettingsAt(
         TRACKED_INSPECTORS,
         new TypeReference<>() {},
         ArrayList::new));
   }
 
-  public List<TrackedInspector> trackedInspectors() {
-    return Collections.unmodifiableList(trackedInspectors.get());
+  private List<TrackedEntry> trackedEntries() {
+    return Collections.unmodifiableList(trackedEntries.get());
   }
 
+  private record ShowableEntry(
+      TrackedEntry trackedEntry,
+      boolean showNow,
+      StorageEntry storageEntry) {}
+
   public List<StorageEntry> entriesOfTrackedInspectors() {
-    final var toRemove = new ArrayList<TrackedInspector>();
-    final var es = new ArrayList<>(trackedInspectors());
-    final var result = es.stream()
-        .flatMap(it -> {
-          final var storageInstance = storageInstanceProvider.get(new StorageId(it.getStorageId()));
+    final var es = new ArrayList<>(trackedEntries());
+    final var showableEntries = es.stream()
+        .map(it -> {
+          final var storageId = new StorageId(it.getStorageId());
+          final var storageInstance = storageInstanceProvider.get(storageId);
           if (storageInstance == null) {
-            log.warn("Could not find storage instance for tracked inspector [ {} ]!", it);
-            toRemove.add(it);
-            return Stream.empty();
+            if (storageInstanceProvider.isKnownStorageInstance(storageId)) {
+              // if the storage is not available, but is known, we won't reopen this:
+              return new ShowableEntry(it, false, null);
+            }
+            // if this is a now forgotten storage, we outright want to eliminate it:
+            return new ShowableEntry(null, false, null);
           }
 
-          return storageInstance.discover(it.getUri()).stream();
+          return storageInstance.discover(it.getUri())
+              // the storage is available, and the entry is found: we show this inspector, if need be:
+              .map(entry -> new ShowableEntry(it, it.isUnderInspection(), entry))
+              .orElseGet(() -> {
+                // the storage is available, but the entry is not: (this means the URI is malformed
+                // as per `discover` -> we shall hide this, and maybe it will be available
+                // on restart:
+                return new ShowableEntry(null, false, null);
+              });
         })
         .toList();
-    if (!toRemove.isEmpty()) {
-      es.removeAll(toRemove);
-      updateTrackedInspectors(es);
-    }
+    final List<ShowableEntry> entriesToKeep = showableEntries.stream()
+        .filter(it -> it.trackedEntry() != null)
+        .toList();
+    final List<TrackedEntry> updated = entriesToKeep.stream()
+        .map(ShowableEntry::trackedEntry)
+        .toList();
+    updateTrackedEntries(updated);
 
-    return result;
+    return entriesToKeep.stream()
+        .filter(ShowableEntry::showNow)
+        .map(ShowableEntry::storageEntry)
+        .toList();
   }
 
   public void addTrackedInspector(final StorageEntry storageEntry) {
     trackLock.lock();
     try {
-      final var trackedInspectors = trackedInspectors();
-      if (trackedInspectors.stream()
-          .anyMatch(it -> Objects.equals(it.getUri(), storageEntry.uri()))) {
-        return;
+      final var trackedEntries = new ArrayList<>(trackedEntries());
+      final List<TrackedEntry> updated;
+      boolean found = false;
+      for (final var trackedEntry : trackedEntries) {
+        if (Objects.equals(trackedEntry.getStorageId(), storageEntry.storageId().uuid())
+            && Objects.equals(trackedEntry.getUri(), storageEntry.uri())) {
+
+          if (trackedEntry.isUnderInspection()) {
+            return;
+          }
+          trackedEntry.setUnderInspection(true);
+          found = true;
+        }
+      }
+      if (!found) {
+        final var newTrackedEntry = new TrackedEntry();
+        newTrackedEntry.setUri(storageEntry.uri());
+        newTrackedEntry.setStorageId(storageEntry.storageId().uuid());
+        newTrackedEntry.setUnderInspection(true);
+        trackedEntries.add(newTrackedEntry);
       }
 
-      final var newTrackedInspector = new TrackedInspector();
-      newTrackedInspector.setUri(storageEntry.uri());
-      newTrackedInspector.setStorageId(storageEntry.storageId().uuid());
-
-      final var updated = new ArrayList<>(trackedInspectors);
-      updated.add(newTrackedInspector);
-      updateTrackedInspectors(updated);
+      updateTrackedEntries(trackedEntries);
     } finally {
       trackLock.unlock();
     }
   }
 
-  public void removeTrackedInspector(final StorageEntry storageEntry) {
+  public void removeTrackedInspector(final StorageEntry storageEntry, boolean forget) {
     trackLock.lock();
     try {
-      final var trackedInspectors = new ArrayList<>(trackedInspectors());
+      final var trackedInspectors = new ArrayList<>(trackedEntries());
       final var toRemove = trackedInspectors.stream()
           .filter(it -> Objects.equals(it.getUri(), storageEntry.uri()))
           .toList();
-      trackedInspectors.removeAll(toRemove);
-      updateTrackedInspectors(trackedInspectors);
+      if (forget) {
+        trackedInspectors.removeAll(toRemove);
+      } else {
+        toRemove.forEach(it -> it.setUnderInspection(false));
+      }
+      updateTrackedEntries(trackedInspectors);
     } finally {
       trackLock.unlock();
     }
   }
 
-  private void updateTrackedInspectors(List<TrackedInspector> trackedInspectors) {
-    final var baseline = trackedInspectors();
-    if (baseline.equals(trackedInspectors)) {
+  private void updateTrackedEntries(List<TrackedEntry> trackedEntries) {
+    final var baseline = trackedEntries();
+    if (baseline.equals(trackedEntries)) {
       return;
     }
 
-    this.trackedInspectors.set(new ArrayList<>(trackedInspectors));
-    persistenceService.writeSettingsTo(TRACKED_INSPECTORS, trackedInspectors);
+    this.trackedEntries.set(new ArrayList<>(trackedEntries));
+    persistenceService.writeSettingsTo(TRACKED_INSPECTORS, trackedEntries);
   }
 
   public Optional<StorageEntryUserData> getUserData(final StorageEntry storageEntry) {
