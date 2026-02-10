@@ -258,34 +258,32 @@ public class ArcScriptEngine {
           return asc ? -1 : 1;
         }
 
-        if (aProp instanceof Number aNum && bProp instanceof Number bNum) {
-          final var res = Double.compare(aNum.doubleValue(), bNum.doubleValue());
-          return asc ? res : -res;
-        }
-
-        if (aProp instanceof String aStr && bProp instanceof String bStr) {
-          final var res = aStr.compareTo(bStr);
-          return asc ? res : -res;
-        }
-
-        if (aProp instanceof Boolean aBool && bProp instanceof Boolean bBool) {
-          final var res = Boolean.compare(aBool, bBool);
-          return asc ? res : -res;
-        }
-
-        if (aProp instanceof OffsetDateTime aDate && bProp instanceof OffsetDateTime bDate) {
-          final var res = aDate.compareTo(bDate);
-          return asc ? res : -res;
-        }
-
-        if (aProp instanceof LocalDateTime aDate && bProp instanceof LocalDateTime bDate) {
-          final var res = aDate.compareTo(bDate);
-          return asc ? res : -res;
-        }
-
-        if (aProp instanceof LocalDate aDate && bProp instanceof LocalDate bDate) {
-          final var res = aDate.compareTo(bDate);
-          return asc ? res : -res;
+        switch (aProp) {
+          case Number aNum when bProp instanceof Number bNum -> {
+            final var res = Double.compare(aNum.doubleValue(), bNum.doubleValue());
+            return asc ? res : -res;
+          }
+          case String aStr when bProp instanceof String bStr -> {
+            final var res = aStr.compareTo(bStr);
+            return asc ? res : -res;
+          }
+          case Boolean aBool when bProp instanceof Boolean bBool -> {
+            final var res = Boolean.compare(aBool, bBool);
+            return asc ? res : -res;
+          }
+          case OffsetDateTime aDate when bProp instanceof OffsetDateTime bDate -> {
+            final var res = aDate.compareTo(bDate);
+            return asc ? res : -res;
+          }
+          case LocalDateTime aDate when bProp instanceof LocalDateTime bDate -> {
+            final var res = aDate.compareTo(bDate);
+            return asc ? res : -res;
+          }
+          case LocalDate aDate when bProp instanceof LocalDate bDate -> {
+            final var res = aDate.compareTo(bDate);
+            return asc ? res : -res;
+          }
+          default -> {}
         }
 
         // these were the comparison we support for same types. For diverging types, the following
