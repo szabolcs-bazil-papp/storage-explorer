@@ -14,6 +14,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
 import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
@@ -160,6 +161,19 @@ public class AppContentView extends JPanel {
     toolBar.updateUI();
   }
 
+  @EventListener(LafChanged.class)
+  public void onLafChanged(final LafChanged event) {
+    SwingUtilities.invokeLater(() -> {
+      if (progressBar != null) {
+        SwingUtilities.updateComponentTreeUI(progressBar);
+      }
+
+      SwingUtilities.updateComponentTreeUI(breadCrumbs);
+      SwingUtilities.updateComponentTreeUI(graphStateLabel);
+      SwingUtilities.updateComponentTreeUI(loadingQueueLabel);
+    });
+  }
+
   public MainView mainView() {
     return mainView;
   }
@@ -207,6 +221,7 @@ public class AppContentView extends JPanel {
       setOpaque(true);
       setHorizontalAlignment(SwingConstants.CENTER);
       setFont(getFont().deriveFont(Font.BOLD));
+      setForeground(Color.BLACK);
       setToolTipText(
           "The number of entries waiting to be loaded. The application may become temporarily unresponsive if this number is greater than 0.");
       setBorder(new EmptyBorder(2, 15, 2, 15));
