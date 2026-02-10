@@ -35,6 +35,7 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.util.Uris;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabContainer;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.EnumeratorWithUri;
@@ -71,6 +72,18 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     initTable();
   }
 
+  protected TabContainer container;
+
+  @Override
+  public void container(TabContainer container) {
+    this.container = container;
+  }
+
+  @Override
+  public TabContainer container() {
+    return container;
+  }
+
   @Override
   public List<JTextArea> textAreas() {
     return Collections.emptyList();
@@ -97,6 +110,7 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     factory.addRenderAction(storageEntry, toolbar);
     toolbar.add(new OpenInSystemExplorerAction(storageEntry, this));
     factory.addEditMetaAction(storageEntry, toolbar);
+    factory.addCloseAndForgetAction(this, toolbar);
     factory.addModifyAction(storageEntry, singleVersionSupplier(), -1, null, toolbar);
     toolbar.add(Box.createHorizontalGlue());
     add(toolbar);

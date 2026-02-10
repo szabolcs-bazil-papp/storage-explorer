@@ -19,6 +19,10 @@ public interface TabContainer {
 
   TabView tabViewAt(final int idx);
     
-  void discardTabView(TabView tabView);
+  default void discardTabView(TabView tabView) {
+    discardTabView(tabView, false);
+  }
+
+  void discardTabView(TabView tabView, boolean forget);
   
 }

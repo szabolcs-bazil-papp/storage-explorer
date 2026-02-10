@@ -38,6 +38,7 @@ import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrack
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabContainer;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -80,6 +81,18 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         versionPane.initialise();
       }
     });
+  }
+
+  protected TabContainer container;
+
+  @Override
+  public void container(TabContainer container) {
+    this.container = container;
+  }
+
+  @Override
+  public TabContainer container() {
+    return container;
   }
 
   @Override
@@ -169,6 +182,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
             ObjectEntryInspectorView.this);
       }
       factory.addModifyAction(objectEntry, () -> version, versionNr, multiVersion, toolbar);
+      factory.addCloseAndForgetAction(ObjectEntryInspectorView.this, toolbar);
       toolbar.add(Box.createHorizontalGlue());
 
       Box box = new Box(BoxLayout.X_AXIS);
@@ -260,16 +274,27 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
   private JComponent errorPane(final ObjectEntryLoadResult.Err err) {
     final var container = new JPanel();
-    container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+    container.setLayout(new BorderLayout(5, 5));
     container.setBorder(new EmptyBorder(5, 5, 5, 5));
 
+    final var toolbar = new JToolBar(SwingConstants.TOP);
+    toolbar.setOrientation(SwingConstants.HORIZONTAL);
+    toolbar.setAlignmentX(LEFT_ALIGNMENT);
+    toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
+    factory.addCloseAndForgetAction(this, toolbar);
+    container.add(toolbar, BorderLayout.NORTH);
+
+    final var innerCont = new JPanel();
+    innerCont.setLayout(new BorderLayout(5, 5));
     final var label = new JLabel(
         (objectEntry == null ? "" : objectEntry + " ") + "LOADING ERROR");
     label.setFont(LafService.font(LafService.FontToken.H3_SEMIBOLD));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
+    innerCont.add(label, BorderLayout.NORTH);
 
-    container.add(label);
-    container.add(errorMessageDisplay(err.msg()));
+    innerCont.add(errorMessageDisplay(err.msg()), BorderLayout.CENTER);
+
+    container.add(innerCont, BorderLayout.CENTER);
     return container;
   }
 

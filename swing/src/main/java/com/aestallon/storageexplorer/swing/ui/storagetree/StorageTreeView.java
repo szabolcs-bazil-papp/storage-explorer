@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
+import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,7 @@ import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorage
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryDialog;
+import com.aestallon.storageexplorer.swing.ui.event.EntryForgotten;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.StorageInstanceStatComponent;
@@ -234,6 +236,20 @@ public class StorageTreeView
   @EventListener
   public void onUserDataChanged(StorageEntryUserDataChanged event) {
     super.onUserDataChanged(event);
+  }
+
+  @EventListener
+  public void onEntryForgotten(final EntryForgotten event) {
+    final TreePath path = treePathsByLeaf.get(event.storageEntry());
+    if (path == null) {
+      return;
+    }
+
+    if (!(path.getLastPathComponent() instanceof MutableTreeNode node)) {
+      return;
+    }
+
+    tree.model().removeNodeFromParent(node);
   }
 
   private final class StorageIndexNodePopupMenu extends JPopupMenu {

@@ -111,7 +111,9 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
           .getTab(storageEntry)
           .ifPresent(tab -> setSelectedComponent(tab.asComponent()));
       case NONE -> {
-        final var inspector = factory.createInspector(storageEntry).asComponent();
+        final var insView = factory.createInspector(storageEntry);
+        insView.container(this);
+        final var inspector = insView.asComponent();
         final var title = factory.trackingService().getUserData(storageEntry)
             .map(StorageEntryTrackingService.StorageEntryUserData::name)
             .filter(it -> !it.isBlank())
@@ -194,15 +196,15 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
   }
 
   @Override
-  public void discardTabView(final TabView tabViewToClose) {
-    remove(tabViewToClose.asComponent());
-    switch (tabViewToClose) {
-      case InspectorView<?> inspector -> factory.dropInspector(inspector);
+  public void discardTabView(final TabView tabView, boolean forget) {
+    remove(tabView.asComponent());
+    switch (tabView) {
+      case InspectorView<?> inspector -> factory.dropInspector(inspector, forget);
       case ArcScriptView arcScriptView -> arcScriptController.drop(arcScriptView);
-      default -> log.warn("Unknown tab view to close: [ {} ]", tabViewToClose);
+      default -> log.warn("Unknown tab view to close: [ {} ]", tabView);
     }
   }
-  
+
   @EventListener
   void onArcScriptViewDropped(final ArcScriptController.ArcScriptViewDropped e) {
     SwingUtilities.invokeLater(() -> discardTabView(e.view()));

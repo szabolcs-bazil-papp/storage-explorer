@@ -8,6 +8,7 @@ import javax.swing.border.EmptyBorder;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabContainer;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -37,6 +38,18 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
     initValue();
   }
 
+  protected TabContainer container;
+
+  @Override
+  public void container(TabContainer container) {
+    this.container = container;
+  }
+
+  @Override
+  public TabContainer container() {
+    return container;
+  }
+
   @Override
   public List<JTextArea> textAreas() {
     return Collections.emptyList();
@@ -62,6 +75,7 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
     toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
     toolbar.add(new OpenInSystemExplorerAction(sequenceEntry, this));
     factory.addEditMetaAction(sequenceEntry, toolbar);
+    factory.addCloseAndForgetAction(this, toolbar);
     toolbar.setAlignmentX(LEFT_ALIGNMENT);
     toolbar.setMinimumSize(new Dimension(Integer.MAX_VALUE, toolbar.getPreferredSize().height));
     add(toolbar);

@@ -51,6 +51,8 @@ import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorCo
 import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorDialog;
 import com.aestallon.storageexplorer.swing.ui.editor.StorageEntryEditorController;
 import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
+import com.aestallon.storageexplorer.swing.ui.event.EntryForgotten;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabView;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
@@ -105,9 +107,10 @@ public class StorageEntryInspectorViewFactory {
     return textareaFactory;
   }
 
-  public void dropInspector(final InspectorView<? extends StorageEntry> inspector) {
+  public void dropInspector(final InspectorView<? extends StorageEntry> inspector,
+                            final boolean forget) {
     final var storageEntry = inspector.storageEntry();
-    dropInspector(storageEntry);
+    dropInspector(storageEntry, forget);
   }
 
   ApplicationEventPublisher eventPublisher() {
@@ -129,11 +132,14 @@ public class StorageEntryInspectorViewFactory {
         });
   }
 
-  private void dropInspector(final StorageEntry storageEntry) {
+  private void dropInspector(final StorageEntry storageEntry, final boolean forget) {
     openedDialogs.remove(storageEntry);
     openedInspectors.remove(storageEntry);
     textAreas.remove(storageEntry);
-    trackingService.removeTrackedInspector(storageEntry, false);
+    trackingService.removeTrackedInspector(storageEntry, forget);
+    if (forget) {
+      eventPublisher.publishEvent(new EntryForgotten(storageEntry));
+    }
   }
 
   public enum InspectorRendering { TAB, DIALOG, NONE }
@@ -185,7 +191,7 @@ public class StorageEntryInspectorViewFactory {
       @Override
       public void windowClosing(WindowEvent e) {
         super.windowClosing(e);
-        dropInspector(storageEntry);
+        dropInspector(storageEntry, false);
       }
 
     });
@@ -330,6 +336,20 @@ public class StorageEntryInspectorViewFactory {
     });
   }
 
+  void addCloseAndForgetAction(final InspectorView<?> inspector, final JToolBar toolBar) {
+    toolBar.add(new AbstractAction(null, IconProvider.NOT_OK) {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        final var container = inspector.container();
+        if (container == null) {
+          return;
+        }
+
+        container.discardTabView(inspector, true);
+      }
+    });
+  }
+
   void addDiffAction(final ObjectEntry objectEntry,
                      final ObjectEntryLoadResult.SingleVersion singleVersion,
                      final long versionNr,
@@ -396,7 +416,7 @@ public class StorageEntryInspectorViewFactory {
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
         .forEach((entry, dialog) -> {
           dialog.dispose();
-          dropInspector(entry); // just to make sure if the listener is not called.
+          dropInspector(entry, true); // just to make sure if the listener is not called.
         });
   }
 
