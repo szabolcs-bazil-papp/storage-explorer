@@ -50,7 +50,7 @@ import com.aestallon.storageexplorer.core.util.Uris;
 import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorController;
 import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorDialog;
 import com.aestallon.storageexplorer.swing.ui.editor.StorageEntryEditorController;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;

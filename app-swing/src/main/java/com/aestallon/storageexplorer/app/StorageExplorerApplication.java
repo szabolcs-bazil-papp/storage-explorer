@@ -23,17 +23,20 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import com.aestallon.storageexplorer.client.ff.FeatureFlag;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.service.ThemeService;
 import com.aestallon.storageexplorer.swing.ui.AppContentView;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptTreeView;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.WelcomePopup;
 import com.aestallon.storageexplorer.swing.ui.splash.SplashScreen;
 import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
-import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme;
+import com.formdev.flatlaf.intellijthemes.FlatMaterialDesignDarkIJTheme;
+import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialLighterIJTheme;
 
 @SpringBootApplication(
     exclude = DataSourceAutoConfiguration.class,
@@ -87,7 +90,7 @@ public class StorageExplorerApplication {
     FeatureFlag.parse(args);
 
     System.setProperty("org.graphstream.ui", "swing");
-    FlatIntelliJLaf.setup();
+    FlatMTMaterialLighterIJTheme.setup();
 
     new SpringApplicationBuilder(StorageExplorerApplication.class)
         .web(WebApplicationType.NONE)
@@ -101,7 +104,8 @@ public class StorageExplorerApplication {
                                   StorageInstanceProvider storageInstanceProvider,
                                   AppContentView appContentView,
                                   StorageTreeView storageTreeView,
-                                  ArcScriptTreeView arcScriptTreeView) {
+                                  ArcScriptTreeView arcScriptTreeView,
+                                  ThemeService themeService) {
     return args -> {
       SwingUtilities.invokeLater(() -> setSplashStatus("Loading storage instances..."));
       storageInstanceProvider.fetchAllKnown();
@@ -112,6 +116,7 @@ public class StorageExplorerApplication {
         arcScriptTreeView.expandAll();
         setSplashStatus("Loading settings...");
         appFrame.appContentView().mainView().explorerView().reopenTrackedEntryInspectors();
+        themeService.applyTheme();
 
         disposeSplashScreen();
         appFrame.launch();
@@ -123,10 +128,11 @@ public class StorageExplorerApplication {
   }
 
   @EventListener
+  @Order(100)
   public void onLafChanged(final LafChanged event) {
     SwingUtilities.invokeLater(() -> {
       switch (event.laf()) {
-        case LIGHT -> FlatIntelliJLaf.setup();
+        case LIGHT -> FlatMTMaterialLighterIJTheme.setup();
         case DARK -> FlatGruvboxDarkHardIJTheme.setup();
       }
       SwingUtilities.updateComponentTreeUI(frame);

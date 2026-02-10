@@ -63,7 +63,7 @@ import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.GraphStylingProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;

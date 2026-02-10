@@ -5,7 +5,8 @@ import javax.swing.*;
 import javax.swing.plaf.UIResource;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.service.ThemeService;
 import jakarta.annotation.Nullable;
 
 @Service
@@ -46,10 +47,15 @@ public class LafService {
 
   private LafChanged.Laf laf;
   private final ApplicationEventPublisher eventPublisher;
+  private final ThemeService themeService;
 
-  public LafService(ApplicationEventPublisher eventPublisher) {
+  public LafService(ApplicationEventPublisher eventPublisher, ThemeService themeService) {
     this.eventPublisher = eventPublisher;
-    laf = LafChanged.Laf.LIGHT;
+    this.themeService = themeService;
+    laf = switch (themeService.currentTheme()) {
+      case LIGHT -> LafChanged.Laf.LIGHT;
+      case DARK -> LafChanged.Laf.DARK;
+    };
   }
 
   public void changeLaf(@Nullable LafChanged.Laf laf) {

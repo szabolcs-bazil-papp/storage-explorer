@@ -1,4 +1,4 @@
-package com.aestallon.storageexplorer.swing.ui.event;
+package com.aestallon.storageexplorer.client.userconfig.event;
 
 public record LafChanged(LafChanged.Laf laf) {
 
