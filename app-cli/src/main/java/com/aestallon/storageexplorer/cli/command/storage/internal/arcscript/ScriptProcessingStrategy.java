@@ -43,7 +43,7 @@ public final class ScriptProcessingStrategy {
 
   public void process() {
     switch (Arc.evaluate(ctx.script(), ctx.storageInstance())) {
-      case ArcScriptResult.Ok(var results) -> processResults(results);
+      case ArcScriptResult.Ok(var results, var verbose) -> processResults(results, verbose);
       case ArcScriptResult.CompilationError compErr -> printCompilationError(compErr);
       case ArcScriptResult.ImpermissibleInstruction(String msg, String cause) ->
           throw new IllegalArgumentException(msg + cause);
@@ -53,12 +53,12 @@ public final class ScriptProcessingStrategy {
   }
 
 
-  private void processResults(List<ArcScriptResult.InstructionResult> elements) {
+  private void processResults(List<ArcScriptResult.InstructionResult> elements, boolean verbose) {
     final var intermediaries = elements.subList(0, elements.size() -1);
     final var last = elements.getLast();
     
-    intermediaryResultProcessor.process(intermediaries);
-    finalResultProcessor.process(last);
+    intermediaryResultProcessor.verbose(verbose).process(intermediaries);
+    finalResultProcessor.verbose(verbose).process(last);
     ctx.commandContext().getTerminal().writer().flush();
   }
 
