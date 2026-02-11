@@ -50,7 +50,7 @@ public class StorageExplorerApplication {
   private static volatile SplashScreen splashScreen;
 
   private static void initSplashScreen() {
-    final String version = "0.5.0";
+    final String version = "0.6.0";
     SwingUtilities.invokeLater(() -> {
       splashScreen = SplashScreen
           .create(version, "/splash/splash_1280x789.png")
