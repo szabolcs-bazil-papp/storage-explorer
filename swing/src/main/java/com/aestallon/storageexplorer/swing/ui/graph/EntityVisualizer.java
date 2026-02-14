@@ -26,12 +26,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.swing.*;
+import org.springframework.lang.NonNull;
 import prefuse.Display;
 import prefuse.Visualization;
 import prefuse.action.ActionList;
 import prefuse.action.RepaintAction;
 import prefuse.action.assignment.ColorAction;
+import prefuse.action.layout.Layout;
 import prefuse.action.layout.graph.ForceDirectedLayout;
+import prefuse.activity.Activity;
 import prefuse.controls.ControlAdapter;
 import prefuse.data.Edge;
 import prefuse.data.Graph;
@@ -49,9 +52,9 @@ public class EntityVisualizer extends JFrame {
 
   private Visualization vis;
   private Display display;
-  private Map<String, Entity> entityMap;
-  private Map<Node, Set<List<Integer>>> expandedDetails; // Node -> Set of property paths
-  private Map<Node, Map<String, Integer>> propertyPositions; // Node -> (path -> y-position)
+  Map<String, Entity> entityMap;
+  Map<Node, Set<List<Integer>>> expandedDetails; // Node -> Set of property paths
+  Map<Node, Map<String, Integer>> propertyPositions; // Node -> (path -> y-position)
 
   private static final int ROW_HEIGHT = 20;
   private static final int HEADER_HEIGHT = 25;
@@ -76,7 +79,7 @@ public class EntityVisualizer extends JFrame {
     // Setup renderers
     DefaultRendererFactory rf = new DefaultRendererFactory();
     rf.setDefaultRenderer(new EntityNodeRenderer(this));
-    rf.setDefaultEdgeRenderer(new ReferenceEdgeRenderer());
+    rf.setDefaultEdgeRenderer(new AssociationRenderer(this));
     vis.setRendererFactory(rf);
 
     // Setup display
@@ -97,13 +100,17 @@ public class EntityVisualizer extends JFrame {
     color.add(edgeArrow);
 
     // Layout
-    ActionList layout = new ActionList(ActionList.INFINITY);
-    ForceDirectedLayout fdl = new ForceDirectedLayout(GRAPH);
+    ActionList layout = new ActionList(Activity.INFINITY);
+    Layout fdl = new ForceDirectedLayout(GRAPH);
+    // Adjust forces to prevent drift
+    // Explicitly set gravity to 0 to prevent top-drifting if it was default
+    // Note: ForceDirectedLayout doesn't have a direct setGravity, it's usually via NBodyForce or similar.
+    
     layout.add(fdl);
     layout.add(new RepaintAction());
 
     vis.putAction("color", color);
-    vis.putAction("layout", layout);
+    // vis.putAction("layout", layout);
 
     // Run color once
     vis.run("color");
@@ -125,8 +132,6 @@ public class EntityVisualizer extends JFrame {
       i++;
     }
 
-    // Run layout
-    vis.run("layout");
 
     // Add interaction
     display.addControlListener(new EntityClickControl());
@@ -142,7 +147,7 @@ public class EntityVisualizer extends JFrame {
 
     // Run visualization
     vis.run("color");
-    vis.run("layout");
+    // vis.run("layout");
   }
 
   private Graph createGraph(List<Entity> entities) {
@@ -568,6 +573,19 @@ public class EntityVisualizer extends JFrame {
   // Example usage
   public static void main(String[] args) {
     // Create sample entities
+
+
+    List<Entity> entities = getEntities();
+
+    SwingUtilities.invokeLater(() -> {
+      EntityVisualizer viz = new EntityVisualizer(entities);
+      viz.setVisible(true);
+    });
+  }
+
+  @NonNull
+  private static List<Entity> getEntities() {
+
     Entity user = new Entity("User", List.of(
         new PropertyEntry(new Property("id", Inline.NUMBER), Arity.ONE),
         new PropertyEntry(new Property("name", Inline.STRING), Arity.ONE),
@@ -605,11 +623,11 @@ public class EntityVisualizer extends JFrame {
         new PropertyEntry(new Property("name", Inline.STRING), Arity.ONE)
     ));
 
-    List<Entity> entities = List.of(user, order, product, category, country);
-
-    SwingUtilities.invokeLater(() -> {
-      EntityVisualizer viz = new EntityVisualizer(entities);
-      viz.setVisible(true);
-    });
+    return List.of(
+        user,
+        order,
+        product,
+        category,
+        country);
   }
 }
