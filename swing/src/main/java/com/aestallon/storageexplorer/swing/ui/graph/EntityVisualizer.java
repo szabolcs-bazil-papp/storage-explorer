@@ -21,6 +21,7 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +32,6 @@ import prefuse.action.ActionList;
 import prefuse.action.RepaintAction;
 import prefuse.action.assignment.ColorAction;
 import prefuse.action.layout.graph.ForceDirectedLayout;
-import prefuse.activity.Activity;
 import prefuse.controls.ControlAdapter;
 import prefuse.data.Edge;
 import prefuse.data.Graph;
@@ -51,6 +51,10 @@ public class EntityVisualizer extends JFrame {
   private Display display;
   private Map<String, Entity> entityMap;
   private Map<Node, Set<List<Integer>>> expandedDetails; // Node -> Set of property paths
+  private Map<Node, Map<String, Integer>> propertyPositions; // Node -> (path -> y-position)
+
+  private static final int ROW_HEIGHT = 20;
+  private static final int HEADER_HEIGHT = 25;
 
   public EntityVisualizer(List<Entity> entities) {
     super("Entity Relationship Diagram");
@@ -60,6 +64,7 @@ public class EntityVisualizer extends JFrame {
       entityMap.put(entity.uniqueName(), entity);
     }
     this.expandedDetails = new HashMap<>();
+    this.propertyPositions = new HashMap<>();
 
     // Create graph
     Graph graph = createGraph(entities);
@@ -83,26 +88,52 @@ public class EntityVisualizer extends JFrame {
     ColorAction nodeStroke = new ColorAction(NODES, VisualItem.STROKECOLOR, ColorLib.gray(50));
     ColorAction nodeFill = new ColorAction(NODES, VisualItem.FILLCOLOR, ColorLib.gray(240));
     ColorAction edgeColor = new ColorAction(EDGES, VisualItem.STROKECOLOR, ColorLib.gray(100));
+    ColorAction edgeArrow = new ColorAction(EDGES, VisualItem.FILLCOLOR, ColorLib.gray(100));
 
     ActionList color = new ActionList();
     color.add(nodeStroke);
     color.add(nodeFill);
     color.add(edgeColor);
+    color.add(edgeArrow);
 
-    ActionList layout = new ActionList(Activity.INFINITY);
+    // Layout
+    ActionList layout = new ActionList(ActionList.INFINITY);
     ForceDirectedLayout fdl = new ForceDirectedLayout(GRAPH);
-    fdl.setForceSimulator(new prefuse.util.force.ForceSimulator());
     layout.add(fdl);
     layout.add(new RepaintAction());
 
     vis.putAction("color", color);
     vis.putAction("layout", layout);
 
+    // Run color once
+    vis.run("color");
+    
+    // Initial positioning: spread nodes in a circle
+    int i = 0;
+    double radius = 300;
+    for (Iterator<?> it = vis.items(NODES); it.hasNext(); ) {
+      var next = it.next();
+      if (!(next instanceof VisualItem n)) {
+        System.out.println("n class: " + next.getClass());
+        continue;
+      }
+      double angle = 2 * Math.PI * i / entities.size();
+      n.setStartX(600 + radius * Math.cos(angle));
+      n.setStartY(400 + radius * Math.sin(angle));
+      n.setX(600 + radius * Math.cos(angle));
+      n.setY(400 + radius * Math.sin(angle));
+      i++;
+    }
+
+    // Run layout
+    vis.run("layout");
+
     // Add interaction
     display.addControlListener(new EntityClickControl());
     display.addControlListener(new prefuse.controls.DragControl());
     display.addControlListener(new prefuse.controls.PanControl());
     display.addControlListener(new prefuse.controls.ZoomControl());
+    display.addControlListener(new prefuse.controls.WheelZoomControl());
 
     // Setup frame
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -117,11 +148,12 @@ public class EntityVisualizer extends JFrame {
   private Graph createGraph(List<Entity> entities) {
     Graph graph = new Graph(true); // directed
     graph.addColumn("entity", Entity.class);
-    graph.getEdgeTable().addColumn("arity", String.class); // For edges
+    graph.getEdgeTable().addColumn("arity", String.class);
     graph.getEdgeTable().addColumn("propertyPath", List.class);
 
-    // Create nodes
+    // Create nodes with initial positions
     Map<String, Node> nodeMap = new HashMap<>();
+    java.util.Random rand = new java.util.Random(42); // Fixed seed for reproducibility
     for (Entity entity : entities) {
       Node node = graph.addNode();
       node.set("entity", entity);
@@ -177,13 +209,27 @@ public class EntityVisualizer extends JFrame {
     return (Entity) node.get("entity");
   }
 
+  public void setPropertyPosition(Node node, List<Integer> path, int yPosition) {
+    propertyPositions.computeIfAbsent(node, k -> new HashMap<>());
+    propertyPositions.get(node).put(pathToString(path), yPosition);
+  }
+
+  public Integer getPropertyPosition(Node node, List<Integer> path) {
+    Map<String, Integer> positions = propertyPositions.get(node);
+    if (positions == null) return null;
+    return positions.get(pathToString(path));
+  }
+
+  private String pathToString(List<Integer> path) {
+    return path.toString().replaceAll("[\\[\\], ]", "_");
+  }
+
   // Custom node renderer
   class EntityNodeRenderer extends AbstractShapeRenderer {
     private EntityVisualizer visualizer;
     private static final int PADDING = 10;
-    private static final int ROW_HEIGHT = 20;
-    private static final int HEADER_HEIGHT = 25;
     private static final int INDENT = 15;
+    private static final int MIN_WIDTH = 200;
 
     public EntityNodeRenderer(EntityVisualizer visualizer) {
       this.visualizer = visualizer;
@@ -192,22 +238,45 @@ public class EntityVisualizer extends JFrame {
     @Override
     protected Shape getRawShape(VisualItem item) {
       Rectangle2D bounds = calculateBounds(item);
-      return bounds;
+      // Prefuse uses (x, y) from the item as center by default for some layouts,
+      // but we want to return a shape that is positioned correctly relative to the item's coordinates.
+      double x = item.getX();
+      double y = item.getY();
+      return new Rectangle2D.Double(x + bounds.getX(), y + bounds.getY(), bounds.getWidth(), bounds.getHeight());
     }
 
     private Rectangle2D calculateBounds(VisualItem item) {
       Entity entity = (Entity) item.get("entity");
-      int maxWidth = 200;
-
+      
       FontMetrics fm = display.getFontMetrics(new Font("SansSerif", Font.PLAIN, 11));
-      maxWidth = Math.max(maxWidth, fm.stringWidth(entity.uniqueName()) + 2 * PADDING);
+      int maxWidth = Math.max(MIN_WIDTH, fm.stringWidth(entity.uniqueName()) + 2 * PADDING);
+      maxWidth = Math.max(maxWidth, calculatePropertiesWidth(item, entity.properties(), new ArrayList<>(), 0) + 2 * PADDING);
 
-      int height = HEADER_HEIGHT + calculatePropertiesHeight(item, entity.properties(), new ArrayList<>(), fm);
+      int height = HEADER_HEIGHT + calculatePropertiesHeight(item, entity.properties(), new ArrayList<>());
 
-      return new Rectangle2D.Double(-maxWidth/2.0, -height/2.0, maxWidth, height + PADDING);
+      return new Rectangle2D.Double(-maxWidth / 2.0, -height / 2.0, maxWidth, height);
     }
 
-    private int calculatePropertiesHeight(VisualItem item, List<PropertyEntry> properties, List<Integer> path, FontMetrics fm) {
+    private int calculatePropertiesWidth(VisualItem item, List<PropertyEntry> properties, List<Integer> path, int indentLevel) {
+      FontMetrics fm = display.getFontMetrics(new Font("SansSerif", Font.PLAIN, 11));
+      int maxWidth = 0;
+      for (int i = 0; i < properties.size(); i++) {
+        PropertyEntry pe = properties.get(i);
+        String label = pe.property().key() + ": " + (pe.arity() == Arity.MANY ? "List<" : "") + formatType(pe.property().type()) + (pe.arity() == Arity.MANY ? ">" : "");
+        maxWidth = Math.max(maxWidth, fm.stringWidth(label) + indentLevel * INDENT);
+
+        if (pe.property().type() instanceof Detail detail) {
+          List<Integer> currentPath = new ArrayList<>(path);
+          currentPath.add(i);
+          if (isDetailExpanded((Node) item.getSourceTuple(), currentPath)) {
+            maxWidth = Math.max(maxWidth, calculatePropertiesWidth(item, detail.properties(), currentPath, indentLevel + 1));
+          }
+        }
+      }
+      return maxWidth;
+    }
+
+    private int calculatePropertiesHeight(VisualItem item, List<PropertyEntry> properties, List<Integer> path) {
       int height = 0;
       for (int i = 0; i < properties.size(); i++) {
         PropertyEntry pe = properties.get(i);
@@ -217,7 +286,7 @@ public class EntityVisualizer extends JFrame {
           List<Integer> currentPath = new ArrayList<>(path);
           currentPath.add(i);
           if (isDetailExpanded((Node) item.getSourceTuple(), currentPath)) {
-            height += calculatePropertiesHeight(item, detail.properties(), currentPath, fm);
+            height += calculatePropertiesHeight(item, detail.properties(), currentPath);
           }
         }
       }
@@ -227,7 +296,8 @@ public class EntityVisualizer extends JFrame {
     @Override
     public void render(Graphics2D g, VisualItem item) {
       Entity entity = (Entity) item.get("entity");
-      Rectangle2D bounds = (Rectangle2D) getShape(item);
+      Shape shape = getShape(item);
+      Rectangle2D bounds = shape.getBounds2D();
 
       // Draw box
       g.setColor(ColorLib.getColor(item.getFillColor()));
@@ -238,25 +308,25 @@ public class EntityVisualizer extends JFrame {
 
       // Draw header
       g.setColor(new Color(100, 150, 200));
-      g.fillRect((int)bounds.getX(), (int)bounds.getY(), (int)bounds.getWidth(), HEADER_HEIGHT);
+      g.fill(new Rectangle2D.Double(bounds.getX(), bounds.getY(), bounds.getWidth(), HEADER_HEIGHT));
 
       g.setColor(Color.WHITE);
       g.setFont(new Font("SansSerif", Font.BOLD, 12));
       g.drawString(entity.uniqueName(),
-          (int)bounds.getX() + PADDING,
-          (int)bounds.getY() + 17);
+          (int) bounds.getX() + PADDING,
+          (int) bounds.getY() + 17);
 
       // Draw properties
       g.setColor(Color.BLACK);
       g.setFont(new Font("SansSerif", Font.PLAIN, 11));
-      int y = (int)bounds.getY() + HEADER_HEIGHT + 15;
+      int y = (int) bounds.getY() + HEADER_HEIGHT + 15;
 
       renderProperties(g, item, entity.properties(), new ArrayList<>(),
-          (int)bounds.getX() + PADDING, y, 0);
+          (int) bounds.getX() + PADDING, y, 0, bounds);
     }
 
     private int renderProperties(Graphics2D g, VisualItem item, List<PropertyEntry> properties,
-                                 List<Integer> path, int x, int y, int indentLevel) {
+                                 List<Integer> path, int x, int y, int indentLevel, Rectangle2D bounds) {
       for (int i = 0; i < properties.size(); i++) {
         PropertyEntry pe = properties.get(i);
         List<Integer> currentPath = new ArrayList<>(path);
@@ -269,16 +339,16 @@ public class EntityVisualizer extends JFrame {
         int currentX = x + (indentLevel * INDENT);
         g.drawString(pe.property().key() + ": " + arityStr + typeStr + arityEnd, currentX, y);
 
-        // Store position for edge calculation
-        // !!! Commented out, because this crashes!
-        // item.set("prop_" + pathToString(currentPath) + "_y", y);
+        // Store absolute position for edge calculation
+        double absoluteY = item.getY() + (y - (item.getY() + bounds.getY()));
+        setPropertyPosition((Node) item.getSourceTuple(), currentPath, (int) absoluteY);
 
         y += ROW_HEIGHT;
 
         // If it's an expanded detail, render nested properties
         if (pe.property().type() instanceof Detail detail) {
           if (isDetailExpanded((Node) item.getSourceTuple(), currentPath)) {
-            y = renderProperties(g, item, detail.properties(), currentPath, x, y, indentLevel + 1);
+            y = renderProperties(g, item, detail.properties(), currentPath, x, y, indentLevel + 1, bounds);
           }
         }
       }
@@ -295,22 +365,107 @@ public class EntityVisualizer extends JFrame {
       }
       return "unknown";
     }
-
-    private String pathToString(List<Integer> path) {
-      return path.toString().replaceAll("[\\[\\], ]", "_");
-    }
   }
 
   // Custom edge renderer
   class ReferenceEdgeRenderer extends EdgeRenderer {
     private static final BasicStroke SINGLE_STROKE = new BasicStroke(2);
-    private static final BasicStroke MULTI_STROKE = new BasicStroke(4);
     private static final float[] DASH_PATTERN = {10, 5};
     private static final BasicStroke MULTI_DASHED_STROKE =
-        new BasicStroke(4, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, DASH_PATTERN, 0);
+        new BasicStroke(3, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10, DASH_PATTERN, 0);
 
     public ReferenceEdgeRenderer() {
       setArrowType(prefuse.Constants.EDGE_ARROW_FORWARD);
+    }
+
+    @Override
+    protected Shape getRawShape(VisualItem item) {
+      Edge edge = (Edge) item.getSourceTuple();
+      VisualItem sourceItem = vis.getVisualItem(NODES, edge.getSourceNode());
+      VisualItem targetItem = vis.getVisualItem(NODES, edge.getTargetNode());
+
+      if (sourceItem == null || targetItem == null) {
+        return super.getRawShape(item);
+      }
+
+      List<Integer> path = (List<Integer>) item.get("propertyPath");
+      Integer yOffset = getPropertyPosition(edge.getSourceNode(), path);
+
+      double startX, startY;
+      Rectangle2D sourceBounds = sourceItem.getBounds();
+
+      if (yOffset != null) {
+        // Use the stored property position
+        startY = yOffset - 5; // Approximate center of the row
+        // Determine if target is to the left or right to pick side of node
+        if (targetItem.getX() > sourceItem.getX()) {
+          startX = sourceBounds.getMaxX();
+        } else {
+          startX = sourceBounds.getMinX();
+        }
+      } else {
+        startX = sourceItem.getX();
+        startY = sourceItem.getY();
+      }
+
+      double endX = targetItem.getX();
+      double endY = targetItem.getY();
+
+      // Find intersection with target node boundary
+      Rectangle2D targetBounds = targetItem.getBounds();
+      
+      Point2D intersection = getIntersection(startX, startY, endX, endY, targetBounds);
+      if (intersection != null) {
+        endX = intersection.getX();
+        endY = intersection.getY();
+      }
+
+      m_line.setLine(startX, startY, endX, endY);
+      return m_line;
+    }
+
+    private Point2D getIntersection(double x1, double y1, double x2, double y2, Rectangle2D rect) {
+      // Very simple intersection with rectangle
+      double dx = x2 - x1;
+      double dy = y2 - y1;
+
+      if (dx == 0 && dy == 0) return null;
+
+      double tMin = Double.MAX_VALUE;
+      Point2D result = null;
+
+      // Check each side of the rectangle
+      double[][] sides = {
+          {rect.getMinX(), rect.getMinY(), rect.getMaxX(), rect.getMinY()}, // Top
+          {rect.getMinX(), rect.getMaxY(), rect.getMaxX(), rect.getMaxY()}, // Bottom
+          {rect.getMinX(), rect.getMinY(), rect.getMinX(), rect.getMaxY()}, // Left
+          {rect.getMaxX(), rect.getMinY(), rect.getMaxX(), rect.getMaxY()}  // Right
+      };
+
+      for (double[] side : sides) {
+        Point2D p = intersectLines(x1, y1, x2, y2, side[0], side[1], side[2], side[3]);
+        if (p != null) {
+          double t;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            t = (p.getX() - x1) / dx;
+          } else {
+            t = (p.getY() - y1) / dy;
+          }
+          if (t >= 0 && t <= 1 && t < tMin) {
+            tMin = t;
+            result = p;
+          }
+        }
+      }
+      return result;
+    }
+
+    private Point2D intersectLines(double x1, double y1, double x2, double y2,
+                                   double x3, double y3, double x4, double y4) {
+      double den = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+      if (den == 0) return null;
+      double ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / den;
+      return new Point2D.Double(x1 + ua * (x2 - x1), y1 + ua * (y2 - y1));
     }
 
     @Override
@@ -336,10 +491,10 @@ public class EntityVisualizer extends JFrame {
         display.getAbsoluteCoordinate(point, point);
 
         Rectangle2D bounds = item.getBounds();
-        double relativeY = point.getY() - bounds.getY() - 25; // Account for header
+        double relativeY = point.getY() - bounds.getY() - HEADER_HEIGHT; // Account for header
 
         if (relativeY > 0) {
-          int row = (int) (relativeY / 20);
+          int row = (int) (relativeY / ROW_HEIGHT);
           List<Integer> clickedPath = findPropertyPath(entity.properties(), row, new ArrayList<>(), node);
 
           if (clickedPath != null) {
@@ -458,4 +613,3 @@ public class EntityVisualizer extends JFrame {
     });
   }
 }
-
