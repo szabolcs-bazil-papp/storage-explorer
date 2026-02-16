@@ -48,7 +48,12 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
 
   @Override
   protected Shape getRawShape(VisualItem item) {
-    return calculateBounds(item);
+    Rectangle2D bounds = calculateBounds(item);
+    // Prefuse uses (x, y) from the item as center by default for some layouts,
+    // but we want to return a shape that is positioned correctly relative to the item's coordinates.
+    double x = item.getX();
+    double y = item.getY();
+    return new Rectangle2D.Double(x + bounds.getX(), y + bounds.getY(), bounds.getWidth(), bounds.getHeight());
   }
 
   private Rectangle2D calculateBounds(VisualItem item) {

@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
@@ -118,12 +119,13 @@ public final class UmlView extends JFrame {
     // Initial positioning: spread nodes in a circle
     int i = 0;
     double radius = 300;
+    int nodeCount = service.nodesByTypeName().size();
     for (Iterator<?> it = vis.items(NODES); it.hasNext(); ) {
       var next = it.next();
       if (!(next instanceof VisualItem n)) {
         continue;
       }
-      double angle = 2 * Math.PI * i / service.nodesByTypeName().size();
+      double angle = nodeCount > 0 ? 2 * Math.PI * i / nodeCount : 0;
       n.setStartX(600 + radius * Math.cos(angle));
       n.setStartY(400 + radius * Math.sin(angle));
       n.setX(600 + radius * Math.cos(angle));
@@ -149,13 +151,14 @@ public final class UmlView extends JFrame {
             1 - 0.1f * e.getWheelRotation(), false);
       }
     });
-//    display.addControlListener(new ZoomToFitControl(
-//        Visualization.ALL_ITEMS,
-//        50, 800,
-//        Control.RIGHT_MOUSE_BUTTON));
+    //    display.addControlListener(new ZoomToFitControl(
+    //        Visualization.ALL_ITEMS,
+    //        50, 800,
+    //        Control.RIGHT_MOUSE_BUTTON));
     display.addControlListener(new ToolTipControl(UmlRenderingService.COL_TOOLTIP));
 
     vis.run("draw");
+    vis.run("color");
     // vis.run("layout");
     // Setup frame
     setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -163,15 +166,17 @@ public final class UmlView extends JFrame {
     pack();
     setLocationRelativeTo(null);
 
-//    final var layout = new ForceDirectedLayout(GRAPH);
-//    layout.getForceSimulator().setIntegrator(new prefuse.util.force.RungeKuttaIntegrator());
-//    Arrays.stream(layout.getForceSimulator().getForces())
-//        .filter(NBodyForce.class::isInstance)
-//        .map(NBodyForce.class::cast)
-//        .forEach(it -> it.setParameter(NBodyForce.GRAVITATIONAL_CONST, -100f));
-//
-//    layout.setVisualization(vis);
-//    animate.add(layout);
+    //    final var layout = new ForceDirectedLayout(GRAPH);
+    //    layout.getForceSimulator().setIntegrator(new RungeKuttaIntegrator());
+    //    for (prefuse.util.force.Force f : layout.getForceSimulator().getForces()) {
+    //      if (f instanceof NBodyForce nbf) {
+    //        nbf.setParameter(0, -400f);
+    //        nbf.setParameter(1, 500f);
+    //      }
+    //    }
+    //
+    //    layout.setVisualization(vis);
+    //    animate.add(layout);
 
     vis.run("layout");
     display.repaint();
@@ -250,6 +255,10 @@ public final class UmlView extends JFrame {
         Node node = (Node) item.getSourceTuple();
         StructuredType st = getEntity(node);
         if (!(st instanceof EntityType entity)) {
+          StructuredType.Unknown unknownType = (StructuredType.Unknown) st;
+          CompletableFuture
+              .runAsync(() -> service.determineStructure(unknownType))
+              .thenRun(() -> SwingUtilities.invokeLater(display::repaint));
           return;
         }
 

@@ -29,6 +29,7 @@ import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.type.Association;
+import com.aestallon.storageexplorer.core.model.type.EntityType;
 import com.aestallon.storageexplorer.core.model.type.StructuredType;
 import com.aestallon.storageexplorer.core.util.Uris;
 import prefuse.data.Edge;
@@ -120,6 +121,12 @@ public final class UmlRenderingService {
     node.set(COL_TOOLTIP, type.name());
     nodesByTypeName.put(type.name(), node);
 
+    addAssociations(type, node);
+
+    return node;
+  }
+
+  private void addAssociations(StructuredType type, Node node) {
     final var associations = type.associations();
     for (final var association : associations) {
       final Node toNode = addType(association.to());
@@ -128,8 +135,6 @@ public final class UmlRenderingService {
       edge.set(COL_TOOLTIP, association.propertyPath());
       assocationsBySourceTypeName.put(type.name(), association);
     }
-
-    return node;
   }
 
   private Node addType(final String typeName) {
@@ -137,10 +142,30 @@ public final class UmlRenderingService {
   }
 
   public void determineStructure(final StructuredType.Unknown type) {
-    if (!typesByTypeName.containsKey(type.name())) {
+    final var typeName = type.name();
+    if (!typesByTypeName.containsKey(typeName)) {
       return;
     }
 
+    // TODO: discover all candidates and merge the type structures:
+    final var candidate = instanceCandidatesByTypeName
+        .computeIfAbsent(typeName, k -> new HashSet<>())
+        .stream()
+        .findAny()
+        .orElse(null);
+    final var discovery = storageInstance.discover(candidate);
+    if(discovery.isEmpty() || !(discovery.get() instanceof ObjectEntry oe)) {
+      return;
+    }
+
+    final StructuredType describedType = storageInstance.index().getOrDescribeTypeOf(oe);
+    if (!(describedType instanceof EntityType entity)) {
+      return;
+    }
+
+    typesByTypeName.put(typeName, entity);
+    nodesByTypeName.get(typeName).set(COL_NODE_TYPE, entity);
+    addAssociations(entity, nodesByTypeName.get(typeName));
   }
 
 
