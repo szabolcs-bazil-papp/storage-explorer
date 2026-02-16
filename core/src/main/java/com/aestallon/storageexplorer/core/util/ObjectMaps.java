@@ -71,7 +71,9 @@ public final class ObjectMaps {
   }
 
   public static EntityType entityTypeOf(String name, Map<String, Object> m) {
-    return new EntityType(name, propertiesOf(m));
+    final var type = new EntityType(name, propertiesOf(m));
+    type.properties().removeIf(it -> UriProperty.OWN.equals(it.key()));
+    return type;
   }
 
   static List<Property> propertiesOf(Map<String, Object> m) {

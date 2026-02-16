@@ -182,50 +182,6 @@ public final class UmlView extends JFrame {
     display.repaint();
   }
 
-  private Graph createGraph(List<EntityType> entities) {
-    Graph graph = new Graph(true); // directed
-    graph.addColumn("entity", EntityType.class);
-    graph.getEdgeTable().addColumn("arity", String.class);
-    graph.getEdgeTable().addColumn("propertyPath", List.class);
-
-    // Create nodes with initial positions
-    Map<String, Node> nodeMap = new HashMap<>();
-    java.util.Random rand = new java.util.Random(42); // Fixed seed for reproducibility
-    for (final var entity : entities) {
-      Node node = graph.addNode();
-      node.set("entity", entity);
-      nodeMap.put(entity.name(), node);
-    }
-
-    // Create edges for references
-    for (final var entity : entities) {
-      Node sourceNode = nodeMap.get(entity.name());
-      addReferencesRecursive(graph, sourceNode, nodeMap, entity.properties(), new ArrayList<>());
-    }
-
-    return graph;
-  }
-
-  private void addReferencesRecursive(Graph graph, Node sourceNode, Map<String, Node> nodeMap,
-                                      List<Property> properties, List<Integer> path) {
-    for (int i = 0; i < properties.size(); i++) {
-      Property pe = properties.get(i);
-      List<Integer> currentPath = new ArrayList<>(path);
-      currentPath.add(i);
-
-      if (pe.type() instanceof PropertyType.Ref ref) {
-        Node targetNode = nodeMap.get(ref.entityName());
-        if (targetNode != null) {
-          Edge edge = graph.addEdge(sourceNode, targetNode);
-          edge.set("arity", pe.type().arity().name());
-          edge.set("propertyPath", currentPath);
-        }
-      } else if (pe.type() instanceof PropertyType.Complex detail) {
-        addReferencesRecursive(graph, sourceNode, nodeMap, detail.properties(), currentPath);
-      }
-    }
-  }
-
   public void toggleDetail(Node node, List<Integer> path) {
     expandedDetails.computeIfAbsent(node, k -> new HashSet<>());
     Set<List<Integer>> expanded = expandedDetails.get(node);
@@ -258,7 +214,13 @@ public final class UmlView extends JFrame {
           StructuredType.Unknown unknownType = (StructuredType.Unknown) st;
           CompletableFuture
               .runAsync(() -> service.determineStructure(unknownType))
-              .thenRun(() -> SwingUtilities.invokeLater(display::repaint));
+              .thenRun(() -> SwingUtilities.invokeLater(() -> {
+                vis.run("draw");
+                vis.run("color");
+                vis.run("layout");
+                vis.repaint();
+                display.repaint();
+              }));
           return;
         }
 

@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import com.aestallon.storageexplorer.client.BatchLoaderExecutor;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
@@ -31,6 +32,7 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.type.Association;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
 import com.aestallon.storageexplorer.core.model.type.StructuredType;
+import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 import com.aestallon.storageexplorer.core.util.Uris;
 import prefuse.data.Edge;
 import prefuse.data.Graph;
@@ -50,8 +52,7 @@ public final class UmlRenderingService {
   private final Consumer<GraphState> graphStateListener;
   private final Graph graph;
   private final Map<String, Node> nodesByTypeName;
-  private final Map<Node, Set<List<Integer>>> expandedDetails; // Node -> Set of property paths
-  private final Map<Node, Map<String, Integer>> propertyPositions; // Node -> (path -> y-position)
+  private final StorageInstanceExaminer.ObjectEntryLookupTable cache;
 
 
   public UmlRenderingService(final StorageInstance storageInstance,
@@ -63,8 +64,7 @@ public final class UmlRenderingService {
     instanceCandidatesByTypeName = new HashMap<>();
     graph = createGraph();
     nodesByTypeName = new HashMap<>();
-    expandedDetails = new HashMap<>();
-    propertyPositions = new HashMap<>();
+    cache = StorageInstanceExaminer.ObjectEntryLookupTable.newInstance();
   }
 
   public Graph graph() {
@@ -73,14 +73,6 @@ public final class UmlRenderingService {
 
   public Map<String, Node> nodesByTypeName() {
     return Collections.unmodifiableMap(nodesByTypeName);
-  }
-
-  public Map<Node, Set<List<Integer>>> expandedDetails() {
-    return Collections.unmodifiableMap(expandedDetails);
-  }
-
-  public Map<Node, Map<String, Integer>> propertyPositions() {
-    return Collections.unmodifiableMap(propertyPositions);
   }
 
   private Graph createGraph() {
@@ -96,12 +88,7 @@ public final class UmlRenderingService {
     final StructuredType type = storageInstance
         .index()
         .getOrDescribeTypeOf(objectEntry);
-    objectEntry.uriProperties().stream()
-        .map(UriProperty::uri)
-        .collect(Collectors.groupingBy(Uris::getTypeName))
-        .forEach((typeName, uris) -> instanceCandidatesByTypeName
-            .computeIfAbsent(typeName, k -> new HashSet<>())
-            .addAll(uris));
+    cacheInstanceCandidates(objectEntry);
     addType(type);
 
     graphStateListener.accept(new GraphState(
@@ -147,25 +134,44 @@ public final class UmlRenderingService {
       return;
     }
 
-    // TODO: discover all candidates and merge the type structures:
-    final var candidate = instanceCandidatesByTypeName
-        .computeIfAbsent(typeName, k -> new HashSet<>())
-        .stream()
-        .findAny()
-        .orElse(null);
-    final var discovery = storageInstance.discover(candidate);
-    if(discovery.isEmpty() || !(discovery.get() instanceof ObjectEntry oe)) {
+    final var candidates = instanceCandidatesByTypeName
+        .computeIfAbsent(typeName, k -> new HashSet<>());
+    final var candidateEntries = candidates.stream()
+        .flatMap(it -> storageInstance.discover(it).stream())
+        .collect(Collectors.toSet());
+    final var loadResults = BatchLoaderExecutor
+        .builder(storageInstance.examiner(), candidateEntries)
+        .useCache(cache)
+        .build()
+        .execute();
+    if(loadResults.isEmpty()) {
       return;
     }
 
-    final StructuredType describedType = storageInstance.index().getOrDescribeTypeOf(oe);
+    loadResults.stream()
+        .map(BatchLoaderExecutor.EntryWithLoadResult::entry)
+        .forEach(this::cacheInstanceCandidates);
+    final StructuredType describedType = storageInstance
+        .index()
+        // TODO: Add method to describe type of all loaded entries, and merge structured type:
+        .getOrDescribeTypeOf(loadResults.stream().findFirst().orElseThrow().entry());
     if (!(describedType instanceof EntityType entity)) {
       return;
     }
 
     typesByTypeName.put(typeName, entity);
     nodesByTypeName.get(typeName).set(COL_NODE_TYPE, entity);
+
     addAssociations(entity, nodesByTypeName.get(typeName));
+  }
+
+  private void cacheInstanceCandidates(ObjectEntry oe) {
+    oe.uriProperties().stream()
+        .map(UriProperty::uri)
+        .collect(Collectors.groupingBy(Uris::getTypeName))
+        .forEach((typeName, uris) -> instanceCandidatesByTypeName
+            .computeIfAbsent(typeName, k -> new HashSet<>())
+            .addAll(uris));
   }
 
 

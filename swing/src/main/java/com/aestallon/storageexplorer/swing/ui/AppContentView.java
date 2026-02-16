@@ -131,9 +131,8 @@ public class AppContentView extends JPanel {
           commanderContainerView.setMaximumSize(new Dimension(0, 0));
           content.setRightComponent(null);
         }
-        case SideBarController.CommanderShowEvent.Some(var commanderView) -> {
-          commanderContainerView.setCommanderView(commanderView);
-        }
+        case SideBarController.CommanderShowEvent.Some(var commanderView) ->
+            commanderContainerView.setCommanderView(commanderView);
       }
     }
   }
@@ -200,20 +199,20 @@ public class AppContentView extends JPanel {
   public void onStorageEntryUserDataChanged(final StorageEntryUserDataChanged event) {
     breadCrumbs.refresh();
   }
-  
+
   @EventListener
   public void onArcScriptViewRenamed(final ArcScriptViewRenamed event) {
     breadCrumbs.refresh();
   }
-  
-  
+
+
 
   public void setGraphState(final GraphState state) {
     graphStateLabel.setState(state);
   }
 
   private static final class LoadingQueueLabel extends JLabel {
-    private final Map<StorageId, Long> sizes;
+    private final transient Map<StorageId, Long> sizes;
 
     public LoadingQueueLabel() {
       sizes = new HashMap<>();
@@ -303,7 +302,7 @@ public class AppContentView extends JPanel {
       }
       BreadCrumbs.this.revalidate();
     }
-    
+
     private void refresh() {
       SwingUtilities.invokeLater(() -> elements.forEach(BreadCrumbElement::setText));
     }
