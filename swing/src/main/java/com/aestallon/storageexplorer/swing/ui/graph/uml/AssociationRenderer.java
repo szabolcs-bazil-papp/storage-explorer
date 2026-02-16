@@ -13,28 +13,13 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.graph;
-
-/*
- * Copyright 2007 - 2026 Ralf Wisser.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+package com.aestallon.storageexplorer.swing.ui.graph.uml;
 
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import com.aestallon.storageexplorer.core.model.type.PropertyType;
 import prefuse.Constants;
 import prefuse.render.EdgeRenderer;
 import prefuse.util.GraphicsLib;
@@ -43,10 +28,10 @@ import prefuse.visual.VisualItem;
 
 public class AssociationRenderer extends EdgeRenderer {
 
-  private final EntityVisualizer visualizer;
+  private final UmlView visualizer;
   boolean full = true;
 
-  public AssociationRenderer(EntityVisualizer visualizer) {
+  public AssociationRenderer(UmlView visualizer) {
     super(Constants.EDGE_TYPE_LINE, Constants.EDGE_ARROW_FORWARD);
     this.visualizer = visualizer;
   }
@@ -73,10 +58,9 @@ public class AssociationRenderer extends EdgeRenderer {
       type = Constants.EDGE_TYPE_CURVE;
     }
 
-    getAlignedPoint(m_tmpPoints[0], item1.getBounds(),
-        m_xAlign1, m_yAlign1);
-    getAlignedPoint(m_tmpPoints[1], item2.getBounds(),
-        m_xAlign2, m_yAlign2);
+    m_tmpPoints[0].setLocation(item1.getX(), item1.getY());
+    m_tmpPoints[1].setLocation(item2.getX(), item2.getY());
+    
     m_curWidth = (float)(m_width * getLineWidth(item));
     EdgeItem e = (EdgeItem)item;
 
@@ -200,6 +184,11 @@ public class AssociationRenderer extends EdgeRenderer {
     return m_arrowTrans;
   }
 
+//  @Override
+//  public void render(Graphics2D g, VisualItem item) {
+//    render(g, item, false);
+//  }
+
   public void render(Graphics2D g, VisualItem item, boolean isSelected) {
     item.setSize(isSelected? 3 : 1);
     int color = Color.GREEN.getRGB();
@@ -220,7 +209,7 @@ public class AssociationRenderer extends EdgeRenderer {
     starPosition = null;
     pendingPosition = null;
     midPosition = null;
-    render(g, item);
+    super.render(g, item);
     if (starPosition != null && starImage != null) {
       double size = STAR_SIZE;
       AffineTransform t2 = new AffineTransform();
@@ -301,8 +290,8 @@ public class AssociationRenderer extends EdgeRenderer {
   /**
    * Render aggregation symbols.
    */
-  protected Polygon updateArrowHead(int w, int h, Arity arity, boolean isSelected) {
-    if (arity == Arity.MANY) {
+  protected Polygon updateArrowHead(int w, int h, PropertyType.Arity arity, boolean isSelected) {
+    if (arity == PropertyType.Arity.MANY) {
       if ( m_arrowHead == null ) {
         m_arrowHead = new Polygon();
       } else {

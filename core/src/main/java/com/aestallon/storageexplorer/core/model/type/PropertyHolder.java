@@ -13,22 +13,25 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.swing.ui.graph;
+package com.aestallon.storageexplorer.core.model.type;
 
 import java.util.List;
 
-public record Entity(String uniqueName, List<PropertyEntry> properties) {}
+interface PropertyHolder {
 
-enum Arity { ONE, MANY }
+  List<Property> properties();
 
-record PropertyEntry(Property property, Arity arity ) {}
+  default void add(Property property) {
+    final var properties = properties();
+    for (final var prop : properties) {
+      if (prop.key().equals(property.key())) {
+        if (prop.type().equals(property.type())) {
+          return;
+        }
 
-record Property(String key, PropertyType type) {}
 
-sealed interface PropertyType {}
+      }
+    }
+  }
 
-enum Inline implements PropertyType { STRING, NUMBER, BOOLEAN }
-
-record Reference(String entityUniqueName) implements PropertyType {}
-
-record Detail(List<PropertyEntry> properties) implements PropertyType {}
+}

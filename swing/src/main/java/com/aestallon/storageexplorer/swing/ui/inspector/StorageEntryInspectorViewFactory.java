@@ -26,17 +26,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.swing.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.ff.FeatureFlag;
 import com.aestallon.storageexplorer.client.graph.event.GraphRenderingRequest;
+import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
@@ -50,9 +55,8 @@ import com.aestallon.storageexplorer.core.util.Uris;
 import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorController;
 import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorDialog;
 import com.aestallon.storageexplorer.swing.ui.editor.StorageEntryEditorController;
-import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.event.EntryForgotten;
-import com.aestallon.storageexplorer.swing.ui.explorer.TabView;
+import com.aestallon.storageexplorer.swing.ui.graph.uml.UmlView;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
@@ -61,6 +65,9 @@ import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
 
 @Service
 public class StorageEntryInspectorViewFactory {
+
+  private static final Logger log = LoggerFactory.getLogger(StorageEntryInspectorViewFactory.class);
+
 
   private record TextAreasByDiffView(ObjectEntryDiffView view, List<JTextArea> textAreas) {}
 
@@ -319,6 +326,31 @@ public class StorageEntryInspectorViewFactory {
       @Override
       public void actionPerformed(ActionEvent e) {
         eventPublisher.publishEvent(new GraphRenderingRequest(storageEntry));
+      }
+    });
+  }
+
+  void addRenderTypeAction(final ObjectEntry objectEntry, final JToolBar toolbar) {
+    toolbar.add(new AbstractAction(null, IconProvider.UML) {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        // eventPublisher.publishEvent(new UmlRenderingRequest(objectEntry));
+        final var service =
+            new UmlRenderingService(
+                storageInstanceProvider.storageInstanceOf(objectEntry),
+                it -> System.out.println("%d / %d".formatted(it.nodeCount(), it.edgeCount())));
+        CompletableFuture
+            .runAsync(() -> {
+              try {
+                service.render(objectEntry);
+              } catch (Exception ex) {
+                log.error("Failed to render UML graph!", ex);
+              }
+            })
+            .thenRun(() -> SwingUtilities.invokeLater(() -> {
+              final var umlView = new UmlView(service);
+              umlView.setVisible(true);
+            }));
       }
     });
   }

@@ -58,12 +58,12 @@ import com.aestallon.storageexplorer.client.graph.layout.forceatlas2.ForceAtlas2
 import com.aestallon.storageexplorer.client.graph.service.GraphRenderingService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.GraphConfigChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
-import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.GraphStylingProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
@@ -136,8 +136,8 @@ public class GraphView extends JPanel {
       case DARK -> GraphStylingProvider.provideDark(this);
       case LIGHT -> GraphStylingProvider.provideLight(this);
     });
-    graph.setAttribute("ui.antialias");
-    graph.setAttribute("ui.quality");
+    //graph.setAttribute("ui.antialias");
+    //graph.setAttribute("ui.quality");
 
     viewer = new SwingViewer(graph, Viewer.ThreadingModel.GRAPH_IN_ANOTHER_THREAD);
     final BarnesHutLayout layout = switch (userConfig.getLayoutAlgorithm()) {

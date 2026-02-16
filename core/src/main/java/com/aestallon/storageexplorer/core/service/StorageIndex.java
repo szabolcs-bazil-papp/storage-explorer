@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -34,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.springframework.context.ApplicationEventPublisher;
+import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -41,7 +43,11 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
+import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.core.model.type.EntityType;
+import com.aestallon.storageexplorer.core.model.type.StructuredType;
 import com.aestallon.storageexplorer.core.service.cache.StorageIndexCache;
+import com.aestallon.storageexplorer.core.util.ObjectMaps;
 import com.google.common.base.Strings;
 
 public abstract sealed class StorageIndex<T extends StorageIndex<T>>
@@ -57,6 +63,8 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   protected StorageEntryFactory storageEntryFactory;
   protected ApplicationEventPublisher eventPublisher;
 
+  protected final ConcurrentHashMap<String, StructuredType> typesByName = new ConcurrentHashMap<>();
+
   protected StorageIndex(StorageId storageId,
                          ObjectApi objectApi,
                          CollectionApi collectionApi) {
@@ -68,7 +76,7 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   public final StorageId id() {
     return storageId;
   }
-  
+
   public final Set<URI> uris() {
     return cache.knownUris();
   }
@@ -203,6 +211,31 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
           .filter(it -> it.uri().getPath().equals(scopedEntry.scope().getPath()))
           .forEach(it -> it.addScopedEntry(scopedEntry));
     }
+  }
+
+  public StructuredType getOrDescribeTypeOf(final ObjectEntry objectEntry) {
+    final var typeName = objectEntry.typeName();
+    final StructuredType type = typesByName.computeIfAbsent(
+        typeName,
+        k -> new StructuredType.Unknown(typeName));
+    if (type instanceof StructuredType.Unknown) {
+      final StructuredType discoveredType = switch (objectEntry.tryLoad().get()) {
+        case ObjectEntryLoadResult.Err(var msg) -> {
+          publishEvent(Msg.err("Failed to load entry!", msg));
+          yield type;
+        }
+        case ObjectEntryLoadResult.MultiVersion mv -> describeTypeOf(typeName, mv.head());
+        case ObjectEntryLoadResult.SingleVersion sv -> describeTypeOf(typeName, sv);
+      };
+      typesByName.put(typeName, discoveredType);
+      return discoveredType;
+    }
+
+    return type;
+  }
+
+  private EntityType describeTypeOf(String name, ObjectEntryLoadResult.SingleVersion sv) {
+    return ObjectMaps.entityTypeOf(name, sv.objectAsMap());
   }
 
   public Stream<StorageEntry> searchForUri(final String queryString) {
