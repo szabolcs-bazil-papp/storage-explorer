@@ -81,4 +81,3 @@ public record Property(String key, PropertyType type) {
   }
 
 }
-
