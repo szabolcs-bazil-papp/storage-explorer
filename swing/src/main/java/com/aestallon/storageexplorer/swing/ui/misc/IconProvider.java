@@ -124,4 +124,6 @@ public final class IconProvider {
   public static final ImageIcon CSV = new ImageIcon(loadIcon("csv"));
   public static final ImageIcon JSON = new ImageIcon(loadIcon("json"));
 
+  public static final ImageIcon UML = new ImageIcon(loadIcon("uml"));
+
 }

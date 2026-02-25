@@ -143,7 +143,7 @@ public final class UmlRenderingService {
         .useCache(cache)
         .build()
         .execute();
-    if(loadResults.isEmpty()) {
+    if (loadResults.isEmpty()) {
       return;
     }
 
@@ -172,7 +172,5 @@ public final class UmlRenderingService {
             .computeIfAbsent(typeName, k -> new HashSet<>())
             .addAll(uris));
   }
-
-
 
 }
