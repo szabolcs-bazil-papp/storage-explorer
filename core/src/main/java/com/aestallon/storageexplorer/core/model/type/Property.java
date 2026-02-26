@@ -16,8 +16,11 @@
 package com.aestallon.storageexplorer.core.model.type;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.common.util.NotImplementedException;
 
 public record Property(String key, PropertyType type) {
@@ -40,6 +43,10 @@ public record Property(String key, PropertyType type) {
       // case 4: A: List<X> | List<Y> -- B: List<X | Y> --> widen!
     } else if (PropertyType.Arity.MANY == type.arity() || PropertyType.Arity.MANY == t.arity()) {
       // we either have A | List<B>, or List<A> | B --> return their union with arity ONE
+      final var props = new ArrayList<PropertyType>();
+      props.add(type);
+      props.add(t);
+      return new Property(key, new PropertyType.Union(props, PropertyType.Arity.ONE));
     } else {
 
       return switch (type) {
@@ -68,6 +75,18 @@ public record Property(String key, PropertyType type) {
           }
           default -> {
             final var props = new ArrayList<PropertyType>();
+           if (type instanceof PropertyType.Complex c1 && t instanceof PropertyType.Complex c2) {
+             final var c1Keys = c1.properties().stream()
+                 .map(Property::key)
+                 .collect(Collectors.toSet());
+             final var c2Keys = c2.properties().stream()
+                 .map(Property::key)
+                 .collect(Collectors.toSet());
+             if (c1Keys.stream().anyMatch(c2Keys::contains)) {
+                yield mergeComplex(c1, c2);
+             }
+           }
+
             props.add(type);
             props.add(t);
             yield new Property(key, new PropertyType.Union(props, PropertyType.Arity.ONE));
@@ -78,6 +97,26 @@ public record Property(String key, PropertyType type) {
 
     }
     throw new NotImplementedException("type union not implemented yet");
+  }
+
+  private Property mergeComplex(PropertyType.Complex c1, PropertyType.Complex c2) {
+    final var allProps = new LinkedHashMap<String, Property>();
+    for (var p : c1.properties()) {
+      allProps.put(p.key(), p);
+    }
+
+    for (var p : c2.properties()) {
+      final var existingProp = allProps.get(p.key());
+      if (existingProp != null) {
+        allProps.put(p.key(), existingProp.union(p.type()));
+      } else {
+        allProps.put(p.key(), p);
+      }
+    }
+
+    return new Property(
+        key,
+        new PropertyType.Complex(new ArrayList<>(allProps.values()), arity()));
   }
 
 }
