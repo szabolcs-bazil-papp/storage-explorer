@@ -31,6 +31,7 @@ import prefuse.visual.VisualItem;
 
 public class StructuredTypeRenderer extends AbstractShapeRenderer {
 
+  private static final String FONT_NAME = "JetBrains Mono";
   private static final int PADDING = 10;
   private static final int INDENT = 15;
   private static final int MIN_WIDTH = 200;
@@ -57,7 +58,7 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
   private Rectangle2D calculateBounds(VisualItem item) {
     StructuredType st = (StructuredType) item.get(UmlRenderingService.COL_NODE_TYPE);
 
-    FontMetrics fm = umlView.display.getFontMetrics(new Font("SansSerif", Font.PLAIN, 11));
+    FontMetrics fm = umlView.display.getFontMetrics(new Font(FONT_NAME, Font.PLAIN, 11));
     int maxWidth = Math.max(MIN_WIDTH, fm.stringWidth(st.name()) + 2 * PADDING);
     int height = HEADER_HEIGHT;
     if (st instanceof EntityType entity) {
@@ -71,7 +72,7 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
 
   private int calculatePropertiesWidth(VisualItem item, java.util.List<Property> properties,
                                        String propertyPath, int indentLevel) {
-    FontMetrics fm = umlView.display.getFontMetrics(new Font("SansSerif", Font.PLAIN, 11));
+    FontMetrics fm = umlView.display.getFontMetrics(new Font(FONT_NAME, Font.PLAIN, 11));
     int maxWidth = 0;
     for (Property pe : properties) {
       String label =
@@ -129,14 +130,14 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
         new Rectangle2D.Double(bounds.getX(), bounds.getY(), bounds.getWidth(), HEADER_HEIGHT));
 
     g.setColor(Color.WHITE);
-    g.setFont(new Font("SansSerif", Font.BOLD, 12));
+    g.setFont(new Font(FONT_NAME, Font.BOLD, 12));
     g.drawString(st.name(),
         (int) bounds.getX() + PADDING,
         (int) bounds.getY() + 17);
 
     // Draw properties
     g.setColor(Color.BLACK);
-    g.setFont(new Font("SansSerif", Font.PLAIN, 11));
+    g.setFont(new Font(FONT_NAME, Font.PLAIN, 11));
 
     if (st instanceof EntityType entity) {
       int y = (int) bounds.getY() + HEADER_HEIGHT + 15;
