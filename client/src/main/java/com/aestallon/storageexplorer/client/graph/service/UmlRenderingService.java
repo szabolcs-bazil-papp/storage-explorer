@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.client.graph.service;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +26,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.client.BatchLoaderExecutor;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
+import com.aestallon.storageexplorer.client.userconfig.model.UmlExportSettings;
+import com.aestallon.storageexplorer.client.util.OpResult;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
@@ -171,6 +174,13 @@ public final class UmlRenderingService {
         .forEach((typeName, uris) -> instanceCandidatesByTypeName
             .computeIfAbsent(typeName, k -> new HashSet<>())
             .addAll(uris));
+  }
+
+  public OpResult exportEntityRelationshipDiagram(final Path target) {
+    final var types = new HashSet<>(typesByTypeName.values());
+    final var associations = new HashSet<>(assocationsBySourceTypeName.values());
+    return new PlantUmlExportService(types, associations, new UmlExportSettings())
+        .exportEntityRelationshipDiagram(target);
   }
 
 }

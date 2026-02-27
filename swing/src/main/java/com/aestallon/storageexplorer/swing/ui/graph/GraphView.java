@@ -21,15 +21,19 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.swing.*;
+import javax.swing.filechooser.FileSystemView;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.MultiGraph;
 import org.graphstream.stream.file.FileSinkImages;
@@ -53,6 +57,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.asexport.ResultSetExporter;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.graph.layout.forceatlas2.ForceAtlas2;
 import com.aestallon.storageexplorer.client.graph.service.GraphRenderingService;
@@ -61,6 +66,8 @@ import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.GraphConfigChanged;
 import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.client.util.OpResult;
+import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -224,24 +231,73 @@ public class GraphView extends JPanel {
     closeBtn.setAlignmentY(TOP_ALIGNMENT);
     closeBtn.setAlignmentX(RIGHT_ALIGNMENT);
 
-    final var labelBtn = new JToggleButton(IconProvider.MAGNIFY);
-    labelBtn.setSelected(showLabels);
-    labelBtn.addActionListener(e -> {
-      showLabels = labelBtn.isSelected();
-      executorService.submit(
-          () -> graphRenderingService.showLabels(graph, showLabels));
-    });
-    labelBtn.setAlignmentY(TOP_ALIGNMENT);
-    labelBtn.setAlignmentX(RIGHT_ALIGNMENT);
+    final java.util.List<JComponent> components = new ArrayList<>();
+    if (graphRenderingService != null) {
+      final var labelBtn = new JToggleButton(IconProvider.MAGNIFY);
+      labelBtn.setSelected(showLabels);
+      labelBtn.addActionListener(e -> {
+        showLabels = labelBtn.isSelected();
+        executorService.submit(
+            () -> graphRenderingService.showLabels(graph, showLabels));
+      });
+      labelBtn.setAlignmentY(TOP_ALIGNMENT);
+      labelBtn.setAlignmentX(RIGHT_ALIGNMENT);
+      components.add(labelBtn);
+    } else if (umlView != null) {
+      final var exportBtn = new JButton(IconProvider.CSV);
+      exportBtn.addActionListener(e -> {
+        exportUml();
+      });
+      exportBtn.setAlignmentY(TOP_ALIGNMENT);
+      exportBtn.setAlignmentX(RIGHT_ALIGNMENT);
+      components.add(exportBtn);
+    }
+
 
     final var box = Box.createHorizontalBox();
     box.setOpaque(false);
     box.add(Box.createGlue());
-    box.add(labelBtn);
+    components.forEach(box::add);
     box.add(closeBtn);
 
     overlayPanel.add(box);
     return overlayPanel;
+  }
+
+  private void exportUml() {
+    final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
+    fileChooser.setDialogType(JFileChooser.SAVE_DIALOG);
+    fileChooser.setDialogTitle("Export as PlantUML");
+
+    final int result = fileChooser.showDialog(this, "Export");
+    if (JFileChooser.APPROVE_OPTION == result) {
+      final File selectedFile = fileChooser.getSelectedFile();
+      if (selectedFile.isDirectory()) {
+        System.err.println("REEEE");
+        return;
+      }
+
+      String filePath = selectedFile.getPath();
+      final var ext = ".puml";
+      if (!filePath.endsWith(ext)) {
+        filePath = filePath + ext;
+      }
+
+      final var r = umlView.service().exportEntityRelationshipDiagram(Path.of(filePath));
+      if (r instanceof OpResult.Err err) {
+        if (err instanceof OpResult.Err.Exc exc) {
+          log.error(exc.msg(), exc.e());
+        }
+        JOptionPane.showMessageDialog(
+            this,
+            err.msg(),
+            err.title(),
+            JOptionPane.ERROR_MESSAGE,
+            IconProvider.ERROR);
+      } else if (r instanceof OpResult.Ok(String title, String msg)){
+        eventPublisher.publishEvent(Msg.info(title, msg));
+      }
+    }
   }
 
   private void discard(final boolean keepVisible) {

@@ -20,23 +20,14 @@ import java.util.List;
 public sealed interface PropertyType {
 
 
-  enum Arity {
-    ONE,
-    MANY,
-  }
+  enum Arity { ONE, MANY }
 
   Arity arity();
 
   PropertyType withArity(Arity arity);
 
 
-  enum PrimitiveType {
-    STR,
-    NUM,
-    BOOL,
-    TIME,
-    NULL,
-  }
+  enum PrimitiveType { STR, NUM, BOOL, TIME, NULL }
 
 
   record Primitive(PrimitiveType type, Arity arity) implements PropertyType {
@@ -67,6 +58,11 @@ public sealed interface PropertyType {
 
       return new Complex(properties, arity);
     }
+
+    @Override
+    public String toString() {
+      return "{ ... }";
+    }
   }
 
 
@@ -82,7 +78,7 @@ public sealed interface PropertyType {
 
     @Override
     public String toString() {
-      return "-->" +  (arity == Arity.ONE ? entityName : "[" + entityName + "]");
+      return (arity == Arity.ONE ? entityName : "[" + entityName + "]");
     }
   }
 

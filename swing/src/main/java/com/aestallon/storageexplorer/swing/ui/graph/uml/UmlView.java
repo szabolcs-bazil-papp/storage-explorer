@@ -161,6 +161,10 @@ public final class UmlView {
     return display;
   }
 
+  public UmlRenderingService service() {
+    return service;
+  }
+
   private void positionNewNodes() {
     List<VisualItem> existingNodes = new ArrayList<>();
     List<VisualItem> newNodes = new ArrayList<>();

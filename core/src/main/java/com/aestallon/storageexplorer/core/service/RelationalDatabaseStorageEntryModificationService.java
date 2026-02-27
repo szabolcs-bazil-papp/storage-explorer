@@ -23,10 +23,10 @@ class RelationalDatabaseStorageEntryModificationService
 
   @Override
   public StorageEntryModificationResult modify(final StorageEntry storageEntry,
-                                               final String content, 
+                                               final String content,
                                                final ModificationMode mode) {
-    throw new NotImplementedException(
-        "Not yet implemented: RelationalDatabaseStorageEntryModificationService.modify(StorageEntry, String, ModificationMode)");
+    throw NotImplementedException.ofMethod(
+        "RelationalDatabaseStorageEntryModificationService.modify(StorageEntry, String, ModificationMode)");
   }
 
 }
