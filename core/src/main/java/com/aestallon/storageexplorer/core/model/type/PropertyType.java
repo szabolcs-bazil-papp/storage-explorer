@@ -48,6 +48,13 @@ public sealed interface PropertyType {
 
       return new Primitive(type, arity);
     }
+
+    @Override
+    public String toString() {
+      final var typeName = type.name();
+      return arity == Arity.ONE ? typeName : "[" + typeName + "]";
+    }
+
   }
 
 
@@ -72,14 +79,22 @@ public sealed interface PropertyType {
 
       return new Ref(entityName, arity);
     }
+
+    @Override
+    public String toString() {
+      return "-->" +  (arity == Arity.ONE ? entityName : "[" + entityName + "]");
+    }
   }
 
 
   record Union(List<PropertyType> types, Arity arity) implements PropertyType {
 
     public boolean isWiderThan(PropertyType other) {
-      // TODO: this is not enough, we must observe lists and stuff!
-      return types.contains(other);
+      if (types.contains(other)) {
+        return true;
+      }
+
+      return false;
     }
 
     @Override
@@ -91,6 +106,27 @@ public sealed interface PropertyType {
       return new Union(types, arity);
     }
 
+    @Override
+    public String toString() {
+      final var sb = new StringBuilder();
+      if (arity == Arity.MANY) {
+        sb.append("[");
+      }
+
+      for (int i = 0; i < types.size(); i++) {
+        var p = types.get(i);
+        sb.append(p.toString());
+        if (i < types.size() - 1) {
+          sb.append(" | ");
+        }
+      }
+
+      if (arity == Arity.MANY) {
+        sb.append("]");
+      }
+
+      return sb.toString();
+    }
   }
 
 

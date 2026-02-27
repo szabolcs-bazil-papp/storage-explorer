@@ -16,7 +16,6 @@
 package com.aestallon.storageexplorer.core.model.type;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -29,7 +28,7 @@ public record Property(String key, PropertyType type) {
     return type.arity();
   }
 
-  Property union(final PropertyType t) {
+  Property merge(final PropertyType t) {
     if (type.equals(t)) {
       return this;
     }
@@ -108,7 +107,7 @@ public record Property(String key, PropertyType type) {
     for (var p : c2.properties()) {
       final var existingProp = allProps.get(p.key());
       if (existingProp != null) {
-        allProps.put(p.key(), existingProp.union(p.type()));
+        allProps.put(p.key(), existingProp.merge(p.type()));
       } else {
         allProps.put(p.key(), p);
       }
@@ -119,4 +118,8 @@ public record Property(String key, PropertyType type) {
         new PropertyType.Complex(new ArrayList<>(allProps.values()), arity()));
   }
 
+  @Override
+  public String toString() {
+    return key + ": " + type;
+  }
 }
