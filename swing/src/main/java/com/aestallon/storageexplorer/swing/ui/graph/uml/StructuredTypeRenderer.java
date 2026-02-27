@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.swing.ui.graph.uml;
 
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
+import java.awt.geom.RoundRectangle2D;
 import java.util.HashMap;
 import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
@@ -116,24 +117,34 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
     }
 
     Rectangle2D bounds = shape.getBounds2D();
+    final var roundedBounds = new RoundRectangle2D.Double(
+        bounds.getX(),
+        bounds.getY(), bounds.getWidth(), bounds.getHeight(), 10, 10);
 
     // Draw box
     g.setColor(ColorLib.getColor(item.getFillColor()));
-    g.fill(bounds);
-    g.setColor(ColorLib.getColor(item.getStrokeColor()));
-    g.setStroke(new BasicStroke(2));
-    g.draw(bounds);
+    g.fill(roundedBounds);
+
 
     // Draw header
-    g.setColor(new Color(100, 150, 200));
-    g.fill(
-        new Rectangle2D.Double(bounds.getX(), bounds.getY(), bounds.getWidth(), HEADER_HEIGHT));
+    g.setColor(new Color(66, 188, 165));
+    g.fill(new RoundRectangle2D.Double(
+        bounds.getX() + 1,
+        bounds.getY(),
+        bounds.getWidth()  -2,
+        HEADER_HEIGHT,
+        2,
+        2));
+
+    g.setColor(ColorLib.getColor(item.getStrokeColor()));
+    g.setStroke(new BasicStroke(2));
+    g.draw(roundedBounds);
 
     g.setColor(Color.WHITE);
     g.setFont(new Font(FONT_NAME, Font.BOLD, 12));
     g.drawString(st.name(),
-        (int) bounds.getX() + PADDING,
-        (int) bounds.getY() + 17);
+        (int) roundedBounds.getX() + PADDING,
+        (int) roundedBounds.getY() + 17);
 
     // Draw properties
     g.setColor(Color.BLACK);

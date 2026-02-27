@@ -56,17 +56,21 @@ import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.graph.layout.forceatlas2.ForceAtlas2;
 import com.aestallon.storageexplorer.client.graph.service.GraphRenderingService;
+import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.GraphConfigChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
+import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
-import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
+import com.aestallon.storageexplorer.swing.ui.graph.uml.UmlView;
 import com.aestallon.storageexplorer.swing.ui.misc.GraphStylingProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
+import prefuse.Display;
 
 @Component
 public class GraphView extends JPanel {
@@ -74,6 +78,8 @@ public class GraphView extends JPanel {
   private static final Logger log = LoggerFactory.getLogger(GraphView.class);
   public static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm");
 
+  private UmlView umlView;
+  private Display display;
   private transient Graph graph;
   private transient Viewer viewer;
   private ViewPanel panel;
@@ -104,22 +110,28 @@ public class GraphView extends JPanel {
     setMinimumSize(new Dimension(500, 500));
   }
 
+  public void initUml(ObjectEntry objectEntry) {
+
+    discard(true);
+
+    final StorageInstance storageInstance = storageInstanceProvider.storageInstanceOf(objectEntry);
+    final var service = new UmlRenderingService(storageInstance, this::onGraphStateChanged);
+    origin = objectEntry;
+    service.render(objectEntry);
+
+    umlView = new UmlView(service);
+    display = umlView.display();
+    overlay = overlay();
+
+    add(overlay);
+    add(display);
+    setVisible(true);
+    umlView.fullRepaint();
+    revalidate();
+  }
+
   public void init(StorageEntry storageEntry) {
-    if (screenshotListener != null) {
-      panel.removeKeyListener(screenshotListener);
-    }
-
-    abortRendering();
-
-    if (panel != null) {
-      remove(panel);
-    }
-    if (overlay != null) {
-      remove(overlay);
-    }
-    if (graph != null) {
-      graph.clear();
-    }
+    discard(true);
 
     final StorageInstance storageInstance = storageInstanceProvider.storageInstanceOf(storageEntry);
     final var userConfig = userConfigService.graphSettings();
@@ -232,12 +244,21 @@ public class GraphView extends JPanel {
     return overlayPanel;
   }
 
-  public void discard() {
+  private void discard(final boolean keepVisible) {
     onGraphStateChanged(GraphState.EMPTY);
-    setVisible(false);
+    setVisible(keepVisible);
     if (panel != null) {
       remove(panel);
       panel = null;
+    }
+
+    if (umlView != null) {
+      umlView = null;
+    }
+
+    if (display != null) {
+      remove(display);
+      display = null;
     }
 
     abortRendering();
@@ -256,6 +277,11 @@ public class GraphView extends JPanel {
     currentHighlight = null;
     origin = null;
     screenshotListener = null;
+    graphRenderingService = null;
+  }
+
+  public void discard() {
+    discard(false);
   }
 
   public boolean displayingStorageAt(final StorageInstance storageInstance) {

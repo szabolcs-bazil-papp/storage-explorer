@@ -49,7 +49,7 @@ import prefuse.util.ColorLib;
 import prefuse.visual.EdgeItem;
 import prefuse.visual.VisualItem;
 
-public final class UmlView extends JFrame {
+public final class UmlView {
   private static final String GRAPH = "graph";
   private static final String NODES = "graph.nodes";
   private static final String EDGES = "graph.edges";
@@ -65,7 +65,6 @@ public final class UmlView extends JFrame {
 
 
   public UmlView(UmlRenderingService service) {
-    super("Entity Relationship Diagram");
     this.service = service;
 
 
@@ -123,10 +122,10 @@ public final class UmlView extends JFrame {
         continue;
       }
       double angle = nodeCount > 0 ? 2 * Math.PI * i / nodeCount : 0;
-      n.setStartX(600 + radius * Math.cos(angle));
-      n.setStartY(400 + radius * Math.sin(angle));
-      n.setX(600 + radius * Math.cos(angle));
-      n.setY(400 + radius * Math.sin(angle));
+      n.setStartX(radius * Math.cos(angle));
+      n.setStartY(radius * Math.sin(angle));
+      n.setX(radius * Math.cos(angle));
+      n.setY(radius * Math.sin(angle));
       i++;
     }
 
@@ -154,13 +153,12 @@ public final class UmlView extends JFrame {
     vis.run("color");
     // vis.run("layout");
     // Setup frame
-    setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-    add(display);
-    pack();
-    setLocationRelativeTo(null);
-
     vis.run("layout");
     display.repaint();
+  }
+
+  public Display display() {
+    return display;
   }
 
   private void positionNewNodes() {
@@ -254,7 +252,7 @@ public final class UmlView extends JFrame {
   }
 
 
-  public void toggleDetail(Node node, String propertyPath) {
+  void toggleDetail(Node node, String propertyPath) {
     expandedDetails.computeIfAbsent(node, k -> new HashSet<>());
     Set<String> expanded = expandedDetails.get(node);
     if (expanded.contains(propertyPath)) {
@@ -264,9 +262,17 @@ public final class UmlView extends JFrame {
     }
   }
 
-  public boolean isDetailExpanded(Node node, String propertyPath) {
+  boolean isDetailExpanded(Node node, String propertyPath) {
     Set<String> expanded = expandedDetails.get(node);
     return expanded != null && expanded.contains(propertyPath);
+  }
+
+  public void fullRepaint() {
+    vis.run("draw");
+    vis.run("color");
+    vis.run("layout");
+    vis.repaint();
+    display.repaint();
   }
 
   // Click control for expanding/collapsing details
@@ -276,13 +282,7 @@ public final class UmlView extends JFrame {
       return (StructuredType) node.get(UmlRenderingService.COL_NODE_TYPE);
     }
 
-    private void fullRepaint() {
-      vis.run("draw");
-      vis.run("color");
-      vis.run("layout");
-      vis.repaint();
-      display.repaint();
-    }
+
 
     @Override
     public void itemClicked(VisualItem item, java.awt.event.MouseEvent e) {
@@ -351,15 +351,13 @@ public final class UmlView extends JFrame {
 
     private int countVisibleRows(List<Property> properties, String propPath, Node node) {
       int count = 0;
-      for (int i = 0; i < properties.size(); i++) {
+      for (Property p : properties) {
         count++;
-        Property pe = properties.get(i);
-        final var currPath = propPath.isEmpty() ? pe.key() : propPath + "." + pe.key();
-        if (pe.type() instanceof PropertyType.Complex detail) {
-          if (isDetailExpanded(node, currPath)) {
+        final var currPath = propPath.isEmpty() ? p.key() : propPath + "." + p.key();
+        if (p.type() instanceof PropertyType.Complex detail && isDetailExpanded(node, currPath)) {
             count += countVisibleRows(detail.properties(), currPath, node);
           }
-        }
+
       }
       return count;
     }
