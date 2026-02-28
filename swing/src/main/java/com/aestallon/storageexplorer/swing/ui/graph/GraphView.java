@@ -126,7 +126,7 @@ public class GraphView extends JPanel {
     origin = objectEntry;
     service.render(objectEntry);
 
-    umlView = new UmlView(service);
+    umlView = new UmlView(service, lafService.getLaf() == LafChanged.Laf.DARK);
     display = umlView.display();
     overlay = overlay();
 
@@ -283,7 +283,9 @@ public class GraphView extends JPanel {
         filePath = filePath + ext;
       }
 
-      final var r = umlView.service().exportEntityRelationshipDiagram(Path.of(filePath));
+      final var r = umlView.service().exportEntityRelationshipDiagram(
+          Path.of(filePath),
+          userConfigService.umlExportSettings());
       if (r instanceof OpResult.Err err) {
         if (err instanceof OpResult.Err.Exc exc) {
           log.error(exc.msg(), exc.e());
@@ -294,7 +296,7 @@ public class GraphView extends JPanel {
             err.title(),
             JOptionPane.ERROR_MESSAGE,
             IconProvider.ERROR);
-      } else if (r instanceof OpResult.Ok(String title, String msg)){
+      } else if (r instanceof OpResult.Ok(String title, String msg)) {
         eventPublisher.publishEvent(Msg.info(title, msg));
       }
     }
@@ -352,19 +354,19 @@ public class GraphView extends JPanel {
     graphRenderingService.changeHighlight(graph, currentHighlight, storageEntry);
     currentHighlight = storageEntry;
   }
-  
+
   @SuppressWarnings("deprecation")
   private MouseEvent scaleMouseEvent(final MouseEvent e) {
     final var transform = getGraphicsConfiguration().getDefaultTransform();
     return new MouseEvent(
-        (java.awt.Component) e.getSource(), 
-        e.getID(), 
-        e.getWhen(), 
+        (java.awt.Component) e.getSource(),
+        e.getID(),
+        e.getWhen(),
         e.getModifiers(),
-        (int) (e.getX() * transform.getScaleX()), (int) (e.getY() * transform.getScaleY()), 
-        e.getXOnScreen(), e.getYOnScreen(), 
-        e.getClickCount(), 
-        e.isPopupTrigger(), 
+        (int) (e.getX() * transform.getScaleX()), (int) (e.getY() * transform.getScaleY()),
+        e.getXOnScreen(), e.getYOnScreen(),
+        e.getClickCount(),
+        e.isPopupTrigger(),
         e.getButton());
   }
 
@@ -414,8 +416,8 @@ public class GraphView extends JPanel {
       y = -1;
       super.mouseMoved(event);
     }
-    
-    
+
+
 
     @Override
     public void mouseClicked(MouseEvent e) {
@@ -533,13 +535,15 @@ public class GraphView extends JPanel {
 
   @EventListener
   public void onLafChanged(final LafChanged event) {
-    if (graph == null) {
-      return;
+    if (graph != null) {
+      SwingUtilities.invokeLater(() -> graph.setAttribute("ui.stylesheet", switch (event.laf()) {
+        case DARK -> GraphStylingProvider.provideDark(this);
+        case LIGHT -> GraphStylingProvider.provideLight(this);
+      }));
+    } else if (umlView != null) {
+      SwingUtilities.invokeLater(() -> umlView.applyTheme(event.laf() == LafChanged.Laf.DARK));
     }
 
-    SwingUtilities.invokeLater(() -> graph.setAttribute("ui.stylesheet", switch (event.laf()) {
-      case DARK -> GraphStylingProvider.provideDark(this);
-      case LIGHT -> GraphStylingProvider.provideLight(this);
-    }));
+
   }
 }

@@ -206,11 +206,13 @@ public final class PlantUmlExportService {
               hostDataClass,
               new Property(key, complexes.get(i)), i);
         }
-        yield union.toString();
+        yield (complexes.isEmpty())
+            ? union.toString()
+            : (union.arity() == PropertyType.Arity.ONE) ? "COMPLEX_UNION" : "[COMPLEX_UNION]";
       }
     };
 
-    if (type == null) {
+    if (type == null || complexVariant >= 0) {
       return;
     }
 

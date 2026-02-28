@@ -176,10 +176,11 @@ public final class UmlRenderingService {
             .addAll(uris));
   }
 
-  public OpResult exportEntityRelationshipDiagram(final Path target) {
+  public OpResult exportEntityRelationshipDiagram(final Path target,
+                                                  final UmlExportSettings settings) {
     final var types = new HashSet<>(typesByTypeName.values());
     final var associations = new HashSet<>(assocationsBySourceTypeName.values());
-    return new PlantUmlExportService(types, associations, new UmlExportSettings())
+    return new PlantUmlExportService(types, associations, settings)
         .exportEntityRelationshipDiagram(target);
   }
 

@@ -54,6 +54,24 @@ public final class UmlView {
   private static final String NODES = "graph.nodes";
   private static final String EDGES = "graph.edges";
 
+  private static final int COLOR_NODE_STRK_LIGHT = ColorLib.gray(50);
+  private static final int COLOR_NODE_FILL_LIGHT = ColorLib.gray(240);
+  private static final int COLOR_EDGE_STRK_LIGHT = ColorLib.gray(100);
+  private static final int COLOR_EDGE_FILL_LIGHT = ColorLib.gray(100);
+
+  private static final int[] PALETTE_LIGHT = {
+      COLOR_NODE_STRK_LIGHT, COLOR_NODE_FILL_LIGHT, COLOR_EDGE_STRK_LIGHT, COLOR_EDGE_FILL_LIGHT
+  };
+
+  private static final int COLOR_NODE_STRK_DARK = ColorLib.gray(200);
+  private static final int COLOR_NODE_FILL_DARK = ColorLib.gray(40);
+  private static final int COLOR_EDGE_STRK_DARK = ColorLib.rgb(223, 195, 88);
+  private static final int COLOR_EDGE_FILL_DARK = COLOR_EDGE_STRK_DARK;
+
+  private static final int[] PALETTE_DARK = {
+      COLOR_NODE_STRK_DARK, COLOR_NODE_FILL_DARK, COLOR_EDGE_STRK_DARK, COLOR_EDGE_FILL_DARK
+  };
+
   final transient Visualization vis;
   final Display display;
   private final transient AssociationRenderer edgeRenderer;
@@ -63,9 +81,16 @@ public final class UmlView {
 
   private final transient UmlRenderingService service;
 
+  private final transient ColorAction nodeStroke;
+  private final transient ColorAction nodeFill;
+  private final transient ColorAction edgeColor;
+  private final transient ColorAction edgeArrow;
 
-  public UmlView(UmlRenderingService service) {
+  volatile boolean dark;
+
+  public UmlView(UmlRenderingService service, boolean dark) {
     this.service = service;
+    this.dark = dark;
 
 
     // Create graph
@@ -85,10 +110,11 @@ public final class UmlView {
         ? edgeRenderer
         : nodeRenderer);
 
-    ColorAction nodeStroke = new ColorAction(NODES, VisualItem.STROKECOLOR, ColorLib.gray(50));
-    ColorAction nodeFill = new ColorAction(NODES, VisualItem.FILLCOLOR, ColorLib.gray(240));
-    ColorAction edgeColor = new ColorAction(EDGES, VisualItem.STROKECOLOR, ColorLib.gray(100));
-    ColorAction edgeArrow = new ColorAction(EDGES, VisualItem.FILLCOLOR, ColorLib.gray(100));
+    int[] palette = dark ? PALETTE_DARK : PALETTE_LIGHT;
+    nodeStroke = new ColorAction(NODES, VisualItem.STROKECOLOR, palette[0]);
+    nodeFill = new ColorAction(NODES, VisualItem.FILLCOLOR, palette[1]);
+    edgeColor = new ColorAction(EDGES, VisualItem.STROKECOLOR, palette[2]);
+    edgeArrow = new ColorAction(EDGES, VisualItem.FILLCOLOR, palette[3]);
 
     ActionList color = new ActionList();
     color.add(nodeStroke);
@@ -105,6 +131,7 @@ public final class UmlView {
 
     // Setup display
     display = new Display(vis);
+    display.setBackground(dark ? new Color(29, 32, 33) : Color.WHITE);
     // display.setDamageRedraw(false);
     display.setSize(1200, 800);
     display.pan(600, 400);
@@ -155,6 +182,19 @@ public final class UmlView {
     // Setup frame
     vis.run("layout");
     display.repaint();
+  }
+
+  public void applyTheme(boolean darkMode) {
+    this.dark = darkMode;
+    int[] palette = darkMode ? PALETTE_DARK : PALETTE_LIGHT;
+
+    nodeStroke.setDefaultColor(palette[0]);
+    nodeFill.setDefaultColor(palette[1]);
+    edgeColor.setDefaultColor(palette[2]);
+    edgeArrow.setDefaultColor(palette[3]);
+
+    display.setBackground(darkMode ? new Color(29, 32, 33) : Color.WHITE);
+    fullRepaint();
   }
 
   public Display display() {
@@ -359,8 +399,8 @@ public final class UmlView {
         count++;
         final var currPath = propPath.isEmpty() ? p.key() : propPath + "." + p.key();
         if (p.type() instanceof PropertyType.Complex detail && isDetailExpanded(node, currPath)) {
-            count += countVisibleRows(detail.properties(), currPath, node);
-          }
+          count += countVisibleRows(detail.properties(), currPath, node);
+        }
 
       }
       return count;

@@ -127,11 +127,13 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
 
 
     // Draw header
-    g.setColor(new Color(66, 188, 165));
+    g.setColor(umlView.dark
+        ? new Color(38, 103, 87)
+        : new Color(66, 188, 165));
     g.fill(new RoundRectangle2D.Double(
         bounds.getX() + 1,
         bounds.getY(),
-        bounds.getWidth()  -2,
+        bounds.getWidth() - 2,
         HEADER_HEIGHT,
         2,
         2));
@@ -147,7 +149,10 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
         (int) roundedBounds.getY() + 17);
 
     // Draw properties
-    g.setColor(Color.BLACK);
+    if (umlView.dark)
+      g.setColor(new Color(223, 195, 88));
+    else
+      g.setColor(Color.BLACK);
     g.setFont(new Font(FONT_NAME, Font.PLAIN, 11));
 
     if (st instanceof EntityType entity) {
