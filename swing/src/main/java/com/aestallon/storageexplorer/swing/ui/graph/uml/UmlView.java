@@ -59,18 +59,27 @@ public final class UmlView {
   private static final int COLOR_EDGE_STRK_LIGHT = ColorLib.gray(100);
   private static final int COLOR_EDGE_FILL_LIGHT = ColorLib.gray(100);
 
-  private static final int[] PALETTE_LIGHT = {
-      COLOR_NODE_STRK_LIGHT, COLOR_NODE_FILL_LIGHT, COLOR_EDGE_STRK_LIGHT, COLOR_EDGE_FILL_LIGHT
-  };
 
   private static final int COLOR_NODE_STRK_DARK = ColorLib.gray(200);
   private static final int COLOR_NODE_FILL_DARK = ColorLib.gray(40);
   private static final int COLOR_EDGE_STRK_DARK = ColorLib.rgb(223, 195, 88);
   private static final int COLOR_EDGE_FILL_DARK = COLOR_EDGE_STRK_DARK;
 
-  private static final int[] PALETTE_DARK = {
-      COLOR_NODE_STRK_DARK, COLOR_NODE_FILL_DARK, COLOR_EDGE_STRK_DARK, COLOR_EDGE_FILL_DARK
-  };
+
+  private record Palette(int nodeStrk, int nodeFill, int edgeStrk, int edgeFill) {
+    private static final Palette LIGHT = new Palette(
+        COLOR_NODE_STRK_LIGHT,
+        COLOR_NODE_FILL_LIGHT,
+        COLOR_EDGE_STRK_LIGHT,
+        COLOR_EDGE_FILL_LIGHT);
+    private static final Palette DARK = new Palette(
+        COLOR_NODE_STRK_DARK,
+        COLOR_NODE_FILL_DARK,
+        COLOR_EDGE_STRK_DARK,
+        COLOR_EDGE_FILL_DARK);
+  }
+
+
 
   final transient Visualization vis;
   final Display display;
@@ -110,11 +119,11 @@ public final class UmlView {
         ? edgeRenderer
         : nodeRenderer);
 
-    int[] palette = dark ? PALETTE_DARK : PALETTE_LIGHT;
-    nodeStroke = new ColorAction(NODES, VisualItem.STROKECOLOR, palette[0]);
-    nodeFill = new ColorAction(NODES, VisualItem.FILLCOLOR, palette[1]);
-    edgeColor = new ColorAction(EDGES, VisualItem.STROKECOLOR, palette[2]);
-    edgeArrow = new ColorAction(EDGES, VisualItem.FILLCOLOR, palette[3]);
+    final var palette = dark ? Palette.DARK : Palette.LIGHT;
+    nodeStroke = new ColorAction(NODES, VisualItem.STROKECOLOR, palette.nodeStrk);
+    nodeFill = new ColorAction(NODES, VisualItem.FILLCOLOR, palette.nodeFill);
+    edgeColor = new ColorAction(EDGES, VisualItem.STROKECOLOR, palette.edgeStrk);
+    edgeArrow = new ColorAction(EDGES, VisualItem.FILLCOLOR, palette.edgeFill);
 
     ActionList color = new ActionList();
     color.add(nodeStroke);
@@ -186,12 +195,12 @@ public final class UmlView {
 
   public void applyTheme(boolean darkMode) {
     this.dark = darkMode;
-    int[] palette = darkMode ? PALETTE_DARK : PALETTE_LIGHT;
+    final var palette = darkMode ? Palette.DARK : Palette.LIGHT;
 
-    nodeStroke.setDefaultColor(palette[0]);
-    nodeFill.setDefaultColor(palette[1]);
-    edgeColor.setDefaultColor(palette[2]);
-    edgeArrow.setDefaultColor(palette[3]);
+    nodeStroke.setDefaultColor(palette.nodeStrk);
+    nodeFill.setDefaultColor(palette.nodeFill);
+    edgeColor.setDefaultColor(palette.edgeStrk);
+    edgeArrow.setDefaultColor(palette.edgeFill);
 
     display.setBackground(darkMode ? new Color(29, 32, 33) : Color.WHITE);
     fullRepaint();
