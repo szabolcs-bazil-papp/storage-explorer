@@ -78,5 +78,50 @@ class PropertyTest {
             PropertyType.Arity.ONE));
   }
 
+  @Test
+  @DisplayName("str + { a: str } --> str | { a: str }")
+  void foo5() {
+    final var left = new Property("foo", PropertyType.Primitive.STR);
+    final var right =
+        new PropertyType.Complex(List.of(new Property("a", PropertyType.Primitive.STR)),
+            PropertyType.Arity.ONE);
+
+    final var res = left.merge(right);
+    assertThat(res.type())
+        .describedAs(() -> "str + { a: str } -> str | { a: str }")
+        .isEqualTo(new PropertyType.Union(
+            List.of(PropertyType.STR, right),
+            PropertyType.Arity.ONE));
+  }
+
+  @Test
+  @DisplayName("{ a: str } + { a: num } --> { a: str | num }")
+  void foo6() {
+    final var left = new Property("foo",
+        new PropertyType.Complex(List.of(new Property("a", PropertyType.Primitive.STR)),
+            PropertyType.Arity.ONE));
+    final var right =
+        new PropertyType.Complex(List.of(new Property("a", PropertyType.Primitive.NUM)),
+            PropertyType.Arity.ONE);
+
+    final var res = left.merge(right);
+    assertThat(res.type())
+        .describedAs(() -> "{ a: str } + { a: num } --> { a: str | num }")
+        .isEqualTo(new PropertyType.Complex(List.of(new Property("a",
+            new PropertyType.Union(List.of(PropertyType.STR, PropertyType.NUM),
+                PropertyType.Arity.ONE))), PropertyType.Arity.ONE));
+  }
+
+  @Test
+  @DisplayName("{ a : str } + { b: num } --> { a: str } | { b: num }")
+  void foo7() {
+
+  }
+
+  @Test
+  @DisplayName("{ a : str, b: num } + { b: num } --> { a: str, b: num }")
+  void foo8() {
+
+  }
 
 }
