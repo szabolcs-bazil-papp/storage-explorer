@@ -278,18 +278,19 @@ class PropertyTest {
   }
 
   @Test
-  @DisplayName("{ a: str, b: num } + { b: num } -> { a: str, b: num }  [right is subset]")
+  @DisplayName("{ a: str, b: num } + { b: num } -> { a: str | null, b: num }  [right is subset]")
   void foo8_rightIsSubset() {
     var left = prop("foo",
         complex(prop("a", PropertyType.Primitive.STR), prop("b", PropertyType.Primitive.NUM)));
     var right = complex(prop("b", PropertyType.Primitive.NUM));
     var res = left.merge(right);
-    assertThat(res.type()).isEqualTo(
-        complex(prop("a", PropertyType.Primitive.STR), prop("b", PropertyType.Primitive.NUM)));
+    assertThat(res.type()).isEqualTo(complex(
+        prop("a", union(PropertyType.Primitive.STR, PropertyType.NULL)),
+        prop("b", PropertyType.Primitive.NUM)));
   }
 
   @Test
-  @DisplayName("{ b: num } + { a: str, b: num } -> { a: str, b: num }  [left is subset]")
+  @DisplayName("{ b: num } + { a: str, b: num } -> { a: str | null, b: num }  [left is subset]")
   void leftIsSubset() {
     var left = prop("foo", complex(prop("b", PropertyType.Primitive.NUM)));
     var right = complex(

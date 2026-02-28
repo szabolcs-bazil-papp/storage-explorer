@@ -149,6 +149,26 @@ public sealed interface PropertyType {
   }
 
 
+  record EmptyArray() implements PropertyType {
+
+    @Override
+    public Arity arity() {
+      return Arity.MANY;
+    }
+
+    @Override
+    public PropertyType withArity(Arity arity) {
+      return this;
+    }
+
+    @Override
+    public String toString() {
+      return "[?]";
+    }
+
+  }
+
+
   PropertyType NULL = new Primitive(PrimitiveType.NULL, Arity.ONE);
   PropertyType STR = new Primitive(PrimitiveType.STR, Arity.ONE);
   PropertyType NUM = new Primitive(PrimitiveType.NUM, Arity.ONE);
