@@ -19,6 +19,18 @@ import java.util.List;
 
 public sealed interface PropertyType {
 
+  static PropertyType.Complex ofComplex(Property... properties) {
+    return new PropertyType.Complex(List.of(properties), Arity.ONE);
+  }
+
+  static PropertyType.Complex ofComplexArray(Property... properties) {
+    return new PropertyType.Complex(List.of(properties), Arity.MANY);
+  }
+
+  static PropertyType.Union union(PropertyType... types) {
+    return new PropertyType.Union(List.of(types), Arity.ONE);
+  }
+
 
   enum Arity { ONE, MANY }
 
@@ -61,7 +73,14 @@ public sealed interface PropertyType {
 
     @Override
     public String toString() {
-      return "{ ... }";
+      final var sb = new StringBuilder("{ ");
+      for (int i = 0; i < properties.size(); i++) {
+        sb.append(properties.get(i).toString());
+        if (i < properties.size() - 1) {
+          sb.append(", ");
+        }
+      }
+      return sb.append(" }").toString();
     }
   }
 
@@ -88,6 +107,10 @@ public sealed interface PropertyType {
     public boolean isWiderThan(PropertyType other) {
       if (types.contains(other)) {
         return true;
+      }
+
+      if (other instanceof Union u2) {
+        return types.containsAll(u2.types());
       }
 
       return false;

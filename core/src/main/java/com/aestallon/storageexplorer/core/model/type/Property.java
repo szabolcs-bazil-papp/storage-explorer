@@ -62,15 +62,17 @@ public record Property(String key, PropertyType type) {
                     PropertyType.Arity.ONE));
           }
           default -> {
-            u1.types().add(t);
-            yield this;
+            final var props = new ArrayList<>(u1.types());
+            props.add(t);
+            yield new Property(key, new PropertyType.Union(props, PropertyType.Arity.ONE));
           }
         };
         default -> switch (t) {
           case PropertyType.Union u2 when u2.isWiderThan(type) -> new Property(key, u2);
           case PropertyType.Union u2 -> {
-            u2.types().add(type);
-            yield new Property(key, u2);
+            final var props = new ArrayList<>(u2.types());
+            props.add(type);
+            yield new Property(key, new PropertyType.Union(props, PropertyType.Arity.ONE));
           }
           default -> {
             final var props = new ArrayList<PropertyType>();
