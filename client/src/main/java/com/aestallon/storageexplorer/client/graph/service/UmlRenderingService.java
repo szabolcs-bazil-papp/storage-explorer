@@ -87,6 +87,7 @@ public final class UmlRenderingService {
   }
 
   public void render(final ObjectEntry objectEntry) {
+    objectEntry.tryLoad().get();
     final StructuredType type = storageInstance
         .index()
         .getOrDescribeTypeOf(objectEntry);

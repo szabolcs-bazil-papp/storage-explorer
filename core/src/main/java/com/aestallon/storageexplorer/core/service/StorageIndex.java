@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.springframework.context.ApplicationEventPublisher;
-import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -217,19 +216,9 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   }
 
   public StructuredType getOrDescribeTypeOf(final ObjectEntry objectEntry) {
-    final var typeName = objectEntry.typeName();
-
-      final StructuredType type = typesByName.computeIfAbsent(
-          typeName,
-          k -> new StructuredType.Unknown(typeName));
-      if (type instanceof StructuredType.Unknown) {
-        return switch (objectEntry.tryLoad().get()) {
-          case ObjectEntryLoadResult.MultiVersion mv -> amendType(typeName, mv.head().objectAsMap());
-          case ObjectEntryLoadResult.SingleVersion sv -> amendType(typeName, sv.objectAsMap());
-          case ObjectEntryLoadResult.Err err -> type;
-        };
-      }
-      return type;
+    return typesByName.computeIfAbsent(
+        objectEntry.typeName(),
+        k -> new StructuredType.Unknown(objectEntry.typeName()));
   }
 
   public StructuredType amendType(final String typeName, final Map<String, Object> oam) {
@@ -242,6 +231,9 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
       final var amendedType = type.amend(ObjectMaps.entityTypeOf(typeName, oam));
       typesByName.put(typeName, amendedType);
       return amendedType;
+    } catch (final Exception e) {
+      log.error(e.getMessage(), e);
+      return new StructuredType.Unknown(typeName);
     } finally {
       typeLock.unlock();
     }
