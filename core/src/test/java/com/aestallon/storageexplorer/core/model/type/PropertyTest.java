@@ -278,6 +278,24 @@ class PropertyTest {
   }
 
   @Test
+  @DisplayName(
+      "{ a: str } | { b: num } + { a: str, b: bool, c: num } -> { a: str | null, b: num | bool | null, c: num | null }")
+  void unionOfDisjointKeysCanBeMerged() {
+    final var left = prop("foo", union(
+        complex(prop("a", PropertyType.Primitive.STR)),
+        complex(prop("b", PropertyType.Primitive.NUM))));
+    final var right = complex(
+        prop("a", PropertyType.Primitive.STR),
+        prop("b", PropertyType.Primitive.BOOL),
+        prop("c", PropertyType.Primitive.NUM));
+    final var res = left.merge(right);
+    assertThat(res.type()).isEqualTo(complex(
+        prop("a", union(PropertyType.Primitive.STR, PropertyType.NULL)),
+        prop("b", union(PropertyType.NUM, PropertyType.BOOL, PropertyType.NULL)),
+        prop("c", union(PropertyType.Primitive.NUM, PropertyType.NULL))));
+  }
+
+  @Test
   @DisplayName("{ a: str, b: num } + { b: num } -> { a: str | null, b: num }  [right is subset]")
   void foo8_rightIsSubset() {
     var left = prop("foo",
@@ -337,7 +355,8 @@ class PropertyTest {
     var right = complex(prop("a", PropertyType.Primitive.NUM));
     var res = left.merge(right);
     assertThat(res.type()).isEqualTo(
-        complex(prop("a", union(complex(prop("b", PropertyType.Primitive.STR)), PropertyType.NUM))));
+        complex(
+            prop("a", union(complex(prop("b", PropertyType.Primitive.STR)), PropertyType.NUM))));
   }
 
   // -----------------------------------------------------------------------------------------------

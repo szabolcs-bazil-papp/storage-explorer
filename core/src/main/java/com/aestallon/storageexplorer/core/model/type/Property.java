@@ -20,8 +20,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.common.util.NotImplementedException;
 
 public record Property(String key, PropertyType type) {
@@ -397,9 +395,17 @@ public record Property(String key, PropertyType type) {
     } else if (!(lhsOne || rhsOne)) {
       return new Property(key, new PropertyType.Union(List.of(lhs, rhs), PropertyType.Arity.ONE));
     } else if (lhsOne) {
-      throw new NotImplementedException("asd");
+      if (rhs.types().contains(lhs)) {
+        return new Property(key, rhs);
+      } else {
+        return new Property(key, PropertyType.union(lhs, rhs));
+      }
     } else {
-      throw new NotImplementedException("asd2");
+      if (lhs.types().contains(rhs)) {
+        return new Property(key, lhs);
+      } else {
+        return new Property(key, PropertyType.union(rhs, lhs));
+      }
     }
 
   }
