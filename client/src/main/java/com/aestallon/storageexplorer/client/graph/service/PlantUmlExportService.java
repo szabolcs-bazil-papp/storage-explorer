@@ -121,6 +121,7 @@ public final class PlantUmlExportService {
     final var key = property.key();
     final var type = switch (property.type()) {
       case PropertyType.Primitive primitive -> primitive.toString();
+      case PropertyType.EmptyArray ea -> ea.toString();
       case PropertyType.Ref ref -> {
 
         final PumlRelation relation = new PumlRelation(

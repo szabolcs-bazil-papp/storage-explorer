@@ -15,7 +15,9 @@
 
 package com.aestallon.storageexplorer.core.model.type;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public sealed interface PropertyType {
 
@@ -35,6 +37,10 @@ public sealed interface PropertyType {
   enum Arity { ONE, MANY }
 
   Arity arity();
+
+  default boolean isArityOne() {
+    return Arity.ONE == arity();
+  }
 
   PropertyType withArity(Arity arity);
 
@@ -69,6 +75,29 @@ public sealed interface PropertyType {
       }
 
       return new Complex(properties, arity);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof Complex(List<Property> thatProperties, Arity thatArity))) {
+        return false;
+      }
+
+      if (arity != thatArity) {
+        return false;
+      }
+
+      if (properties.size() != thatProperties.size()) {
+        return false;
+      }
+
+      final var thisPropsByKey = properties.stream().collect(Collectors.toMap(
+          Property::key,
+          Property::type));
+      final var thatPropsByKey = thatProperties.stream().collect(Collectors.toMap(
+          Property::key,
+          Property::type));
+      return thisPropsByKey.equals(thatPropsByKey);
     }
 
     @Override
@@ -123,6 +152,23 @@ public sealed interface PropertyType {
       }
 
       return new Union(types, arity);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof Union(List<PropertyType> thatTypes, Arity thatArity))) {
+        return false;
+      }
+
+      if (arity != thatArity) {
+        return false;
+      }
+
+      if (types.size() != thatTypes.size()) {
+        return false;
+      }
+
+      return new HashSet<>(thatTypes).containsAll(types);
     }
 
     @Override

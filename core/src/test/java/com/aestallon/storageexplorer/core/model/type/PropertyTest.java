@@ -304,7 +304,7 @@ class PropertyTest {
 
   @Test
   @DisplayName(
-      "{ a: str, b: num } + { b: str, c: null } -> { a: str, b: num | str, c: null }  [partial overlap]")
+      "{ a: str, b: num } + { b: str, c: null } -> { a: str | null, b: num | str, c: null }  [partial overlap]")
   void partialOverlapKeys() {
     var left = prop("foo",
         complex(prop("a", PropertyType.Primitive.STR), prop("b", PropertyType.Primitive.NUM)));
@@ -312,7 +312,7 @@ class PropertyTest {
         complex(prop("b", PropertyType.Primitive.STR), prop("c", PropertyType.Primitive.NULL));
     var res = left.merge(right);
     assertThat(res.type()).isEqualTo(complex(
-        prop("a", PropertyType.Primitive.STR),
+        prop("a", union(PropertyType.Primitive.STR, PropertyType.NULL)),
         prop("b", union(PropertyType.NUM, PropertyType.STR)),
         prop("c", PropertyType.Primitive.NULL)));
   }

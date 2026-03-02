@@ -55,6 +55,7 @@ public record EntityType(String name, List<Property> properties)
   private Set<Association> collectAssociations(String prefix, String pKey, PropertyType pType) {
     return switch (pType) {
       case PropertyType.Primitive primitive -> Collections.emptySet();
+      case PropertyType.EmptyArray ea -> Collections.emptySet();
       case PropertyType.Ref(var entityName, var arity) -> Set.of(new Association(
           name,
           entityName,
