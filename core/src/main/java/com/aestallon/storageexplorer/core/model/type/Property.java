@@ -257,26 +257,12 @@ public record Property(String key, PropertyType type) {
         return new Property(key, new PropertyType.Union(List.of(lhs, rhs), PropertyType.Arity.ONE));
       }
 
-      final var allProps = new LinkedHashSet<>(lhsProps.sequencedKeySet());
-      allProps.addAll(rhsProps.sequencedKeySet());
-
-      final var newProps = new ArrayList<Property>();
-      for (final var k : allProps) {
-        if (sharedKeys.contains(k)) {
-          final var l = new Property(k, lhsProps.get(k));
-          final var r = rhsProps.get(k);
-          newProps.add(l.merge(r));
-        } else if (lhsProps.containsKey(k)) {
-          final var l = new Property(k, lhsProps.get(k));
-          newProps.add(l.merge(PropertyType.NULL));
-        } else {
-          final var r = new Property(k, rhsProps.get(k));
-          newProps.add(r.merge(PropertyType.NULL));
-        }
-      }
+      final var newProps = EntityType
+          .mergePropList(lhsProps, rhsProps, sharedKeys)
+          .toArray(Property[]::new);
       return new Property(key, arityLhs
-          ? PropertyType.ofComplex(newProps.toArray(Property[]::new))
-          : PropertyType.ofComplexArray(newProps.toArray(Property[]::new)));
+          ? PropertyType.ofComplex(newProps)
+          : PropertyType.ofComplexArray(newProps));
 
     } else {
       return new Property(key, new PropertyType.Union(List.of(lhs, rhs), PropertyType.Arity.ONE));

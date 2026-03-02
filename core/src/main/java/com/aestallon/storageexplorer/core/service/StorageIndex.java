@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -63,6 +65,7 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   protected StorageEntryFactory storageEntryFactory;
   protected ApplicationEventPublisher eventPublisher;
 
+  protected final Lock typeLock = new ReentrantLock(true);
   protected final ConcurrentHashMap<String, StructuredType> typesByName = new ConcurrentHashMap<>();
 
   protected StorageIndex(StorageId storageId,
@@ -215,23 +218,33 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
 
   public StructuredType getOrDescribeTypeOf(final ObjectEntry objectEntry) {
     final var typeName = objectEntry.typeName();
-    final StructuredType type = typesByName.computeIfAbsent(
-        typeName,
-        k -> new StructuredType.Unknown(typeName));
-    if (type instanceof StructuredType.Unknown) {
-      final StructuredType discoveredType = switch (objectEntry.tryLoad().get()) {
-        case ObjectEntryLoadResult.Err(var msg) -> {
-          publishEvent(Msg.err("Failed to load entry!", msg));
-          yield type;
-        }
-        case ObjectEntryLoadResult.MultiVersion mv -> describeTypeOf(typeName, mv.head());
-        case ObjectEntryLoadResult.SingleVersion sv -> describeTypeOf(typeName, sv);
-      };
-      typesByName.put(typeName, discoveredType);
-      return discoveredType;
-    }
 
-    return type;
+      final StructuredType type = typesByName.computeIfAbsent(
+          typeName,
+          k -> new StructuredType.Unknown(typeName));
+      if (type instanceof StructuredType.Unknown) {
+        return switch (objectEntry.tryLoad().get()) {
+          case ObjectEntryLoadResult.MultiVersion mv -> amendType(typeName, mv.head().objectAsMap());
+          case ObjectEntryLoadResult.SingleVersion sv -> amendType(typeName, sv.objectAsMap());
+          case ObjectEntryLoadResult.Err err -> type;
+        };
+      }
+      return type;
+  }
+
+  public StructuredType amendType(final String typeName, final Map<String, Object> oam) {
+    typeLock.lock();
+    try {
+
+      final StructuredType type = typesByName.computeIfAbsent(
+          typeName,
+          k -> new StructuredType.Unknown(typeName));
+      final var amendedType = type.amend(ObjectMaps.entityTypeOf(typeName, oam));
+      typesByName.put(typeName, amendedType);
+      return amendedType;
+    } finally {
+      typeLock.unlock();
+    }
   }
 
   private EntityType describeTypeOf(String name, ObjectEntryLoadResult.SingleVersion sv) {

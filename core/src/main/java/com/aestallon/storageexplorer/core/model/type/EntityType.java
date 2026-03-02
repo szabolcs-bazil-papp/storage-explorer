@@ -15,8 +15,11 @@
 
 package com.aestallon.storageexplorer.core.model.type;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -72,4 +75,47 @@ public record EntityType(String name, List<Property> properties)
           .collect(Collectors.toSet());
     };
   }
+
+  @Override
+  public StructuredType amend(StructuredType other) {
+    return switch (other) {
+      case Unknown unknown -> this;
+      case EntityType entity -> merge(entity);
+    };
+  }
+
+  private EntityType merge(EntityType other) {
+    final var lhsProps = new LinkedHashMap<String, PropertyType>();
+    properties().forEach(it -> lhsProps.put(it.key(), it.type()));
+    final var rhsProps = new LinkedHashMap<String, PropertyType>();
+    other.properties().forEach(it -> rhsProps.put(it.key(), it.type()));
+    final var sharedKeys = lhsProps.keySet().stream()
+        .filter(rhsProps::containsKey)
+        .collect(Collectors.toSet());
+    return new EntityType(name, mergePropList(lhsProps, rhsProps, sharedKeys));
+  }
+
+  static List<Property> mergePropList(LinkedHashMap<String, PropertyType> lhsProps,
+                            LinkedHashMap<String, PropertyType> rhsProps, Set<String> sharedKeys) {
+    final var allProps = new LinkedHashSet<>(lhsProps.sequencedKeySet());
+    allProps.addAll(rhsProps.sequencedKeySet());
+
+    final var newProps = new ArrayList<Property>();
+    for (final var k : allProps) {
+      if (sharedKeys.contains(k)) {
+        final var l = new Property(k, lhsProps.get(k));
+        final var r = rhsProps.get(k);
+        newProps.add(l.merge(r));
+      } else if (lhsProps.containsKey(k)) {
+        final var l = new Property(k, lhsProps.get(k));
+        newProps.add(l.merge(PropertyType.NULL));
+      } else {
+        final var r = new Property(k, rhsProps.get(k));
+        newProps.add(r.merge(PropertyType.NULL));
+      }
+    }
+
+    return newProps;
+  }
+
 }

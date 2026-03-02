@@ -155,7 +155,6 @@ public final class UmlRenderingService {
         .forEach(this::cacheInstanceCandidates);
     final StructuredType describedType = storageInstance
         .index()
-        // TODO: Add method to describe type of all loaded entries, and merge structured type:
         .getOrDescribeTypeOf(loadResults.stream().findFirst().orElseThrow().entry());
     if (!(describedType instanceof EntityType entity)) {
       return;

@@ -27,11 +27,18 @@ public sealed interface StructuredType permits EntityType, StructuredType.Unknow
       return Collections.emptySet();
     }
 
+    @Override
+    public StructuredType amend(StructuredType other) {
+      return other;
+    }
+
   }
 
   String name();
 
 
   Set<Association> associations();
+
+  StructuredType amend(final StructuredType other);
 
 }
