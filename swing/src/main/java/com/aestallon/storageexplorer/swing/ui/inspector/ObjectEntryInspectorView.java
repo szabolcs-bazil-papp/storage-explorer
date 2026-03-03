@@ -174,6 +174,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       toolbar.setOrientation(SwingConstants.HORIZONTAL);
       toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
       factory.addRenderAction(objectEntry, toolbar);
+      factory.addRenderTypeAction(objectEntry, toolbar);
       toolbar.add(openInSystemExplorerAction);
       factory.addEditMetaAction(objectEntry, toolbar);
       if (multiVersion != null) {

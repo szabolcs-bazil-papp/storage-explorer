@@ -13,20 +13,40 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.core.service;
+package com.aestallon.storageexplorer.core.model.type.dto;
 
-import com.aestallon.storageexplorer.common.util.NotImplementedException;
-import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
-class RelationalDatabaseStorageEntryModificationService
-    implements StorageEntryModificationService<RelationalDatabaseStorageIndex> {
+public enum ArityVariant {
+
+  ONE("1"),
+  MANY("*");
+
+  private final String value;
+
+  ArityVariant(String value) {
+    this.value = value;
+  }
+
+  @JsonValue
+  public String getValue() {
+    return value;
+  }
 
   @Override
-  public StorageEntryModificationResult modify(final StorageEntry storageEntry,
-                                               final String content,
-                                               final ModificationMode mode) {
-    throw NotImplementedException.ofMethod(
-        "RelationalDatabaseStorageEntryModificationService.modify(StorageEntry, String, ModificationMode)");
+  public String toString() {
+    return value;
+  }
+
+  @JsonCreator
+  public static ArityVariant fromValue(String value) {
+    for (ArityVariant b : ArityVariant.values()) {
+      if (b.value.equals(value)) {
+        return b;
+      }
+    }
+    throw new IllegalArgumentException("Unexpected value '" + value + "'");
   }
 
 }

@@ -38,6 +38,8 @@ import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptController;
 import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptDialog;
 import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
+import com.aestallon.storageexplorer.swing.ui.dialog.umlexportsettings.UmlExportSettingsController;
+import com.aestallon.storageexplorer.swing.ui.dialog.umlexportsettings.UmlExportSettingsDialog;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
@@ -154,6 +156,16 @@ public class AppFrame extends JFrame {
       dialog.setVisible(true);
     });
     settings.add(graphSettings);
+
+    final var umlExportSettings = new JMenuItem("UML Export Settings...");
+    umlExportSettings.addActionListener(e -> {
+      final var controller = UmlExportSettingsController.newInstance(userConfigService);
+      final var dialog = new UmlExportSettingsDialog(controller);
+      dialog.pack();
+      dialog.setLocationRelativeTo(this);
+      dialog.setVisible(true);
+    });
+    settings.add(umlExportSettings);
 
     final var keymapSettings = new JMenuItem("Keymap Settings...");
     keymapSettings.addActionListener(e -> {

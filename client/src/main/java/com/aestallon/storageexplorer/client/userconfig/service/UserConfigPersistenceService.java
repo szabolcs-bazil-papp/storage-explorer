@@ -34,7 +34,7 @@ public class UserConfigPersistenceService {
 
   private static final Logger log = LoggerFactory.getLogger(UserConfigPersistenceService.class);
 
-  private static final ObjectMapper OBJECT_MAPPER = ObjectEntryLoadingService.OBJECT_MAPPER;
+  static final ObjectMapper OBJECT_MAPPER = ObjectEntryLoadingService.OBJECT_MAPPER;
 
   private static Path getSettingsFolder(final String customFolder) {
     if (!Strings.isNullOrEmpty(customFolder)) {

@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -34,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
 import org.springframework.context.ApplicationEventPublisher;
+import com.aestallon.storageexplorer.core.event.TypeInfoUpdated;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -41,7 +45,10 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
+import com.aestallon.storageexplorer.core.model.type.EntityType;
+import com.aestallon.storageexplorer.core.model.type.StructuredType;
 import com.aestallon.storageexplorer.core.service.cache.StorageIndexCache;
+import com.aestallon.storageexplorer.core.util.ObjectMaps;
 import com.google.common.base.Strings;
 
 public abstract sealed class StorageIndex<T extends StorageIndex<T>>
@@ -57,6 +64,9 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   protected StorageEntryFactory storageEntryFactory;
   protected ApplicationEventPublisher eventPublisher;
 
+  protected final Lock typeLock = new ReentrantLock(true);
+  protected final ConcurrentHashMap<String, StructuredType> typesByName = new ConcurrentHashMap<>();
+
   protected StorageIndex(StorageId storageId,
                          ObjectApi objectApi,
                          CollectionApi collectionApi) {
@@ -68,11 +78,22 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   public final StorageId id() {
     return storageId;
   }
-  
+
   public final Set<URI> uris() {
     return cache.knownUris();
   }
 
+  /**
+   * Indexes the entire underlying smartbit4all storage with the provided {@link IndexingStrategy}.
+   *
+   * <p>
+   * All discovered {@link StorageEntry} instances are submitted to the underlying cache of this
+   * index.
+   *
+   * @param strategy the {@link IndexingStrategy} to use for refreshing the index, not null
+   *
+   * @return the number of {@link StorageEntry} instances discovered by the indexing operation
+   */
   public int refresh(IndexingStrategy strategy) {
     clear();
     if (!strategy.fetchEntries()) {
@@ -83,6 +104,20 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     return res.size();
   }
 
+  /**
+   * Indexes a subset of the underlying smartbit4all storage with the provided
+   * {@link IndexingStrategy}.
+   *
+   * <p>
+   * All discovered {@link StorageEntry} instances are submitted to the underlying cache of this
+   * index.
+   *
+   * @param strategy the {@link IndexingStrategy} to use for refreshing the index, not null
+   * @param target the {@link IndexingTarget} defining the storage schemas and types to visit
+   *     and index, not null
+   *
+   * @return the number of {@link StorageEntry} instances discovered by the indexing operation
+   */
   public int refresh(final IndexingStrategy strategy, final IndexingTarget target) {
     if (!strategy.fetchEntries()) {
       return 0;
@@ -95,6 +130,14 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     }
   }
 
+  /**
+   * Clears the underlying {@link StorageIndexCache} of this index.
+   *
+   * <p>
+   * This method should be invoked with extreme caution, as the {@link StorageEntry} instances
+   * indexed by this index will be left dangling after this method returns.
+   *
+   */
   public void clear() {
     cache.clear();
   }
@@ -114,10 +157,22 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
         .forEach(ObjectEntryLoadRequest::get);
   }
 
+  /**
+   * Sets the Spring event publisher to use for publishing events.
+   *
+   * @param eventPublisher the {@link ApplicationEventPublisher} to use, nullable
+   */
   public void setEventPublisher(final ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
   }
 
+  /**
+   * Publishes a Spring application event, if the publisher is set.
+   *
+   * @param e the event object to publish, not null
+   * @param <EVENT> the type of the event object, it should be a final type (such as a
+   *     {@code record})
+   */
   protected <EVENT> void publishEvent(final EVENT e) {
     if (eventPublisher != null) {
       eventPublisher.publishEvent(e);
@@ -131,7 +186,6 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   public final void notifyRefresh(StorageEntry storageEntry) {
     cache.put(storageEntry.uri(), storageEntry);
   }
-
 
   public abstract ObjectEntryLoadingService<T> loader();
 
@@ -203,6 +257,62 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
           .filter(it -> it.uri().getPath().equals(scopedEntry.scope().getPath()))
           .forEach(it -> it.addScopedEntry(scopedEntry));
     }
+  }
+
+  public StructuredType getOrDescribeTypeOf(final ObjectEntry objectEntry) {
+    return getOrDescribeTypeOf(objectEntry.typeName());
+  }
+
+  public StructuredType getOrDescribeTypeOf(final String typeName) {
+    return typesByName.computeIfAbsent(
+        typeName,
+        k -> new StructuredType.Unknown(typeName));
+  }
+
+  public StructuredType amendType(final String typeName, final Map<String, Object> oam) {
+    typeLock.lock();
+    try {
+
+      final StructuredType type = typesByName.computeIfAbsent(
+          typeName,
+          k -> new StructuredType.Unknown(typeName));
+      final var amendedType = type.amend(ObjectMaps.entityTypeOf(typeName, oam));
+      typesByName.put(typeName, amendedType);
+      return amendedType;
+    } catch (final Exception e) {
+      log.error(e.getMessage(), e);
+      return new StructuredType.Unknown(typeName);
+    } finally {
+      typeLock.unlock();
+      publishEvent(new TypeInfoUpdated(storageId));
+    }
+  }
+
+  public void addTypeInfo(Collection<EntityType> types) {
+    typeLock.lock();
+    try {
+
+      for (final EntityType type : types) {
+        final var typeName = type.name();
+        final StructuredType existingType = typesByName.computeIfAbsent(
+            typeName,
+            k -> new StructuredType.Unknown(typeName));
+        final var amendedType = existingType.amend(type);
+        typesByName.put(typeName, amendedType);
+      }
+
+    } catch (final Exception e) {
+      log.error(e.getMessage(), e);
+    } finally {
+      typeLock.unlock();
+    }
+  }
+
+  public Set<EntityType> getStructuredTypeInfo() {
+    return typesByName.values().stream()
+        .filter(EntityType.class::isInstance)
+        .map(EntityType.class::cast)
+        .collect(toSet());
   }
 
   public Stream<StorageEntry> searchForUri(final String queryString) {
