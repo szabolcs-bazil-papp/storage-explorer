@@ -151,11 +151,11 @@ public record Property(String key, PropertyType type) {
   // if one side is EMPTY_ARR, and rhs is a union without any ARR, we rhs added EMPTY_ARR
   private Property mergeWithEmptyArray(PropertyType.EmptyArray lhs, PropertyType rhs) {
     if (rhs instanceof PropertyType.EmptyArray) {
-      new Property(key, rhs);
+      return new Property(key, rhs);
     }
 
     if (rhs.arity() == PropertyType.Arity.MANY) {
-      new Property(key, rhs);
+      return new Property(key, rhs);
     }
 
     if (rhs instanceof PropertyType.Union u && u.types().stream()

@@ -133,16 +133,15 @@ public sealed interface PropertyType {
 
   record Union(List<PropertyType> types, Arity arity) implements PropertyType {
 
-    public boolean isWiderThan(PropertyType other) {
-      if (types.contains(other)) {
-        return true;
-      }
+    public boolean hasComplex() {
+      return types.stream().anyMatch(PropertyType.Complex.class::isInstance);
+    }
 
-      if (other instanceof Union u2) {
-        return types.containsAll(u2.types());
-      }
-
-      return false;
+    public List<Complex> complexes() {
+      return types.stream()
+          .filter(PropertyType.Complex.class::isInstance)
+          .map(PropertyType.Complex.class::cast)
+          .toList();
     }
 
     @Override

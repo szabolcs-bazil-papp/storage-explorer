@@ -395,4 +395,33 @@ class PropertyTest {
     var res = a.merge(rhs);
     assertThat(res.type()).isEqualTo(union(PropertyType.STR, innerComplex, rhs));
   }
+
+  @Test
+  @DisplayName("[{ a: str }] + [?] -> [{ a: str }]")
+  void arrayMergeWithEmptyArrayYieldsNoUnion() {
+    final var lhs = prop("foo", complex(prop("a", PropertyType.Primitive.STR))
+        .withArity(PropertyType.Arity.MANY));
+    var res = lhs.merge(new PropertyType.EmptyArray());
+    assertThat(res.type()).isEqualTo(complex(prop("a", PropertyType.Primitive.STR))
+        .withArity(PropertyType.Arity.MANY));
+  }
+
+  @Test
+  @DisplayName("[?] + [{ a: str }] -> [{ a: str }]")
+  void arrayMergeWithEmptyArrayYieldsNoUnion_2() {
+    final var lhs = prop("foo", new PropertyType.EmptyArray());
+    final var rhs = complex(prop("a", PropertyType.Primitive.STR))
+        .withArity(PropertyType.Arity.MANY);
+    var res = lhs.merge(rhs);
+    assertThat(res.type()).isEqualTo(complex(prop("a", PropertyType.Primitive.STR))
+        .withArity(PropertyType.Arity.MANY));
+  }
+
+  @Test
+  @DisplayName("[?] + [?] -> [?]")
+  void mergingEmptyArraysYieldsEmptyArray() {
+    final var lhs = prop("foo", new PropertyType.EmptyArray());
+    final var res = lhs.merge(new PropertyType.EmptyArray());
+    assertThat(res.type()).isEqualTo(new PropertyType.EmptyArray());
+  }
 }
