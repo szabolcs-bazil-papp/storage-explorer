@@ -251,6 +251,25 @@ public record Property(String key, PropertyType type) {
       final var sharedKeys = lhsProps.keySet().stream()
           .filter(rhsProps::containsKey)
           .collect(Collectors.toSet());
+      // if both sides are empty, we already short-circuited on behalf of equality.
+       if (lhsProps.isEmpty()) {
+        // if lhs is empty, return rhs with every key merged with NULL
+         final var arity = rhs.arity();
+         return new Property(key, new PropertyType.Complex(
+             rhs.properties().stream()
+                 .map(it -> it.merge(PropertyType.NULL))
+                 .toList(),
+             arity));
+      } else if (rhsProps.isEmpty()) {
+        // if rhs is empty, return lhs with every key merged with NULL
+         final var arity = lhs.arity();
+         return new Property(key, new PropertyType.Complex(
+             lhs.properties().stream()
+                 .map(it -> it.merge(PropertyType.NULL))
+                 .toList(),
+             arity));
+      }
+
       if (sharedKeys.isEmpty()) {
         return new Property(key, new PropertyType.Union(List.of(lhs, rhs), PropertyType.Arity.ONE));
       }

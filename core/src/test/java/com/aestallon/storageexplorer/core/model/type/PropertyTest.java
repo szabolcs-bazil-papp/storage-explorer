@@ -424,4 +424,33 @@ class PropertyTest {
     final var res = lhs.merge(new PropertyType.EmptyArray());
     assertThat(res.type()).isEqualTo(new PropertyType.EmptyArray());
   }
+
+  @Test
+  @DisplayName("{ } + { a: num } -> { a: num | null }")
+  void mergingEmptyObjWithNonEmptyObjYieldsNonEmptyObj() {
+    final var lhs = prop("foo", complex());
+    final var rhs = complex(prop("a", PropertyType.Primitive.NUM));
+    final var res = lhs.merge(rhs);
+    assertThat(res.type()).isEqualTo(
+        complex(prop("a", union(PropertyType.NUM, PropertyType.NULL))));
+  }
+
+  @Test
+  @DisplayName("{ a: num } + { } -> { a: num | null }")
+  void mergingNonEmptyObjWithEmptyObjYieldsNonEmptyObj() {
+    final var lhs = prop("foo", complex(prop("a", PropertyType.Primitive.NUM)));
+    final var rhs = complex();
+    final var res = lhs.merge(rhs);
+    assertThat(res.type()).isEqualTo(
+        complex(prop("a", union(PropertyType.NUM, PropertyType.NULL))));
+  }
+
+  @Test
+  @DisplayName("{ } + { } -> { }")
+  void mergingEmptyObjWithEmptyObjYieldsEmptyObj() {
+    final var lhs = prop("foo", complex());
+    final var rhs = complex();
+    final var res = lhs.merge(rhs);
+    assertThat(res.type()).isEqualTo(complex());
+  }
 }
