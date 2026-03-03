@@ -87,6 +87,15 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
           maxWidth = Math.max(maxWidth,
               calculatePropertiesWidth(item, detail.properties(), currentPath, indentLevel + 1));
         }
+      } else if (pe.type() instanceof PropertyType.Union u && u.hasComplex()) {
+        final var currentPath = propertyPath.isEmpty() ? pe.key() : propertyPath + "." + pe.key();
+        if (umlView.isDetailExpanded((Node) item.getSourceTuple(), currentPath)) {
+          for (final var detail : u.complexes()) {
+            maxWidth = Math.max(maxWidth,
+                calculatePropertiesWidth(item, detail.properties(), currentPath, indentLevel + 1));
+            maxWidth += INDENT;
+          }
+        }
       }
     }
     return maxWidth + 10;
@@ -102,6 +111,15 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
         final var currentPath = path.isEmpty() ? pe.key() : path + "." + pe.key();
         if (umlView.isDetailExpanded((Node) item.getSourceTuple(), currentPath)) {
           height += calculatePropertiesHeight(item, detail.properties(), currentPath);
+        }
+      } else if (pe.type() instanceof PropertyType.Union u && u.hasComplex()) {
+        final var currentPath = path.isEmpty() ? pe.key() : path + "." + pe.key();
+        if (umlView.isDetailExpanded((Node) item.getSourceTuple(), currentPath)) {
+          for (final var detail : u.complexes()) {
+
+            height += calculatePropertiesHeight(item, detail.properties(), currentPath);
+            height += ROW_HEIGHT;
+          }
         }
       }
     }
@@ -169,12 +187,10 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
       Property pe = properties.get(i);
       String currPath = path.isEmpty() ? pe.key() : path + "." + pe.key();
 
-      String arityStr = pe.arity() == PropertyType.Arity.MANY ? "List<" : "";
-      String arityEnd = pe.arity() == PropertyType.Arity.MANY ? ">" : "";
       String typeStr = formatType(pe.type());
 
       int currentX = x + (indentLevel * INDENT);
-      g.drawString(pe.key() + ": " + arityStr + typeStr + arityEnd, currentX, y);
+      g.drawString(pe.key() + ": " + typeStr, currentX, y);
 
       // Store absolute position for edge calculation
       setPropertyPosition((Node) item.getSourceTuple(), currPath, (int) y);
@@ -187,22 +203,32 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
           y = renderProperties(g, item, detail.properties(), currPath, x, y, indentLevel + 1,
               bounds);
         }
+      } else if (pe.type() instanceof PropertyType.Union u && u.hasComplex()) {
+        if (umlView.isDetailExpanded((Node) item.getSourceTuple(), currPath)) {
+          for (final var detail : u.complexes()) {
+            y = renderProperties(g, item, detail.properties(), currPath, x, y, indentLevel + 1,
+                bounds);
+            g.drawString("-------", x + ((indentLevel + 1) * INDENT), y);
+            y += ROW_HEIGHT;
+          }
+        }
       }
     }
     return y;
   }
 
   private String formatType(PropertyType type) {
-    if (type instanceof PropertyType.Primitive inline) {
-      return inline.type().name().toLowerCase();
-    } else if (type instanceof PropertyType.Ref ref) {
-      return "→ " + ref.entityName();
-    } else if (type instanceof PropertyType.Complex) {
-      return "{ ... }";
-    } else if (type instanceof PropertyType.Union union) {
-      return union.types().stream().map(this::formatType).collect(Collectors.joining(" | "));
-    }
-    return "unknown";
+    final var typeSymbol = switch (type) {
+      case PropertyType.Primitive inline -> inline.type().name().toLowerCase();
+      case PropertyType.Ref ref -> "\u2504\u2504\u25b7 " + ref.entityName();
+      case PropertyType.Complex c -> c.properties().isEmpty() ? "{ }" : "{ ... }";
+      case PropertyType.Union union ->
+          union.types().stream().map(this::formatType).collect(Collectors.joining(" | "));
+      case PropertyType.EmptyArray e -> "?";
+      case null, default -> "unknown";
+    };
+
+    return type.isArityOne() ? typeSymbol : "[" + typeSymbol + "]";
   }
 
 

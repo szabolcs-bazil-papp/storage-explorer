@@ -378,7 +378,9 @@ public final class UmlView {
 
           if (clickedPath != null) {
             Property pe = getPropertyAtPath(entity.properties(), clickedPath);
-            if (pe != null && pe.type() instanceof PropertyType.Complex) {
+            if (pe != null && (pe.type() instanceof PropertyType.Complex || (
+                pe.type() instanceof PropertyType.Union u && u.types().stream().anyMatch(
+                    PropertyType.Complex.class::isInstance)))) {
               toggleDetail(node, clickedPath);
               fullRepaint();
             }
@@ -408,6 +410,20 @@ public final class UmlView {
             return found;
           }
           currentRow += countVisibleRows(c.properties(), currentPath, node);
+        } else if (p.type() instanceof PropertyType.Union u && u.hasComplex() && isDetailExpanded(node, currentPath)) {
+          for (PropertyType type : u.types()) {
+            if (type instanceof PropertyType.Complex c) {
+              String found = findPropertyPath(
+                  c.properties(),
+                  targetRow - currentRow,
+                  currentPath,
+                  node);
+              if (found != null) {
+                return found;
+              }
+              currentRow += countVisibleRows(c.properties(), currentPath, node) + 1;
+            }
+          }
         }
 
       }
@@ -421,6 +437,12 @@ public final class UmlView {
         final var currPath = propPath.isEmpty() ? p.key() : propPath + "." + p.key();
         if (p.type() instanceof PropertyType.Complex detail && isDetailExpanded(node, currPath)) {
           count += countVisibleRows(detail.properties(), currPath, node);
+        } else if (p.type() instanceof PropertyType.Union u && u.hasComplex() && isDetailExpanded(node, currPath)) {
+          for (PropertyType type : u.types()) {
+            if (type instanceof PropertyType.Complex detail) {
+              count += countVisibleRows(detail.properties(), currPath, node) + 1;
+            }
+          }
         }
 
       }
@@ -453,6 +475,15 @@ public final class UmlView {
         return getPropertyAtPath(
             detail.properties(),
             propertyPath.substring(dotIndex + 1));
+      } else if (current.type() instanceof PropertyType.Union u && u.hasComplex()) {
+        for (final var complex : u.complexes()) {
+          final var p = getPropertyAtPath(
+              complex.properties(),
+              propertyPath.substring(dotIndex + 1));
+          if (p != null) {
+            return p;
+          }
+        }
       }
       return null;
     }
