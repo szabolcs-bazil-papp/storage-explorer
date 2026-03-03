@@ -103,19 +103,16 @@ public final class ObjectMaps {
   }
 
   static PropertyType typeOfList(List<?> list) {
-    final var elementProps = new LinkedHashSet<PropertyType>();
+    PropertyType elementType = null;
     for (final var e : list) {
-      elementProps.add(typeOf(e));
+      elementType = (elementType == null)
+          ? typeOf(e)
+          : new Property("temp", elementType).merge(typeOf(e)).type();
     }
 
-    if (elementProps.isEmpty()) {
-      // TODO: Make a distinct type for UNKNOWN and its list version:
-      return PropertyType.NULL;
-    } else if (elementProps.size() == 1) {
-      return elementProps.getFirst().withArity(PropertyType.Arity.MANY);
-    } else {
-      return new PropertyType.Union(new ArrayList<>(elementProps), PropertyType.Arity.MANY);
-    }
+    return elementType == null
+        ? new PropertyType.EmptyArray()
+        : elementType.withArity(PropertyType.Arity.MANY);
   }
 
 }

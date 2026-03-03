@@ -131,10 +131,10 @@ public final class UmlRenderingService {
     return addType(new StructuredType.Unknown(typeName));
   }
 
-  public void determineStructure(final StructuredType.Unknown type) {
+  public boolean determineStructure(final StructuredType.Unknown type) {
     final var typeName = type.name();
     if (!typesByTypeName.containsKey(typeName)) {
-      return;
+      return false;
     }
 
     final var candidates = instanceCandidatesByTypeName
@@ -147,24 +147,22 @@ public final class UmlRenderingService {
         .useCache(cache)
         .build()
         .execute();
-    if (loadResults.isEmpty()) {
-      return;
-    }
 
     loadResults.stream()
         .map(BatchLoaderExecutor.EntryWithLoadResult::entry)
         .forEach(this::cacheInstanceCandidates);
     final StructuredType describedType = storageInstance
         .index()
-        .getOrDescribeTypeOf(loadResults.stream().findFirst().orElseThrow().entry());
+        .getOrDescribeTypeOf(type.name());
     if (!(describedType instanceof EntityType entity)) {
-      return;
+      return false;
     }
 
     typesByTypeName.put(typeName, entity);
     nodesByTypeName.get(typeName).set(COL_NODE_TYPE, entity);
 
     addAssociations(entity, nodesByTypeName.get(typeName));
+    return true;
   }
 
   private void cacheInstanceCandidates(ObjectEntry oe) {

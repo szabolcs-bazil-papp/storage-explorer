@@ -28,7 +28,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
+import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
+import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
 import com.aestallon.storageexplorer.core.model.type.Property;
 import com.aestallon.storageexplorer.core.model.type.PropertyType;
@@ -81,24 +83,28 @@ public final class UmlView {
 
 
 
-  final transient Visualization vis;
+  final Visualization vis;
   final Display display;
-  private final transient AssociationRenderer edgeRenderer;
-  private final transient StructuredTypeRenderer nodeRenderer;
   final Map<Node, Set<String>> expandedDetails = new HashMap<>();
   final Map<Node, Map<String, Integer>> propertyPositions = new HashMap<>();
+  private final AssociationRenderer edgeRenderer;
+  private final StructuredTypeRenderer nodeRenderer;
 
-  private final transient UmlRenderingService service;
+  private final UmlRenderingService service;
+  private final ApplicationEventPublisher eventPublisher;
 
-  private final transient ColorAction nodeStroke;
-  private final transient ColorAction nodeFill;
-  private final transient ColorAction edgeColor;
-  private final transient ColorAction edgeArrow;
+  private final ColorAction nodeStroke;
+  private final ColorAction nodeFill;
+  private final ColorAction edgeColor;
+  private final ColorAction edgeArrow;
 
   volatile boolean dark;
 
-  public UmlView(UmlRenderingService service, boolean dark) {
+  public UmlView(UmlRenderingService service,
+                 ApplicationEventPublisher eventPublisher,
+                 boolean dark) {
     this.service = service;
+    this.eventPublisher = eventPublisher;
     this.dark = dark;
 
 
@@ -345,10 +351,16 @@ public final class UmlView {
         if (!(st instanceof EntityType entity)) {
           StructuredType.Unknown unknownType = (StructuredType.Unknown) st;
           CompletableFuture
-              .runAsync(() -> service.determineStructure(unknownType))
-              .thenRun(() -> SwingUtilities.invokeLater(() -> {
-                positionNewNodes();
-                fullRepaint();
+              .supplyAsync(() -> service.determineStructure(unknownType))
+              .thenAccept(success -> SwingUtilities.invokeLater(() -> {
+                if (!success) {
+                  eventPublisher.publishEvent(Msg.warn(
+                      "Could not determine structure of " + unknownType.name(),
+                      "No type information is available for the requested type. Try indexing more entries belonging to this type!"));
+                } else {
+                  positionNewNodes();
+                  fullRepaint();
+                }
               }));
           return;
         }

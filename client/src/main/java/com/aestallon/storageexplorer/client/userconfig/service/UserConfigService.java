@@ -161,6 +161,10 @@ public class UserConfigService {
     return new ArcScriptFileService(persistenceService.settingsFolder());
   }
 
+  public TypeInfoRepository typeInfoRepository() {
+    return new TypeInfoRepository(persistenceService.settingsFolder());
+  }
+
   public void updateKeymapSettings(Map<String, Keymap> keymapSettings) {
     final var baseline = keymapSettings();
     if (baseline.equals(keymapSettings)) {

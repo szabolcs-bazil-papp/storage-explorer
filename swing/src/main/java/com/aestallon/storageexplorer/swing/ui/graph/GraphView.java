@@ -126,7 +126,7 @@ public class GraphView extends JPanel {
     origin = objectEntry;
     service.render(objectEntry);
 
-    umlView = new UmlView(service, lafService.getLaf() == LafChanged.Laf.DARK);
+    umlView = new UmlView(service, eventPublisher, lafService.getLaf() == LafChanged.Laf.DARK);
     display = umlView.display();
     overlay = overlay();
 

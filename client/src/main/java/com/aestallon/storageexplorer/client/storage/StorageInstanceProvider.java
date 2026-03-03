@@ -16,7 +16,9 @@
 package com.aestallon.storageexplorer.client.storage;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -32,7 +34,9 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.userconfig.model.Problem;
 import com.aestallon.storageexplorer.client.userconfig.service.ProblemService;
+import com.aestallon.storageexplorer.client.userconfig.service.TypeInfoRepository;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.client.util.OpResult;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkCompletedEvent;
 import com.aestallon.storageexplorer.common.event.bgwork.BackgroundWorkStartedEvent;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
@@ -44,6 +48,7 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
+import com.aestallon.storageexplorer.core.model.type.EntityType;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 
 @Service
@@ -259,6 +264,28 @@ public class StorageInstanceProvider {
           ctx, storageInstance);
       log.debug(t.getMessage(), t);
     }
+  }
+
+  public void loadTypeInformation() {
+    final TypeInfoRepository typeInfoRepository = userConfigService.typeInfoRepository();
+    for (final var storageInstance : storageInstancesById.values()) {
+      final var id = storageInstance.id();
+      final List<EntityType> types = typeInfoRepository.loadStructuredTypeInfo(id);
+      storageInstance.index().addTypeInfo(types);
+    }
+  }
+
+  public void saveTypeInformation(StorageId storageId) {
+    final StorageInstance storageInstance = get(storageId);
+    final Set<EntityType> types = storageInstance.index().getStructuredTypeInfo();
+    final OpResult result = userConfigService
+        .typeInfoRepository()
+        .saveStructuredTypeInfo(storageId, types);
+    final var message = switch (result) {
+      case OpResult.Ok(var title, var msg) -> Msg.info(title, msg);
+      case OpResult.Err err -> Msg.warn(err.title(), err.msg());
+    };
+    eventPublisher.publishEvent(message);
   }
 
 }
