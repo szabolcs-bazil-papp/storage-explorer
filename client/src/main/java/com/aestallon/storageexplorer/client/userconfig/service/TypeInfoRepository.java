@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.client.util.OpResult;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.aestallon.storageexplorer.core.model.type.dto.EntityTypeDto;
 
 /*
  *[...]/storage-explorer/
@@ -76,6 +76,7 @@ public final class TypeInfoRepository {
 
       final var orderedTypes = types.stream()
           .sorted(Comparator.comparing(EntityType::name))
+          .map(EntityTypeDto::of)
           .toList();
       final var json = UserConfigPersistenceService.OBJECT_MAPPER
           .writerWithDefaultPrettyPrinter()
@@ -103,9 +104,10 @@ public final class TypeInfoRepository {
       }
 
       try (final var in = Files.newInputStream(typeInfoFile)) {
-        return UserConfigPersistenceService.OBJECT_MAPPER
-            .readerForListOf(EntityType.class)
+        final List<EntityTypeDto> dtos = UserConfigPersistenceService.OBJECT_MAPPER
+            .readerForListOf(EntityTypeDto.class)
             .readValue(in);
+        return dtos.stream().map(EntityTypeDto::toDomainObject).toList();
       }
 
     } catch (IOException e) {
