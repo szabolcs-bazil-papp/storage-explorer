@@ -56,6 +56,8 @@ public final class UmlRenderingService {
   private final Map<String, Node> nodesByTypeName;
   private final StorageInstanceExaminer.ObjectEntryLookupTable cache;
 
+  private String originTypename;
+
 
   public UmlRenderingService(final StorageInstance storageInstance,
                              final Consumer<GraphState> graphStateListener) {
@@ -86,6 +88,10 @@ public final class UmlRenderingService {
     return graph;
   }
 
+  public String originTypename() {
+    return originTypename;
+  }
+
   public void render(final ObjectEntry objectEntry) {
     objectEntry.tryLoad().get();
     final StructuredType type = storageInstance
@@ -93,6 +99,7 @@ public final class UmlRenderingService {
         .getOrDescribeTypeOf(objectEntry);
     cacheInstanceCandidates(objectEntry);
     addType(type);
+    originTypename = type.name();
 
     graphStateListener.accept(new GraphState(
         graph.getNodeCount(),

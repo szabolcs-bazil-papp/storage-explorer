@@ -156,18 +156,28 @@ public final class UmlView {
 
     // Initial positioning: spread nodes in a circle
     int i = 0;
-    double radius = 300;
+    double radius = 600;
     int nodeCount = service.nodesByTypeName().size();
     for (Iterator<?> it = vis.items(NODES); it.hasNext(); ) {
       var next = it.next();
       if (!(next instanceof VisualItem n)) {
         continue;
       }
-      double angle = nodeCount > 0 ? 2 * Math.PI * i / nodeCount : 0;
-      n.setStartX(radius * Math.cos(angle));
-      n.setStartY(radius * Math.sin(angle));
-      n.setX(radius * Math.cos(angle));
-      n.setY(radius * Math.sin(angle));
+      final var typename = ((StructuredType) n.get(UmlRenderingService.COL_NODE_TYPE)).name();
+      final double x, y;
+      if (typename.equals(service.originTypename())) {
+        x = 0d;
+        y = 0d;
+      } else {
+        double angle = nodeCount > 0 ? 2 * Math.PI * i / nodeCount : 0;
+        x = radius * Math.cos(angle);
+        y = radius * Math.sin(angle);
+      }
+
+      n.setStartX(x);
+      n.setStartY(y);
+      n.setX(x);
+      n.setY(y);
       i++;
     }
 

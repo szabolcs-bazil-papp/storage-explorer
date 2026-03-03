@@ -57,7 +57,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import com.aestallon.storageexplorer.client.asexport.ResultSetExporter;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.graph.layout.forceatlas2.ForceAtlas2;
 import com.aestallon.storageexplorer.client.graph.service.GraphRenderingService;
@@ -244,7 +243,7 @@ public class GraphView extends JPanel {
       labelBtn.setAlignmentX(RIGHT_ALIGNMENT);
       components.add(labelBtn);
     } else if (umlView != null) {
-      final var exportBtn = new JButton(IconProvider.CSV);
+      final var exportBtn = new JButton(IconProvider.PUML);
       exportBtn.addActionListener(e -> {
         exportUml();
       });
