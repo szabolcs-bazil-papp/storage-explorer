@@ -10,8 +10,14 @@ dependencies {
 
   compileOnly 'org.smartbit4all.platform:sql'
   compileOnly 'org.springframework.boot:spring-boot-starter-jdbc'
+  compileOnly 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.19.4'
 
   implementation 'org.xerial:sqlite-jdbc:3.50.1.0'
   implementation 'com.github.ben-manes.caffeine:caffeine:3.2.1'
   implementation 'org.apache.fury:fury-core:0.10.3'
+
+  testImplementation platform('com.fasterxml.jackson:jackson-bom:2.19.4')
+  testImplementation 'com.fasterxml.jackson.core:jackson-databind'
+  testImplementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+
 }

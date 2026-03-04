@@ -76,9 +76,9 @@ public sealed interface NominalType {
 
   }
 
-  record ObjProperty(String key, NominalType type, PropertyType.Arity arity) {}
+  record ObjProperty(String key, String description, NominalType type, PropertyType.Arity arity, boolean required) {}
 
-  record Obj(String typeName, List<ObjProperty> properties) implements NominalType {}
+  record Obj(String typeName, String description, List<ObjProperty> properties) implements NominalType {}
 
-
+  record Ref(String typeName) implements NominalType {}
 }
