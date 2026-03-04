@@ -102,14 +102,22 @@ public sealed interface PropertyType {
 
     @Override
     public String toString() {
-      final var sb = new StringBuilder("{ ");
+      final var sb = new StringBuilder();
+      if (arity == Arity.MANY) {
+        sb.append("[");
+      }
+      sb.append("{ ");
       for (int i = 0; i < properties.size(); i++) {
         sb.append(properties.get(i).toString());
         if (i < properties.size() - 1) {
           sb.append(", ");
         }
       }
-      return sb.append(" }").toString();
+      sb.append(" }");
+      if (arity == Arity.MANY) {
+        sb.append("]");
+      }
+      return sb.toString();
     }
   }
 

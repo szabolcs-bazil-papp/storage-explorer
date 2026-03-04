@@ -453,4 +453,82 @@ class PropertyTest {
     final var res = lhs.merge(rhs);
     assertThat(res.type()).isEqualTo(complex());
   }
+
+  @Test
+  @DisplayName(
+      "null | { a: str, b: num } + { a: str, b: num | null } -> null | { a: str, b: num | null }")
+  void mergingObjectWithOverlappingPropertiesToUnionReducesTheObjectCorrectly() {
+    final var lhs = prop("foo", union(
+        PropertyType.Primitive.NULL,
+        complex(
+            prop("a", PropertyType.Primitive.STR),
+            prop("b", PropertyType.Primitive.NUM))));
+    final var rhs = complex(
+        prop("a", PropertyType.Primitive.STR),
+        prop("b", union(PropertyType.Primitive.NUM, PropertyType.Primitive.NULL)));
+    final var res = lhs.merge(rhs);
+    assertThat(res.type()).isEqualTo(union(
+        PropertyType.Primitive.NULL,
+        complex(
+            prop("a", PropertyType.Primitive.STR),
+            prop("b", union(PropertyType.Primitive.NUM, PropertyType.Primitive.NULL)))));
+  }
+
+  @Test
+  @DisplayName(
+      "null | [{ a: str, b: num }] + [{ a: str, b: num | null }] -> null | { a: str, b: num | null }")
+  void mergingObjectWithOverlappingPropertiesToUnionReducesTheObjectCorrectly_Arr() {
+    final var lhs = prop("foo", union(
+        PropertyType.Primitive.NULL,
+        complex(
+            prop("a", PropertyType.Primitive.STR),
+            prop("b", PropertyType.Primitive.NUM)).withArity(PropertyType.Arity.MANY)));
+    final var rhs = complex(
+        prop("a", PropertyType.Primitive.STR),
+        prop("b", union(PropertyType.Primitive.NUM, PropertyType.Primitive.NULL)))
+        .withArity(PropertyType.Arity.MANY);
+    final var res = lhs.merge(rhs);
+    assertThat(res.type()).isEqualTo(union(
+        PropertyType.Primitive.NULL,
+        complex(
+            prop("a", PropertyType.Primitive.STR),
+            prop("b", union(PropertyType.Primitive.NUM, PropertyType.Primitive.NULL)))
+            .withArity(PropertyType.Arity.MANY)));
+  }
+
+  @Test
+  @DisplayName("[{ a: str, b: num }] + [{ a: str, b: num | null }] -> [{ a: str, b: num | null }]")
+  void mergingObjectArrays() {
+    final var lhs = prop("foo", complex(
+        prop("a", PropertyType.Primitive.STR),
+        prop("b", PropertyType.Primitive.NUM)).withArity(PropertyType.Arity.MANY));
+    final var rhs = complex(
+        prop("a", PropertyType.Primitive.STR),
+        prop("b", union(PropertyType.Primitive.NUM, PropertyType.Primitive.NULL)))
+        .withArity(PropertyType.Arity.MANY);
+    final var res = lhs.merge(rhs);
+    assertThat(res.type()).isEqualTo(complex(
+        prop("a", PropertyType.Primitive.STR),
+        prop("b", union(PropertyType.Primitive.NUM, PropertyType.Primitive.NULL)))
+        .withArity(PropertyType.Arity.MANY));
+  }
+
+  @Test
+  @DisplayName(
+      "[ { a: str } | { b: str } ] + [{ a: str, b: num}] ->  [{ a: str | null, b: num | str | null}]")
+  void foo() {
+    final var lhs = prop("foo", union(
+        complex(prop("a", PropertyType.STR)),
+        complex(prop("b", PropertyType.STR)))
+        .withArity(PropertyType.Arity.MANY));
+    final var rhs = complex(prop("a", PropertyType.STR), prop("b", PropertyType.NUM))
+        .withArity(PropertyType.Arity.MANY);
+    final var res = lhs.merge(rhs);
+    assertThat(res.type()).isEqualTo(complex(
+        prop("a", union(PropertyType.STR, PropertyType.NULL)),
+        prop("b", union(PropertyType.NUM, PropertyType.STR, PropertyType.NULL)))
+        .withArity(PropertyType.Arity.MANY));
+  }
+
+
 }

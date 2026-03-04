@@ -303,8 +303,9 @@ public record Property(String key, PropertyType type) {
   //   do as point A) -> filter out the complex components of arity ONE C1, C2 and merge with them
   // Points C) and D) follow the same reasoning as III/alpha/B.
   private Property mergeComplexWithUnion(PropertyType.Complex lhs, PropertyType.Union rhs) {
+    final var complexArity = lhs.arity();
     final var complexOne = lhs.isArityOne();
-    final var unionOne = lhs.isArityOne();
+    final var unionOne = rhs.isArityOne();
     if (!complexOne || unionOne) {
       final var candidateArity = (complexOne) || !unionOne
           ? PropertyType.Arity.ONE
@@ -316,12 +317,12 @@ public record Property(String key, PropertyType type) {
           .filter(it -> candidateArity == it.arity())
           .collect(Collectors.toList());
       components.removeAll(candidates);
-      candidates.add(lhs);
+      candidates.add((PropertyType.Complex) lhs.withArity(candidateArity));
 
       final var reduced = reduce(candidates);
       components.addAll(reduced);
       if (components.size() == 1) {
-        return new Property(key, components.getFirst());
+        return new Property(key, components.getFirst().withArity(complexArity));
       } else {
         return new Property(key, new PropertyType.Union(components, rhs.arity()));
       }
