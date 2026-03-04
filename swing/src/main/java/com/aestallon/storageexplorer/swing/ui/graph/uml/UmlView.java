@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
@@ -325,7 +326,23 @@ public final class UmlView {
     expandedDetails.computeIfAbsent(node, k -> new HashSet<>());
     Set<String> expanded = expandedDetails.get(node);
     if (expanded.contains(propertyPath)) {
-      expanded.remove(propertyPath);
+      expanded.removeIf(it -> it.startsWith(propertyPath));
+      final Map<String, Integer> propPositionsByPath = propertyPositions.get(node);
+      if (propPositionsByPath == null) {
+        return;
+      }
+
+      final Integer propPosition = propPositionsByPath.get(propertyPath);
+      final Set<String> subPaths = propPositionsByPath.keySet().stream()
+          .filter(it -> it.startsWith(propertyPath) && !it.equals(propertyPath))
+          .collect(Collectors.toSet());
+      if (propPosition != null) {
+        subPaths.forEach(it -> propPositionsByPath.put(it, propPosition));
+      } else {
+        subPaths.forEach(propPositionsByPath::remove);
+      }
+
+
     } else {
       expanded.add(propertyPath);
     }
@@ -389,8 +406,7 @@ public final class UmlView {
           if (clickedPath != null) {
             Property pe = getPropertyAtPath(entity.properties(), clickedPath);
             if (pe != null && (pe.type() instanceof PropertyType.Complex || (
-                pe.type() instanceof PropertyType.Union u && u.types().stream().anyMatch(
-                    PropertyType.Complex.class::isInstance)))) {
+                pe.type() instanceof PropertyType.Union u && u.hasComplex()))) {
               toggleDetail(node, clickedPath);
               fullRepaint();
             }

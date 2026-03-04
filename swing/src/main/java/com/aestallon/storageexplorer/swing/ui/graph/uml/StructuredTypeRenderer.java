@@ -77,8 +77,7 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
     int maxWidth = 0;
     for (Property pe : properties) {
       String label =
-          pe.key() + ": " + (pe.arity() == PropertyType.Arity.MANY ? "List<" : "")
-              + formatType(pe.type()) + (pe.arity() == PropertyType.Arity.MANY ? ">" : "");
+          pe.key() + ": " + formatType(pe.type());
       maxWidth = Math.max(maxWidth, fm.stringWidth(label) + indentLevel * INDENT);
 
       if (pe.type() instanceof PropertyType.Complex detail) {
@@ -168,13 +167,14 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
 
     // Draw properties
     if (umlView.dark)
-      g.setColor(new Color(223, 195, 88));
+      g.setColor(Color.WHITE);
     else
       g.setColor(Color.BLACK);
     g.setFont(new Font(FONT_NAME, Font.PLAIN, 11));
 
     if (st instanceof EntityType entity) {
       int y = (int) bounds.getY() + HEADER_HEIGHT + 15;
+      clearPropertyPositions((Node) item.getSourceTuple());
       renderProperties(g, item, entity.properties(), "",
           (int) bounds.getX() + PADDING, y, 0, bounds);
     }
@@ -190,7 +190,8 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
       String typeStr = formatType(pe.type());
 
       int currentX = x + (indentLevel * INDENT);
-      g.drawString(pe.key() + ": " + typeStr, currentX, y);
+      final String keySegment = pe.key() + ": ";
+      drawProperty(g, currentX, y, keySegment, typeStr);
 
       // Store absolute position for edge calculation
       setPropertyPosition((Node) item.getSourceTuple(), currPath, (int) y);
@@ -217,6 +218,22 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
     return y;
   }
 
+  private void drawProperty(final Graphics2D g,
+                            final int x,
+                            final int y,
+                            final String keySegment,
+                            final String typeStr) {
+    g.drawString(keySegment, x, y);
+    final var keySegmentWidth = g.getFontMetrics().stringWidth(keySegment);
+    final var colour = g.getColor();
+    final var typeColour = umlView.dark
+        ? new Color(223, 195, 88)
+        : new Color(120, 7, 7);
+    g.setColor(typeColour);
+    g.drawString(typeStr, x + keySegmentWidth, y);
+    g.setColor(colour);
+  }
+
   private String formatType(PropertyType type) {
     final var typeSymbol = switch (type) {
       case PropertyType.Primitive inline -> inline.type().name().toLowerCase();
@@ -240,6 +257,10 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
   public void setPropertyPosition(Node node, String propertyPath, int yPosition) {
     umlView.propertyPositions.computeIfAbsent(node, k -> new HashMap<>());
     umlView.propertyPositions.get(node).put(propertyPath, yPosition);
+  }
+
+  public void clearPropertyPositions(Node node) {
+    umlView.propertyPositions.remove(node);
   }
 
 }
