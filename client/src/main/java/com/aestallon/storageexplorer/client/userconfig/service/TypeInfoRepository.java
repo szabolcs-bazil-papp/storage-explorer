@@ -31,7 +31,7 @@ import com.aestallon.storageexplorer.core.service.type.YamlSchemaExtractor;
  *            ┃         ┣━━━━━[storage-id-2]
  *            ┃         ┃            ┃
  *            ┃        ...           ┗━━━━━type.info.json   <-- contains the discovered structural
- *            ┃                          type information
+ *            ┃                                                 type information
  *            ┗━━━━━━━━yaml
  *                      ┃                                    ⇣
  *                      ┣━━━━━[1-api.yaml]                     contains the YAML files

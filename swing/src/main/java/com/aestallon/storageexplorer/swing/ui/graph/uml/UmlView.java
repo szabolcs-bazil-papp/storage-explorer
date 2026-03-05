@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -37,6 +38,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
 import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
+import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
 import com.aestallon.storageexplorer.core.model.type.NominalType;
 import com.aestallon.storageexplorer.core.model.type.Property;
@@ -415,9 +417,8 @@ public final class UmlView {
     // -------------------------------------------------------------------------
 
     private void updateTooltipContent(VisualItem item, MouseEvent e) {
-      Map<String, String> meta = extractMetaAtCursor(item, e);
-      String title = item.canGetString("label") ? item.getString("label") : "Node";
-      tooltipPanel.update(title, meta);
+      final var data = extractMetaAtCursor(item, e);
+      tooltipPanel.update(data);
       tooltipPanel.setSize(tooltipPanel.getPreferredSize());
       if (popupWindow != null) {
         popupWindow.setSize(tooltipPanel.getPreferredSize());
@@ -454,36 +455,75 @@ public final class UmlView {
       return new Point(screenPos.x + 16, screenPos.y + 8);
     }
 
-    private Map<String, String> extractMetaAtCursor(VisualItem item, MouseEvent e) {
+    private TooltipData extractMetaAtCursor(VisualItem item, MouseEvent e) {
       final NodeProp locator = findPropertyAtCursor(item, e);
       if (locator == null) {
-        return Collections.emptyMap();
+        return null;
       }
 
-      final var meta = new HashMap<String, String>();
-      final var type = locator.t();
-      nominalTypeService.get(type.name()).map(NominalType.Obj::description)
-          .ifPresent(it -> meta.put("Type Description", it));
+      final var structuredType = locator.t();
 
       final var p = locator.p();
       final var propPath = locator.propertyPath();
       if (propPath != null && !propPath.isEmpty()) {
-        nominalTypeService.get(type.name(), propPath)
-            .map(it -> switch (it) {
-              case NominalType.Obj obj -> obj.typeName() + " -- " + obj.description();
-              default -> it.typeName();
-            })
-            .ifPresent(it -> meta.put("Prop Type Description", it));
-        nominalTypeService.get(type.name())
-            .flatMap(objType -> nominalTypeService.getProperty(objType, propPath))
-            .ifPresent(propType -> {
-              meta.put("Prop Description", propType.description());
-              if (p != null) {
-                meta.put("Matches?", p.type().matches(propType.type(), propType.arity()) ? "Yes" : "No");
-              }
-            });
+        Optional<? extends NominalType> nominalTypeOfProp =
+            nominalTypeService.get(structuredType.name(), propPath);
+        Optional<Pair<NominalType.Obj, NominalType.ObjProperty>> nominalPropByHostType =
+            nominalTypeService
+                .get(structuredType.name())
+                .flatMap(objType -> nominalTypeService.getProperty(objType, propPath));
+        final String
+            nominalPropertyKey,
+            nominalHostTypeName,
+            nominalPropertyDescription,
+            structuralPropertyTypeName,
+            nominalPropertyTypeName,
+            nominalPropertyTypeDescription;
+        final TooltipData.TypeMatchStatus typeMatchStatus;
+        if (nominalPropByHostType.isPresent() && nominalTypeOfProp.isPresent()) {
+          final var hostType = nominalPropByHostType.get().a();
+          final var nominalProp = nominalPropByHostType.get().b();
+          final var nominalPropType = nominalProp.type();
+
+          nominalPropertyKey = nominalProp.key();
+          nominalHostTypeName = hostType.typeName();
+          nominalPropertyDescription = nominalProp.description();
+          structuralPropertyTypeName = p.type().toString();
+          nominalPropertyTypeName = nominalPropType.typeName();
+          nominalPropertyTypeDescription = switch (nominalPropType) {
+            case NominalType.Obj obj-> obj.description();
+            case NominalType.Primitive prim -> prim.typeName();
+            default -> "unknown";
+          };
+          typeMatchStatus = (p.type().matches(nominalPropType, nominalProp.arity()))
+              ? TooltipData.TypeMatchStatus.MATCH
+              : TooltipData.TypeMatchStatus.MISMATCH;
+        } else {
+          nominalPropertyKey = "";
+          nominalHostTypeName = "";
+          nominalPropertyDescription = "";
+          structuralPropertyTypeName = p.type().toString();
+          nominalPropertyTypeName = "";
+          nominalPropertyTypeDescription = "";
+          typeMatchStatus = TooltipData.TypeMatchStatus.UNAVAILABLE;
+        }
+
+        return new TooltipData(
+            structuredType.name(),
+            propPath,
+            nominalPropertyKey,
+            nominalHostTypeName,
+            nominalPropertyDescription,
+            typeMatchStatus,
+            structuralPropertyTypeName,
+            nominalPropertyTypeName,
+            nominalPropertyTypeDescription);
       }
-      return meta;
+      return new TooltipData(
+          structuredType.name(),
+          nominalTypeService
+              .get(structuredType.name())
+              .map(NominalType.Obj::description).orElse(""));
     }
 
     record NodeProp(Node node, StructuredType t, Property p, String propertyPath) {}
