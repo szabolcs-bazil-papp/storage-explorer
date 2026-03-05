@@ -29,10 +29,20 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 public final class YamlSchemaExtractor {
 
   private static final YAMLMapper YAML_MAPPER = new YAMLMapper();
+  public static final String YAML_PROP_COMPONENTS = "components";
+  public static final String YAML_PROP_SCHEMAS = "schemas";
+  public static final String YAML_PROP_TYPE = "type";
+  public static final String YAML_VALUE_OBJECT = "object";
+  public static final String YAML_PROP_PROPERTIES = "properties";
+  public static final String YAML_VALUE_ARRAY = "array";
+  public static final String YAML_PROP_DESCRIPTION = "description";
+  public static final String YAML_PROP_ITEMS = "items";
+  public static final String YAML_PROP_REF_MARKER = "$ref";
+  public static final String YAML_PROP_FORMAT = "format";
 
   public Map<String, NominalType.Obj> extract(String yaml) throws IOException {
     final var root = YAML_MAPPER.readTree(yaml);
-    final var schemas = root.path("components").path("schemas");
+    final var schemas = root.path(YAML_PROP_COMPONENTS).path(YAML_PROP_SCHEMAS);
     if (schemas.isMissingNode() || schemas.isNull()) {
       return Map.of();
     }
@@ -52,16 +62,16 @@ public final class YamlSchemaExtractor {
 
 
   private boolean isObjectSchema(JsonNode node) {
-    String type = node.path("type").asText(null);
-    return "object".equals(type) || (type == null && node.has("properties"));
+    String type = node.path(YAML_PROP_TYPE).asText(null);
+    return YAML_VALUE_OBJECT.equals(type) || (type == null && node.has(YAML_PROP_PROPERTIES));
   }
 
   private NominalType.Obj parseObjectSchema(String typeName, JsonNode schemaNode) {
-    String description = textOrNull(schemaNode, "description");
+    String description = textOrEmpty(schemaNode, YAML_PROP_DESCRIPTION);
     List<String> requiredKeys = collectRequired(schemaNode);
 
     List<NominalType.ObjProperty> props = new ArrayList<>();
-    JsonNode properties = schemaNode.path("properties");
+    JsonNode properties = schemaNode.path(YAML_PROP_PROPERTIES);
     if (!properties.isMissingNode()) {
       for (Iterator<Map.Entry<String, JsonNode>> it = properties.fields(); it.hasNext(); ) {
         Map.Entry<String, JsonNode> entry = it.next();
@@ -76,11 +86,11 @@ public final class YamlSchemaExtractor {
       String key, JsonNode propNode, List<String> requiredKeys) {
 
     boolean required = requiredKeys.contains(key);
-    String description = textOrNull(propNode, "description");
-    String type = propNode.path("type").asText(null);
+    String description = textOrEmpty(propNode, YAML_PROP_DESCRIPTION);
+    String type = propNode.path(YAML_PROP_TYPE).asText(null);
 
-    if ("array".equals(type)) {
-      NominalType itemType = resolveType(propNode.path("items"));
+    if (YAML_VALUE_ARRAY.equals(type)) {
+      NominalType itemType = resolveType(propNode.path(YAML_PROP_ITEMS));
       return new NominalType.ObjProperty(key, description, itemType, PropertyType.Arity.MANY,
           required);
     }
@@ -95,7 +105,7 @@ public final class YamlSchemaExtractor {
     }
 
     // $ref takes priority
-    String ref = node.path("$ref").asText(null);
+    String ref = node.path(YAML_PROP_REF_MARKER).asText(null);
     if (ref != null) {
       String refName = ref.contains("/")
           ? ref.substring(ref.lastIndexOf('/') + 1)
@@ -103,11 +113,11 @@ public final class YamlSchemaExtractor {
       return new NominalType.Ref(refName);
     }
 
-    String type = node.path("type").asText(null);
-    String format = node.path("format").asText(null);
+    String type = node.path(YAML_PROP_TYPE).asText(null);
+    String format = node.path(YAML_PROP_FORMAT).asText(null);
 
     // Inline anonymous object
-    if ("object".equals(type) || (type == null && node.has("properties"))) {
+    if (YAML_VALUE_OBJECT.equals(type) || (type == null && node.has(YAML_PROP_PROPERTIES))) {
       return unknownObj();
     }
 
@@ -159,9 +169,9 @@ public final class YamlSchemaExtractor {
     };
   }
 
-  private static String textOrNull(JsonNode node, String fieldName) {
+  private static String textOrEmpty(JsonNode node, String fieldName) {
     JsonNode field = node.path(fieldName);
-    return field.isTextual() ? field.asText() : null;
+    return field.isTextual() ? field.asText() : "";
   }
 
   /** Collects entries from the schema's {@code required} array. */

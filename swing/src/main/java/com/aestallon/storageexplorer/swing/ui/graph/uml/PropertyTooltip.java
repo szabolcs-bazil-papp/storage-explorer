@@ -10,6 +10,10 @@ public class PropertyTooltip extends JPanel {
   private static final Color FG_PRIMARY = new Color(255, 255, 255);
   private static final Color FG_MUTED = new Color(200, 200, 200);
   private static final Color SEPARATOR = new Color(255, 255, 255, 128);
+
+  private static final Color GREEN = new Color(17, 147, 17);
+  private static final Color YELLOW = new Color(209, 181, 45);
+  private static final Color RED = new Color(168, 16, 16);
   private static final int MAX_WIDTH = 340;
   private static final int ARC = 12;
   private static final int PAD = 10;
@@ -62,7 +66,8 @@ public class PropertyTooltip extends JPanel {
     add(typeMatchRow(d));
 
     // Nominal property type section
-    if (d.typeMatchStatus != TooltipData.TypeMatchStatus.UNAVAILABLE && d.nominalPropertyTypeName != null) {
+    if (d.typeMatchStatus != TooltipData.TypeMatchStatus.UNAVAILABLE
+        && d.nominalPropertyTypeName != null) {
       add(separator());
       add(subtitle(d.nominalPropertyTypeName));
       if (d.nominalPropertyTypeDescription != null) {
@@ -87,14 +92,14 @@ public class PropertyTooltip extends JPanel {
   private JLabel subtitle(String text) {
     return styledLabel(
         "<html><b>" + esc(text) + "</b></html>",
-        FG_MUTED, Font.BOLD, 12f
+        FG_MUTED, Font.BOLD, 16f
     );
   }
 
   /** <p><em>…</em></p> — italic, wrapping, muted */
   private JTextArea description(String text) {
     JTextArea area = new JTextArea(text);
-    area.setFont(getFont().deriveFont(Font.ITALIC, 12f));
+    area.setFont(getFont().deriveFont(Font.ITALIC, 16f));
     area.setForeground(FG_MUTED);
     area.setBackground(new Color(0, 0, 0, 0)); // transparent
     area.setOpaque(false);
@@ -111,15 +116,26 @@ public class PropertyTooltip extends JPanel {
 
   /** Type match indicator row */
   private JLabel typeMatchRow(TooltipData d) {
-    String text = switch (d.typeMatchStatus) {
-      case MATCH -> "✅ " + d.structuralPropertyTypeName + " == " + d.nominalPropertyTypeName;
-      case MISMATCH -> "❌ " + d.structuralPropertyTypeName + " <-> " + d.nominalPropertyTypeName;
-      case UNAVAILABLE -> "⚠️ No nominal type information is available";
-    };
-    return styledLabel(
-        "<html><b>" + esc(text) + "</b></html>",
-        FG_PRIMARY, Font.BOLD, 12f
-    );
+    final String text;
+    final Color colour;
+
+    switch (d.typeMatchStatus) {
+      case MATCH -> {
+        text = "✅ " + d.structuralPropertyTypeName + " <== " + d.nominalPropertyTypeName;
+        colour = GREEN;
+      }
+      case MISMATCH -> {
+        text = "❌ " + d.structuralPropertyTypeName + " <!= " + d.nominalPropertyTypeName;
+        colour = RED;
+      }
+      case UNAVAILABLE -> {
+        text = "⚠️ No nominal type information is available";
+        colour = YELLOW;
+      }
+      default -> throw new IllegalStateException("Unexpected value: " + d.typeMatchStatus);
+    }
+
+    return styledLabel(text, colour, Font.BOLD, 16f);
   }
 
   /** Horizontal rule */
@@ -129,7 +145,7 @@ public class PropertyTooltip extends JPanel {
     sep.setAlignmentX(LEFT_ALIGNMENT);
     // Top+bottom margin around the line
     sep.setBorder(BorderFactory.createEmptyBorder(4, 0, 6, 0));
-    sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 12));
+    sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 16));
     return sep;
   }
 

@@ -18,15 +18,12 @@ package com.aestallon.storageexplorer.swing.ui.graph.uml;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
-import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,7 +50,6 @@ import prefuse.action.RepaintAction;
 import prefuse.action.assignment.ColorAction;
 import prefuse.activity.Activity;
 import prefuse.controls.ControlAdapter;
-import prefuse.controls.ToolTipControl;
 import prefuse.data.Graph;
 import prefuse.data.Node;
 import prefuse.util.ColorLib;
@@ -484,18 +480,23 @@ public final class UmlView {
           final var hostType = nominalPropByHostType.get().a();
           final var nominalProp = nominalPropByHostType.get().b();
           final var nominalPropType = nominalProp.type();
+          final var nominalArity = nominalProp.arity();
+          final String aPrefix = nominalArity == PropertyType.Arity.MANY ? "[" : "";
+          final String aSuffix = nominalArity == PropertyType.Arity.MANY ? "]" : "";
 
           nominalPropertyKey = nominalProp.key();
           nominalHostTypeName = hostType.typeName();
           nominalPropertyDescription = nominalProp.description();
           structuralPropertyTypeName = p.type().toString();
-          nominalPropertyTypeName = nominalPropType.typeName();
+          nominalPropertyTypeName = aPrefix +(nominalProp.required()
+              ? nominalPropType.typeName()
+              : nominalPropType.typeName() + " | null") + aSuffix;
           nominalPropertyTypeDescription = switch (nominalPropType) {
             case NominalType.Obj obj-> obj.description();
             case NominalType.Primitive prim -> prim.typeName();
             default -> "unknown";
           };
-          typeMatchStatus = (p.type().matches(nominalPropType, nominalProp.arity()))
+          typeMatchStatus = (p.type().satisfies(nominalTypeService.asPropertyType(hostType.typeName(), nominalProp)))
               ? TooltipData.TypeMatchStatus.MATCH
               : TooltipData.TypeMatchStatus.MISMATCH;
         } else {

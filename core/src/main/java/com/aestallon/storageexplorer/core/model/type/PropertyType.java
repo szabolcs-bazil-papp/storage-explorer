@@ -44,7 +44,7 @@ public sealed interface PropertyType {
 
   PropertyType withArity(Arity arity);
 
-  boolean matches(NominalType nominalType, Arity arity);
+  boolean satisfies(PropertyType other);
 
   enum PrimitiveType { STR, NUM, BOOL, TIME, NULL }
 
@@ -61,13 +61,15 @@ public sealed interface PropertyType {
 
     @Override
     public String toString() {
-      final var typeName = type.name();
+      final var typeName = type.name().toLowerCase();
       return arity == Arity.ONE ? typeName : "[" + typeName + "]";
     }
 
     @Override
-    public boolean matches(NominalType nominalType, Arity arity) {
-      return false;
+    public boolean satisfies(PropertyType other) {
+      return NULL.equals(other)
+          || equals(other)
+          || other instanceof Union u && u.types().stream().anyMatch(this::satisfies);
     }
   }
 
@@ -112,12 +114,12 @@ public sealed interface PropertyType {
         sb.append("[");
       }
       sb.append("{ ");
-      for (int i = 0; i < properties.size(); i++) {
+      /*for (int i = 0; i < properties.size(); i++) {
         sb.append(properties.get(i).toString());
         if (i < properties.size() - 1) {
           sb.append(", ");
         }
-      }
+      }*/
       sb.append(" }");
       if (arity == Arity.MANY) {
         sb.append("]");
@@ -126,7 +128,11 @@ public sealed interface PropertyType {
     }
 
     @Override
-    public boolean matches(NominalType nominalType, Arity arity) {
+    public boolean satisfies(PropertyType other) {
+      if (other instanceof Complex c && c.properties.isEmpty()) {
+        // as a special rule, we ALWAYS satisfy the empty complex, as it has a special meaning: unknown shape:
+        return true;
+      }
       return false;
     }
   }
@@ -148,12 +154,19 @@ public sealed interface PropertyType {
     }
 
     @Override
-    public boolean matches(NominalType nominalType, Arity arity) {
-      if (!(nominalType instanceof NominalType.Primitive p)) {
+    public boolean satisfies(PropertyType other) {
+      if (arity != other.arity()) {
         return false;
       }
 
-      return p == NominalType.Primitive.URI && this.arity == arity;
+      return switch (other) {
+        case Ref(String otherEntityName, var otherArity) ->
+            entityName.equals(otherEntityName) || "?".equals(otherEntityName);
+        case Primitive p when p.type() == PrimitiveType.NULL -> true;
+        // if this is a concrete type, we satisfy the union if we match even one variant:
+        case Union u -> u.types().stream().anyMatch(this::satisfies);
+        default -> false;
+      };
     }
   }
 
@@ -220,8 +233,10 @@ public sealed interface PropertyType {
     }
 
     @Override
-    public boolean matches(NominalType nominalType, Arity arity) {
-      return false;
+    public boolean satisfies(PropertyType other) {
+      return other instanceof Union u && types.stream().allMatch(our -> u.types().stream().anyMatch(our::satisfies))
+          // we can only satisfy a non-union, if somehow all our variants satisfy it:
+          || types.stream().allMatch(it -> it.satisfies(other));
     }
   }
 
@@ -244,7 +259,16 @@ public sealed interface PropertyType {
     }
 
     @Override
-    public boolean matches(NominalType nominalType, Arity arity) {
+    public boolean satisfies(PropertyType other) {
+      if (other.arity() == Arity.MANY) {
+        // empty array satisfies any array:
+        return true;
+      }
+
+      if (other instanceof Union u) {
+        return u.types().stream().anyMatch(this::satisfies);
+      }
+
       return false;
     }
   }
