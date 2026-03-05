@@ -16,13 +16,17 @@
 package com.aestallon.storageexplorer.swing.ui.graph.uml;
 
 import java.awt.*;
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,8 +35,10 @@ import java.util.stream.Collectors;
 import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
+import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
+import com.aestallon.storageexplorer.core.model.type.NominalType;
 import com.aestallon.storageexplorer.core.model.type.Property;
 import com.aestallon.storageexplorer.core.model.type.PropertyType;
 import com.aestallon.storageexplorer.core.model.type.StructuredType;
@@ -92,6 +98,7 @@ public final class UmlView {
   private final StructuredTypeRenderer nodeRenderer;
 
   private final UmlRenderingService service;
+  private final NominalTypeService nominalTypeService;
   private final ApplicationEventPublisher eventPublisher;
 
   private final ColorAction nodeStroke;
@@ -102,9 +109,11 @@ public final class UmlView {
   volatile boolean dark;
 
   public UmlView(UmlRenderingService service,
+                 NominalTypeService nominalTypeService,
                  ApplicationEventPublisher eventPublisher,
                  boolean dark) {
     this.service = service;
+    this.nominalTypeService = nominalTypeService;
     this.eventPublisher = eventPublisher;
     this.dark = dark;
 
@@ -200,7 +209,6 @@ public final class UmlView {
             1 - 0.1f * e.getWheelRotation(), false);
       }
     });
-    display.addControlListener(new ToolTipControl(UmlRenderingService.COL_TOOLTIP));
 
     vis.run("draw");
     vis.run("color");
@@ -229,6 +237,10 @@ public final class UmlView {
 
   public UmlRenderingService service() {
     return service;
+  }
+
+  NominalTypeService types() {
+    return nominalTypeService;
   }
 
   private void positionNewNodes() {
@@ -368,50 +380,176 @@ public final class UmlView {
       return (StructuredType) node.get(UmlRenderingService.COL_NODE_TYPE);
     }
 
+    private PropertyTooltip tooltipPanel = new PropertyTooltip();
+    private Popup activePopup;
+    private Window popupWindow;
 
+    @Override
+    public void itemEntered(VisualItem item, MouseEvent e) {
+      updateTooltipContent(item, e);
+      showTooltip(e);
+    }
+
+    @Override
+    public void itemMoved(VisualItem item, MouseEvent e) {
+      updateTooltipContent(item, e);  // update content based on new cursor position
+      repositionTooltip(e);           // move the window, no flicker
+    }
+
+    @Override
+    public void itemPressed(VisualItem item, MouseEvent e) {
+      hideTooltip();
+    }
+
+    @Override
+    public void itemReleased(VisualItem item, MouseEvent e) {
+      updateTooltipContent(item, e);
+      showTooltip(e);
+    }
+
+    @Override
+    public void itemExited(VisualItem item, MouseEvent e) {
+      hideTooltip();
+    }
+
+    // -------------------------------------------------------------------------
+
+    private void updateTooltipContent(VisualItem item, MouseEvent e) {
+      Map<String, String> meta = extractMetaAtCursor(item, e);
+      String title = item.canGetString("label") ? item.getString("label") : "Node";
+      tooltipPanel.update(title, meta);
+      tooltipPanel.setSize(tooltipPanel.getPreferredSize());
+      if (popupWindow != null) {
+        popupWindow.setSize(tooltipPanel.getPreferredSize());
+      }
+    }
+
+    private void showTooltip(MouseEvent e) {
+      Point p = tooltipPosition(e);
+      activePopup = PopupFactory.getSharedInstance()
+          .getPopup(e.getComponent(), tooltipPanel, p.x, p.y);
+      activePopup.show();
+
+      // Grab the window Swing created so we can reposition it cheaply
+      popupWindow = SwingUtilities.windowForComponent(tooltipPanel);
+    }
+
+    private void repositionTooltip(MouseEvent e) {
+      if (popupWindow != null) {
+        Point p = tooltipPosition(e);
+        popupWindow.setLocation(p.x, p.y);  // just moves the window, no repaint of canvas
+      }
+    }
+
+    private void hideTooltip() {
+      if (activePopup != null) {
+        activePopup.hide();
+        activePopup = null;
+        popupWindow = null;
+      }
+    }
+
+    private Point tooltipPosition(MouseEvent e) {
+      Point screenPos = e.getLocationOnScreen();
+      return new Point(screenPos.x + 16, screenPos.y + 8);
+    }
+
+    private Map<String, String> extractMetaAtCursor(VisualItem item, MouseEvent e) {
+      final NodeProp locator = findPropertyAtCursor(item, e);
+      if (locator == null) {
+        return Collections.emptyMap();
+      }
+
+      final var meta = new HashMap<String, String>();
+      final var type = locator.t();
+      nominalTypeService.get(type.name()).map(NominalType.Obj::description)
+          .ifPresent(it -> meta.put("Type Description", it));
+
+      final var p = locator.p();
+      final var propPath = locator.propertyPath();
+      if (propPath != null && !propPath.isEmpty()) {
+        nominalTypeService.get(type.name(), propPath)
+            .map(it -> switch (it) {
+              case NominalType.Obj obj -> obj.typeName() + " -- " + obj.description();
+              default -> it.typeName();
+            })
+            .ifPresent(it -> meta.put("Prop Type Description", it));
+        nominalTypeService.get(type.name())
+            .flatMap(objType -> nominalTypeService.getProperty(objType, propPath))
+            .ifPresent(propType -> {
+              meta.put("Prop Description", propType.description());
+              if (p != null) {
+                meta.put("Matches?", p.type().matches(propType.type(), propType.arity()) ? "Yes" : "No");
+              }
+            });
+      }
+      return meta;
+    }
+
+    record NodeProp(Node node, StructuredType t, Property p, String propertyPath) {}
+
+    private NodeProp findPropertyAtCursor(VisualItem item, MouseEvent e) {
+      if (!item.isInGroup(NODES)) {
+        return null;
+      }
+
+      final Node node = (Node) item.getSourceTuple();
+      final StructuredType st = getEntity(node);
+      if (!(st instanceof EntityType entity)) {
+        return new NodeProp(node, st, null, "");
+      }
+
+      // Determine which property was clicked
+      final Point2D point = new Point2D.Double(e.getX(), e.getY());
+      display.getAbsoluteCoordinate(point, point);
+
+      Rectangle2D bounds = item.getBounds();
+      double relativeY = point.getY() - bounds.getY() - HEADER_HEIGHT; // Account for header
+
+      if (relativeY > 0) {
+        int row = (int) (relativeY / ROW_HEIGHT);
+        String clickedPath = findPropertyPath(entity.properties(), row, "", node);
+
+        if (clickedPath != null) {
+          Property pe = getPropertyAtPath(entity.properties(), clickedPath);
+          return new NodeProp(node, st, pe, clickedPath);
+        }
+      }
+
+      return new NodeProp(node, st, null, "");
+    }
 
     @Override
     public void itemClicked(VisualItem item, java.awt.event.MouseEvent e) {
-      if (item.isInGroup(NODES)) {
-        Node node = (Node) item.getSourceTuple();
-        StructuredType st = getEntity(node);
-        if (!(st instanceof EntityType entity)) {
-          StructuredType.Unknown unknownType = (StructuredType.Unknown) st;
-          CompletableFuture
-              .supplyAsync(() -> service.determineStructure(unknownType))
-              .thenAccept(success -> SwingUtilities.invokeLater(() -> {
-                if (!success) {
-                  eventPublisher.publishEvent(Msg.warn(
-                      "Could not determine structure of " + unknownType.name(),
-                      "No type information is available for the requested type. Try indexing more entries belonging to this type!"));
-                } else {
-                  positionNewNodes();
-                  fullRepaint();
-                }
-              }));
-          return;
-        }
+      final var locator = findPropertyAtCursor(item, e);
+      if (locator == null) {
+        return;
+      }
 
-        // Determine which property was clicked
-        Point2D point = new Point2D.Double(e.getX(), e.getY());
-        display.getAbsoluteCoordinate(point, point);
+      final var type = locator.t();
+      if (!(type instanceof EntityType entity)) {
+        StructuredType.Unknown unknownType = (StructuredType.Unknown) type;
+        CompletableFuture
+            .supplyAsync(() -> service.determineStructure(unknownType))
+            .thenAccept(success -> SwingUtilities.invokeLater(() -> {
+              if (!success) {
+                eventPublisher.publishEvent(Msg.warn(
+                    "Could not determine structure of " + unknownType.name(),
+                    "No type information is available for the requested type. Try indexing more entries belonging to this type!"));
+              } else {
+                positionNewNodes();
+                fullRepaint();
+              }
+            }));
+        return;
+      }
 
-        Rectangle2D bounds = item.getBounds();
-        double relativeY = point.getY() - bounds.getY() - HEADER_HEIGHT; // Account for header
-
-        if (relativeY > 0) {
-          int row = (int) (relativeY / ROW_HEIGHT);
-          String clickedPath = findPropertyPath(entity.properties(), row, "", node);
-
-          if (clickedPath != null) {
-            Property pe = getPropertyAtPath(entity.properties(), clickedPath);
-            if (pe != null && (pe.type() instanceof PropertyType.Complex || (
-                pe.type() instanceof PropertyType.Union u && u.hasComplex()))) {
-              toggleDetail(node, clickedPath);
-              fullRepaint();
-            }
-          }
-        }
+      final var pe = locator.p();
+      final var clickedPath = locator.propertyPath();
+      if (pe != null && (pe.type() instanceof PropertyType.Complex || (
+          pe.type() instanceof PropertyType.Union u && u.hasComplex()))) {
+        toggleDetail(locator.node(), clickedPath);
+        fullRepaint();
       }
     }
 
@@ -436,7 +574,8 @@ public final class UmlView {
             return found;
           }
           currentRow += countVisibleRows(c.properties(), currentPath, node);
-        } else if (p.type() instanceof PropertyType.Union u && u.hasComplex() && isDetailExpanded(node, currentPath)) {
+        } else if (p.type() instanceof PropertyType.Union u && u.hasComplex() && isDetailExpanded(
+            node, currentPath)) {
           for (PropertyType type : u.types()) {
             if (type instanceof PropertyType.Complex c) {
               String found = findPropertyPath(
@@ -463,7 +602,8 @@ public final class UmlView {
         final var currPath = propPath.isEmpty() ? p.key() : propPath + "." + p.key();
         if (p.type() instanceof PropertyType.Complex detail && isDetailExpanded(node, currPath)) {
           count += countVisibleRows(detail.properties(), currPath, node);
-        } else if (p.type() instanceof PropertyType.Union u && u.hasComplex() && isDetailExpanded(node, currPath)) {
+        } else if (p.type() instanceof PropertyType.Union u && u.hasComplex() && isDetailExpanded(
+            node, currPath)) {
           for (PropertyType type : u.types()) {
             if (type instanceof PropertyType.Complex detail) {
               count += countVisibleRows(detail.properties(), currPath, node) + 1;

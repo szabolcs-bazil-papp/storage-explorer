@@ -64,6 +64,7 @@ import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.GraphConfigChanged;
 import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.client.util.OpResult;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
@@ -103,14 +104,18 @@ public class GraphView extends JPanel {
   private final transient ApplicationEventPublisher eventPublisher;
   private final transient UserConfigService userConfigService;
   private final transient LafService lafService;
+  private final transient NominalTypeService nominalTypeService;
 
-  public GraphView(StorageInstanceProvider storageInstanceProvider,
-                   ApplicationEventPublisher eventPublisher,
-                   UserConfigService userConfigService, LafService lafService) {
+  public GraphView(final StorageInstanceProvider storageInstanceProvider,
+                   final ApplicationEventPublisher eventPublisher,
+                   final UserConfigService userConfigService,
+                   final LafService lafService,
+                   final NominalTypeService nominalTypeService) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
     this.lafService = lafService;
+    this.nominalTypeService = nominalTypeService;
 
     setLayout(new OverlayLayout(this));
     setMinimumSize(new Dimension(500, 500));
@@ -125,7 +130,7 @@ public class GraphView extends JPanel {
     origin = objectEntry;
     service.render(objectEntry);
 
-    umlView = new UmlView(service, eventPublisher, lafService.getLaf() == LafChanged.Laf.DARK);
+    umlView = new UmlView(service, nominalTypeService, eventPublisher, lafService.getLaf() == LafChanged.Laf.DARK);
     display = umlView.display();
     overlay = overlay();
 

@@ -109,10 +109,12 @@ public final class TypeInfoRepository {
       }
 
       try (final var in = Files.newInputStream(typeInfoFile)) {
-        final List<EntityTypeDto> dtos = UserConfigPersistenceService.OBJECT_MAPPER
+        return UserConfigPersistenceService.OBJECT_MAPPER
             .readerForListOf(EntityTypeDto.class)
-            .readValue(in);
-        return dtos.stream().map(EntityTypeDto::toDomainObject).toList();
+            .<List<EntityTypeDto>>readValue(in)
+            .stream()
+            .map(EntityTypeDto::toDomainObject)
+            .toList();
       }
 
     } catch (IOException e) {
@@ -155,20 +157,19 @@ public final class TypeInfoRepository {
     try {
       final var yamlDir = yamlDir();
       try (final var files = Files.list(yamlDir)) {
+        final var extractor = new YamlSchemaExtractor();
         return files
-            .filter(it -> it.getFileName().endsWith(".yaml") || it.getFileName().endsWith(".yml"))
+            .filter(it ->  it.getFileName().toString().endsWith(".yaml") || it.getFileName().toString().endsWith(".yml"))
             .<Pair<String, Optional<Map<String, NominalType.Obj>>>>map(it -> {
               final var filename = it.getFileName().toString();
               try {
-                final var extractor = new YamlSchemaExtractor();
                 final var types = extractor.extract(Files.readString(it, StandardCharsets.UTF_8));
                 return Pair.of(filename,
                     Optional.of(types));
               } catch (final IOException e) {
                 log.error("Could not load YAML file [ {} ]: {}", it, e.getMessage());
                 log.debug(e.getMessage(), e);
-                return Pair.of(filename,
-                    Optional.empty());
+                return Pair.of(filename, Optional.empty());
               }
             })
             .flatMap(Pair.streamOnB())

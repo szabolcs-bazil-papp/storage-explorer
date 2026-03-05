@@ -44,6 +44,7 @@ public sealed interface PropertyType {
 
   PropertyType withArity(Arity arity);
 
+  boolean matches(NominalType nominalType, Arity arity);
 
   enum PrimitiveType { STR, NUM, BOOL, TIME, NULL }
 
@@ -64,6 +65,10 @@ public sealed interface PropertyType {
       return arity == Arity.ONE ? typeName : "[" + typeName + "]";
     }
 
+    @Override
+    public boolean matches(NominalType nominalType, Arity arity) {
+      return false;
+    }
   }
 
 
@@ -119,6 +124,11 @@ public sealed interface PropertyType {
       }
       return sb.toString();
     }
+
+    @Override
+    public boolean matches(NominalType nominalType, Arity arity) {
+      return false;
+    }
   }
 
 
@@ -135,6 +145,15 @@ public sealed interface PropertyType {
     @Override
     public String toString() {
       return (arity == Arity.ONE ? entityName : "[" + entityName + "]");
+    }
+
+    @Override
+    public boolean matches(NominalType nominalType, Arity arity) {
+      if (!(nominalType instanceof NominalType.Primitive p)) {
+        return false;
+      }
+
+      return p == NominalType.Primitive.URI && this.arity == arity;
     }
   }
 
@@ -199,6 +218,11 @@ public sealed interface PropertyType {
 
       return sb.toString();
     }
+
+    @Override
+    public boolean matches(NominalType nominalType, Arity arity) {
+      return false;
+    }
   }
 
 
@@ -219,6 +243,10 @@ public sealed interface PropertyType {
       return "[?]";
     }
 
+    @Override
+    public boolean matches(NominalType nominalType, Arity arity) {
+      return false;
+    }
   }
 
 

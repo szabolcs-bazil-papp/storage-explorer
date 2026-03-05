@@ -61,6 +61,23 @@ public class NominalTypeService {
     return get(typename).flatMap(objType -> get(objType, propertyPath));
   }
 
+  public Optional<NominalType.ObjProperty> getProperty(NominalType.Obj objType,
+                                                       String propertyPath) {
+    final var dotIdx = propertyPath.indexOf('.');
+    if (dotIdx < 0) {
+      return objType.properties().stream()
+          .filter(prop -> prop.key().equals(propertyPath))
+          .findFirst();
+    }
+
+    final var rootProp = propertyPath.substring(0, dotIdx);
+    final var rest = propertyPath.substring(dotIdx + 1);
+    return get(objType, rootProp).flatMap(propType -> switch (propType) {
+      case NominalType.Obj obj -> getProperty(obj, rest);
+      default -> Optional.empty();
+    });
+  }
+
   private Optional<? extends NominalType> get(NominalType.Obj objType, String propertyPath) {
     final var dotIdx = propertyPath.indexOf('.');
     if (dotIdx < 0) {
