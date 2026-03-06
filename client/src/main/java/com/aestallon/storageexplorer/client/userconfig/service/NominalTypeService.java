@@ -16,6 +16,9 @@
 package com.aestallon.storageexplorer.client.userconfig.service;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -110,44 +113,89 @@ public class NominalTypeService {
   }
 
   public PropertyType asPropertyType(String hostTypename, NominalType.ObjProperty nominalProp) {
+    return asPropertyType(hostTypename, nominalProp, new HashMap<>());
+  }
+
+  private PropertyType asPropertyType(String hostTypename, NominalType.ObjProperty nominalProp,
+                                      Map<String, PropertyType.Complex> nascentComplexTypes) {
     final var key = hostTypename + "." + nominalProp.key();
-    return propStructures.computeIfAbsent(key, k -> constructStructure(nominalProp));
+
+    final var nascentType = nascentComplexTypes.get(key);
+    if (nascentType != null) {
+      return nascentType;
+    }
+
+    // Check cache first — no lock held during construction
+    final var cached = propStructures.get(key);
+    if (cached != null) {
+      return cached;
+    }
+
+    // Compute outside computeIfAbsent to avoid recursive CHM update
+    final var computed = constructStructure(nominalProp, nascentComplexTypes);
+    propStructures.putIfAbsent(key, computed);
+    return propStructures.get(key);   // return winner in case of a race
   }
 
-  private PropertyType.Complex asPropertyType(String hostTypename) {
-    final var type = propStructures.computeIfAbsent(hostTypename, this::constructPropertyType);
-    assert type instanceof PropertyType.Complex;
-    return (PropertyType.Complex) type;
+  private PropertyType.Complex asPropertyType(String hostTypename,
+                                              Map<String, PropertyType.Complex> nascentComplexTypes) {
+    final var nascentType = nascentComplexTypes.get(hostTypename);
+    if (nascentType != null) {
+      return nascentType;
+    }
+
+    // Check cache first
+    final var cached = propStructures.get(hostTypename);
+    if (cached instanceof PropertyType.Complex complex) {
+      return complex;
+    }
+
+    // Compute outside computeIfAbsent to avoid recursive CHM update
+    final var computed = constructPropertyType(hostTypename, nascentComplexTypes);
+    propStructures.putIfAbsent(hostTypename, computed);
+    final var winner = propStructures.get(hostTypename);
+    assert winner instanceof PropertyType.Complex;
+    return (PropertyType.Complex) winner;
   }
 
-  private PropertyType.Complex constructPropertyType(String hostTypename) {
+  private PropertyType.Complex constructPropertyType(String hostTypename,
+                                                     Map<String, PropertyType.Complex> nascentComplexTypes) {
     return get(hostTypename)
-        .map(obj -> obj.properties().stream()
-            .map(prop -> {
-              final String pKey = prop.key();
-              final PropertyType p = asPropertyType(hostTypename, prop);
-              return new Property(pKey, p);
-            })
-            .toList())
-        .map(props -> new PropertyType.Complex(props, PropertyType.Arity.ONE))
+        .map(obj -> {
+          final var props = new ArrayList<Property>();
+          final var complex = new PropertyType.Complex(props, PropertyType.Arity.ONE);
+          nascentComplexTypes.put(hostTypename, complex);
+
+          obj.properties().stream()
+              .map(prop -> {
+                final String pKey = prop.key();
+                final PropertyType p = asPropertyType(hostTypename, prop, nascentComplexTypes);
+                return new Property(pKey, p);
+              })
+              .forEach(props::add);
+          return complex;
+        })
         .orElseGet(PropertyType::ofComplex);
   }
 
-  private PropertyType constructStructure(final NominalType.ObjProperty nominalProp) {
+  private PropertyType constructStructure(final NominalType.ObjProperty nominalProp,
+                                          Map<String, PropertyType.Complex> nascentComplexTypes) {
     final var arity = nominalProp.arity();
     final var required = nominalProp.required();
     final NominalType nominalType = nominalProp.type();
     PropertyType structuralType = switch (nominalType) {
       case NominalType.Primitive primitive -> switch (primitive) {
         case F32, F64, I32, I64, NUM -> PropertyType.NUM;
-        case STR, DATE, TIME, UUID ->  PropertyType.STR;
+        case STR, DATE, TIME, UUID -> PropertyType.STR;
         case BOOL -> PropertyType.BOOL;
         case URI -> new PropertyType.Ref("?", arity);
       };
-      case NominalType.Ref(var target) -> asPropertyType(target);
+      case NominalType.Ref(var target) -> target == null
+      ? new PropertyType.Complex(Collections.emptyList(), arity)
+      :asPropertyType(target, nascentComplexTypes);
       case NominalType.Obj obj -> {
         log.warn("Huh? {} on {}", obj, nominalProp);
-        yield asPropertyType(obj.typeName());
+        yield asPropertyType(obj.typeName(), nascentComplexTypes);
       }
     };
 

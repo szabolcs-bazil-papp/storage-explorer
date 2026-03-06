@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.core.model.type;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public sealed interface PropertyType {
@@ -67,8 +68,7 @@ public sealed interface PropertyType {
 
     @Override
     public boolean satisfies(PropertyType other) {
-      return NULL.equals(other)
-          || equals(other)
+      return equals(other)
           || other instanceof Union u && u.types().stream().anyMatch(this::satisfies);
     }
   }
@@ -133,6 +133,41 @@ public sealed interface PropertyType {
         // as a special rule, we ALWAYS satisfy the empty complex, as it has a special meaning: unknown shape:
         return true;
       }
+
+      if (other instanceof Complex c) {
+        final Map<String, PropertyType> thisProps = properties.stream()
+            .collect(Collectors.toMap(Property::key, Property::type));
+        final Map<String, PropertyType> thatProps = c.properties.stream()
+            .collect(Collectors.toMap(Property::key, Property::type));
+        final var sharedKeys = thisProps.keySet().stream()
+            .filter(thatProps::containsKey)
+            .collect(Collectors.toSet());
+        final boolean sharedPropsAreSatisfied = sharedKeys.stream()
+            .allMatch(key -> thisProps.get(key).satisfies(thatProps.get(key)));
+        if (!sharedPropsAreSatisfied) {
+          return false;
+        }
+
+        // the properties only in this instance are satisfactory if they satisfy NULL:
+        final var ourPropertiesAreNotMandatory = thisProps.entrySet().stream()
+            .filter(e -> !sharedKeys.contains(e.getKey()))
+            .map(Map.Entry::getValue)
+            .allMatch(it -> it.satisfies(PropertyType.NULL));
+        if (!ourPropertiesAreNotMandatory) {
+          return false;
+        }
+
+        // their properties are satisfied if NULL satisfies them (as we lack them):
+        return thatProps.entrySet().stream()
+            .filter(e -> !sharedKeys.contains(e.getKey()))
+            .map(Map.Entry::getValue)
+            .allMatch(PropertyType.NULL::satisfies);
+      }
+
+      if (other instanceof Union u) {
+        return u.types().stream().anyMatch(this::satisfies);
+      }
+
       return false;
     }
   }

@@ -476,10 +476,12 @@ public final class UmlView {
             nominalPropertyTypeName,
             nominalPropertyTypeDescription;
         final TooltipData.TypeMatchStatus typeMatchStatus;
-        if (nominalPropByHostType.isPresent() && nominalTypeOfProp.isPresent()) {
+        if (nominalPropByHostType.isPresent()) {
           final var hostType = nominalPropByHostType.get().a();
           final var nominalProp = nominalPropByHostType.get().b();
-          final var nominalPropType = nominalProp.type();
+          final NominalType nominalPropType = nominalTypeOfProp
+              .map(it -> (NominalType) it) // :(
+              .orElseGet(nominalProp::type);
           final var nominalArity = nominalProp.arity();
           final String aPrefix = nominalArity == PropertyType.Arity.MANY ? "[" : "";
           final String aSuffix = nominalArity == PropertyType.Arity.MANY ? "]" : "";
