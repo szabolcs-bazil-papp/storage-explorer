@@ -58,7 +58,7 @@ public class PropertyTooltip extends JPanel {
     // Header
     Component title = add(title(d.structuralTypeName + "::" + d.propertyPath));
     maxWidth = Math.max(maxWidth, title.getPreferredSize().width);
-    if (d.nominalTypeName != null) {
+    if (d.nominalTypeName != null && !d.nominalTypeName.isEmpty()) {
       add(subtitle(d.nominalTypeName + "::" + d.propertyName));
     }
 
