@@ -126,7 +126,7 @@ public final class YamlSchemaExtractor {
 
   private NominalType resolveType(JsonNode node) {
     if (node == null || node.isMissingNode()) {
-      return unknownObj();
+      return unknown();
     }
 
     // $ref takes priority
@@ -156,7 +156,11 @@ public final class YamlSchemaExtractor {
 
     // Inline anonymous object
     if (YAML_VALUE_OBJECT.equals(type) || (type == null && node.has(YAML_PROP_PROPERTIES))) {
-      return unknownObj();
+      return unknown();
+    }
+
+    if (!node.path("additionalProperties").isMissingNode()) {
+      return unknown();
     }
 
     if ("string".equals(type))
@@ -172,8 +176,8 @@ public final class YamlSchemaExtractor {
     return new NominalType.Ref(type);
   }
 
-  private static NominalType unknownObj() {
-    return new NominalType.Ref("UnknownObj");
+  private static NominalType unknown() {
+    return new NominalType.Unknown();
   }
 
   private NominalType.Primitive mapStringFormat(String format) {

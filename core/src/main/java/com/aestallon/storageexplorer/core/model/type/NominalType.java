@@ -155,4 +155,16 @@ public sealed interface NominalType {
       return "Symbolic reference to " + typeName;
     }
   }
+
+  record Unknown() implements NominalType, Root {
+    @Override
+    public String typeName() {
+      return "?";
+    }
+
+    @Override
+    public String description() {
+      return "Unknown type";
+    }
+  }
 }

@@ -89,6 +89,10 @@ public sealed interface PropertyType {
         return PropertyType.checkWithUnion(this, u);
       }
 
+      if (other instanceof Unknown) {
+        return true;
+      }
+
       return equals(other);
     }
   }
@@ -146,6 +150,10 @@ public sealed interface PropertyType {
 
     @Override
     public boolean satisfies(PropertyType other) {
+      if (other instanceof Unknown) {
+        return true;
+      }
+
       if (other instanceof Complex c && c.properties.isEmpty()) {
         // as a special rule, we ALWAYS satisfy the empty complex, as it has a special meaning: unknown shape:
         return true;
@@ -207,6 +215,10 @@ public sealed interface PropertyType {
 
     @Override
     public boolean satisfies(PropertyType other) {
+      if (other instanceof Unknown) {
+        return true;
+      }
+
       if (other instanceof Union u) {
         return checkWithUnion(this, u);
       }
@@ -288,6 +300,10 @@ public sealed interface PropertyType {
 
     @Override
     public boolean satisfies(PropertyType other) {
+      if (other instanceof Unknown) {
+        return true;
+      }
+
       return other instanceof Union u && types.stream().allMatch(our -> u.types().stream().anyMatch(our::satisfies))
           // we can only satisfy a non-union, if somehow all our variants satisfy it:
           || types.stream().allMatch(it -> it.satisfies(other));
@@ -327,6 +343,30 @@ public sealed interface PropertyType {
     }
   }
 
+  record Unknown() implements PropertyType {
+
+    @Override
+    public Arity arity() {
+      return Arity.ONE;
+    }
+
+    @Override
+    public PropertyType withArity(Arity arity) {
+      return this;
+    }
+
+    @Override
+    public boolean satisfies(PropertyType other) {
+      return false;
+    }
+
+    @Override
+    public String toString() {
+      return "?";
+    }
+  }
+
+  PropertyType UNKNOWN = new Unknown();
 
   PropertyType NULL = new Primitive(PrimitiveType.NULL, Arity.ONE);
   PropertyType STR = new Primitive(PrimitiveType.STR, Arity.ONE);

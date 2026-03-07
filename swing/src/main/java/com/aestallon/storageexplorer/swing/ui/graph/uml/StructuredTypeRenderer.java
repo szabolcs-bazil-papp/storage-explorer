@@ -207,6 +207,7 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
               .flatMap(root -> switch (root) {
                 case NominalType.Obj obj -> tgClrOfObj(currPath, pe.type(), obj);
                 case NominalType.Enumeration e -> Optional.of(TgClr.None);
+                case NominalType.Unknown unk -> Optional.of(TgClr.YELLOW);
               })
               .orElse(TgClr.YELLOW);
         } catch (Exception e) {

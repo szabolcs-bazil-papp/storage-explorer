@@ -180,8 +180,9 @@ public class NominalTypeService {
             yield complex;
           }
           case NominalType.Enumeration e -> PropertyType.STR;
+          case NominalType.Unknown u -> PropertyType.UNKNOWN;
         })
-        .orElseGet(PropertyType::ofComplex);
+        .orElse(PropertyType.UNKNOWN);
   }
 
   private PropertyType constructStructure(final NominalType.ObjProperty nominalProp,
@@ -197,6 +198,7 @@ public class NominalTypeService {
         case URI -> new PropertyType.Ref("?", arity);
       };
       case NominalType.Enumeration e -> PropertyType.STR;
+      case NominalType.Unknown u -> PropertyType.UNKNOWN;
       case NominalType.Ref(var target) -> target == null
           ? new PropertyType.Complex(Collections.emptyList(), arity)
           : asPropertyType(target, nascentComplexTypes);
