@@ -40,19 +40,21 @@ public final class YamlSchemaExtractor {
   public static final String YAML_PROP_REF_MARKER = "$ref";
   public static final String YAML_PROP_FORMAT = "format";
 
-  public Map<String, NominalType.Obj> extract(String yaml) throws IOException {
+  public Map<String, NominalType.Root> extract(String yaml) throws IOException {
     final var root = YAML_MAPPER.readTree(yaml);
     final var schemas = root.path(YAML_PROP_COMPONENTS).path(YAML_PROP_SCHEMAS);
     if (schemas.isMissingNode() || schemas.isNull()) {
       return Map.of();
     }
 
-    Map<String, NominalType.Obj> result = new LinkedHashMap<>();
+    Map<String, NominalType.Root> result = new LinkedHashMap<>();
     for (Iterator<Map.Entry<String, JsonNode>> it = schemas.fields(); it.hasNext(); ) {
       Map.Entry<String, JsonNode> entry = it.next();
-      String   name = entry.getKey();
+      String name = entry.getKey();
       JsonNode node = entry.getValue();
-      if (isObjectSchema(node)) {
+      if (isEnumSchema(node)) {
+        result.put(name, parseEnumSchema(name, node));
+      } else if (isObjectSchema(node)) {
         result.put(name, parseObjectSchema(name, node));
       }
     }
@@ -64,6 +66,11 @@ public final class YamlSchemaExtractor {
   private boolean isObjectSchema(JsonNode node) {
     String type = node.path(YAML_PROP_TYPE).asText(null);
     return YAML_VALUE_OBJECT.equals(type) || (type == null && node.has(YAML_PROP_PROPERTIES));
+  }
+
+  private boolean isEnumSchema(JsonNode node) {
+    final var $enum = node.path("enum");
+    return !$enum.isMissingNode() && !$enum.isNull() && $enum.isArray();
   }
 
   private NominalType.Obj parseObjectSchema(String typeName, JsonNode schemaNode) {
@@ -80,6 +87,24 @@ public final class YamlSchemaExtractor {
     }
 
     return new NominalType.Obj(typeName, description, List.copyOf(props));
+  }
+
+  private NominalType.Enumeration parseEnumSchema(String typeName, JsonNode schemaNode) {
+    String description = textOrEmpty(schemaNode, YAML_PROP_DESCRIPTION);
+    List<String> values = new ArrayList<>();
+    JsonNode $enum = schemaNode.path("enum");
+    if (!$enum.isMissingNode() && !$enum.isNull() && $enum.isArray()) {
+      for (JsonNode n : $enum) {
+        values.add(n.asText());
+      }
+    }
+    final String variantDescription = String.join(" | ", values);
+    if (!description.isEmpty()) {
+      description += "\n";
+    }
+
+    description += "Possible values: " + variantDescription;
+    return new NominalType.Enumeration(typeName, description, List.copyOf(values));
   }
 
   private NominalType.ObjProperty parseProperty(
@@ -111,6 +136,19 @@ public final class YamlSchemaExtractor {
           ? ref.substring(ref.lastIndexOf('/') + 1)
           : ref;
       return new NominalType.Ref(refName);
+    }
+
+    if (!node.path("enum").isMissingNode() && node.path("enum").isArray()) {
+      final var enumVariants = new ArrayList<String>();
+      node.path("enum").forEach(n -> enumVariants.add(n.asText()));
+      String enumDescription = textOrEmpty(node, YAML_PROP_DESCRIPTION);
+      for (final var it : node) {
+        enumVariants.add(it.asText());
+      }
+      return new NominalType.Enumeration(
+          String.join(" | ", enumVariants),
+          enumDescription,
+          enumVariants);
     }
 
     String type = node.path(YAML_PROP_TYPE).asText(null);

@@ -135,7 +135,7 @@ public final class TypeInfoRepository {
     }
   }
 
-  public Pair<String, Map<String, NominalType.Obj>> saveYaml(final Path yaml) {
+  public Pair<String, Map<String, NominalType.Root>> saveYaml(final Path yaml) {
     try {
       final var yamlDir = yamlDir();
       final var filename = yaml.getFileName().toString();
@@ -153,19 +153,18 @@ public final class TypeInfoRepository {
     }
   }
 
-  public Map<String, Map<String, NominalType.Obj>> loadYamls() {
+  public Map<String, Map<String, NominalType.Root>> loadYamls() {
     try {
       final var yamlDir = yamlDir();
       try (final var files = Files.list(yamlDir)) {
         final var extractor = new YamlSchemaExtractor();
         return files
             .filter(it ->  it.getFileName().toString().endsWith(".yaml") || it.getFileName().toString().endsWith(".yml"))
-            .<Pair<String, Optional<Map<String, NominalType.Obj>>>>map(it -> {
+            .<Pair<String, Optional<Map<String, NominalType.Root>>>>map(it -> {
               final var filename = it.getFileName().toString();
               try {
                 final var types = extractor.extract(Files.readString(it, StandardCharsets.UTF_8));
-                return Pair.of(filename,
-                    Optional.of(types));
+                return Pair.of(filename, Optional.of(types));
               } catch (final IOException e) {
                 log.error("Could not load YAML file [ {} ]: {}", it, e.getMessage());
                 log.debug(e.getMessage(), e);

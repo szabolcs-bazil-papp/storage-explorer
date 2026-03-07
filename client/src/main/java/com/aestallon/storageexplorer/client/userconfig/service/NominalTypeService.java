@@ -35,7 +35,7 @@ public class NominalTypeService {
 
   private static final Logger log = LoggerFactory.getLogger(NominalTypeService.class);
   private final UserConfigService userConfigService;
-  private final ConcurrentHashMap<String, Map<String, NominalType.Obj>> types;
+  private final ConcurrentHashMap<String, Map<String, NominalType.Root>> types;
   private final ConcurrentHashMap<String, PropertyType> propStructures;
 
   public NominalTypeService(UserConfigService userConfigService) {
@@ -45,7 +45,7 @@ public class NominalTypeService {
   }
 
   public void save(final Path yaml) {
-    Pair<String, Map<String, NominalType.Obj>> res = userConfigService
+    Pair<String, Map<String, NominalType.Root>> res = userConfigService
         .typeInfoRepository()
         .saveYaml(yaml);
     if (res != null) {
@@ -57,7 +57,7 @@ public class NominalTypeService {
     types.putAll(userConfigService.typeInfoRepository().loadYamls());
   }
 
-  public Optional<NominalType.Obj> get(String typename) {
+  public Optional<NominalType.Root> get(String typename) {
     return types.values().stream()
         .flatMap(it -> Optional.ofNullable(it.get(typename)).stream())
         .findFirst();
@@ -65,10 +65,12 @@ public class NominalTypeService {
 
   public Optional<? extends NominalType> get(String typename, String propertyPath) {
     if (propertyPath == null || propertyPath.isEmpty()) {
-      return get(typename);
+      return get(typename).map(it -> (NominalType) it);
     }
 
-    return get(typename).flatMap(objType -> get(objType, propertyPath));
+    return get(typename)
+        .map(it -> it instanceof NominalType.Obj obj ? obj : null)
+        .flatMap(objType -> get(objType, propertyPath));
   }
 
   public Optional<Pair<NominalType.Obj, NominalType.ObjProperty>> getProperty(
@@ -109,6 +111,7 @@ public class NominalTypeService {
         .flatMap(prop -> prop.type() instanceof NominalType.Ref(String target)
             ? get(target)
             : Optional.empty())
+        .map(it -> it instanceof NominalType.Obj obj ? obj : null)
         .flatMap(referencedType -> get(referencedType, rest));
   }
 
@@ -137,8 +140,8 @@ public class NominalTypeService {
     return propStructures.get(key);   // return winner in case of a race
   }
 
-  private PropertyType.Complex asPropertyType(String hostTypename,
-                                              Map<String, PropertyType.Complex> nascentComplexTypes) {
+  private PropertyType asPropertyType(String hostTypename,
+                                      Map<String, PropertyType.Complex> nascentComplexTypes) {
     final var nascentType = nascentComplexTypes.get(hostTypename);
     if (nascentType != null) {
       return nascentType;
@@ -146,34 +149,37 @@ public class NominalTypeService {
 
     // Check cache first
     final var cached = propStructures.get(hostTypename);
-    if (cached instanceof PropertyType.Complex complex) {
-      return complex;
+    if (cached != null) {
+      return cached;
     }
 
     // Compute outside computeIfAbsent to avoid recursive CHM update
     final var computed = constructPropertyType(hostTypename, nascentComplexTypes);
     propStructures.putIfAbsent(hostTypename, computed);
     final var winner = propStructures.get(hostTypename);
-    assert winner instanceof PropertyType.Complex;
-    return (PropertyType.Complex) winner;
+    return winner;
   }
 
-  private PropertyType.Complex constructPropertyType(String hostTypename,
-                                                     Map<String, PropertyType.Complex> nascentComplexTypes) {
+  private PropertyType constructPropertyType(String hostTypename,
+                                             Map<String, PropertyType.Complex> nascentComplexTypes) {
+    // this has to be reworked to yield ENUMs too!!
     return get(hostTypename)
-        .map(obj -> {
-          final var props = new ArrayList<Property>();
-          final var complex = new PropertyType.Complex(props, PropertyType.Arity.ONE);
-          nascentComplexTypes.put(hostTypename, complex);
+        .map(it -> switch (it) {
+          case NominalType.Obj obj -> {
+            final var props = new ArrayList<Property>();
+            final var complex = new PropertyType.Complex(props, PropertyType.Arity.ONE);
+            nascentComplexTypes.put(hostTypename, complex);
 
-          obj.properties().stream()
-              .map(prop -> {
-                final String pKey = prop.key();
-                final PropertyType p = asPropertyType(hostTypename, prop, nascentComplexTypes);
-                return new Property(pKey, p);
-              })
-              .forEach(props::add);
-          return complex;
+            obj.properties().stream()
+                .map(prop -> {
+                  final String pKey = prop.key();
+                  final PropertyType p = asPropertyType(hostTypename, prop, nascentComplexTypes);
+                  return new Property(pKey, p);
+                })
+                .forEach(props::add);
+            yield complex;
+          }
+          case NominalType.Enumeration e -> PropertyType.STR;
         })
         .orElseGet(PropertyType::ofComplex);
   }
@@ -190,9 +196,10 @@ public class NominalTypeService {
         case BOOL -> PropertyType.BOOL;
         case URI -> new PropertyType.Ref("?", arity);
       };
+      case NominalType.Enumeration e -> PropertyType.STR;
       case NominalType.Ref(var target) -> target == null
-      ? new PropertyType.Complex(Collections.emptyList(), arity)
-      :asPropertyType(target, nascentComplexTypes);
+          ? new PropertyType.Complex(Collections.emptyList(), arity)
+          : asPropertyType(target, nascentComplexTypes);
       case NominalType.Obj obj -> {
         log.warn("Huh? {} on {}", obj, nominalProp);
         yield asPropertyType(obj.typeName(), nascentComplexTypes);

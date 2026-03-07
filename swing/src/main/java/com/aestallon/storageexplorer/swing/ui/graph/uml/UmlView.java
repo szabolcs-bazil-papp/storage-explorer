@@ -467,6 +467,7 @@ public final class UmlView {
         Optional<Pair<NominalType.Obj, NominalType.ObjProperty>> nominalPropByHostType =
             nominalTypeService
                 .get(structuredType.name())
+                .map(it -> it instanceof NominalType.Obj obj ? obj : null)
                 .flatMap(objType -> nominalTypeService.getProperty(objType, propPath));
         final String
             nominalPropertyKey,
@@ -493,11 +494,7 @@ public final class UmlView {
           nominalPropertyTypeName = aPrefix +(nominalProp.required()
               ? nominalPropType.typeName()
               : nominalPropType.typeName() + " | null") + aSuffix;
-          nominalPropertyTypeDescription = switch (nominalPropType) {
-            case NominalType.Obj obj-> obj.description();
-            case NominalType.Primitive prim -> prim.typeName();
-            default -> "unknown";
-          };
+          nominalPropertyTypeDescription = nominalPropType.description();
           typeMatchStatus = (p.type().satisfies(nominalTypeService.asPropertyType(hostType.typeName(), nominalProp)))
               ? TooltipData.TypeMatchStatus.MATCH
               : TooltipData.TypeMatchStatus.MISMATCH;
@@ -526,7 +523,8 @@ public final class UmlView {
           structuredType.name(),
           nominalTypeService
               .get(structuredType.name())
-              .map(NominalType.Obj::description).orElse(""));
+              .map(it -> (NominalType) it)
+              .map(NominalType::description).orElse(""));
     }
 
     record NodeProp(Node node, StructuredType t, Property p, String propertyPath) {}
