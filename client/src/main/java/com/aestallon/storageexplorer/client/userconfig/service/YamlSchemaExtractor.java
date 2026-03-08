@@ -13,7 +13,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.aestallon.storageexplorer.core.service.type;
+package com.aestallon.storageexplorer.client.userconfig.service;
 
 import java.io.IOException;
 import java.util.ArrayList;

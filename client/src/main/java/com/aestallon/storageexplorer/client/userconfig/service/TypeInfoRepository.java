@@ -19,7 +19,6 @@ import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
 import com.aestallon.storageexplorer.core.model.type.NominalType;
 import com.aestallon.storageexplorer.core.model.type.dto.EntityTypeDto;
-import com.aestallon.storageexplorer.core.service.type.YamlSchemaExtractor;
 
 /*
  *[...]/storage-explorer/
