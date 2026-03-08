@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
+import com.aestallon.storageexplorer.client.userconfig.service.ThemeService;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
 import com.aestallon.storageexplorer.core.model.type.NominalType;
 import com.aestallon.storageexplorer.core.model.type.Property;
@@ -31,7 +32,6 @@ import com.aestallon.storageexplorer.core.model.type.PropertyType;
 import com.aestallon.storageexplorer.core.model.type.StructuredType;
 import prefuse.data.Node;
 import prefuse.render.AbstractShapeRenderer;
-import prefuse.util.ColorLib;
 import prefuse.visual.VisualItem;
 
 public class StructuredTypeRenderer extends AbstractShapeRenderer {
@@ -144,14 +144,12 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
         bounds.getY(), bounds.getWidth(), bounds.getHeight(), 10, 10);
 
     // Draw box
-    g.setColor(ColorLib.getColor(item.getFillColor()));
+    g.setColor(umlView.colours().get(ThemeService.C_ERD_BOX_BG));
     g.fill(roundedBounds);
 
 
     // Draw header
-    g.setColor(umlView.dark
-        ? new Color(38, 103, 87)
-        : new Color(66, 188, 165));
+    g.setColor(umlView.colours().get(ThemeService.C_ERD_BOX_HEADER_BG));
     g.fill(new RoundRectangle2D.Double(
         bounds.getX() + 1,
         bounds.getY(),
@@ -160,21 +158,18 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
         2,
         2));
 
-    g.setColor(ColorLib.getColor(item.getStrokeColor()));
+    g.setColor(umlView.colours().get(ThemeService.C_ERD_BOX_HEADER_BD));
     g.setStroke(new BasicStroke(2));
     g.draw(roundedBounds);
 
-    g.setColor(Color.WHITE);
+    g.setColor(umlView.colours().get(ThemeService.C_ERD_BOX_HEADER_TXT));
     g.setFont(new Font(FONT_NAME, Font.BOLD, 12));
     g.drawString(st.name(),
         (int) roundedBounds.getX() + PADDING,
         (int) roundedBounds.getY() + 17);
 
     // Draw properties
-    if (umlView.dark)
-      g.setColor(Color.WHITE);
-    else
-      g.setColor(Color.BLACK);
+    g.setColor(umlView.colours().get(ThemeService.C_ERD_BOX_PROP_KEY));
     g.setFont(new Font(FONT_NAME, Font.PLAIN, 11));
 
     if (st instanceof EntityType entity) {
@@ -185,7 +180,7 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
     }
   }
 
-  enum TgClr { None, RED, YELLOW }
+  enum TgClr { NONE, MISMATCH, WARN }
 
   private int renderProperties(Graphics2D g, VisualItem item, java.util.List<Property> properties,
                                String path, int x, int y, int indentLevel,
@@ -200,25 +195,25 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
       final String keySegment = pe.key() + ": ";
       StructuredType type = (StructuredType) item.get(UmlRenderingService.COL_NODE_TYPE);
 
-      TgClr tgClr = TgClr.None;
+      TgClr tgClr = TgClr.NONE;
       if (type instanceof EntityType entity) {
         try {
           tgClr = umlView.types().get(entity.name())
               .flatMap(root -> switch (root) {
                 case NominalType.Obj obj -> tgClrOfObj(currPath, pe.type(), obj);
-                case NominalType.Enumeration e -> Optional.of(TgClr.None);
-                case NominalType.Unknown unk -> Optional.of(TgClr.YELLOW);
+                case NominalType.Enumeration e -> Optional.of(TgClr.NONE);
+                case NominalType.Unknown unk -> Optional.of(TgClr.WARN);
               })
-              .orElse(TgClr.YELLOW);
+              .orElse(TgClr.WARN);
         } catch (Exception e) {
           log.error("Failed to determine match: ", e);
-          tgClr = TgClr.None;
+          tgClr = TgClr.NONE;
         }
       }
       final var colour = switch (tgClr) {
-        case None -> null;
-        case RED -> PropertyTooltip.RED;
-        case YELLOW -> PropertyTooltip.YELLOW;
+        case NONE -> null;
+        case MISMATCH -> umlView.colours().get(ThemeService.C_ERD_BOX_PROP_KEY_MISMATCH);
+        case WARN -> umlView.colours().get(ThemeService.C_ERD_BOX_PROP_KEY_WARN);
       };
       drawProperty(g, currentX, y, keySegment, typeStr, colour);
 
@@ -253,7 +248,7 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
     return umlView.types().getProperty(obj, path)
         .map(p -> umlView.types().asPropertyType(p.a().typeName(), p.b()))
         .map(propertyType::satisfies)
-        .map(yes -> yes ? TgClr.None : TgClr.RED);
+        .map(yes -> yes ? TgClr.NONE : TgClr.MISMATCH);
   }
 
   private void drawProperty(final Graphics2D g,
@@ -272,9 +267,7 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
     }
     final var keySegmentWidth = g.getFontMetrics().stringWidth(keySegment);
     final var colour = g.getColor();
-    final var typeColour = umlView.dark
-        ? new Color(223, 195, 88)
-        : new Color(120, 7, 7);
+    final var typeColour = umlView.colours().get(ThemeService.C_ERD_BOX_PROP_VALUE);
     g.setColor(typeColour);
     g.drawString(typeStr, x + keySegmentWidth, y);
     g.setColor(colour);

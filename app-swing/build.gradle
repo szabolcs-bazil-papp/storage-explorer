@@ -19,10 +19,7 @@ dependencies {
     exclude group: 'com.oracle.database.ha', module: 'ons'
     exclude group: 'com.oracle.database.ha', module: 'simplefan'
   }
-  runtimeOnly 'org.postgresql:postgresql:42.7.4'
-
-  implementation 'com.formdev:flatlaf:3.6'
-  implementation 'com.formdev:flatlaf-intellij-themes:3.6'
+  runtimeOnly 'org.postgresql:postgresql:42.7.7'
 }
 
 test {

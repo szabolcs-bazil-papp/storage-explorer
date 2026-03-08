@@ -28,6 +28,7 @@ import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeServic
 import com.aestallon.storageexplorer.client.userconfig.service.ThemeService;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
+import com.aestallon.storageexplorer.swing.ui.dialog.colour.ColourConfigDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.findtab.FindTabController;
 import com.aestallon.storageexplorer.swing.ui.dialog.graphsettings.GraphSettingsController;
 import com.aestallon.storageexplorer.swing.ui.dialog.graphsettings.GraphSettingsDialog;
@@ -42,6 +43,7 @@ import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.umlexportsettings.UmlExportSettingsController;
 import com.aestallon.storageexplorer.swing.ui.dialog.umlexportsettings.UmlExportSettingsDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.yaml.YamlCatalogDialog;
+import com.aestallon.storageexplorer.swing.ui.misc.ColourService;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
@@ -55,14 +57,18 @@ public class AppFrame extends JFrame {
   private final transient LafService lafService;
   private final transient FindTabController findTabController;
   private final transient ThemeService themeService;
+  private final transient ColourService colourService;
   private final transient NominalTypeService nominalTypeService;
 
   public AppFrame(StorageInstanceProvider storageInstanceProvider,
                   UserConfigService userConfigService,
                   AppContentView appContentView,
                   ArcScriptController arcScriptController,
-                  LafService lafService, FindTabController findTabController,
-                  ThemeService themeService, NominalTypeService nominalTypeService) {
+                  LafService lafService,
+                  FindTabController findTabController,
+                  ThemeService themeService,
+                  ColourService colourService,
+                  NominalTypeService nominalTypeService) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.userConfigService = userConfigService;
     this.appContentView = appContentView;
@@ -70,6 +76,7 @@ public class AppFrame extends JFrame {
     this.lafService = lafService;
     this.findTabController = findTabController;
     this.themeService = themeService;
+    this.colourService = colourService;
     this.nominalTypeService = nominalTypeService;
 
     setTitle("Storage Explorer");
@@ -187,6 +194,13 @@ public class AppFrame extends JFrame {
       dialog.setVisible(true);
     });
     settings.add(yamlCatalog);
+
+    final var colourConfig = new JMenuItem("Colours...");
+    colourConfig.addActionListener(e -> {
+      final var dialog = new ColourConfigDialog(colourService, this);
+      dialog.setVisible(true);
+    });
+    settings.add(colourConfig);
 
     final var darkMode = new JCheckBoxMenuItem("Dark Mode");
     darkMode.setSelected(Theme.DARK == themeService.currentTheme());

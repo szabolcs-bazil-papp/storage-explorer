@@ -1,7 +1,6 @@
 package com.aestallon.storageexplorer.swing.ui.graph.uml;
 
 import java.awt.*;
-import java.util.Map;
 import javax.swing.*;
 
 public class PropertyTooltip extends JPanel {
@@ -11,9 +10,9 @@ public class PropertyTooltip extends JPanel {
   private static final Color FG_MUTED = new Color(200, 200, 200);
   private static final Color SEPARATOR = new Color(255, 255, 255, 128);
 
-  static final Color GREEN = new Color(17, 147, 17);
-  static final Color YELLOW = new Color(209, 181, 45);
-  static final Color RED = new Color(168, 16, 16);
+  private static final Color GREEN = new Color(17, 147, 17);
+  private static final Color YELLOW = new Color(209, 181, 45);
+  private static final Color RED = new Color(168, 16, 16);
   private static final int MAX_WIDTH = 340;
   private static final int ARC = 12;
   private static final int PAD = 10;
