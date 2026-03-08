@@ -43,6 +43,7 @@ import com.aestallon.storageexplorer.core.model.type.PropertyType;
 import com.aestallon.storageexplorer.core.model.type.StructuredType;
 import static com.aestallon.storageexplorer.swing.ui.graph.uml.StructuredTypeRenderer.HEADER_HEIGHT;
 import static com.aestallon.storageexplorer.swing.ui.graph.uml.StructuredTypeRenderer.ROW_HEIGHT;
+import com.aestallon.storageexplorer.swing.ui.misc.ColourService;
 import prefuse.Display;
 import prefuse.Visualization;
 import prefuse.action.ActionList;
@@ -96,6 +97,7 @@ public final class UmlView {
   private final StructuredTypeRenderer nodeRenderer;
 
   private final UmlRenderingService service;
+  private final ColourService colourService;
   private final NominalTypeService nominalTypeService;
   private final ApplicationEventPublisher eventPublisher;
 
@@ -106,11 +108,12 @@ public final class UmlView {
 
   volatile boolean dark;
 
-  public UmlView(UmlRenderingService service,
+  public UmlView(UmlRenderingService service, ColourService colourService,
                  NominalTypeService nominalTypeService,
                  ApplicationEventPublisher eventPublisher,
                  boolean dark) {
     this.service = service;
+    this.colourService = colourService;
     this.nominalTypeService = nominalTypeService;
     this.eventPublisher = eventPublisher;
     this.dark = dark;
@@ -235,6 +238,10 @@ public final class UmlView {
 
   public UmlRenderingService service() {
     return service;
+  }
+
+  ColourService colours() {
+    return colourService;
   }
 
   NominalTypeService types() {

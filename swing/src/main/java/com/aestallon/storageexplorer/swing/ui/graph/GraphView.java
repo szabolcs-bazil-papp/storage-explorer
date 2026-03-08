@@ -74,6 +74,7 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
 import com.aestallon.storageexplorer.swing.ui.graph.uml.UmlView;
+import com.aestallon.storageexplorer.swing.ui.misc.ColourService;
 import com.aestallon.storageexplorer.swing.ui.misc.GraphStylingProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
@@ -105,17 +106,19 @@ public class GraphView extends JPanel {
   private final transient UserConfigService userConfigService;
   private final transient LafService lafService;
   private final transient NominalTypeService nominalTypeService;
+  private final transient ColourService colourService;
 
   public GraphView(final StorageInstanceProvider storageInstanceProvider,
                    final ApplicationEventPublisher eventPublisher,
                    final UserConfigService userConfigService,
                    final LafService lafService,
-                   final NominalTypeService nominalTypeService) {
+                   final NominalTypeService nominalTypeService, ColourService colourService) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
     this.lafService = lafService;
     this.nominalTypeService = nominalTypeService;
+    this.colourService = colourService;
 
     setLayout(new OverlayLayout(this));
     setMinimumSize(new Dimension(500, 500));
@@ -130,7 +133,11 @@ public class GraphView extends JPanel {
     origin = objectEntry;
     service.render(objectEntry);
 
-    umlView = new UmlView(service, nominalTypeService, eventPublisher, lafService.getLaf() == LafChanged.Laf.DARK);
+    umlView = new UmlView(service,
+        colourService,
+        nominalTypeService,
+        eventPublisher,
+        lafService.getLaf() == LafChanged.Laf.DARK);
     display = umlView.display();
     overlay = overlay();
 
