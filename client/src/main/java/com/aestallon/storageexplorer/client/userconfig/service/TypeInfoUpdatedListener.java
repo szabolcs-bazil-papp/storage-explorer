@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.event.TypeInfoUpdated;
@@ -35,19 +36,17 @@ public class TypeInfoUpdatedListener {
   }
 
   @EventListener(TypeInfoUpdated.class)
+  @Async
   public void onTypeInfoUpdated(TypeInfoUpdated e) {
-    final StorageId storageId = e.storageId();
-
-    final var existingFuture = pendingTasks.get(storageId);
-    if (existingFuture != null) {
-      existingFuture.cancel(false);
-    }
-
-    final var next = scheduler.schedule(
-        () -> persistTypeInfo(storageId),
-        DEBOUNCE_DELAY_MS,
-        TimeUnit.MILLISECONDS);
-    pendingTasks.put(storageId, next);
+    pendingTasks.compute(e.storageId(), (k, v) -> {
+      if (v != null) {
+        v.cancel(false);
+      }
+      return scheduler.schedule(
+          () -> persistTypeInfo(k),
+          DEBOUNCE_DELAY_MS,
+          TimeUnit.MILLISECONDS);
+    });
   }
 
   private void persistTypeInfo(StorageId storageId) {

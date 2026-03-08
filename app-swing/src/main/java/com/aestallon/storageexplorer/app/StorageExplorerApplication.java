@@ -26,6 +26,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import com.aestallon.storageexplorer.client.ff.FeatureFlag;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.client.userconfig.service.ThemeService;
 import com.aestallon.storageexplorer.swing.ui.AppContentView;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
@@ -102,11 +103,14 @@ public class StorageExplorerApplication {
   @Bean
   CommandLineRunner frameLauncher(AppFrame appFrame,
                                   StorageInstanceProvider storageInstanceProvider,
+                                  NominalTypeService nominalTypeService,
                                   AppContentView appContentView,
                                   StorageTreeView storageTreeView,
                                   ArcScriptTreeView arcScriptTreeView,
                                   ThemeService themeService) {
     return args -> {
+      SwingUtilities.invokeLater(() -> setSplashStatus("Loading type descriptors..."));
+      nominalTypeService.load();
       SwingUtilities.invokeLater(() -> setSplashStatus("Loading storage instances..."));
       storageInstanceProvider.fetchAllKnown();
       SwingUtilities.invokeLater(() -> {

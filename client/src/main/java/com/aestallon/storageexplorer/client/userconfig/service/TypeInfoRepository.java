@@ -9,31 +9,35 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.client.util.OpResult;
+import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
+import com.aestallon.storageexplorer.core.model.type.NominalType;
 import com.aestallon.storageexplorer.core.model.type.dto.EntityTypeDto;
 
 /*
  *[...]/storage-explorer/
  *            ┃
- *            ┗━━━━━type-info
- *                      ┃
- *                      ┣━━━━━[storage-id-1]                <-- one subfolder per storage
- *                      ┃
- *                      ┣━━━━━[storage-id-2]
- *                      ┃            ┃
- *                     ...           ┣━━━━━type.info.json   <-- contains the discovered structural
- *                                   ┃                          type information
- *                                   ┗━━━━━yaml
- *                                           ┃                   ⇣
- *                                           ┣━━━━━[1-api.yaml]    contains the YAML files
- *                                           ┃                     describing the nominal type
- *                                           ┣━━━━━[2-api.yaml]    information for this storage
- *                                           ┃                   ⇡
- *                                          ...
+ *            ┣━━━━━type-info
+ *            ┃         ┃
+ *            ┃         ┣━━━━━[storage-id-1]                <-- one subfolder per storage
+ *            ┃         ┃
+ *            ┃         ┣━━━━━[storage-id-2]
+ *            ┃         ┃            ┃
+ *            ┃        ...           ┗━━━━━type.info.json   <-- contains the discovered structural
+ *            ┃                                                 type information
+ *            ┗━━━━━━━━yaml
+ *                      ┃                                    ⇣
+ *                      ┣━━━━━[1-api.yaml]                     contains the YAML files
+ *                      ┃                                      describing the nominal type
+ *                      ┣━━━━━[2-api.yaml]                     information
+ *                      ┃                                    ⇡
+ *                     ...
  */
 public final class TypeInfoRepository {
 
@@ -64,8 +68,8 @@ public final class TypeInfoRepository {
     return Files.createDirectories(storagePath);
   }
 
-  private Path yamlDir(final StorageId storageId) throws IOException {
-    final Path yamlDirPath = storageDir(storageId).resolve(FOLDER_YAML);
+  private Path yamlDir() throws IOException {
+    final Path yamlDirPath = settingsFolder.resolve(FOLDER_YAML);
     return Files.createDirectories(yamlDirPath);
   }
 
@@ -104,10 +108,12 @@ public final class TypeInfoRepository {
       }
 
       try (final var in = Files.newInputStream(typeInfoFile)) {
-        final List<EntityTypeDto> dtos = UserConfigPersistenceService.OBJECT_MAPPER
+        return UserConfigPersistenceService.OBJECT_MAPPER
             .readerForListOf(EntityTypeDto.class)
-            .readValue(in);
-        return dtos.stream().map(EntityTypeDto::toDomainObject).toList();
+            .<List<EntityTypeDto>>readValue(in)
+            .stream()
+            .map(EntityTypeDto::toDomainObject)
+            .toList();
       }
 
     } catch (IOException e) {
@@ -116,5 +122,75 @@ public final class TypeInfoRepository {
       return Collections.emptyList();
     }
   }
+
+  public boolean yamlExists(final String yamlName) {
+    try {
+      final var yamlDir = yamlDir();
+      final var yamlPath = yamlDir.resolve(yamlName);
+      return Files.exists(yamlPath);
+    } catch (IOException e) {
+      log.error("Could not check if YAML file [ {} ] exists!", yamlName);
+      return false;
+    }
+  }
+
+  public boolean deleteYaml(final String yamlName) {
+    try {
+      final var yamlDir = yamlDir();
+      final var yamlPath = yamlDir.resolve(yamlName);
+      return Files.deleteIfExists(yamlPath);
+    } catch (IOException e) {
+      log.error("Could not delete YAML file [ {} ]!", yamlName);
+      return false;
+    }
+  }
+
+  public Pair<String, Map<String, NominalType.Root>> saveYaml(final Path yaml) {
+    try {
+      final var yamlDir = yamlDir();
+      final var filename = yaml.getFileName().toString();
+      final var yamlPath = yamlDir.resolve(filename);
+      Files.copy(yaml, yamlPath);
+
+      final var extractor = new YamlSchemaExtractor();
+      final var types = extractor.extract(Files.readString(yamlPath, StandardCharsets.UTF_8));
+      return Pair.of(filename, types);
+
+    } catch (final IOException e) {
+      log.error("Could not save YAML file [ {} ]: {}", yaml, e.getMessage());
+      log.debug(e.getMessage(), e);
+      return null;
+    }
+  }
+
+  public Map<String, Map<String, NominalType.Root>> loadYamls() {
+    try {
+      final var yamlDir = yamlDir();
+      try (final var files = Files.list(yamlDir)) {
+        final var extractor = new YamlSchemaExtractor();
+        return files
+            .filter(it ->  it.getFileName().toString().endsWith(".yaml") || it.getFileName().toString().endsWith(".yml"))
+            .<Pair<String, Optional<Map<String, NominalType.Root>>>>map(it -> {
+              final var filename = it.getFileName().toString();
+              try {
+                final var types = extractor.extract(Files.readString(it, StandardCharsets.UTF_8));
+                return Pair.of(filename, Optional.of(types));
+              } catch (final IOException e) {
+                log.error("Could not load YAML file [ {} ]: {}", it, e.getMessage());
+                log.debug(e.getMessage(), e);
+                return Pair.of(filename, Optional.empty());
+              }
+            })
+            .flatMap(Pair.streamOnB())
+            .collect(Pair.toMap());
+      }
+    } catch (final IOException e) {
+      log.error("Could not load YAML files: {}", e.getMessage());
+      log.debug(e.getMessage(), e);
+      return Collections.emptyMap();
+    }
+  }
+
+
 
 }

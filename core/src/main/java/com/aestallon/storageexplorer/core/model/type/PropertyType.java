@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.core.model.type;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public sealed interface PropertyType {
@@ -33,6 +34,23 @@ public sealed interface PropertyType {
     return new PropertyType.Union(List.of(types), Arity.ONE);
   }
 
+  private static boolean checkWithUnion(PropertyType lhs, Union rhs) {
+    assert !(lhs instanceof Union);
+
+    return switch (lhs.arity()) {
+      case ONE -> switch (rhs.arity()) {
+        case ONE -> rhs.types().stream().anyMatch(lhs::satisfies);
+        case MANY -> false;
+      };
+      case MANY -> switch (rhs.arity()) {
+        case ONE -> rhs.types().stream().anyMatch(lhs::satisfies);
+        case MANY -> rhs.types().stream()
+            .map(it -> it.withArity(Arity.MANY))
+            .anyMatch(lhs::satisfies);
+      };
+    };
+  }
+
 
   enum Arity { ONE, MANY }
 
@@ -44,6 +62,7 @@ public sealed interface PropertyType {
 
   PropertyType withArity(Arity arity);
 
+  boolean satisfies(PropertyType other);
 
   enum PrimitiveType { STR, NUM, BOOL, TIME, NULL }
 
@@ -60,10 +79,22 @@ public sealed interface PropertyType {
 
     @Override
     public String toString() {
-      final var typeName = type.name();
+      final var typeName = type.name().toLowerCase();
       return arity == Arity.ONE ? typeName : "[" + typeName + "]";
     }
 
+    @Override
+    public boolean satisfies(PropertyType other) {
+      if (other instanceof Union u) {
+        return PropertyType.checkWithUnion(this, u);
+      }
+
+      if (other instanceof Unknown) {
+        return true;
+      }
+
+      return equals(other);
+    }
   }
 
 
@@ -107,17 +138,62 @@ public sealed interface PropertyType {
         sb.append("[");
       }
       sb.append("{ ");
-      for (int i = 0; i < properties.size(); i++) {
-        sb.append(properties.get(i).toString());
-        if (i < properties.size() - 1) {
-          sb.append(", ");
-        }
+      if (!properties.isEmpty()) {
+        sb.append("...");
       }
       sb.append(" }");
       if (arity == Arity.MANY) {
         sb.append("]");
       }
       return sb.toString();
+    }
+
+    @Override
+    public boolean satisfies(PropertyType other) {
+      if (other instanceof Unknown) {
+        return true;
+      }
+
+      if (other instanceof Complex c && c.properties.isEmpty()) {
+        // as a special rule, we ALWAYS satisfy the empty complex, as it has a special meaning: unknown shape:
+        return true;
+      }
+
+      if (other instanceof Complex c) {
+        final Map<String, PropertyType> thisProps = properties.stream()
+            .collect(Collectors.toMap(Property::key, Property::type));
+        final Map<String, PropertyType> thatProps = c.properties.stream()
+            .collect(Collectors.toMap(Property::key, Property::type));
+        final var sharedKeys = thisProps.keySet().stream()
+            .filter(thatProps::containsKey)
+            .collect(Collectors.toSet());
+        final boolean sharedPropsAreSatisfied = sharedKeys.stream()
+            .allMatch(key -> thisProps.get(key).satisfies(thatProps.get(key)));
+        if (!sharedPropsAreSatisfied) {
+          return false;
+        }
+
+        // the properties only in this instance are satisfactory if they satisfy NULL:
+        final var ourPropertiesAreNotMandatory = thisProps.entrySet().stream()
+            .filter(e -> !sharedKeys.contains(e.getKey()))
+            .map(Map.Entry::getValue)
+            .allMatch(it -> it.satisfies(PropertyType.NULL));
+        if (!ourPropertiesAreNotMandatory) {
+          return false;
+        }
+
+        // their properties are satisfied if NULL satisfies them (as we lack them):
+        return thatProps.entrySet().stream()
+            .filter(e -> !sharedKeys.contains(e.getKey()))
+            .map(Map.Entry::getValue)
+            .allMatch(PropertyType.NULL::satisfies);
+      }
+
+      if (other instanceof Union u) {
+        return checkWithUnion(this, u);
+      }
+
+      return false;
     }
   }
 
@@ -135,6 +211,28 @@ public sealed interface PropertyType {
     @Override
     public String toString() {
       return (arity == Arity.ONE ? entityName : "[" + entityName + "]");
+    }
+
+    @Override
+    public boolean satisfies(PropertyType other) {
+      if (other instanceof Unknown) {
+        return true;
+      }
+
+      if (other instanceof Union u) {
+        return checkWithUnion(this, u);
+      }
+      if (arity != other.arity()) {
+        return false;
+      }
+
+      return switch (other) {
+        case Ref(String otherEntityName, var otherArity) ->
+            entityName.equals(otherEntityName) || "?".equals(otherEntityName);
+        case Primitive p when p.type() == PrimitiveType.NULL -> true;
+        // if this is a concrete type, we satisfy the union if we match even one variant:
+        default -> false;
+      };
     }
   }
 
@@ -199,6 +297,17 @@ public sealed interface PropertyType {
 
       return sb.toString();
     }
+
+    @Override
+    public boolean satisfies(PropertyType other) {
+      if (other instanceof Unknown) {
+        return true;
+      }
+
+      return other instanceof Union u && types.stream().allMatch(our -> u.types().stream().anyMatch(our::satisfies))
+          // we can only satisfy a non-union, if somehow all our variants satisfy it:
+          || types.stream().allMatch(it -> it.satisfies(other));
+    }
   }
 
 
@@ -219,8 +328,45 @@ public sealed interface PropertyType {
       return "[?]";
     }
 
+    @Override
+    public boolean satisfies(PropertyType other) {
+      if (other.arity() == Arity.MANY) {
+        // empty array satisfies any array:
+        return true;
+      }
+
+      if (other instanceof Union u) {
+        return u.types().stream().anyMatch(this::satisfies);
+      }
+
+      return false;
+    }
   }
 
+  record Unknown() implements PropertyType {
+
+    @Override
+    public Arity arity() {
+      return Arity.ONE;
+    }
+
+    @Override
+    public PropertyType withArity(Arity arity) {
+      return this;
+    }
+
+    @Override
+    public boolean satisfies(PropertyType other) {
+      return false;
+    }
+
+    @Override
+    public String toString() {
+      return "?";
+    }
+  }
+
+  PropertyType UNKNOWN = new Unknown();
 
   PropertyType NULL = new Primitive(PrimitiveType.NULL, Arity.ONE);
   PropertyType STR = new Primitive(PrimitiveType.STR, Arity.ONE);

@@ -24,7 +24,8 @@ public enum PropertyTypeTag {
   REFERENCE("r"),
   COMPLEX("c"),
   UNION("u"),
-  EMPTY_ARRAY("[?]");
+  EMPTY_ARRAY("[?]"),
+  UNKNOWN("?");
 
   private final String value;
 

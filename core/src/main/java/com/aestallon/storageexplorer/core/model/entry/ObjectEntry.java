@@ -148,20 +148,20 @@ public sealed class ObjectEntry
   }
 
   public void refresh(final Map<String, Object> objectAsMap, final long version) {
-      if (valid && uriProperties != null) {
-        return;
-      }
+    if (valid && uriProperties != null) {
+      return;
+    }
 
-      uriProperties.clear();
-      if (objectAsMap == null) {
-        return;
-      }
+    uriProperties.clear();
+    if (objectAsMap == null) {
+      return;
+    }
 
-      uriProperties.addAll(initUriProperties(objectAsMap));
-      valid = true;
-      versioning = version < 0 ? new Versioning.Single() : new Versioning.Multi(version);
-      storageIndex.get().notifyRefresh(this);
-      storageIndex.get().amendType(typeName, objectAsMap);
+    uriProperties.addAll(initUriProperties(objectAsMap));
+    valid = true;
+    versioning = version < 0 ? new Versioning.Single() : new Versioning.Multi(version);
+    storageIndex.get().notifyRefresh(this);
+    storageIndex.get().amendType(typeName, objectAsMap);
   }
 
   private Set<UriProperty> initUriProperties(final Map<String, Object> objectAsMap) {
@@ -245,6 +245,10 @@ public sealed class ObjectEntry
 
 
   public ObjectEntryLoadRequest tryLoad() {
+    if ("BinaryDataObject".equals(typeName)) {
+      return new ObjectEntryLoadRequest.FileSystemObjectEntryLoadRequest(
+          ObjectEntryLoadResult.err("BinaryData loading not supported!"));
+    }
     return Objects.requireNonNull(storageIndex.get()).loader().load(this);
   }
 

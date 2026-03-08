@@ -58,6 +58,7 @@ public class PropertyTypeDto {
         dto.setTag(PropertyTypeTag.UNION);
       }
       case PropertyType.EmptyArray e -> dto.setTag(PropertyTypeTag.EMPTY_ARRAY);
+      case PropertyType.Unknown u -> dto.setTag(PropertyTypeTag.UNKNOWN);
     }
 
     return dto;
@@ -103,6 +104,7 @@ public class PropertyTypeDto {
         yield new PropertyType.Union(members, pArity);
       }
       case EMPTY_ARRAY -> new PropertyType.EmptyArray();
+      case UNKNOWN ->  PropertyType.UNKNOWN;
     };
   }
 

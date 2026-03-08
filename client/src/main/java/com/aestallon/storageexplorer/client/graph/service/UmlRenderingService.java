@@ -45,8 +45,6 @@ public final class UmlRenderingService {
   public static final String COL_NODE_TYPE = "structured_type";
   public static final String COL_EDGE_ASSOC = "association";
 
-  public static final String COL_TOOLTIP = "tooltip_label";
-
   private final StorageInstance storageInstance;
   private final Map<String, StructuredType> typesByTypeName;
   private final Map<String, Association> assocationsBySourceTypeName;
@@ -82,9 +80,7 @@ public final class UmlRenderingService {
   private Graph createGraph() {
     final Graph graph = new Graph(true);
     graph.getNodeTable().addColumn(COL_NODE_TYPE, StructuredType.class);
-    graph.getNodeTable().addColumn(COL_TOOLTIP, String.class);
     graph.getEdgeTable().addColumn(COL_EDGE_ASSOC, Association.class);
-    graph.getEdgeTable().addColumn(COL_TOOLTIP, String.class);
     return graph;
   }
 
@@ -115,7 +111,6 @@ public final class UmlRenderingService {
 
     final Node node = graph.addNode();
     node.set(COL_NODE_TYPE, type);
-    node.set(COL_TOOLTIP, type.name());
     nodesByTypeName.put(type.name(), node);
 
     addAssociations(type, node);
@@ -129,7 +124,6 @@ public final class UmlRenderingService {
       final Node toNode = addType(association.to());
       final Edge edge = graph.addEdge(node, toNode);
       edge.set(COL_EDGE_ASSOC, association);
-      edge.set(COL_TOOLTIP, association.propertyPath());
       assocationsBySourceTypeName.put(type.name(), association);
     }
   }

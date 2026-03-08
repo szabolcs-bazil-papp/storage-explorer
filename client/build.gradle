@@ -21,4 +21,8 @@ dependencies {
   implementation 'org.jgrapht:jgrapht-io:1.5.2'
 
   api files('../lib/prefuse.jar')
+
+  implementation platform('com.fasterxml.jackson:jackson-bom:2.19.4')
+  implementation 'com.fasterxml.jackson.core:jackson-databind'
+  implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
 }

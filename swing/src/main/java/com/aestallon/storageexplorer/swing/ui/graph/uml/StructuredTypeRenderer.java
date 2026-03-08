@@ -19,9 +19,13 @@ import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
+import com.aestallon.storageexplorer.core.model.type.NominalType;
 import com.aestallon.storageexplorer.core.model.type.Property;
 import com.aestallon.storageexplorer.core.model.type.PropertyType;
 import com.aestallon.storageexplorer.core.model.type.StructuredType;
@@ -38,6 +42,7 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
   private static final int MIN_WIDTH = 200;
   static final int ROW_HEIGHT = 20;
   static final int HEADER_HEIGHT = 25;
+  private static final Logger log = LoggerFactory.getLogger(StructuredTypeRenderer.class);
 
   private final UmlView umlView;
 
@@ -180,6 +185,8 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
     }
   }
 
+  enum TgClr { None, RED, YELLOW }
+
   private int renderProperties(Graphics2D g, VisualItem item, java.util.List<Property> properties,
                                String path, int x, int y, int indentLevel,
                                Rectangle2D bounds) {
@@ -191,7 +198,29 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
 
       int currentX = x + (indentLevel * INDENT);
       final String keySegment = pe.key() + ": ";
-      drawProperty(g, currentX, y, keySegment, typeStr);
+      StructuredType type = (StructuredType) item.get(UmlRenderingService.COL_NODE_TYPE);
+
+      TgClr tgClr = TgClr.None;
+      if (type instanceof EntityType entity) {
+        try {
+          tgClr = umlView.types().get(entity.name())
+              .flatMap(root -> switch (root) {
+                case NominalType.Obj obj -> tgClrOfObj(currPath, pe.type(), obj);
+                case NominalType.Enumeration e -> Optional.of(TgClr.None);
+                case NominalType.Unknown unk -> Optional.of(TgClr.YELLOW);
+              })
+              .orElse(TgClr.YELLOW);
+        } catch (Exception e) {
+          log.error("Failed to determine match: ", e);
+          tgClr = TgClr.None;
+        }
+      }
+      final var colour = switch (tgClr) {
+        case None -> null;
+        case RED -> PropertyTooltip.RED;
+        case YELLOW -> PropertyTooltip.YELLOW;
+      };
+      drawProperty(g, currentX, y, keySegment, typeStr, colour);
 
       // Store absolute position for edge calculation
       setPropertyPosition((Node) item.getSourceTuple(), currPath, (int) y);
@@ -218,12 +247,29 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
     return y;
   }
 
+  private Optional<TgClr> tgClrOfObj(final String path,
+                                     final PropertyType propertyType,
+                                     final NominalType.Obj obj) {
+    return umlView.types().getProperty(obj, path)
+        .map(p -> umlView.types().asPropertyType(p.a().typeName(), p.b()))
+        .map(propertyType::satisfies)
+        .map(yes -> yes ? TgClr.None : TgClr.RED);
+  }
+
   private void drawProperty(final Graphics2D g,
                             final int x,
                             final int y,
                             final String keySegment,
-                            final String typeStr) {
+                            final String typeStr,
+                            final Color keyColour) {
+    final var origColour = g.getColor();
+    if (keyColour != null) {
+      g.setColor(keyColour);
+    }
     g.drawString(keySegment, x, y);
+    if (keyColour != null) {
+      g.setColor(origColour);
+    }
     final var keySegmentWidth = g.getFontMetrics().stringWidth(keySegment);
     final var colour = g.getColor();
     final var typeColour = umlView.dark
