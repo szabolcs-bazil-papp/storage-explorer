@@ -57,13 +57,15 @@ class YamlSchemaExtractorTest {
                   description: haha
               required: [ b, d ]""";
   final var extractor = new YamlSchemaExtractor();
-    Map<String, NominalType.Obj> types = extractor.extract(input);
+    Map<String, NominalType.Root> types = extractor.extract(input);
     assertThat(types)
         .isNotNull()
         .hasSize(1);
 
-    final var foo = types.get("Foo");
-    assertThat(foo).isNotNull();
+    final var fooRoot = types.get("Foo");
+    assertThat(fooRoot).isNotNull()
+        .isInstanceOf(NominalType.Obj.class);
+    final var foo = (NominalType.Obj) fooRoot;
     assertThat(foo.description()).contains("Type-level description");
     assertThat(foo.properties()).hasSize(5);
 

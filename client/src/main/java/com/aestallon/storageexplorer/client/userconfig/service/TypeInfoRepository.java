@@ -135,6 +135,17 @@ public final class TypeInfoRepository {
     }
   }
 
+  public boolean deleteYaml(final String yamlName) {
+    try {
+      final var yamlDir = yamlDir();
+      final var yamlPath = yamlDir.resolve(yamlName);
+      return Files.deleteIfExists(yamlPath);
+    } catch (IOException e) {
+      log.error("Could not delete YAML file [ {} ]!", yamlName);
+      return false;
+    }
+  }
+
   public Pair<String, Map<String, NominalType.Root>> saveYaml(final Path yaml) {
     try {
       final var yamlDir = yamlDir();

@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,7 +51,29 @@ public class NominalTypeService {
         .saveYaml(yaml);
     if (res != null) {
       types.put(res.a(), res.b());
+      propStructures.clear();
     }
+  }
+
+  public List<String> findAll() {
+    return types.keySet().stream()
+        .sorted()
+        .toList();
+  }
+
+  public boolean exists(final Path yaml) {
+    final String filename = yaml.getFileName().toString();
+    return userConfigService.typeInfoRepository().yamlExists(filename);
+  }
+
+  public boolean delete(final String yamlName) {
+    final boolean success = userConfigService.typeInfoRepository().deleteYaml(yamlName);
+    if (success) {
+      types.remove(yamlName);
+      propStructures.clear();
+    }
+
+    return success;
   }
 
   public void load() {
