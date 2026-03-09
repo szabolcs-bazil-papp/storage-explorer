@@ -161,7 +161,9 @@ public sealed class ObjectEntry
     valid = true;
     versioning = version < 0 ? new Versioning.Single() : new Versioning.Multi(version);
     storageIndex.get().notifyRefresh(this);
-    storageIndex.get().amendType(typeName, objectAsMap);
+    storageIndex.get().amendType(this instanceof ScopedObjectEntry scoped
+        ? typeName + "::" + scoped
+        : typeName, objectAsMap);
   }
 
   private Set<UriProperty> initUriProperties(final Map<String, Object> objectAsMap) {
