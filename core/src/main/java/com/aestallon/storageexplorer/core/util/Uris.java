@@ -39,6 +39,9 @@ public final class Uris {
   private static final String REGEX_TIMESTAMP = "/\\d{4}/\\d{1,2}/\\d{1,2}/\\d{1,2}";
   private static final Pattern PATTERN_TIMESTAMP = Pattern.compile(REGEX_TIMESTAMP);
 
+  private static final String REGEX_VERSIONED_URI = "^.*\\.v\\d+$";
+  private static final Pattern PATTERN_VERSIONED_URI = Pattern.compile(REGEX_VERSIONED_URI);
+
   public static boolean equalIgnoringVersion(URI u1, URI u2) {
     return Objects.equals(
         (u1 == null) ? null : ObjectStorageImpl.getUriWithoutVersion(u1),
@@ -55,6 +58,10 @@ public final class Uris {
 
   public static URI latest(URI uri) {
     final String uriString = uri.toString();
+    if (!PATTERN_VERSIONED_URI.matcher(uriString).matches()) {
+      return uri;
+    }
+
     final int dotIdx = uriString.lastIndexOf('.');
     if (dotIdx > -1) {
       return URI.create(uriString.substring(0, dotIdx));

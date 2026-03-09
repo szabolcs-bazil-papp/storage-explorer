@@ -135,12 +135,12 @@ public abstract class AbstractTreeView
     treePathsByLeaf = new HashMap<>();
 
     add(scrollPane, BorderLayout.CENTER);
-    
+
     final JLabel title = new JLabel(name());
     title.setFont(LafService.font(LafService.FontToken.SEMIBOLD));
     title.setIcon(icon());
     add(title, BorderLayout.NORTH);
-    
+
     sideBarController.registerTreeView(this);
   }
 
@@ -151,14 +151,26 @@ public abstract class AbstractTreeView
     Optional
         .ofNullable(treePathsByLeaf.get(entity))
         .ifPresent(path -> {
+          requestVisibility();
           selectEntryInternal(path);
           eventPublisher.publishEvent(new BreadCrumbsChanged(path));
         });
   }
 
   protected void selectEntryInternal(TreePath path) {
+    final var oldSelection = tree.getSelectionPath();
+    // If the tree was previously hidden, and now a select brings it to fore, but the selection path
+    // effectively does not change, the selection listener won't be triggered. But we are counting
+    // on the selection listener to emit an event which results in views to be shown according to
+    // the selected node entity:
+    final var needsReselect = oldSelection != null && oldSelection.equals(path);
+
     tree.setSelectionPath(path);
     tree.scrollPathToVisible(path);
+    final Object terminal = path.getLastPathComponent();
+    if (needsReselect && propagate && entityNodeType().isInstance(terminal)) {
+      eventPublisher.publishEvent(terminal);
+    }
   }
 
   @Override
@@ -166,6 +178,37 @@ public abstract class AbstractTreeView
     propagate = false;  // FIXME: This is a freaking hack!
     selectNode(entity);
     propagate = true;
+  }
+
+  @Override
+  public void clearSelection() {
+    tree.clearSelection();
+  }
+
+  @Override
+  public boolean hasNode(final DefaultMutableTreeNode node) {
+    final var model = tree.getModel();
+    final var root = model.getRoot();
+    if (!(root instanceof DefaultMutableTreeNode rootNode)) {
+      return false;
+    }
+
+    return isNodeInSubtree(rootNode, node);
+  }
+
+  private boolean isNodeInSubtree(final DefaultMutableTreeNode current,
+                                  final DefaultMutableTreeNode target) {
+    if (current == target) {
+      return true;
+    }
+
+    for (int i = 0; i < current.getChildCount(); i++) {
+      if (isNodeInSubtree((DefaultMutableTreeNode) current.getChildAt(i), target)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   @Override

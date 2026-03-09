@@ -22,8 +22,13 @@ import java.awt.event.KeyEvent;
 import javax.swing.*;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.model.Theme;
+import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
+import com.aestallon.storageexplorer.client.userconfig.service.ThemeService;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
+import com.aestallon.storageexplorer.swing.ui.dialog.colour.ColourConfigDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.findtab.FindTabController;
 import com.aestallon.storageexplorer.swing.ui.dialog.graphsettings.GraphSettingsController;
 import com.aestallon.storageexplorer.swing.ui.dialog.graphsettings.GraphSettingsDialog;
@@ -35,7 +40,10 @@ import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryControll
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptController;
 import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptDialog;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.swing.ui.dialog.umlexportsettings.UmlExportSettingsController;
+import com.aestallon.storageexplorer.swing.ui.dialog.umlexportsettings.UmlExportSettingsDialog;
+import com.aestallon.storageexplorer.swing.ui.dialog.yaml.YamlCatalogDialog;
+import com.aestallon.storageexplorer.swing.ui.misc.ColourService;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
@@ -48,18 +56,28 @@ public class AppFrame extends JFrame {
   private final transient ArcScriptController arcScriptController;
   private final transient LafService lafService;
   private final transient FindTabController findTabController;
+  private final transient ThemeService themeService;
+  private final transient ColourService colourService;
+  private final transient NominalTypeService nominalTypeService;
 
   public AppFrame(StorageInstanceProvider storageInstanceProvider,
                   UserConfigService userConfigService,
                   AppContentView appContentView,
                   ArcScriptController arcScriptController,
-                  LafService lafService, FindTabController findTabController) {
+                  LafService lafService,
+                  FindTabController findTabController,
+                  ThemeService themeService,
+                  ColourService colourService,
+                  NominalTypeService nominalTypeService) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.userConfigService = userConfigService;
     this.appContentView = appContentView;
     this.arcScriptController = arcScriptController;
     this.lafService = lafService;
     this.findTabController = findTabController;
+    this.themeService = themeService;
+    this.colourService = colourService;
+    this.nominalTypeService = nominalTypeService;
 
     setTitle("Storage Explorer");
     setSize(900, 600);
@@ -150,6 +168,16 @@ public class AppFrame extends JFrame {
     });
     settings.add(graphSettings);
 
+    final var umlExportSettings = new JMenuItem("UML Export Settings...");
+    umlExportSettings.addActionListener(e -> {
+      final var controller = UmlExportSettingsController.newInstance(userConfigService);
+      final var dialog = new UmlExportSettingsDialog(controller);
+      dialog.pack();
+      dialog.setLocationRelativeTo(this);
+      dialog.setVisible(true);
+    });
+    settings.add(umlExportSettings);
+
     final var keymapSettings = new JMenuItem("Keymap Settings...");
     keymapSettings.addActionListener(e -> {
       final var controller = KeymapController.newInstance(userConfigService);
@@ -160,7 +188,22 @@ public class AppFrame extends JFrame {
     });
     settings.add(keymapSettings);
 
+    final var yamlCatalog = new JMenuItem("YAML Catalog...");
+    yamlCatalog.addActionListener(e -> {
+      final var dialog = new YamlCatalogDialog(nominalTypeService, this);
+      dialog.setVisible(true);
+    });
+    settings.add(yamlCatalog);
+
+    final var colourConfig = new JMenuItem("Colours...");
+    colourConfig.addActionListener(e -> {
+      final var dialog = new ColourConfigDialog(colourService, this);
+      dialog.setVisible(true);
+    });
+    settings.add(colourConfig);
+
     final var darkMode = new JCheckBoxMenuItem("Dark Mode");
+    darkMode.setSelected(Theme.DARK == themeService.currentTheme());
     darkMode.addActionListener(e -> {
       final LafChanged.Laf laf = darkMode.isSelected() ? LafChanged.Laf.DARK : LafChanged.Laf.LIGHT;
       lafService.changeLaf(laf);

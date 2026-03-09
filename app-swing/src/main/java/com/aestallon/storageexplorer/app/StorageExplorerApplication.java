@@ -23,16 +23,21 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import com.aestallon.storageexplorer.client.ff.FeatureFlag;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
+import com.aestallon.storageexplorer.client.userconfig.service.ThemeService;
 import com.aestallon.storageexplorer.swing.ui.AppContentView;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptTreeView;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.WelcomePopup;
+import com.aestallon.storageexplorer.swing.ui.splash.SplashScreen;
 import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
-import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme;
+import com.formdev.flatlaf.intellijthemes.FlatMaterialDesignDarkIJTheme;
+import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialLighterIJTheme;
 
 @SpringBootApplication(
     exclude = DataSourceAutoConfiguration.class,
@@ -43,6 +48,38 @@ import com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme;
     })
 public class StorageExplorerApplication {
 
+  private static volatile SplashScreen splashScreen;
+
+  private static void initSplashScreen() {
+    final String version = "0.6.0";
+    SwingUtilities.invokeLater(() -> {
+      splashScreen = SplashScreen
+          .create(version, "/splash/splash_1280x789.png")
+          .orElse(null);
+      if (splashScreen != null) {
+        splashScreen.setAlwaysOnTop(true);
+        splashScreen.setVisible(true);
+      }
+    });
+  }
+
+  private static void setSplashStatus(String status) {
+    if (splashScreen == null) {
+      return;
+    }
+
+    splashScreen.setStatus(status);
+  }
+
+  private static void disposeSplashScreen() {
+    if (splashScreen == null) {
+      return;
+    }
+
+    splashScreen.dispose();
+    splashScreen = null;
+  }
+
   private final AppFrame frame;
 
   public StorageExplorerApplication(AppFrame frame) {
@@ -50,10 +87,11 @@ public class StorageExplorerApplication {
   }
 
   public static void main(String[] args) {
+    initSplashScreen();
     FeatureFlag.parse(args);
 
     System.setProperty("org.graphstream.ui", "swing");
-    FlatIntelliJLaf.setup();
+    FlatMTMaterialLighterIJTheme.setup();
 
     new SpringApplicationBuilder(StorageExplorerApplication.class)
         .web(WebApplicationType.NONE)
@@ -65,17 +103,26 @@ public class StorageExplorerApplication {
   @Bean
   CommandLineRunner frameLauncher(AppFrame appFrame,
                                   StorageInstanceProvider storageInstanceProvider,
+                                  NominalTypeService nominalTypeService,
                                   AppContentView appContentView,
                                   StorageTreeView storageTreeView,
-                                  ArcScriptTreeView arcScriptTreeView) {
+                                  ArcScriptTreeView arcScriptTreeView,
+                                  ThemeService themeService) {
     return args -> {
+      SwingUtilities.invokeLater(() -> setSplashStatus("Loading type descriptors..."));
+      nominalTypeService.load();
+      SwingUtilities.invokeLater(() -> setSplashStatus("Loading storage instances..."));
       storageInstanceProvider.fetchAllKnown();
       SwingUtilities.invokeLater(() -> {
+        setSplashStatus("Initialising UI...");
         appContentView.initSideBar();
         storageTreeView.requestVisibility();
         arcScriptTreeView.expandAll();
+        setSplashStatus("Loading settings...");
         appFrame.appContentView().mainView().explorerView().reopenTrackedEntryInspectors();
-        
+        themeService.applyTheme();
+
+        disposeSplashScreen();
         appFrame.launch();
         if (storageInstanceProvider.provide().findAny().isEmpty()) {
           WelcomePopup.show(appFrame);
@@ -85,10 +132,11 @@ public class StorageExplorerApplication {
   }
 
   @EventListener
+  @Order(100)
   public void onLafChanged(final LafChanged event) {
     SwingUtilities.invokeLater(() -> {
       switch (event.laf()) {
-        case LIGHT -> FlatIntelliJLaf.setup();
+        case LIGHT -> FlatMTMaterialLighterIJTheme.setup();
         case DARK -> FlatGruvboxDarkHardIJTheme.setup();
       }
       SwingUtilities.updateComponentTreeUI(frame);

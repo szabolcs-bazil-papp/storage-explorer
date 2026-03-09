@@ -15,7 +15,6 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -23,10 +22,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.toSet;
-import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.object.ObjectNode;
@@ -37,8 +36,12 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.util.ObjectMaps;
 import com.aestallon.storageexplorer.core.util.Uris;
+import jakarta.annotation.Nullable;
 
-public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntry {
+public sealed class ObjectEntry
+    extends AbstractStorageEntry
+    implements StorageEntry
+    permits ScopedObjectEntry, GodObjectEntry {
 
   public sealed interface Versioning {
 
@@ -52,26 +55,18 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
 
-  private final WeakReference<StorageIndex<?>> storageIndex;
-  private final StorageId id;
-  private final Path path;
-  private final URI uri;
+
   private final String typeName;
   private final String uuid;
   private final Set<ScopedEntry> scopedEntries = new HashSet<>();
 
   private final Lock refreshLock = new ReentrantLock(true);
-  private boolean valid = false;
+  private volatile boolean valid = false;
   private Versioning versioning;
-  private Set<UriProperty> uriProperties;
+  private final Set<UriProperty> uriProperties = new ConcurrentSkipListSet<>();
 
-  ObjectEntry(final StorageIndex<?> storageIndex,
-              final Path path,
-              final URI uri) {
-    this.storageIndex = new WeakReference<>(storageIndex);
-    this.id = storageIndex.id();
-    this.path = path;
-    this.uri = uri;
+  ObjectEntry(final StorageIndex<?> storageIndex, final Path path, final URI uri) {
+    super(storageIndex, path, uri);
     this.typeName = Uris.getTypeName(uri);
     this.uuid = Uris.getUuid(uri);
   }
@@ -96,7 +91,7 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   @Override
   public Set<UriProperty> uriProperties() {
-    if (!valid) {
+    if (!valid || uriProperties == null) {
       refresh();
     }
 
@@ -119,8 +114,8 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   @Override
   public boolean references(StorageEntry that) {
-    return StorageEntry.super.references(that)
-           || ((that instanceof ScopedEntry se) && scopedEntries.contains(se));
+    return super.references(that)
+        || ((that instanceof ScopedEntry se) && scopedEntries.contains(se));
   }
 
   @Override
@@ -153,19 +148,22 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
   }
 
   public void refresh(final Map<String, Object> objectAsMap, final long version) {
-    if (valid) {
+    if (valid && uriProperties != null) {
       return;
     }
 
+    uriProperties.clear();
     if (objectAsMap == null) {
-      uriProperties = new HashSet<>();
       return;
     }
 
-    uriProperties = initUriProperties(objectAsMap);
+    uriProperties.addAll(initUriProperties(objectAsMap));
     valid = true;
     versioning = version < 0 ? new Versioning.Single() : new Versioning.Multi(version);
     storageIndex.get().notifyRefresh(this);
+    storageIndex.get().amendType(this instanceof ScopedObjectEntry scoped
+        ? typeName + "::" + scoped
+        : typeName, objectAsMap);
   }
 
   private Set<UriProperty> initUriProperties(final Map<String, Object> objectAsMap) {
@@ -184,12 +182,12 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     if (!heuristicName.isEmpty()) {
       sb.append(" (").append(heuristicName).append(")");
     }
-    
+
     final var entryId = version.meta().entryId();
     if (entryId != null && !entryId.isEmpty()) {
       sb.append(" (ID: ").append(entryId).append(")");
     }
-    
+
     return sb.toString();
   }
 
@@ -214,7 +212,8 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
     try {
 
       if (Objects.requireNonNull(storageEntry) instanceof ObjectEntry that && that.valid) {
-        uriProperties = that.uriProperties;
+        uriProperties.clear();
+        uriProperties.addAll(that.uriProperties);
         valid = true;
       }
 
@@ -248,6 +247,10 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
 
   public ObjectEntryLoadRequest tryLoad() {
+    if ("BinaryDataObject".equals(typeName)) {
+      return new ObjectEntryLoadRequest.FileSystemObjectEntryLoadRequest(
+          ObjectEntryLoadResult.err("BinaryData loading not supported!"));
+    }
     return Objects.requireNonNull(storageIndex.get()).loader().load(this);
   }
 
@@ -258,25 +261,14 @@ public sealed class ObjectEntry implements StorageEntry permits ScopedObjectEntr
 
   @Override
   public void setUriProperties(Set<UriProperty> uriProperties) {
-    this.uriProperties = uriProperties;
-    this.valid = true;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    refreshLock.lock();
+    try {
+      this.uriProperties.clear();
+      this.uriProperties.addAll(uriProperties);
+      this.valid = true;
+    } finally {
+      refreshLock.unlock();
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ObjectEntry that = (ObjectEntry) o;
-    return Uris.equalIgnoringVersion(uri, that.uri);
-  }
-
-  @Override
-  public int hashCode() {
-    return uri.hashCode();
   }
 
   @Override

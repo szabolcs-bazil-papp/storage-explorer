@@ -138,7 +138,7 @@ public final class RelationalDatabaseStorageIndex
         trustPlatformBeans
             ? StorageInteractionStrategy.RelationalDatabase.Trusting::new
             : StorageInteractionStrategy.RelationalDatabase.Autonomous::new);
-    this.storageEntryFactory = StorageEntryFactory.builder(this, objectApi, collectionApi).build();
+    this.storageEntryFactory = StorageEntryFactory.builder(this).build();
     this.cache = StorageIndexCache.inMemory();
   }
 
@@ -243,7 +243,9 @@ public final class RelationalDatabaseStorageIndex
           try {
             return parseResultSet(r, true);
           } catch (final Exception e) {
-            log.error(e.getMessage(), e);
+            log.error("Could not parse result set for [ URI: {} | version: {} ]: {}",
+                uri, version, e.getMessage());
+            log.debug(e.getMessage(), e);
             return LoadResult.Err.ERR;
           }
         })
@@ -284,7 +286,9 @@ public final class RelationalDatabaseStorageIndex
           try {
             return parseResultSet(r, false);
           } catch (final Exception e) {
-            log.error(e.getMessage(), e);
+            log.error("Could not parse result set for [ URIs: {} ] [ problem index: {}]: {}",
+                uris, c, e.getMessage());
+            log.debug(e.getMessage(), e);
             return LoadResult.Err.ERR;
           }
         })
@@ -344,6 +348,7 @@ public final class RelationalDatabaseStorageIndex
           .orElseGet(Collections::emptyMap);
     } catch (IOException e) {
       log.error("Could not read OAM blob for [ URI: {} | version: {} ]", uriStr, version, e);
+      log.debug(e.getMessage(), e);
       objectAsMap = Collections.emptyMap();
     }
 

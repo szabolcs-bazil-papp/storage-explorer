@@ -19,7 +19,10 @@ import java.awt.*;
 import javax.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 
 @Component
@@ -29,6 +32,12 @@ public class CommanderContainerView extends JPanel {
 
   public CommanderContainerView() {
     setLayout(new BorderLayout(0, 0));
+  }
+
+  @EventListener(LafChanged.class)
+  @Order(1_050)
+  public void onLafChanged(final LafChanged event) {
+    SwingUtilities.invokeLater(() -> SwingUtilities.updateComponentTreeUI(this));
   }
 
   public void setCommanderView(final CommanderView commanderView) {

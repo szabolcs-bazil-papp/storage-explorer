@@ -21,17 +21,19 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder({ "storageId", "uri" })
-public class TrackedInspector {
-  
+@JsonPropertyOrder({ "storageId", "uri", "underInspection" })
+public class TrackedEntry {
+
   private UUID storageId;
   private URI uri;
+  private boolean underInspection;
   
-  public TrackedInspector() { /* POJO constructor */ }
+  public TrackedEntry() { /* POJO constructor */ }
   
-  public TrackedInspector(UUID storageId, URI uri) {
+  public TrackedEntry(UUID storageId, URI uri, boolean underInspection) {
     this.storageId = storageId;
     this.uri = uri;
+    this.underInspection = underInspection;
   }
   
   @JsonProperty("storageId")
@@ -53,22 +55,37 @@ public class TrackedInspector {
   public void setUri(URI uri) {
     this.uri = uri;
   }
-  
+
+  @JsonProperty("underInspection")
+  public boolean isUnderInspection() {
+    return underInspection;
+  }
+
+  @JsonProperty("underInspection")
+  public void setUnderInspection(final boolean underInspection) {
+    this.underInspection = underInspection;
+  }
+
   @Override
   public String toString() {
-    return "TrackedInspector [storageId=" + storageId + ", uri=" + uri + "]";
+    return "TrackedEntry {" +
+        "\n  storageId: " + storageId +
+        ",\n  uri: " + uri +
+        ",\n  underInspection: " + underInspection +
+        "\n}";
   }
 
   @Override
   public boolean equals(Object o) {
-    if (o == null || getClass() != o.getClass()) { return false; }
-    TrackedInspector that = (TrackedInspector) o;
-    return Objects.equals(storageId, that.storageId) && Objects.equals(uri,
-        that.uri);
+    if (o == null || getClass() != o.getClass())
+      return false;
+    TrackedEntry that = (TrackedEntry) o;
+    return underInspection == that.underInspection && Objects.equals(storageId,
+        that.storageId) && Objects.equals(uri, that.uri);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(storageId, uri);
+    return Objects.hash(storageId, uri, underInspection);
   }
 }

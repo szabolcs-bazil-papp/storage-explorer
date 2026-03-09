@@ -8,8 +8,6 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.api.collection.CollectionApi;
-import org.smartbit4all.core.object.ObjectApi;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.util.Uris;
@@ -25,10 +23,8 @@ public final class StorageEntryFactory {
   public static final String STORED_SEQ_MARKER = "/storedSeq";
 
 
-  public static Builder builder(final StorageIndex<?> storageIndex,
-                                final ObjectApi objectApi,
-                                final CollectionApi collectionApi) {
-    return new Builder(storageIndex, objectApi, collectionApi);
+  public static Builder builder(final StorageIndex<?> storageIndex) {
+    return new Builder(storageIndex);
   }
 
   private static Optional<URI> scopeUri(final String uriString, final String probe) {
@@ -48,43 +44,37 @@ public final class StorageEntryFactory {
 
   private final StorageIndex<?> storageIndex;
   private final StorageId id;
-  private final ObjectApi objectApi;
-  private final CollectionApi collectionApi;
   private final Path pathToStorage;
 
   private StorageEntryFactory(final Builder builder) {
     this.storageIndex = builder.storageIndex;
     id = storageIndex.id();
-    this.objectApi = builder.objectApi;
-    this.collectionApi = builder.collectionApi;
     this.pathToStorage = builder.pathToStorage;
   }
 
   public Optional<? extends StorageEntry> create(final URI uri) {
-    final URI latestUri = objectApi.getLatestUri(uri);
+    final URI latestUri = Uris.latest(uri);
     final Path relativePath = Paths.get(latestUri.getScheme(), latestUri.getPath() + ".o");
     final Path path = (pathToStorage == null) ? null : pathToStorage.resolve(relativePath);
     final String uriString = latestUri.toString();
     try {
       if (uriString.contains(STORED_LIST_MARKER)) {
         return scopeUri(uriString, STORED_LIST_MARKER)
-            .map(
-                scope -> (ListEntry) new ScopedListEntry(storageIndex, id, path, latestUri, objectApi,
-                    collectionApi, scope))
-            .or(() -> Optional.of(new ListEntry(storageIndex, id, path, latestUri, objectApi, collectionApi)));
+            .<ListEntry>map(scope -> new ScopedListEntry(storageIndex, path, latestUri, scope))
+            .or(() -> Optional.of(new ListEntry(storageIndex, path, latestUri)));
 
       } else if (uriString.contains(STORED_MAP_MARKER)) {
         return scopeUri(uriString, STORED_MAP_MARKER)
-            .map(scope -> (MapEntry) new ScopedMapEntry(storageIndex, id, path, latestUri, objectApi,
-                collectionApi, scope))
-            .or(() -> Optional.of(new MapEntry(storageIndex, id, path, latestUri, objectApi, collectionApi)));
+            .<MapEntry>map(scope -> new ScopedMapEntry(storageIndex, path, latestUri, scope))
+            .or(() -> Optional.of(new MapEntry(storageIndex, path, latestUri)));
 
       } else if (uriString.contains(STORED_REF_MARKER)) {
         return scopeUri(uriString, STORED_REF_MARKER)
-            .map(scope -> new ScopedObjectEntry(storageIndex, path, latestUri, scope));
+            .<ObjectEntry>map(scope -> new ScopedObjectEntry(storageIndex, path, latestUri, scope))
+            .or(() -> Optional.of(new GodObjectEntry(storageIndex, path, latestUri)));
 
       } else if (uriString.contains(STORED_SEQ_MARKER)) {
-        return Optional.of(new SequenceEntry(id, path, latestUri, collectionApi));
+        return Optional.of(new SequenceEntry(storageIndex, path, latestUri));
 
       } else {
         return Optional.of(new ObjectEntry(storageIndex, path, latestUri));
@@ -103,16 +93,11 @@ public final class StorageEntryFactory {
 
   public static final class Builder {
     private final StorageIndex<?> storageIndex;
-    private final ObjectApi objectApi;
-    private final CollectionApi collectionApi;
 
     private Path pathToStorage;
 
-    private Builder(StorageIndex<?> storageIndex, ObjectApi objectApi,
-                    CollectionApi collectionApi) {
+    private Builder(StorageIndex<?> storageIndex) {
       this.storageIndex = Objects.requireNonNull(storageIndex, "StorageId must not be null!");
-      this.objectApi = Objects.requireNonNull(objectApi, "ObjectApi must not be null!");
-      this.collectionApi = Objects.requireNonNull(collectionApi, "CollectionApi must not be null!");
     }
 
     public Builder pathToStorage(final Path pathToStorage) {

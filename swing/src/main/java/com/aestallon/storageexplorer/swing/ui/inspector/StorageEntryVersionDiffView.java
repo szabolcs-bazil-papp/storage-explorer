@@ -122,7 +122,8 @@ public class StorageEntryVersionDiffView extends JPanel {
         }
 
       } catch (final BadLocationException e) {
-        log.error(e.getMessage(), e);
+        log.error("Failed to colour diff row [ {} ]: {}", row.getOldLine(), e.getMessage());
+        log.debug(e.getMessage(), e);
       }
     }
   }

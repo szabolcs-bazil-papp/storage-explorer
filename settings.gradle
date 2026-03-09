@@ -8,7 +8,7 @@ pluginManagement {
 
 rootProject.name = 'storage-explorer'
 
-includeBuild '../platform-jdk21-silent-mode-20250706'
+includeBuild '../platform-jdk21-silent-mode-20260207'
 include 'app-swing'
 include 'app-angular'
 include 'core'

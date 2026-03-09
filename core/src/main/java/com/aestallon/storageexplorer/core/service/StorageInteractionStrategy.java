@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.core.service;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,6 +53,8 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
     this.loadingService = loadingService;
   }
 
+  protected abstract ObjectEntryLoadResult.SingleVersion.Eager loadExact(URI uri, long version);
+
   abstract static sealed class FileSystem extends
       StorageInteractionStrategy<FileSystemStorageIndex, ObjectEntryLoadingService.FileSystem> {
 
@@ -68,6 +71,34 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
       }
 
       @Override
+      protected ObjectEntryLoadResult.SingleVersion.Eager loadExact(URI uri, long version) {
+        if (Uris.isSingleVersion(uri)) {
+          return tryDeserialise(
+              uri,
+              IO.uriToPath(loadingService.storageIndex.pathToStorage(), uri))
+              .map(oam -> new ObjectEntryLoadResult.SingleVersion.Eager(
+                  new ObjectEntryMeta(uri, null, null, version, null, null, null),
+                  oam,
+                  ObjectEntryLoadingService.OBJECT_MAPPER))
+              .orElse(StorageInteractionStrategy.noVersionAvailable(uri, version));
+        }
+
+        try {
+          final var node = loadingService.storageIndex.objectApi.load(Uris.atVersion(uri, version));
+          return new ObjectEntryLoadResult.SingleVersion.Eager(
+              ObjectEntryMeta.of(node.getData()),
+              node.getObjectAsMap(),
+              ObjectEntryLoadingService.OBJECT_MAPPER);
+        } catch (final Exception e) {
+          log.error(
+              "Could not load exact version [ uri: {}, version: {} ] of multi-version object in autonomous mode: {}",
+              uri, version, e.getMessage());
+          log.debug(e.getMessage(), e);
+          return StorageInteractionStrategy.noVersionAvailable(uri, version);
+        }
+      }
+
+      @Override
       protected ObjectNode loadObjectNode(ObjectEntry entry) {
         if (Uris.isSingleVersion(entry.uri())) {
           // We have to do this...
@@ -78,29 +109,41 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
         try {
           return loadingService.storageIndex.objectApi.loadLatest(entry.uri());
         } catch (final Exception e) {
-          log.error(e.getMessage(), e);
+          log.error("Failure loading [ entry: {} ] in autonomous mode: {}",
+              entry.uri(), e.getMessage());
+          log.debug(e.getMessage(), e);
           return null;
         }
       }
 
-      private Optional<Map<?, ?>> tryDeserialise(final ObjectEntry entry) {
+      private Optional<Map<String, Object>> tryDeserialise(final ObjectEntry entry) {
         final var entryPath = entry.path();
         // ObjectEntry::path is never null here, because FileSystemStorageIndex guarantees it!
         assert entryPath != null;
-        final String rawContent = IO.read(entryPath);
+        return tryDeserialise(entry.uri(), entryPath);
+      }
+
+      private Optional<Map<String, Object>> tryDeserialise(final URI uri, final Path path) {
+        if (uri.toString().contains("org_smartbit4all_api_binarydata_BinaryDataObject")) {
+          log.warn("Skipping deserialisation of binary data at {}", uri);
+          return Optional.empty();
+        }
+
+        final String rawContent = IO.read(path);
         if (Strings.isNullOrEmpty(rawContent)) {
-          log.error("Empty content found during deserialisation attempt of [ {} ]", entry.uri());
+          log.error("Empty content found during deserialisation attempt of [ {} ]", uri);
           return Optional.empty();
         }
 
         try {
-          final Map<?, ?> res = loadingService.storageIndex.objectApi
+          @SuppressWarnings("unchecked")
+          final Map<String, Object> res = loadingService.storageIndex.objectApi
               .getDefaultSerializer()
               .fromString(rawContent, LinkedHashMap.class);
           return Optional.of(res);
         } catch (IOException e) {
-          log.error("Error during deserialisation attempt of [ {} ]", entry.uri());
-          log.error(e.getMessage(), e);
+          log.error("Error during deserialisation attempt of [ {} ]", uri);
+          log.debug(e.getMessage(), e);
           return Optional.empty();
         }
       }
@@ -119,11 +162,36 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
         try {
           return loadingService.storageIndex.objectApi.load(entry.uri());
         } catch (final Exception e) {
-          log.error(e.getMessage(), e);
+          log.error("Failure loading [ entry: {} ] in trusting mode: {}",
+              entry.uri(), e.getMessage());
+          log.debug(e.getMessage(), e);
           return null;
         }
       }
 
+      @Override
+      protected ObjectEntryLoadResult.SingleVersion.Eager loadExact(URI uri, long version) {
+        try {
+
+          final ObjectNode node;
+          if (Uris.isSingleVersion(uri)) {
+            node = loadingService.storageIndex.objectApi.load(uri);
+          } else {
+            node = loadingService.storageIndex.objectApi.load(Uris.atVersion(uri, version));
+          }
+
+          return new ObjectEntryLoadResult.SingleVersion.Eager(
+              ObjectEntryMeta.of(node.getData()),
+              node.getObjectAsMap(),
+              ObjectEntryLoadingService.OBJECT_MAPPER);
+
+        } catch (final Exception e) {
+          log.error("Failure loading exact version [ uri: {}, version: {} ] in trusting mode: {}",
+              uri, version, e.getMessage());
+          log.debug(e.getMessage(), e);
+          return noVersionAvailable(uri, version);
+        }
+      }
     }
 
   }
@@ -135,8 +203,6 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
     protected RelationalDatabase(ObjectEntryLoadingService.RelationalDatabase loadingService) {
       super(loadingService);
     }
-
-    protected abstract ObjectEntryLoadResult.SingleVersion.Eager loadExact(URI uri, long version);
 
     protected abstract List<ObjectEntryLoadResult> loadBatch(List<URI> uris);
 
@@ -173,11 +239,10 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
               node.getObjectAsMap(),
               ObjectEntryLoadingService.OBJECT_MAPPER);
         } catch (final Exception e) {
-          log.error(e.getMessage(), e);
-          return new ObjectEntryLoadResult.SingleVersion.Eager(
-              new ObjectEntryMeta(uri, null, null, version, null, null, null),
-              Collections.emptyMap(),
-              ObjectEntryLoadingService.OBJECT_MAPPER);
+          log.error("Failure loading exact version [ uri: {}, version: {} ] in trusting mode: {}",
+              uri, version, e.getMessage());
+          log.debug(e.getMessage(), e);
+          return noVersionAvailable(uri, version);
         }
       }
 
@@ -210,6 +275,14 @@ abstract sealed class StorageInteractionStrategy<T extends StorageIndex<T>, U ex
 
     }
 
+  }
+
+  private static ObjectEntryLoadResult.SingleVersion.Eager noVersionAvailable(final URI uri,
+                                                                              final long version) {
+    return new ObjectEntryLoadResult.SingleVersion.Eager(
+        new ObjectEntryMeta(uri, null, null, version, null, null, null),
+        Collections.emptyMap(),
+        ObjectEntryLoadingService.OBJECT_MAPPER);
   }
 
 }

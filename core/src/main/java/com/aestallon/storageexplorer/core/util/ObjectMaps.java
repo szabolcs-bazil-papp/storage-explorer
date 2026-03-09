@@ -16,12 +16,19 @@
 package com.aestallon.storageexplorer.core.util;
 
 
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
+import com.aestallon.storageexplorer.core.model.type.EntityType;
+import com.aestallon.storageexplorer.core.model.type.Property;
+import com.aestallon.storageexplorer.core.model.type.PropertyType;
 
 public final class ObjectMaps {
 
@@ -52,7 +59,7 @@ public final class ObjectMaps {
       return IntStream.range(0, l.size())
           .mapToObj(i -> Pair.of(
               UriProperty.Segment.join(property, UriProperty.Segment.idx(i)),
-                  (Object) l.get(i)))
+              (Object) l.get(i)))
           .flatMap(ObjectMaps::flattenToPrimitivePair);
     }
 
@@ -61,6 +68,51 @@ public final class ObjectMaps {
     }
 
     return Stream.of(e);
+  }
+
+  public static EntityType entityTypeOf(String name, Map<String, Object> m) {
+    final var type = new EntityType(name, propertiesOf(m));
+    type.properties().removeIf(it -> UriProperty.OWN.equals(it.key()));
+    return type;
+  }
+
+  static List<Property> propertiesOf(Map<String, Object> m) {
+    return m.entrySet().stream()
+        .map(e -> new Property(e.getKey(), typeOf(e.getValue())))
+        .collect(Collectors.toList());
+  }
+
+  static PropertyType typeOf(Object o) {
+    return switch (o) {
+      case null -> PropertyType.NULL;
+      case String s -> Uris.parseStr(s)
+          .map(Uris::getTypeName)
+          .<PropertyType>map(it -> new PropertyType.Ref(it, PropertyType.Arity.ONE))
+          .orElse(PropertyType.STR);
+      case URI uri -> new PropertyType.Ref(Uris.getTypeName(uri), PropertyType.Arity.ONE);
+      case Number n -> PropertyType.NUM;
+      case Boolean b -> PropertyType.BOOL;
+      case List<?> l -> typeOfList(l);
+      case Map<?, ?> m -> {
+        @SuppressWarnings({ "unchecked" })
+        final Map<String, Object> m2 = (Map<String, Object>) m;
+        yield new PropertyType.Complex(propertiesOf(m2), PropertyType.Arity.ONE);
+      }
+      default -> throw new IllegalArgumentException("unsupported type: " + o.getClass());
+    };
+  }
+
+  static PropertyType typeOfList(List<?> list) {
+    PropertyType elementType = null;
+    for (final var e : list) {
+      elementType = (elementType == null)
+          ? typeOf(e)
+          : new Property("temp", elementType).merge(typeOf(e)).type();
+    }
+
+    return elementType == null
+        ? new PropertyType.EmptyArray()
+        : elementType.withArity(PropertyType.Arity.MANY);
   }
 
 }

@@ -21,16 +21,19 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
-import java.awt.geom.AffineTransform;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.swing.*;
+import javax.swing.filechooser.FileSystemView;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.MultiGraph;
 import org.graphstream.stream.file.FileSinkImages;
@@ -54,20 +57,28 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.graph.layout.forceatlas2.ForceAtlas2;
 import com.aestallon.storageexplorer.client.graph.service.GraphRenderingService;
-import com.aestallon.storageexplorer.client.graph.event.GraphState;
+import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.GraphConfigChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
+import com.aestallon.storageexplorer.client.util.OpResult;
+import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.event.EntryInspectionEvent;
+import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.swing.ui.controller.ViewController;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.swing.ui.graph.uml.UmlView;
+import com.aestallon.storageexplorer.swing.ui.misc.ColourService;
 import com.aestallon.storageexplorer.swing.ui.misc.GraphStylingProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
+import prefuse.Display;
 
 @Component
 public class GraphView extends JPanel {
@@ -75,6 +86,8 @@ public class GraphView extends JPanel {
   private static final Logger log = LoggerFactory.getLogger(GraphView.class);
   public static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm");
 
+  private UmlView umlView;
+  private Display display;
   private transient Graph graph;
   private transient Viewer viewer;
   private ViewPanel panel;
@@ -92,35 +105,51 @@ public class GraphView extends JPanel {
   private final transient ApplicationEventPublisher eventPublisher;
   private final transient UserConfigService userConfigService;
   private final transient LafService lafService;
+  private final transient NominalTypeService nominalTypeService;
+  private final transient ColourService colourService;
 
-  public GraphView(StorageInstanceProvider storageInstanceProvider,
-                   ApplicationEventPublisher eventPublisher,
-                   UserConfigService userConfigService, LafService lafService) {
+  public GraphView(final StorageInstanceProvider storageInstanceProvider,
+                   final ApplicationEventPublisher eventPublisher,
+                   final UserConfigService userConfigService,
+                   final LafService lafService,
+                   final NominalTypeService nominalTypeService, ColourService colourService) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.eventPublisher = eventPublisher;
     this.userConfigService = userConfigService;
     this.lafService = lafService;
+    this.nominalTypeService = nominalTypeService;
+    this.colourService = colourService;
 
     setLayout(new OverlayLayout(this));
     setMinimumSize(new Dimension(500, 500));
   }
 
+  public void initUml(ObjectEntry objectEntry) {
+
+    discard(true);
+
+    final StorageInstance storageInstance = storageInstanceProvider.storageInstanceOf(objectEntry);
+    final var service = new UmlRenderingService(storageInstance, this::onGraphStateChanged);
+    origin = objectEntry;
+    service.render(objectEntry);
+
+    umlView = new UmlView(service,
+        colourService,
+        nominalTypeService,
+        eventPublisher,
+        lafService.getLaf() == LafChanged.Laf.DARK);
+    display = umlView.display();
+    overlay = overlay();
+
+    add(overlay);
+    add(display);
+    setVisible(true);
+    umlView.fullRepaint();
+    revalidate();
+  }
+
   public void init(StorageEntry storageEntry) {
-    if (screenshotListener != null) {
-      panel.removeKeyListener(screenshotListener);
-    }
-
-    abortRendering();
-
-    if (panel != null) {
-      remove(panel);
-    }
-    if (overlay != null) {
-      remove(overlay);
-    }
-    if (graph != null) {
-      graph.clear();
-    }
+    discard(true);
 
     final StorageInstance storageInstance = storageInstanceProvider.storageInstanceOf(storageEntry);
     final var userConfig = userConfigService.graphSettings();
@@ -183,10 +212,11 @@ public class GraphView extends JPanel {
     if (rendering != null) {
       switch (rendering.state()) {
         case RUNNING -> {
+          log.info("Aborting graph rendering!");
           rendering.cancel(true);
         }
         case null, default -> {
-          log.info("No rendering in progress!");
+          log.info("No graph rendering in progress!");
         }
       }
     }
@@ -212,32 +242,92 @@ public class GraphView extends JPanel {
     closeBtn.setAlignmentY(TOP_ALIGNMENT);
     closeBtn.setAlignmentX(RIGHT_ALIGNMENT);
 
-    final var labelBtn = new JToggleButton(IconProvider.MAGNIFY);
-    labelBtn.setSelected(showLabels);
-    labelBtn.addActionListener(e -> {
-      showLabels = labelBtn.isSelected();
-      executorService.submit(
-          () -> graphRenderingService.showLabels(graph, showLabels));
-    });
-    labelBtn.setAlignmentY(TOP_ALIGNMENT);
-    labelBtn.setAlignmentX(RIGHT_ALIGNMENT);
+    final java.util.List<JComponent> components = new ArrayList<>();
+    if (graphRenderingService != null) {
+      final var labelBtn = new JToggleButton(IconProvider.MAGNIFY);
+      labelBtn.setSelected(showLabels);
+      labelBtn.addActionListener(e -> {
+        showLabels = labelBtn.isSelected();
+        executorService.submit(
+            () -> graphRenderingService.showLabels(graph, showLabels));
+      });
+      labelBtn.setAlignmentY(TOP_ALIGNMENT);
+      labelBtn.setAlignmentX(RIGHT_ALIGNMENT);
+      components.add(labelBtn);
+    } else if (umlView != null) {
+      final var exportBtn = new JButton(IconProvider.PUML);
+      exportBtn.addActionListener(e -> {
+        exportUml();
+      });
+      exportBtn.setAlignmentY(TOP_ALIGNMENT);
+      exportBtn.setAlignmentX(RIGHT_ALIGNMENT);
+      components.add(exportBtn);
+    }
+
 
     final var box = Box.createHorizontalBox();
     box.setOpaque(false);
     box.add(Box.createGlue());
-    box.add(labelBtn);
+    components.forEach(box::add);
     box.add(closeBtn);
 
     overlayPanel.add(box);
     return overlayPanel;
   }
 
-  public void discard() {
+  private void exportUml() {
+    final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
+    fileChooser.setDialogType(JFileChooser.SAVE_DIALOG);
+    fileChooser.setDialogTitle("Export as PlantUML");
+
+    final int result = fileChooser.showDialog(this, "Export");
+    if (JFileChooser.APPROVE_OPTION == result) {
+      final File selectedFile = fileChooser.getSelectedFile();
+      if (selectedFile.isDirectory()) {
+        System.err.println("REEEE");
+        return;
+      }
+
+      String filePath = selectedFile.getPath();
+      final var ext = ".puml";
+      if (!filePath.endsWith(ext)) {
+        filePath = filePath + ext;
+      }
+
+      final var r = umlView.service().exportEntityRelationshipDiagram(
+          Path.of(filePath),
+          userConfigService.umlExportSettings());
+      if (r instanceof OpResult.Err err) {
+        if (err instanceof OpResult.Err.Exc exc) {
+          log.error(exc.msg(), exc.e());
+        }
+        JOptionPane.showMessageDialog(
+            this,
+            err.msg(),
+            err.title(),
+            JOptionPane.ERROR_MESSAGE,
+            IconProvider.ERROR);
+      } else if (r instanceof OpResult.Ok(String title, String msg)) {
+        eventPublisher.publishEvent(Msg.info(title, msg));
+      }
+    }
+  }
+
+  private void discard(final boolean keepVisible) {
     onGraphStateChanged(GraphState.EMPTY);
-    setVisible(false);
+    setVisible(keepVisible);
     if (panel != null) {
       remove(panel);
       panel = null;
+    }
+
+    if (umlView != null) {
+      umlView = null;
+    }
+
+    if (display != null) {
+      remove(display);
+      display = null;
     }
 
     abortRendering();
@@ -256,6 +346,11 @@ public class GraphView extends JPanel {
     currentHighlight = null;
     origin = null;
     screenshotListener = null;
+    graphRenderingService = null;
+  }
+
+  public void discard() {
+    discard(false);
   }
 
   public boolean displayingStorageAt(final StorageInstance storageInstance) {
@@ -270,19 +365,19 @@ public class GraphView extends JPanel {
     graphRenderingService.changeHighlight(graph, currentHighlight, storageEntry);
     currentHighlight = storageEntry;
   }
-  
+
   @SuppressWarnings("deprecation")
   private MouseEvent scaleMouseEvent(final MouseEvent e) {
     final var transform = getGraphicsConfiguration().getDefaultTransform();
     return new MouseEvent(
-        (java.awt.Component) e.getSource(), 
-        e.getID(), 
-        e.getWhen(), 
+        (java.awt.Component) e.getSource(),
+        e.getID(),
+        e.getWhen(),
         e.getModifiers(),
-        (int) (e.getX() * transform.getScaleX()), (int) (e.getY() * transform.getScaleY()), 
-        e.getXOnScreen(), e.getYOnScreen(), 
-        e.getClickCount(), 
-        e.isPopupTrigger(), 
+        (int) (e.getX() * transform.getScaleX()), (int) (e.getY() * transform.getScaleY()),
+        e.getXOnScreen(), e.getYOnScreen(),
+        e.getClickCount(),
+        e.isPopupTrigger(),
         e.getButton());
   }
 
@@ -332,8 +427,8 @@ public class GraphView extends JPanel {
       y = -1;
       super.mouseMoved(event);
     }
-    
-    
+
+
 
     @Override
     public void mouseClicked(MouseEvent e) {
@@ -422,7 +517,8 @@ public class GraphView extends JPanel {
         try {
           img.writeAll(graph, "./screens/" + DTF.format(LocalDateTime.now()) + ".png");
         } catch (IOException ex) {
-          log.error(ex.getMessage(), ex);
+          log.error("Failed to write screenshot: {}", ex.getMessage());
+          log.debug(ex.getMessage(), ex);
         }
       }
     }
@@ -450,13 +546,15 @@ public class GraphView extends JPanel {
 
   @EventListener
   public void onLafChanged(final LafChanged event) {
-    if (graph == null) {
-      return;
+    if (graph != null) {
+      SwingUtilities.invokeLater(() -> graph.setAttribute("ui.stylesheet", switch (event.laf()) {
+        case DARK -> GraphStylingProvider.provideDark(this);
+        case LIGHT -> GraphStylingProvider.provideLight(this);
+      }));
+    } else if (umlView != null) {
+      SwingUtilities.invokeLater(() -> umlView.applyTheme(event.laf() == LafChanged.Laf.DARK));
     }
 
-    SwingUtilities.invokeLater(() -> graph.setAttribute("ui.stylesheet", switch (event.laf()) {
-      case DARK -> GraphStylingProvider.provideDark(this);
-      case LIGHT -> GraphStylingProvider.provideLight(this);
-    }));
+
   }
 }

@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
+import com.aestallon.storageexplorer.arcscript.api.SortInstruction;
+import com.aestallon.storageexplorer.arcscript.api.YieldInstruction;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import groovy.lang.Closure;
 
@@ -14,6 +17,7 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
   public final Set<String> _types = new HashSet<>();
   public final Set<String> _schemas = new HashSet<>();
   public final List<ShowColumn> _columns = new ArrayList<>();
+  public final List<SortInstruction.SortKey> _sortKeys = new ArrayList<>();
 
   public long _limit = -1L;
   public QueryConditionImpl condition;
@@ -56,6 +60,10 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
     }
   }
 
+  public String propertyMissing(final String name) {
+    return name;
+  }
+
   @Override
   public QueryCondition where(Closure closure) {
     QueryConditionImpl condition = new QueryConditionImpl();
@@ -79,6 +87,16 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
   @Override
   public QueryCondition expr(QueryCondition condition) {
     return condition;
+  }
+
+  @Override
+  public QueryCondition e(Closure closure) {
+    return expr(closure);
+  }
+
+  @Override
+  public QueryCondition e(QueryCondition condition) {
+    return expr(condition);
   }
 
   @Override
@@ -111,6 +129,30 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
     for (final String prop : properties) {
       this._columns.add(new ShowColumn(prop));
     }
+  }
+
+  @Override
+  public YieldInstruction yield(Closure closure) {
+    final YieldInstructionImpl yieldIns = new YieldInstructionImpl();
+    closure = closure.rehydrate(yieldIns, yieldIns, yieldIns);
+    closure.call();
+
+    this._columns.addAll(yieldIns._columns);
+    return yieldIns;
+  }
+
+  @Override
+  public SortInstruction order(Closure closure) {
+    if (!_sortKeys.isEmpty()) {
+      throw new IllegalArgumentException("Only one order clause is allowed!");
+    }
+
+    final var sort = new SortInstructionImpl();
+    final var code = closure.rehydrate(sort, sort, sort);
+    code.call();
+
+    _sortKeys.addAll(sort._ops.stream().map(SortInstructionImpl.SortOpImpl::asSortKey).toList());
+    return null;
   }
 
   public static final class ShowColumn implements Column {
@@ -169,8 +211,23 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
     }
     sb.append("where ").append(conditionStr);
 
+    if (!_sortKeys.isEmpty()) {
+      sb.append(" order by ");
+      final var sortList = _sortKeys.stream()
+          .map(it -> it.target() + " " + (it.asc() ? "asc" : "desc")).collect(
+          Collectors.joining(", "));
+      sb.append(sortList);
+    }
     if (_limit > 0) {
       sb.append(" limit ").append(_limit);
+    }
+
+    if (!_columns.isEmpty()) {
+      sb.append(" yield columns ( ");
+      final String columnList = _columns.stream()
+          .map(ShowColumn::displayNameInternal)
+          .collect(Collectors.joining(", "));
+      sb.append(columnList).append( " )");
     }
 
     return sb.toString();

@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.graph.event.GraphRenderingRequest;
 import com.aestallon.storageexplorer.client.graph.event.GraphSelectionRequest;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
+import com.aestallon.storageexplorer.client.graph.event.UmlRenderingRequest;
 import com.aestallon.storageexplorer.common.event.msg.ErrorMsg;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
 import com.aestallon.storageexplorer.core.event.EntryAcquired;
@@ -91,6 +92,12 @@ public class ViewController {
   }
 
   @EventListener
+  public void onUmlRenderingRequest(UmlRenderingRequest e) {
+    explorerView.openGraphView();
+    graphView.initUml(e.objectEntry());
+  }
+
+  @EventListener
   public GraphSelectionRequest onTreeTouchRequest(TreeTouchRequest e) {
     storageTreeView.selectNodeSoft(e.storageEntry());
     storageTreeView.requestVisibility();
@@ -143,9 +150,9 @@ public class ViewController {
   @EventListener
   public void onEntryAcquired(EntryAcquired e) {
     SwingUtilities.invokeLater(() -> {
-      log.info("Entry acquired: {}", e.storageEntry());
+      log.debug("Entry acquired: {}", e.storageEntry());
       storageTreeView.incorporateNode(e.storageEntry());
-      log.info("Selecting entry: {}", e.storageEntry());
+      log.debug("Selecting entry: {}", e.storageEntry());
       storageTreeView.selectNode(e.storageEntry());
     });
   }

@@ -20,9 +20,10 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
-import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,11 +33,14 @@ import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.graph.service.GraphExportService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
+import com.aestallon.storageexplorer.client.userconfig.model.Problem;
+import com.aestallon.storageexplorer.client.userconfig.service.ProblemService;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
 import com.aestallon.storageexplorer.common.event.msg.Msg;
 import static com.aestallon.storageexplorer.common.util.Streams.enumerationToStream;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
+import com.aestallon.storageexplorer.core.model.entry.GodObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -53,6 +57,7 @@ import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorage
 import com.aestallon.storageexplorer.swing.ui.dialog.importstorage.ImportStorageDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryController;
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryDialog;
+import com.aestallon.storageexplorer.swing.ui.event.EntryForgotten;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.StorageInstanceStatComponent;
@@ -69,32 +74,35 @@ import com.aestallon.storageexplorer.swing.ui.tree.TreeView;
 public class StorageTreeView
     extends AbstractTreeView
     <
-            StorageTree,
-            StorageEntry,
-            StorageEntryUserDataChanged,
-            StorageInstanceTreeNode,
-            ClickableTreeNode,
-            StorageTreeView>
+        StorageTree,
+        StorageEntry,
+        StorageEntryUserDataChanged,
+        StorageInstanceTreeNode,
+        ClickableTreeNode,
+        StorageTreeView>
     implements TreeView
     <
-            StorageEntry,
-            StorageEntryUserDataChanged> {
+        StorageEntry,
+        StorageEntryUserDataChanged> {
 
   private static final Logger log = LoggerFactory.getLogger(StorageTreeView.class);
 
   public static final String TREE_NAME_STORAGES = "Storages";
-  
+
   private transient StorageEntryTrackingService trackingService;
+  private final transient ProblemService problemService;
 
   public StorageTreeView(ApplicationEventPublisher eventPublisher,
                          StorageInstanceProvider storageInstanceProvider,
                          UserConfigService userConfigService,
                          SideBarController sideBarController,
-                         StorageEntryTrackingService trackingService) {
+                         StorageEntryTrackingService trackingService,
+                         ProblemService problemService) {
     super(
         eventPublisher, storageInstanceProvider, userConfigService,
         sideBarController,
         self -> self.trackingService = trackingService);
+    this.problemService = problemService;
   }
 
   @Override
@@ -160,7 +168,7 @@ public class StorageTreeView
           eventPublisher.publishEvent(Msg.warn(
               "Cannot add orphan scoped entry to Tree!",
               "Entry " + scopedEntry
-              + " has been indexed, but will not show on the tree until its host entry is missing."));
+                  + " has been indexed, but will not show on the tree until its host entry is missing."));
         } else {
           final StorageEntry host = hostEntry.get();
           final TreePath hostPath = treePathsByLeaf.get(host);
@@ -174,7 +182,7 @@ public class StorageTreeView
               (StorageObjectTreeNode) hostPath.getLastPathComponent();
           if (enumerationToStream(hostNode.children()).anyMatch(
               it -> it instanceof ClickableTreeNode c
-                    && c.entity().uri().equals(scopedEntry.uri()))) {
+                  && c.entity().uri().equals(scopedEntry.uri()))) {
             // node is already here...
             return;
           }
@@ -182,19 +190,24 @@ public class StorageTreeView
           hostNode.enableChildren(true);
           tree.model().nodeChanged(hostNode);
           tree.model().insertNodeInto(
-              (DefaultMutableTreeNode) node,
+              node,
               hostNode,
               hostNode.getChildCount());
 
         }
       }
       case ListEntry listEntry -> node = tree.incorporateListEntry(storageInstance, listEntry);
-      case ObjectEntry objectEntry ->
-          node = tree.incorporateObjectEntry(storageInstance, objectEntry);
+      case GodObjectEntry godObjectEntry -> node = tree.incorporateGodObjectEntry(
+          storageInstance,
+          godObjectEntry);
+      case ObjectEntry objectEntry -> node = tree.incorporateObjectEntry(
+          storageInstance,
+          objectEntry);
       case MapEntry mapEntry -> node = tree.incorporateMapEntry(storageInstance, mapEntry);
-      case SequenceEntry sequenceEntry ->
-          node = tree.incorporateSequenceEntry(storageInstance, sequenceEntry);
-      case null, default -> node = null;
+      case SequenceEntry sequenceEntry -> node = tree.incorporateSequenceEntry(
+          storageInstance,
+          sequenceEntry);
+      default -> node = null;
     }
 
     if (node != null) {
@@ -225,6 +238,20 @@ public class StorageTreeView
     super.onUserDataChanged(event);
   }
 
+  @EventListener
+  public void onEntryForgotten(final EntryForgotten event) {
+    final TreePath path = treePathsByLeaf.get(event.storageEntry());
+    if (path == null) {
+      return;
+    }
+
+    if (!(path.getLastPathComponent() instanceof MutableTreeNode node)) {
+      return;
+    }
+
+    tree.model().removeNodeFromParent(node);
+  }
+
   private final class StorageIndexNodePopupMenu extends JPopupMenu {
     private StorageIndexNodePopupMenu(StorageInstanceTreeNode sitn) {
       super(String.valueOf(sitn.getUserObject()));
@@ -247,8 +274,9 @@ public class StorageTreeView
       final var discard = new JMenuItem("Delete", IconProvider.CLOSE);
       discard.addActionListener(e -> eventPublisher.publishEvent(
           new StorageIndexDiscardedEvent(sitn.storageInstance())));
-      discard.setToolTipText("Close this storage to reclaim system resources.\n"
-                             + "This storage won't be preloaded on the next startup.");
+      discard.setToolTipText("""
+          Close this storage to reclaim system resources.
+          This storage won't be preloaded on the next startup.""");
       add(discard);
 
       final var export = createExportMenuItem(sitn);
@@ -295,6 +323,8 @@ public class StorageTreeView
             new GraphExportService().export(sitn.storageInstance(), target);
           } catch (IOException ex) {
             eventPublisher.publishEvent(Msg.err("Graph Export Failed", ex.getMessage()));
+            CompletableFuture.runAsync(
+                () -> problemService.add(Problem.of("Failed to export graph!")));
           }
         }
       });

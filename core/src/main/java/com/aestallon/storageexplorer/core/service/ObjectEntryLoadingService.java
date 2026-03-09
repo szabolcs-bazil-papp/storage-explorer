@@ -39,12 +39,19 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.util.Uris;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>> {
 
   private static final Logger log = LoggerFactory.getLogger(ObjectEntryLoadingService.class);
 
-  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  public static final ObjectMapper OBJECT_MAPPER;
+
+  static {
+    final var mapper = new ObjectMapper();
+    mapper.registerModule(new JavaTimeModule());
+    OBJECT_MAPPER = mapper;
+  }
 
   protected final T storageIndex;
 
@@ -58,40 +65,6 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
                                                                       final long version);
 
   protected final ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry,
-                                                  final ObjectNode node) {
-    try {
-      final ObjectEntryLoadResult ret;
-      if (!objectEntry.valid() && node != null) {
-        objectEntry.refresh(node);
-      }
-
-      if (Uris.isSingleVersion(objectEntry.uri())) {
-        ret = (node != null)
-            ? ObjectEntryLoadResult.singleVersion(node, OBJECT_MAPPER)
-            : ObjectEntryLoadResult.err("Failed to retrieve single version object entry!");
-      } else {
-        ret = (node != null)
-            ? ObjectEntryLoadResult.multiVersion(
-            node,
-            this::loadExact,
-            OBJECT_MAPPER,
-            Long.MAX_VALUE)
-            : ObjectEntryLoadResult.err("Failed to retrieve multi version object entry!");
-      }
-
-      return ret;
-    } catch (Throwable t) {
-      final String msg = String.format("Could not load Object Entry [ %s ] : %s",
-          objectEntry.uri(),
-          t.getMessage());
-      log.error(msg);
-      log.error(t.getMessage(), t);
-
-      return ObjectEntryLoadResult.err(msg);
-    }
-  }
-
-  protected final ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry,
                                                   final ObjectEntryLoadResult headLoadResult) {
     if (headLoadResult.isErr()) {
       return headLoadResult;
@@ -102,13 +75,11 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
       case ObjectEntryLoadResult.MultiVersion mv -> mv.head();
       default -> throw new AssertionError("Unexpected head load result " + headLoadResult);
     };
-    if (!objectEntry.valid()) {
-      objectEntry.refresh(
-          head.objectAsMap(),
-          headLoadResult instanceof ObjectEntryLoadResult.MultiVersion(var versions)
-              ? versions.size()
-              : -1L);
-    }
+    objectEntry.refresh(
+        head.objectAsMap(),
+        headLoadResult instanceof ObjectEntryLoadResult.MultiVersion(var versions)
+            ? versions.size()
+            : -1L);
 
     if (headLoadResult instanceof ObjectEntryLoadResult.SingleVersion sv) {
       return sv;
@@ -131,25 +102,55 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
 
     @Override
     public ObjectEntryLoadRequest load(ObjectEntry objectEntry) {
-      return new ObjectEntryLoadRequest.FileSystemObjectEntryLoadRequest(loadInner(objectEntry));
+      return new ObjectEntryLoadRequest.FileSystemObjectEntryLoadRequest(loadFromObjectNode(objectEntry));
     }
 
     @Override
     public ObjectEntryLoadResult.SingleVersion.Eager loadExact(URI uri, long version) {
-      return (ObjectEntryLoadResult.SingleVersion.Eager) ObjectEntryLoadResult.singleVersion(
-          Uris.isSingleVersion(uri)
-              ? storageIndex.objectApi.loadLatest(uri, null)
-              : storageIndex.objectApi.load(Uris.atVersion(uri, version)),
-          OBJECT_MAPPER);
+      return interactionStrategy.loadExact(uri, version);
     }
 
-    private ObjectEntryLoadResult loadInner(final ObjectEntry objectEntry) {
+    private ObjectEntryLoadResult loadFromObjectNode(final ObjectEntry objectEntry) {
       final var node = loadObjectNode(objectEntry);
-      return loadInner(objectEntry, node);
+      return loadFromObjectNode(objectEntry, node);
     }
 
     private ObjectNode loadObjectNode(ObjectEntry entry) {
       return interactionStrategy.loadObjectNode(entry);
+    }
+
+    private ObjectEntryLoadResult loadFromObjectNode(final ObjectEntry objectEntry,
+                                                     final ObjectNode node) {
+      try {
+        final ObjectEntryLoadResult ret;
+        if (!objectEntry.valid() && node != null) {
+          objectEntry.refresh(node);
+        }
+
+        if (Uris.isSingleVersion(objectEntry.uri())) {
+          ret = (node != null)
+              ? ObjectEntryLoadResult.singleVersion(node, OBJECT_MAPPER)
+              : ObjectEntryLoadResult.err("Failed to retrieve single version object entry!");
+        } else {
+          ret = (node != null)
+              ? ObjectEntryLoadResult.multiVersion(
+              node,
+              this::loadExact,
+              OBJECT_MAPPER,
+              Long.MAX_VALUE)
+              : ObjectEntryLoadResult.err("Failed to retrieve multi version object entry!");
+        }
+
+        return ret;
+      } catch (Throwable t) {
+        final String msg = String.format("Could not load Object Entry [ %s ] : %s",
+            objectEntry.uri(),
+            t.getMessage());
+        log.error(msg);
+        log.debug(t.getMessage(), t);
+
+        return ObjectEntryLoadResult.err(msg);
+      }
     }
 
   }
@@ -169,7 +170,8 @@ public abstract sealed class ObjectEntryLoadingService<T extends StorageIndex<T>
   static final class RelationalDatabase
       extends ObjectEntryLoadingService<RelationalDatabaseStorageIndex> {
 
-    private record LoadingTask(ObjectEntry objectEntry) {}
+    private record LoadingTask(ObjectEntry objectEntry) {
+    }
 
 
     private final Map<LoadingTask, CompletableFuture<ObjectEntryLoadResult>> pendingRequests;

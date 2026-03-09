@@ -1,0 +1,305 @@
+/*
+ * Copyright (C) 2025 Szabolcs Bazil Papp
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with this program.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package com.aestallon.storageexplorer.swing.ui.graph.uml;
+
+import java.awt.*;
+import java.awt.geom.Rectangle2D;
+import java.awt.geom.RoundRectangle2D;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.client.graph.service.UmlRenderingService;
+import com.aestallon.storageexplorer.client.userconfig.service.ThemeService;
+import com.aestallon.storageexplorer.core.model.type.EntityType;
+import com.aestallon.storageexplorer.core.model.type.NominalType;
+import com.aestallon.storageexplorer.core.model.type.Property;
+import com.aestallon.storageexplorer.core.model.type.PropertyType;
+import com.aestallon.storageexplorer.core.model.type.StructuredType;
+import prefuse.data.Node;
+import prefuse.render.AbstractShapeRenderer;
+import prefuse.visual.VisualItem;
+
+public class StructuredTypeRenderer extends AbstractShapeRenderer {
+
+  private static final String FONT_NAME = "JetBrains Mono";
+  private static final int PADDING = 10;
+  private static final int INDENT = 15;
+  private static final int MIN_WIDTH = 200;
+  static final int ROW_HEIGHT = 20;
+  static final int HEADER_HEIGHT = 25;
+  private static final Logger log = LoggerFactory.getLogger(StructuredTypeRenderer.class);
+
+  private final UmlView umlView;
+
+  public StructuredTypeRenderer(UmlView umlView) {
+    this.umlView = umlView;
+  }
+
+  @Override
+  protected Shape getRawShape(VisualItem item) {
+    Rectangle2D bounds = calculateBounds(item);
+    // Prefuse uses (x, y) from the item as center by default for some layouts,
+    // but we want to return a shape that is positioned correctly relative to the item's coordinates.
+    double x = item.getX();
+    double y = item.getY();
+    return new Rectangle2D.Double(x + bounds.getX(), y + bounds.getY(), bounds.getWidth(),
+        bounds.getHeight());
+  }
+
+  private Rectangle2D calculateBounds(VisualItem item) {
+    StructuredType st = (StructuredType) item.get(UmlRenderingService.COL_NODE_TYPE);
+
+    FontMetrics fm = umlView.display.getFontMetrics(new Font(FONT_NAME, Font.PLAIN, 11));
+    int maxWidth = Math.max(MIN_WIDTH, fm.stringWidth(st.name()) + 2 * PADDING);
+    int height = HEADER_HEIGHT;
+    if (st instanceof EntityType entity) {
+      maxWidth = Math.max(
+          maxWidth,
+          calculatePropertiesWidth(item, entity.properties(), "", 0) + 2 * PADDING);
+      height += calculatePropertiesHeight(item, entity.properties(), "");
+    }
+    return new Rectangle2D.Double(-maxWidth / 2.0, -height / 2.0, maxWidth, height);
+  }
+
+  private int calculatePropertiesWidth(VisualItem item, java.util.List<Property> properties,
+                                       String propertyPath, int indentLevel) {
+    FontMetrics fm = umlView.display.getFontMetrics(new Font(FONT_NAME, Font.PLAIN, 11));
+    int maxWidth = 0;
+    for (Property pe : properties) {
+      String label =
+          pe.key() + ": " + formatType(pe.type());
+      maxWidth = Math.max(maxWidth, fm.stringWidth(label) + indentLevel * INDENT);
+
+      if (pe.type() instanceof PropertyType.Complex detail) {
+        final var currentPath = propertyPath.isEmpty() ? pe.key() : propertyPath + "." + pe.key();
+        if (umlView.isDetailExpanded((Node) item.getSourceTuple(), currentPath)) {
+          maxWidth = Math.max(maxWidth,
+              calculatePropertiesWidth(item, detail.properties(), currentPath, indentLevel + 1));
+        }
+      } else if (pe.type() instanceof PropertyType.Union u && u.hasComplex()) {
+        final var currentPath = propertyPath.isEmpty() ? pe.key() : propertyPath + "." + pe.key();
+        if (umlView.isDetailExpanded((Node) item.getSourceTuple(), currentPath)) {
+          for (final var detail : u.complexes()) {
+            maxWidth = Math.max(maxWidth,
+                calculatePropertiesWidth(item, detail.properties(), currentPath, indentLevel + 1));
+            maxWidth += INDENT;
+          }
+        }
+      }
+    }
+    return maxWidth + 10;
+  }
+
+  private int calculatePropertiesHeight(VisualItem item, java.util.List<Property> properties,
+                                        String path) {
+    int height = 0;
+    for (Property pe : properties) {
+      height += ROW_HEIGHT;
+
+      if (pe.type() instanceof PropertyType.Complex detail) {
+        final var currentPath = path.isEmpty() ? pe.key() : path + "." + pe.key();
+        if (umlView.isDetailExpanded((Node) item.getSourceTuple(), currentPath)) {
+          height += calculatePropertiesHeight(item, detail.properties(), currentPath);
+        }
+      } else if (pe.type() instanceof PropertyType.Union u && u.hasComplex()) {
+        final var currentPath = path.isEmpty() ? pe.key() : path + "." + pe.key();
+        if (umlView.isDetailExpanded((Node) item.getSourceTuple(), currentPath)) {
+          for (final var detail : u.complexes()) {
+
+            height += calculatePropertiesHeight(item, detail.properties(), currentPath);
+            height += ROW_HEIGHT;
+          }
+        }
+      }
+    }
+    return height;
+  }
+
+  @Override
+  public void render(Graphics2D g, VisualItem item) {
+    final StructuredType st = (StructuredType) item.get(UmlRenderingService.COL_NODE_TYPE);
+    final Shape shape = getShape(item);
+    if (shape == null) {
+      return;
+    }
+
+    Rectangle2D bounds = shape.getBounds2D();
+    final var roundedBounds = new RoundRectangle2D.Double(
+        bounds.getX(),
+        bounds.getY(), bounds.getWidth(), bounds.getHeight(), 10, 10);
+
+    // Draw box
+    g.setColor(umlView.colours().get(ThemeService.C_ERD_BOX_BG));
+    g.fill(roundedBounds);
+
+
+    // Draw header
+    g.setColor(umlView.colours().get(ThemeService.C_ERD_BOX_HEADER_BG));
+    g.fill(new RoundRectangle2D.Double(
+        bounds.getX() + 1,
+        bounds.getY(),
+        bounds.getWidth() - 2,
+        HEADER_HEIGHT,
+        2,
+        2));
+
+    g.setColor(umlView.colours().get(ThemeService.C_ERD_BOX_HEADER_BD));
+    g.setStroke(new BasicStroke(2));
+    g.draw(roundedBounds);
+
+    g.setColor(umlView.colours().get(ThemeService.C_ERD_BOX_HEADER_TXT));
+    g.setFont(new Font(FONT_NAME, Font.BOLD, 12));
+    g.drawString(st.name(),
+        (int) roundedBounds.getX() + PADDING,
+        (int) roundedBounds.getY() + 17);
+
+    // Draw properties
+    g.setColor(umlView.colours().get(ThemeService.C_ERD_BOX_PROP_KEY));
+    g.setFont(new Font(FONT_NAME, Font.PLAIN, 11));
+
+    if (st instanceof EntityType entity) {
+      int y = (int) bounds.getY() + HEADER_HEIGHT + 15;
+      clearPropertyPositions((Node) item.getSourceTuple());
+      renderProperties(g, item, entity.properties(), "",
+          (int) bounds.getX() + PADDING, y, 0, bounds);
+    }
+  }
+
+  enum TgClr { NONE, MISMATCH, WARN }
+
+  private int renderProperties(Graphics2D g, VisualItem item, java.util.List<Property> properties,
+                               String path, int x, int y, int indentLevel,
+                               Rectangle2D bounds) {
+    for (int i = 0; i < properties.size(); i++) {
+      Property pe = properties.get(i);
+      String currPath = path.isEmpty() ? pe.key() : path + "." + pe.key();
+
+      String typeStr = formatType(pe.type());
+
+      int currentX = x + (indentLevel * INDENT);
+      final String keySegment = pe.key() + ": ";
+      StructuredType type = (StructuredType) item.get(UmlRenderingService.COL_NODE_TYPE);
+
+      TgClr tgClr = TgClr.NONE;
+      if (type instanceof EntityType entity) {
+        try {
+          tgClr = umlView.types().get(entity.name())
+              .flatMap(root -> switch (root) {
+                case NominalType.Obj obj -> tgClrOfObj(currPath, pe.type(), obj);
+                case NominalType.Enumeration e -> Optional.of(TgClr.NONE);
+                case NominalType.Unknown unk -> Optional.of(TgClr.WARN);
+              })
+              .orElse(TgClr.WARN);
+        } catch (Exception e) {
+          log.error("Failed to determine match: ", e);
+          tgClr = TgClr.NONE;
+        }
+      }
+      final var colour = switch (tgClr) {
+        case NONE -> null;
+        case MISMATCH -> umlView.colours().get(ThemeService.C_ERD_BOX_PROP_KEY_MISMATCH);
+        case WARN -> umlView.colours().get(ThemeService.C_ERD_BOX_PROP_KEY_WARN);
+      };
+      drawProperty(g, currentX, y, keySegment, typeStr, colour);
+
+      // Store absolute position for edge calculation
+      setPropertyPosition((Node) item.getSourceTuple(), currPath, (int) y);
+
+      y += ROW_HEIGHT;
+
+      // If it's an expanded detail, render nested properties
+      if (pe.type() instanceof PropertyType.Complex detail) {
+        if (umlView.isDetailExpanded((Node) item.getSourceTuple(), currPath)) {
+          y = renderProperties(g, item, detail.properties(), currPath, x, y, indentLevel + 1,
+              bounds);
+        }
+      } else if (pe.type() instanceof PropertyType.Union u && u.hasComplex()) {
+        if (umlView.isDetailExpanded((Node) item.getSourceTuple(), currPath)) {
+          for (final var detail : u.complexes()) {
+            y = renderProperties(g, item, detail.properties(), currPath, x, y, indentLevel + 1,
+                bounds);
+            g.drawString("-------", x + ((indentLevel + 1) * INDENT), y);
+            y += ROW_HEIGHT;
+          }
+        }
+      }
+    }
+    return y;
+  }
+
+  private Optional<TgClr> tgClrOfObj(final String path,
+                                     final PropertyType propertyType,
+                                     final NominalType.Obj obj) {
+    return umlView.types().getProperty(obj, path)
+        .map(p -> umlView.types().asPropertyType(p.a().typeName(), p.b()))
+        .map(propertyType::satisfies)
+        .map(yes -> yes ? TgClr.NONE : TgClr.MISMATCH);
+  }
+
+  private void drawProperty(final Graphics2D g,
+                            final int x,
+                            final int y,
+                            final String keySegment,
+                            final String typeStr,
+                            final Color keyColour) {
+    final var origColour = g.getColor();
+    if (keyColour != null) {
+      g.setColor(keyColour);
+    }
+    g.drawString(keySegment, x, y);
+    if (keyColour != null) {
+      g.setColor(origColour);
+    }
+    final var keySegmentWidth = g.getFontMetrics().stringWidth(keySegment);
+    final var colour = g.getColor();
+    final var typeColour = umlView.colours().get(ThemeService.C_ERD_BOX_PROP_VALUE);
+    g.setColor(typeColour);
+    g.drawString(typeStr, x + keySegmentWidth, y);
+    g.setColor(colour);
+  }
+
+  private String formatType(PropertyType type) {
+    final var typeSymbol = switch (type) {
+      case PropertyType.Primitive inline -> inline.type().name().toLowerCase();
+      case PropertyType.Ref ref -> "\u2504\u2504\u25b7 " + ref.entityName();
+      case PropertyType.Complex c -> c.properties().isEmpty() ? "{ }" : "{ ... }";
+      case PropertyType.Union union ->
+          union.types().stream().map(this::formatType).collect(Collectors.joining(" | "));
+      case PropertyType.EmptyArray e -> "?";
+      case null, default -> "unknown";
+    };
+
+    return type.isArityOne() ? typeSymbol : "[" + typeSymbol + "]";
+  }
+
+
+
+  public StructuredType getEntity(Node node) {
+    return (StructuredType) node.get(UmlRenderingService.COL_NODE_TYPE);
+  }
+
+  public void setPropertyPosition(Node node, String propertyPath, int yPosition) {
+    umlView.propertyPositions.computeIfAbsent(node, k -> new HashMap<>());
+    umlView.propertyPositions.get(node).put(propertyPath, yPosition);
+  }
+
+  public void clearPropertyPositions(Node node) {
+    umlView.propertyPositions.remove(node);
+  }
+
+}

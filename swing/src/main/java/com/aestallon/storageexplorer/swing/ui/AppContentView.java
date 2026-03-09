@@ -14,6 +14,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
 import com.aestallon.storageexplorer.core.event.LoadingQueueSize;
@@ -22,6 +23,7 @@ import com.aestallon.storageexplorer.swing.ui.commander.CommanderContainerView;
 import com.aestallon.storageexplorer.swing.ui.controller.SideBarController;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
 import com.aestallon.storageexplorer.swing.ui.event.BreadCrumbsChanged;
+import com.aestallon.storageexplorer.swing.ui.event.TreeSelectionCeased;
 import com.aestallon.storageexplorer.swing.ui.misc.HiddenPaneSize;
 
 @Component
@@ -159,6 +161,19 @@ public class AppContentView extends JPanel {
     toolBar.updateUI();
   }
 
+  @EventListener(LafChanged.class)
+  public void onLafChanged(final LafChanged event) {
+    SwingUtilities.invokeLater(() -> {
+      if (progressBar != null) {
+        SwingUtilities.updateComponentTreeUI(progressBar);
+      }
+
+      SwingUtilities.updateComponentTreeUI(breadCrumbs);
+      SwingUtilities.updateComponentTreeUI(graphStateLabel);
+      SwingUtilities.updateComponentTreeUI(loadingQueueLabel);
+    });
+  }
+
   public MainView mainView() {
     return mainView;
   }
@@ -174,6 +189,11 @@ public class AppContentView extends JPanel {
   @EventListener
   public void onBreadCrumbsChanged(final BreadCrumbsChanged e) {
     breadCrumbs.set(e.path().getPath());
+  }
+
+  @EventListener
+  public void onTreeSelectionCeased(final TreeSelectionCeased e) {
+    SwingUtilities.invokeLater(() -> breadCrumbs.set(null));
   }
 
   @EventListener
@@ -201,6 +221,7 @@ public class AppContentView extends JPanel {
       setOpaque(true);
       setHorizontalAlignment(SwingConstants.CENTER);
       setFont(getFont().deriveFont(Font.BOLD));
+      setForeground(Color.BLACK);
       setToolTipText(
           "The number of entries waiting to be loaded. The application may become temporarily unresponsive if this number is greater than 0.");
       setBorder(new EmptyBorder(2, 15, 2, 15));
@@ -266,6 +287,7 @@ public class AppContentView extends JPanel {
       elements.forEach(this::remove);
       elements.clear();
       if (path == null || path.length < 2) {
+        BreadCrumbs.this.revalidate();
         return;
       }
 
@@ -352,7 +374,9 @@ public class AppContentView extends JPanel {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-      sideBarController.treeView("Storage Tree").ifPresent(it -> it.selectNodeSoft(node));
+      sideBarController
+          .treeViewContaining(node)
+          .ifPresent(it -> it.selectNodeSoft(node));
     }
   }
 

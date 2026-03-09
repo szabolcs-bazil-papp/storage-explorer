@@ -36,6 +36,7 @@ import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
 import com.aestallon.storageexplorer.swing.ui.arcscript.editor.ArcScriptView;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
+import com.aestallon.storageexplorer.swing.ui.event.TreeSelectionCeased;
 import com.aestallon.storageexplorer.swing.ui.inspector.InspectorView;
 import com.aestallon.storageexplorer.swing.ui.inspector.StorageEntryInspectorViewFactory;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -61,6 +62,7 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
     addChangeListener(e -> {
       final TabView selectedComponent = (TabView) getSelectedComponent();
       switch (selectedComponent) {
+        case null -> eventPublisher.publishEvent(new TreeSelectionCeased());
         case InspectorView<?> inspector -> eventPublisher.publishEvent(
             new TreeTouchRequest(inspector.storageEntry()));
         case ArcScriptView as -> eventPublisher.publishEvent(
@@ -109,7 +111,9 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
           .getTab(storageEntry)
           .ifPresent(tab -> setSelectedComponent(tab.asComponent()));
       case NONE -> {
-        final var inspector = factory.createInspector(storageEntry).asComponent();
+        final var insView = factory.createInspector(storageEntry);
+        insView.container(this);
+        final var inspector = insView.asComponent();
         final var title = factory.trackingService().getUserData(storageEntry)
             .map(StorageEntryTrackingService.StorageEntryUserData::name)
             .filter(it -> !it.isBlank())
@@ -192,15 +196,15 @@ public class TabContainerView extends JTabbedPane implements TabContainer {
   }
 
   @Override
-  public void discardTabView(final TabView tabViewToClose) {
-    remove(tabViewToClose.asComponent());
-    switch (tabViewToClose) {
-      case InspectorView<?> inspector -> factory.dropInspector(inspector);
+  public void discardTabView(final TabView tabView, boolean forget) {
+    remove(tabView.asComponent());
+    switch (tabView) {
+      case InspectorView<?> inspector -> factory.dropInspector(inspector, forget);
       case ArcScriptView arcScriptView -> arcScriptController.drop(arcScriptView);
-      default -> log.warn("Unknown tab view to close: [ {} ]", tabViewToClose);
+      default -> log.warn("Unknown tab view to close: [ {} ]", tabView);
     }
   }
-  
+
   @EventListener
   void onArcScriptViewDropped(final ArcScriptController.ArcScriptViewDropped e) {
     SwingUtilities.invokeLater(() -> discardTabView(e.view()));

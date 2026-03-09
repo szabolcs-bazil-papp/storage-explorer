@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import javax.swing.*;
 import org.springframework.util.StreamUtils;
+import com.aestallon.storageexplorer.core.model.entry.GodObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -31,7 +32,6 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseVendor;
 import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
 
 public final class IconProvider {
 
@@ -46,8 +46,8 @@ public final class IconProvider {
 
     try {
       return StreamUtils.copyToByteArray(resourceAsStream);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+    } catch (final IOException e) {
+      throw new IllegalStateException("Cannot load icon [ " + iconName + " ]", e);
     }
   }
 
@@ -63,6 +63,7 @@ public final class IconProvider {
       };
       case ObjectEntry object -> switch (object) {
         case ScopedObjectEntry scoped -> SCOPED_OBJ;
+        case GodObjectEntry god -> GOD_OBJ;
         default -> OBJ;
       };
       case SequenceEntry seq -> SEQUENCE;
@@ -70,24 +71,16 @@ public final class IconProvider {
   }
 
   public static ImageIcon getIconForStorageInstance(final StorageInstance storageInstance) {
-    final StorageLocation location = storageInstance.location();
-    if (location instanceof FsStorageLocation) {
-      return (IconProvider.DB_FS);
-    } else if (location instanceof SqlStorageLocation) {
-      final DatabaseVendor vendor = ((SqlStorageLocation) location).getVendor();
-      if (DatabaseVendor.PG == vendor) {
-        return (IconProvider.DB_PG);
-      } else if (DatabaseVendor.ORACLE == vendor) {
-        return (IconProvider.DB_ORA);
-      } else if (DatabaseVendor.H2 == vendor) {
-        return (IconProvider.DB_H2);
-      } else {
-        return (IconProvider.DB);
-      }
-
-    } else {
-      return (IconProvider.DB);
-    }
+    return switch (storageInstance.location()) {
+      case null -> DB;
+      case FsStorageLocation fs -> DB_FS;
+      case SqlStorageLocation sql -> switch (sql.getVendor()) {
+        case DatabaseVendor.PG -> DB_PG;
+        case DatabaseVendor.ORACLE -> DB_ORA;
+        case DatabaseVendor.H2 -> DB_H2;
+        case null, default -> DB;
+      };
+    };
   }
 
   public static final ImageIcon FAVICON = new ImageIcon(loadIcon("favicon"));
@@ -98,6 +91,7 @@ public final class IconProvider {
   public static final ImageIcon SCOPED_LIST = new ImageIcon(loadIcon("scoped_list"));
   public static final ImageIcon SCOPED_MAP = new ImageIcon(loadIcon("scoped_map"));
   public static final ImageIcon SCOPED_OBJ = new ImageIcon(loadIcon("scoped_object"));
+  public static final ImageIcon GOD_OBJ = new ImageIcon(loadIcon("god_object"));
   public static final ImageIcon GRAPH = new ImageIcon(loadIcon("graph"));
   public static final ImageIcon CLOSE = new ImageIcon(loadIcon("close"));
   public static final ImageIcon REFRESH = new ImageIcon(loadIcon("refresh"));
@@ -126,8 +120,11 @@ public final class IconProvider {
   public static final ImageIcon PLAY = new ImageIcon(loadIcon("play"));
   public static final ImageIcon PLUS = new ImageIcon(loadIcon("plus"));
   public static final ImageIcon DELETE = new ImageIcon(loadIcon("delete"));
-  
+
   public static final ImageIcon CSV = new ImageIcon(loadIcon("csv"));
   public static final ImageIcon JSON = new ImageIcon(loadIcon("json"));
+
+  public static final ImageIcon UML = new ImageIcon(loadIcon("uml"));
+  public static final ImageIcon PUML = new ImageIcon(loadIcon("plantuml"));
 
 }

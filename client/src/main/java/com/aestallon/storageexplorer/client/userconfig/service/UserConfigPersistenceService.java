@@ -16,11 +16,9 @@
 package com.aestallon.storageexplorer.client.userconfig.service;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.security.spec.DSAPrivateKeySpec;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +34,7 @@ public class UserConfigPersistenceService {
 
   private static final Logger log = LoggerFactory.getLogger(UserConfigPersistenceService.class);
 
-  private static final ObjectMapper OBJECT_MAPPER = ObjectEntryLoadingService.OBJECT_MAPPER;
+  static final ObjectMapper OBJECT_MAPPER = ObjectEntryLoadingService.OBJECT_MAPPER;
 
   private static Path getSettingsFolder(final String customFolder) {
     if (!Strings.isNullOrEmpty(customFolder)) {
@@ -70,7 +68,7 @@ public class UserConfigPersistenceService {
       return true;
     } catch (IOException e) {
       log.error("Cannot create missing settings directory at [ {} ]", path);
-      log.error(e.getMessage(), e);
+      log.debug(e.getMessage(), e);
       return false;
     }
   }
@@ -117,7 +115,7 @@ public class UserConfigPersistenceService {
       OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValue(out, settings);
     } catch (IOException e) {
       log.error("Could not write settings to [ {} ]!", settingsFile);
-      log.error(e.getMessage(), e);
+      log.debug(e.getMessage(), e);
     }
   }
 

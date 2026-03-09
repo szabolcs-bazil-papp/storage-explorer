@@ -17,6 +17,11 @@ dependencies {
 
   implementation 'com.intellij:forms_rt:7.0.3'
   implementation "io.github.java-diff-utils:java-diff-utils:4.15"
+
+  api 'com.formdev:flatlaf:3.7'
+  api 'com.formdev:flatlaf-intellij-themes:3.7'
+
+  implementation 'io.github.dj-raven:swing-color-picker:2.0.0'
 }
 
 test {

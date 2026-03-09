@@ -47,7 +47,7 @@ import com.aestallon.storageexplorer.swing.ui.arcscript.result.ArcScriptResultVi
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptTreeView;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
@@ -277,7 +277,7 @@ public class ArcScriptController {
 
   public void drop(ArcScriptView arcScriptView) {
     arcScriptViews.remove(arcScriptView);
-    log.info("Dropped ArcScriptView {}, size remaining: {}",
+    log.debug("Dropped ArcScriptView {}, size remaining: {}",
         arcScriptView.storedArcScript().title(),
         arcScriptViews.size());
   }

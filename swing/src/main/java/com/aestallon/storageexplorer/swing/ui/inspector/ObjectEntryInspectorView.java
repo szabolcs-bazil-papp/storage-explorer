@@ -38,11 +38,13 @@ import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrack
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabContainer;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
+import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
 import com.aestallon.storageexplorer.swing.ui.tree.TreeEntityLocator;
 
 public class ObjectEntryInspectorView extends JTabbedPane implements InspectorView<ObjectEntry> {
@@ -81,6 +83,18 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     });
   }
 
+  protected TabContainer container;
+
+  @Override
+  public void container(TabContainer container) {
+    this.container = container;
+  }
+
+  @Override
+  public TabContainer container() {
+    return container;
+  }
+
   @Override
   public List<JTextArea> textAreas() {
     return textAreas;
@@ -97,7 +111,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
         "<B>%s</B> (%s)".formatted(
             factory.storageInstanceProvider().get(storageId()).name(),
             storageEntry().uri().toString()),
-        new TreeEntityLocator("Storage Tree", storageEntry()));
+        new TreeEntityLocator(StorageTreeView.TREE_NAME_STORAGES, storageEntry()));
   }
 
   private void setUpObjectNodeDisplay(ObjectEntryLoadResult.MultiVersion multiVersion) {
@@ -160,6 +174,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
       toolbar.setOrientation(SwingConstants.HORIZONTAL);
       toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
       factory.addRenderAction(objectEntry, toolbar);
+      factory.addRenderTypeAction(objectEntry, toolbar);
       toolbar.add(openInSystemExplorerAction);
       factory.addEditMetaAction(objectEntry, toolbar);
       if (multiVersion != null) {
@@ -168,6 +183,7 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
             ObjectEntryInspectorView.this);
       }
       factory.addModifyAction(objectEntry, () -> version, versionNr, multiVersion, toolbar);
+      factory.addCloseAndForgetAction(ObjectEntryInspectorView.this, toolbar);
       toolbar.add(Box.createHorizontalGlue());
 
       Box box = new Box(BoxLayout.X_AXIS);
@@ -259,16 +275,27 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
   private JComponent errorPane(final ObjectEntryLoadResult.Err err) {
     final var container = new JPanel();
-    container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+    container.setLayout(new BorderLayout(5, 5));
     container.setBorder(new EmptyBorder(5, 5, 5, 5));
 
+    final var toolbar = new JToolBar(SwingConstants.TOP);
+    toolbar.setOrientation(SwingConstants.HORIZONTAL);
+    toolbar.setAlignmentX(LEFT_ALIGNMENT);
+    toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
+    factory.addCloseAndForgetAction(this, toolbar);
+    container.add(toolbar, BorderLayout.NORTH);
+
+    final var innerCont = new JPanel();
+    innerCont.setLayout(new BorderLayout(5, 5));
     final var label = new JLabel(
         (objectEntry == null ? "" : objectEntry + " ") + "LOADING ERROR");
     label.setFont(LafService.font(LafService.FontToken.H3_SEMIBOLD));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
+    innerCont.add(label, BorderLayout.NORTH);
 
-    container.add(label);
-    container.add(errorMessageDisplay(err.msg()));
+    innerCont.add(errorMessageDisplay(err.msg()), BorderLayout.CENTER);
+
+    container.add(innerCont, BorderLayout.CENTER);
     return container;
   }
 

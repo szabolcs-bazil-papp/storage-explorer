@@ -18,14 +18,13 @@ package com.aestallon.storageexplorer.core.model.entry;
 import java.net.URI;
 import java.nio.file.Path;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
-import com.aestallon.storageexplorer.core.util.Uris;
 
 public final class ScopedObjectEntry extends ObjectEntry implements StorageEntry, ScopedEntry {
 
   private final URI scopeUri;
 
-  ScopedObjectEntry(final StorageIndex storageIndex, 
-                    final Path path, 
+  ScopedObjectEntry(final StorageIndex<?> storageIndex,
+                    final Path path,
                     final URI uri,
                     final URI scopeUri) {
     super(storageIndex, path, uri);
@@ -37,22 +36,6 @@ public final class ScopedObjectEntry extends ObjectEntry implements StorageEntry
     return scopeUri;
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o)
-      return true;
-    if (o == null || getClass() != o.getClass())
-      return false;
-    if (!super.equals(o))
-      return false;
-    ScopedObjectEntry that = (ScopedObjectEntry) o;
-    return Uris.equalIgnoringVersion(uri(), that.uri());
-  }
-
-  @Override
-  public int hashCode() {
-    return uri().hashCode();
-  }
 
   @Override
   public String toString() {
