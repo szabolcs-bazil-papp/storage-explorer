@@ -95,13 +95,22 @@ class ArcScriptEngineCharacterizationTest {
     ctx.refresh();
 
     final ObjectApi objectApi = ctx.getBean(ObjectApi.class);
+    final List<java.net.URI> userUris = new java.util.ArrayList<>();
     for (int i = 0; i < USER_COUNT; i++) {
-      objectApi.saveAsNew(SCHEMA, new User()
+      userUris.add(objectApi.saveAsNew(SCHEMA, new User()
           .username("user_%02d".formatted(i))
           .name("User %02d".formatted(i))
           .email("user%02d@example.com".formatted(i))
-          .inactive(i % 3 == 0));
+          .inactive(i % 3 == 0)));
     }
+
+    final CollectionApi collectionApi = ctx.getBean(CollectionApi.class);
+    collectionApi.list(SCHEMA, "firstTen").addAll(userUris.subList(0, 10));
+    final Map<String, java.net.URI> byUsername = new HashMap<>();
+    for (int i = 0; i < 8; i++) {
+      byUsername.put("user_%02d".formatted(i), userUris.get(i));
+    }
+    collectionApi.map(SCHEMA, "byUsername").putAll(byUsername);
 
     storageInstance.setIndex(new FileSystemStorageIndex(
         storageInstance.id(),
@@ -298,6 +307,77 @@ class ArcScriptEngineCharacterizationTest {
     // must be retained, in order:
     assertThat(names(pipelined))
         .containsExactly("User 00", "User 01", "User 02", "User 03", "User 04");
+  }
+
+  @Test
+  void listSourcedQuery_bothEnginesReturnTheListedEntries() {
+    final String script = """
+        query {
+          list 'firstTen'
+          from '%s'
+        }""".formatted(SCHEMA);
+
+    final var legacy = runLegacy(script);
+    final var pipelined = runPipelined(script);
+
+    assertThat(legacy.resultSet().size()).isEqualTo(10);
+    assertThat(pipelined.resultSet().entries())
+        .containsExactlyInAnyOrderElementsOf(legacy.resultSet().entries());
+  }
+
+  @Test
+  void listSourcedQueryWithPredicateAndProjection_bothEnginesReturnTheSameRows() {
+    final String script = """
+        query {
+          list 'firstTen'
+          from '%s'
+          where { bool 'inactive' is false }
+          order { by 'name' }
+          show 'name'
+        }""".formatted(SCHEMA);
+
+    final var legacy = runLegacy(script);
+    final var pipelined = runPipelined(script);
+
+    // of the first ten users, indices 0, 3, 6 and 9 are inactive:
+    assertThat(names(pipelined))
+        .hasSize(6)
+        .containsExactlyElementsOf(names(legacy));
+  }
+
+  @Test
+  void mapSourcedQuery_bothEnginesReturnTheMappedEntries() {
+    final String script = """
+        query {
+          map 'byUsername'
+          from '%s'
+        }""".formatted(SCHEMA);
+
+    final var legacy = runLegacy(script);
+    final var pipelined = runPipelined(script);
+
+    assertThat(legacy.resultSet().size()).isEqualTo(8);
+    assertThat(pipelined.resultSet().entries())
+        .containsExactlyInAnyOrderElementsOf(legacy.resultSet().entries());
+  }
+
+  @Test
+  void nonExistentCollection_failsTheQueryOnBothEngines() {
+    final String script = """
+        query {
+          list 'noSuchList'
+          from '%s'
+        }""".formatted(SCHEMA);
+
+    for (final var mode : QueryEngineSettings.EngineMode.values()) {
+      final var result = Arc.evaluate(script, storageInstance, settings(mode).build());
+      assertThat(result)
+          .withFailMessage("Expected failure on %s engine, but got: %s", mode, result)
+          .isInstanceOf(ArcScriptResult.UnknownError.class);
+      assertThat(((ArcScriptResult.UnknownError) result).msg())
+          .contains("noSuchList")
+          .contains("does not exist");
+    }
   }
 
   @Test

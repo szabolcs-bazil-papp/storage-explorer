@@ -28,7 +28,6 @@ import com.aestallon.storageexplorer.arcscript.internal.query.QueryInstructionIm
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
-import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 
 public class QueryEngineImpl implements QueryEngine {
@@ -37,8 +36,7 @@ public class QueryEngineImpl implements QueryEngine {
                                                    QueryInstructionImpl query) {
     final long start = System.nanoTime();
 
-    final IndexingTarget target = new IndexingTarget(query._schemas, query._types);
-    final Set<StorageEntry> entries = storageInstance.index().get(target);
+    final Set<StorageEntry> entries = QuerySourceResolver.resolve(storageInstance, query);
     final var examiner = storageInstance.examiner();
     final var condition = query.condition;
     final var limit = query._limit;

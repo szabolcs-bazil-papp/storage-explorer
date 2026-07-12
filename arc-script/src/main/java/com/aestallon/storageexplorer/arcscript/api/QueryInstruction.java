@@ -16,6 +16,30 @@ public interface QueryInstruction {
 
   void every(final String... typeNames);
 
+  /**
+   * Sources this query from the elements of the stored list bearing the provided name in the
+   * schema designated by the {@code from} clause.
+   *
+   * <p>
+   * Mutually exclusive with {@code a}/{@code an}/{@code every} (type-based sourcing) and
+   * {@code map}: exactly one source specification is permitted per query instruction.
+   *
+   * @param name the name of the stored list to query the elements of, not null or blank
+   */
+  void list(final String name);
+
+  /**
+   * Sources this query from the values of the stored map bearing the provided name in the schema
+   * designated by the {@code from} clause.
+   *
+   * <p>
+   * Mutually exclusive with {@code a}/{@code an}/{@code every} (type-based sourcing) and
+   * {@code list}: exactly one source specification is permitted per query instruction.
+   *
+   * @param name the name of the stored map to query the values of, not null or blank
+   */
+  void map(final String name);
+
   void from(final String... schema);
 
   QueryCondition where(Closure closure);

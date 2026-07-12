@@ -112,7 +112,21 @@ public final class Uris {
   private static boolean containsTimestampPattern(final String input) {
     return PATTERN_TIMESTAMP.matcher(input).find();
   }
-  
+
+  public static URI constructMap(final String schema, final String name) {
+    if (Strings.isNullOrEmpty(schema) || Strings.isNullOrEmpty(name)) {
+      throw new IllegalArgumentException("Both schema and name must be non-empty!");
+    }
+
+    return URI.create(
+        schema + "-collections:" + StorageEntryFactory.STORED_MAP_MARKER + "/" + name + "-s");
+  }
+
+  public static URI constructList(final String schema, final String name) {
+    return URI.create(
+        schema + "-collections:" + StorageEntryFactory.STORED_LIST_MARKER + "/" + name + "-s");
+  }
+
   public static Optional<URI> parseStr(final String s) {
     if (s == null || s.isBlank()) {
       return Optional.empty();
@@ -129,7 +143,7 @@ public final class Uris {
     if (s.endsWith(".") || s.endsWith(".v")) {
       return Optional.empty();
     }
-    
+
     if (Strings.isNullOrEmpty(s.substring(0, s.indexOf(':')))) {
       return Optional.empty();
     }
@@ -140,11 +154,11 @@ public final class Uris {
     }
 
     try {
-      
+
       return Optional.of(new URI(s));
     } catch (final URISyntaxException e) {
       return Optional.empty();
     }
   }
-  
+
 }

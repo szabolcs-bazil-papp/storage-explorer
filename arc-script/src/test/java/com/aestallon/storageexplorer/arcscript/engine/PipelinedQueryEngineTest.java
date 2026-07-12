@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.Availability;
 import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
@@ -88,6 +89,26 @@ class PipelinedQueryEngineTest {
         .EntryAcquisitionResult.New(StorageEntry entry)) {
       storageInstance.index().accept(uri, entry);
     }
+  }
+
+  /**
+   * Mints a stored collection entry holding references to the first {@code size} Foo entries -
+   * pre-validated, as the synthetic storage holds no loadable content.
+   */
+  private void mintCollection(final URI uri, final int size,
+                              final java.util.function.IntFunction<UriProperty.Segment> segment) {
+    final var result = storageInstance.index().getOrCreate(uri);
+    assertThat(result)
+        .isInstanceOf(com.aestallon.storageexplorer.core.service.StorageIndex
+            .EntryAcquisitionResult.New.class);
+    final var entry = ((com.aestallon.storageexplorer.core.service.StorageIndex
+        .EntryAcquisitionResult.New) result).entry();
+    entry.setUriProperties(IntStream.range(0, size)
+        .mapToObj(i -> UriProperty.of(
+            new UriProperty.Segment[] { segment.apply(i) },
+            URI.create("test:/com_example_Foo/2026/1/1/1/1/foo-" + i)))
+        .collect(java.util.stream.Collectors.toSet()));
+    storageInstance.index().accept(uri, entry);
   }
 
   private static QueryEngineSettings pipelined() {
@@ -385,6 +406,91 @@ class PipelinedQueryEngineTest {
 
     final var query = soleQueryResult(result);
     assertThat(query.resultSet().size()).isEqualTo(FOO_COUNT);
+  }
+
+  @Test
+  void listSourcedQuery_returnsTheEntriesReferencedByTheStoredList() {
+    mintCollection(
+        URI.create("test-collections:/storedlist/mylist-s"),
+        10,
+        UriProperty.Segment::idx);
+
+    final var result = Arc.evaluate("""
+        query {
+          list 'mylist'
+          from 'test'
+        }""", storageInstance, pipelined());
+
+    final var query = soleQueryResult(result);
+    assertThat(query.resultSet().size()).isEqualTo(10);
+    assertThat(query.resultSet().entries())
+        .allSatisfy(it -> assertThat(it.uri().toString()).contains("Foo"));
+  }
+
+  @Test
+  void mapSourcedQuery_returnsTheEntriesReferencedByTheStoredMap() {
+    mintCollection(
+        URI.create("test-collections:/storedmap/mymap-s"),
+        5,
+        i -> UriProperty.Segment.key("key-" + i));
+
+    final var result = Arc.evaluate("""
+        query {
+          map 'mymap'
+          from 'test'
+        }""", storageInstance, pipelined());
+
+    final var query = soleQueryResult(result);
+    assertThat(query.resultSet().size()).isEqualTo(5);
+  }
+
+  @Test
+  void listSourcedQuery_agreesAcrossEngines() {
+    mintCollection(
+        URI.create("test-collections:/storedlist/sharedlist-s"),
+        8,
+        UriProperty.Segment::idx);
+
+    final String script = """
+        query {
+          list 'sharedlist'
+          from 'test'
+        }""";
+    final var pipelined = soleQueryResult(Arc.evaluate(script, storageInstance, pipelined()));
+    final var legacy = soleQueryResult(Arc.evaluate(
+        script,
+        storageInstance,
+        QueryEngineSettings.builder()
+            .engineMode(QueryEngineSettings.EngineMode.LEGACY)
+            .build()));
+
+    assertThat(pipelined.resultSet().entries())
+        .containsExactlyInAnyOrderElementsOf(legacy.resultSet().entries());
+  }
+
+  @Test
+  void nonExistentCollection_failsTheQuery() {
+    final var result = Arc.evaluate("""
+        query {
+          list 'no-such-list'
+          from 'test'
+        }""", storageInstance, pipelined());
+
+    assertThat(result).isInstanceOf(ArcScriptResult.UnknownError.class);
+    assertThat(((ArcScriptResult.UnknownError) result).msg())
+        .contains("no-such-list")
+        .contains("does not exist");
+  }
+
+  @Test
+  void collectionQueryWithMultipleSchemas_isImpermissible() {
+    final var result = Arc.evaluate("""
+        query {
+          list 'mylist'
+          from 'test', 'other'
+        }""", storageInstance, pipelined());
+
+    assertThat(result).isInstanceOf(ArcScriptResult.ImpermissibleInstruction.class);
   }
 
   @Test

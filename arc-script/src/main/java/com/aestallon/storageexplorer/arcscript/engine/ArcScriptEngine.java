@@ -51,6 +51,18 @@ public class ArcScriptEngine {
           return ArcScriptResult.impermissible("Specify at least one schema for query: ", query);
         }
 
+        if (query._collectionKind != null) {
+          if (schemas.size() != 1) {
+            return ArcScriptResult.impermissible(
+                "Specify exactly one schema for a collection query: ",
+                query);
+          }
+
+          // collection-sourced queries acquire their entries directly by the URIs contained in
+          // the named stored collection - no schema-wide implicit indexing is warranted:
+          continue;
+        }
+
         for (int j = 0; j < i; j++) {
           final Instruction instruction2 = instructions.get(j);
           if (instruction2 instanceof IndexInstructionImpl index) {

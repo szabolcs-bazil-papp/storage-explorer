@@ -27,7 +27,6 @@ import java.util.concurrent.TimeoutException;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryInstructionImpl;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
-import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 
 /**
@@ -70,8 +69,7 @@ public final class PipelinedQueryEngine implements QueryEngine {
                                                    final QueryInstructionImpl query) {
     final long start = System.nanoTime();
 
-    final var target = new IndexingTarget(query._schemas, query._types);
-    final Set<StorageEntry> entries = storageInstance.index().get(target);
+    final Set<StorageEntry> entries = QuerySourceResolver.resolve(storageInstance, query);
     final var examiner = storageInstance.examiner();
     final var cache = settings.cacheMaxEntries() > 0L
         ? StorageInstanceExaminer.ObjectEntryLookupTable.adaptive(
@@ -122,7 +120,7 @@ public final class PipelinedQueryEngine implements QueryEngine {
           limit)
           : null;
       yieldMetrics = metrics.register("yield");
-      final var yield = new YieldProcessor(
+      final var y = new YieldProcessor(
           executor,
           settings,
           yieldMetrics,
@@ -134,11 +132,11 @@ public final class PipelinedQueryEngine implements QueryEngine {
       source.subscribe(where);
       if (ordering != null) {
         where.subscribe(ordering);
-        ordering.subscribe(yield);
+        ordering.subscribe(y);
       } else {
-        where.subscribe(yield);
+        where.subscribe(y);
       }
-      yield.subscribe(collector);
+      y.subscribe(collector);
 
       source.start();
       try {
