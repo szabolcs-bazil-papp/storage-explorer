@@ -60,3 +60,8 @@ screens/
 
 ### Distribution artefacts ###
 **/*.msi
+
+### AI ###
+/*.md
+!/README.md
+/.claude/

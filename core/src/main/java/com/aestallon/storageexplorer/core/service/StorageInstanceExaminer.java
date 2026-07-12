@@ -1,6 +1,7 @@
 package com.aestallon.storageexplorer.core.service;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,22 +30,49 @@ public class StorageInstanceExaminer {
   private static final Logger log = LoggerFactory.getLogger(StorageInstanceExaminer.class);
 
 
-  public static final class ObjectEntryLookupTable {
+  public interface ObjectEntryLookupTable {
 
-    public static ObjectEntryLookupTable newInstance() {
-      return new ObjectEntryLookupTable();
+    static ObjectEntryLookupTable newInstance() {
+      return new Unbounded();
     }
 
-    private final ConcurrentHashMap<ObjectEntry, ObjectEntryLoadRequest> inner;
-
-    private ObjectEntryLookupTable() {
-      inner = new ConcurrentHashMap<>();
+    /**
+     * Creates a size-bounded, frequency-aware lookup table.
+     *
+     * <p>
+     * Unlike {@link #newInstance()}, instances returned by this method may discard rarely accessed
+     * entries under size pressure, trading repeated loads for a bounded memory footprint during
+     * large query executions.
+     *
+     * @param maxEntries the maximum number of object entries to retain, positive
+     * @param expireAfterAccess entries not accessed for this duration become eligible for
+     *     eviction regardless of size pressure, not null
+     *
+     * @return a bounded {@link ObjectEntryLookupTable}, never null
+     */
+    static ObjectEntryLookupTable adaptive(final long maxEntries,
+                                           final Duration expireAfterAccess) {
+      return new AdaptiveEntryLookupTable(maxEntries, expireAfterAccess);
     }
 
-    private ObjectEntryLoadRequest computeIfAbsent(final ObjectEntry objectEntry,
-                                                   final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f) {
-      return inner.computeIfAbsent(objectEntry, f);
+    ObjectEntryLoadRequest computeIfAbsent(final ObjectEntry objectEntry,
+                                           final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f);
+
+    final class Unbounded implements ObjectEntryLookupTable {
+
+      private final ConcurrentHashMap<ObjectEntry, ObjectEntryLoadRequest> inner;
+
+      private Unbounded() {
+        inner = new ConcurrentHashMap<>();
+      }
+
+      @Override
+      public ObjectEntryLoadRequest computeIfAbsent(final ObjectEntry objectEntry,
+                                                    final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f) {
+        return inner.computeIfAbsent(objectEntry, f);
+      }
     }
+
   }
 
 

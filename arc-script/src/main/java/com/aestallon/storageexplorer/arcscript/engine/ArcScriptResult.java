@@ -71,8 +71,41 @@ public sealed interface ArcScriptResult {
       implements InstructionResult {}
 
 
-  record QueryPerformed(String prettyPrint, ResultSet resultSet, long timeTaken)
-      implements InstructionResult {}
+  record QueryPerformed(String prettyPrint, ResultSet resultSet, long timeTaken,
+      PipelineStats pipelineStats)
+      implements InstructionResult {
+
+    public QueryPerformed(String prettyPrint, ResultSet resultSet, long timeTaken) {
+      this(prettyPrint, resultSet, timeTaken, null);
+    }
+
+  }
+
+
+  /**
+   * Per-stage instrumentation of a pipelined query execution.
+   *
+   * <p>
+   * Only attached to a {@link QueryPerformed} result when the executing engine is pipeline-based
+   * and stage timing collection is enabled; {@code null} otherwise.
+   */
+  record PipelineStats(List<StageStats> stages) {}
+
+
+  /**
+   * Instrumentation of a single pipeline stage.
+   *
+   * @param stage the name of the pipeline stage
+   * @param entriesIn number of elements the stage received from its upstream
+   * @param entriesOut number of elements the stage emitted downstream
+   * @param timeTaken nanos elapsed from the stage's first processed element until the stage
+   *     completed; {@code -1} if the stage never received an element
+   * @param earlyTerminated whether the stage stopped exhausting its input before completion:
+   *     either by cancelling its upstream (limit satisfied), or by discarding entries under a
+   *     configured hard cap
+   */
+  record StageStats(String stage, long entriesIn, long entriesOut, long timeTaken,
+      boolean earlyTerminated) {}
 
 
   record ColumnDescriptor(String prop, String title) {}

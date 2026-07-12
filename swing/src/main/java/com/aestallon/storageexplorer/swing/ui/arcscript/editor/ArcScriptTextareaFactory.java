@@ -48,6 +48,8 @@ public final class ArcScriptTextareaFactory {
     textarea.setCodeFoldingEnabled(true);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
+    textarea.setTabSize(2);
+    textarea.setTabsEmulated(true);
     textarea.setFont(monospaceFontProvider.getFont());
     monospaceFontProvider.applyFontSizeChangeAction(textarea);
 
