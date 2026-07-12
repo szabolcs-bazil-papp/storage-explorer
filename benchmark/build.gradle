@@ -1,0 +1,30 @@
+plugins {
+  id 'buildlogic.java-library-conventions'
+}
+
+dependencies {
+  implementation project(':client')
+  implementation 'org.smartbit4all.platform:api'
+  implementation 'org.springframework:spring-context'
+
+  implementation 'org.openjdk.jmh:jmh-core:1.37'
+  annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
+
+  runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+}
+
+// Runs the JMH benchmarks. Pass JMH command line arguments through -PjmhArgs, e.g.:
+//   ./gradlew benchmark:jmh
+//   ./gradlew benchmark:jmh -PjmhArgs="-p engineMode=PIPELINED -p entryCount=5000 ordered"
+//   ./gradlew benchmark:jmh -PjmhArgs="-p whereConcurrency=4,32,default filtered"
+//   ./gradlew benchmark:jmh -PjmhArgs="-lp"   (list parameter combinations)
+tasks.register('jmh', JavaExec) {
+  group = 'benchmark'
+  description = 'Runs the LEGACY vs PIPELINED ArcScript query engine JMH benchmarks.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'org.openjdk.jmh.Main'
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+  args((findProperty('jmhArgs') ?: '').toString().split(/\s+/).findAll { !it.isEmpty() })
+}

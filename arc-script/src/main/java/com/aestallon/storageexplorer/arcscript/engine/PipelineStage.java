@@ -74,7 +74,7 @@ abstract class PipelineStage<IN, OUT> implements Flow.Processor<IN, OUT> {
     this.downstream = new SubmissionPublisher<>(
         executor,
         queueCapacity,
-        (subscriber, throwable) -> subscriber.onError(throwable));
+        Flow.Subscriber::onError);
     this.permits = concurrency > 0 ? new Semaphore(concurrency) : null;
     // demand never exceeds the initial request (one further element is requested only per
     // completed unit of work), so a prefetch below the concurrency bound would silently cap the
