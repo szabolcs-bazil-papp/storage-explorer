@@ -55,12 +55,61 @@ public class StorageInstanceExaminer {
       return new AdaptiveEntryLookupTable(maxEntries, expireAfterAccess);
     }
 
+    /**
+     * Returns the load request associated with the provided entry, invoking the provided function
+     * to create one if this table holds no association yet.
+     *
+     * <p>
+     * The function is invoked at most once per retained entry, and - crucially - <strong>outside
+     * any map-internal monitor</strong>: loading an object entry is blocking I/O, and executing it
+     * inside a {@code ConcurrentHashMap} bin lock (which is where both CHM's and Caffeine's
+     * {@code compute}-style mapping functions run) would pin the carrier of every virtual thread
+     * contending for the same bin for the whole duration of the load. Implementations must map to
+     * a cheap placeholder under the map's own synchronization and resolve the actual load under a
+     * virtual-thread-friendly lock instead.
+     *
+     * @param objectEntry the entry whose load request is looked up, not null
+     * @param f the loading function, invoked at most once per retained entry, not null
+     *
+     * @return the (possibly newly created) {@link ObjectEntryLoadRequest}, never null
+     */
     ObjectEntryLoadRequest computeIfAbsent(final ObjectEntry objectEntry,
                                            final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f);
 
+    /**
+     * Memoizes a single entry's load request so the loading I/O runs under a
+     * {@link java.util.concurrent.locks.ReentrantLock} - parking, not pinning, virtual threads -
+     * instead of inside the owning map's bin monitor.
+     */
+    final class MemoizedLoadRequest {
+
+      private final java.util.concurrent.locks.ReentrantLock lock =
+          new java.util.concurrent.locks.ReentrantLock();
+      private volatile ObjectEntryLoadRequest value;
+
+      ObjectEntryLoadRequest resolve(final ObjectEntry objectEntry,
+                                     final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f) {
+        final ObjectEntryLoadRequest present = value;
+        if (present != null) {
+          return present;
+        }
+
+        lock.lock();
+        try {
+          if (value == null) {
+            value = f.apply(objectEntry);
+          }
+          return value;
+        } finally {
+          lock.unlock();
+        }
+      }
+
+    }
+
     final class Unbounded implements ObjectEntryLookupTable {
 
-      private final ConcurrentHashMap<ObjectEntry, ObjectEntryLoadRequest> inner;
+      private final ConcurrentHashMap<ObjectEntry, MemoizedLoadRequest> inner;
 
       private Unbounded() {
         inner = new ConcurrentHashMap<>();
@@ -69,7 +118,11 @@ public class StorageInstanceExaminer {
       @Override
       public ObjectEntryLoadRequest computeIfAbsent(final ObjectEntry objectEntry,
                                                     final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f) {
-        return inner.computeIfAbsent(objectEntry, f);
+        // only a cheap placeholder is created inside the bin lock; the load itself resolves
+        // outside it:
+        return inner
+            .computeIfAbsent(objectEntry, k -> new MemoizedLoadRequest())
+            .resolve(objectEntry, f);
       }
     }
 

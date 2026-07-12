@@ -33,7 +33,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  */
 final class AdaptiveEntryLookupTable implements StorageInstanceExaminer.ObjectEntryLookupTable {
 
-  private final Cache<ObjectEntry, ObjectEntryLoadRequest> inner;
+  private final Cache<ObjectEntry, MemoizedLoadRequest> inner;
 
   AdaptiveEntryLookupTable(final long maxEntries, final Duration expireAfterAccess) {
     if (maxEntries < 1L) {
@@ -55,7 +55,12 @@ final class AdaptiveEntryLookupTable implements StorageInstanceExaminer.ObjectEn
   @Override
   public ObjectEntryLoadRequest computeIfAbsent(final ObjectEntry objectEntry,
                                                 final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f) {
-    return inner.get(objectEntry, f);
+    // Caffeine executes its mapping function inside the backing ConcurrentHashMap's bin lock -
+    // only a cheap placeholder is created there; the blocking load resolves outside it, under a
+    // virtual-thread-friendly lock:
+    return inner
+        .get(objectEntry, k -> new MemoizedLoadRequest())
+        .resolve(objectEntry, f);
   }
 
   long estimatedSize() {

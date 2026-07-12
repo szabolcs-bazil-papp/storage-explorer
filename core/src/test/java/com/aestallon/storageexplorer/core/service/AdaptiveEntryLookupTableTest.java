@@ -81,6 +81,40 @@ class AdaptiveEntryLookupTableTest {
   }
 
   @Test
+  void contendedAccessOfTheSameKey_invokesTheMappingFunctionOnlyOnce_onBothImplementations()
+      throws Exception {
+    final var tables = java.util.List.of(
+        StorageInstanceExaminer.ObjectEntryLookupTable.newInstance(),
+        StorageInstanceExaminer.ObjectEntryLookupTable.adaptive(4L, Duration.ofMinutes(1L)));
+    for (final var cache : tables) {
+      final var entry = mint(java.util.concurrent.ThreadLocalRandom.current().nextInt(1_000_000));
+      final var invocations = new AtomicLong();
+      final var results =
+          java.util.concurrent.ConcurrentHashMap.<ObjectEntryLoadRequest>newKeySet();
+
+      try (final var executor =
+               java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        for (int i = 0; i < 64; i++) {
+          executor.submit(() -> results.add(cache.computeIfAbsent(entry, e -> {
+            invocations.incrementAndGet();
+            // simulate the blocking I/O of a real load - with the memoized resolution this
+            // parks contending virtual threads instead of pinning carriers:
+            try {
+              Thread.sleep(20L);
+            } catch (InterruptedException ex) {
+              Thread.currentThread().interrupt();
+            }
+            return dummyLoad();
+          })));
+        }
+      }
+
+      assertThat(invocations).hasValue(1L);
+      assertThat(results).hasSize(1);
+    }
+  }
+
+  @Test
   void insertionsBeyondTheBound_evictInsteadOfGrowing() {
     final var cache = (AdaptiveEntryLookupTable) StorageInstanceExaminer.ObjectEntryLookupTable
         .adaptive(4L, Duration.ofMinutes(1L));

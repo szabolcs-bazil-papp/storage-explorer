@@ -280,6 +280,38 @@ class ArcScriptEngineE2ETest {
   }
 
   @Test
+  void listSourcedQuery_bothEnginesReturnTheSameEntries() {
+    final String script = """
+        query {
+          list 'activedocumenttypes'
+          from 'documentdossier'
+        }""";
+
+    final var legacy = run(script, legacy());
+    final var pipelined = run(script, pipelined());
+
+    assertThat(legacy.resultSet().size()).isPositive();
+    assertThat(pipelined.resultSet().entries())
+        .containsExactlyInAnyOrderElementsOf(legacy.resultSet().entries());
+  }
+
+  @Test
+  void mapSourcedQuery_bothEnginesReturnTheSameEntries() {
+    final String script = """
+        query {
+          map 'contentsById'
+          from 'documentdossier'
+        }""";
+
+    final var legacy = run(script, legacy());
+    final var pipelined = run(script, pipelined());
+
+    assertThat(legacy.resultSet().size()).isPositive();
+    assertThat(pipelined.resultSet().entries())
+        .containsExactlyInAnyOrderElementsOf(legacy.resultSet().entries());
+  }
+
+  @Test
   void tightlyBoundedCache_doesNotAffectResults() {
     final String script = """
         query {

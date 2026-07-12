@@ -20,6 +20,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.arcscript.api.SortInstruction;
@@ -55,7 +56,9 @@ final class OrderingStage extends PipelineStage<IndexedEntry, IndexedEntry> {
   private final boolean hardCapEngaged;
   private final int warnThreshold;
 
-  private final Object lock = new Object();
+  // ReentrantLock, not synchronized: contended monitor acquisition blocks a virtual thread's
+  // carrier on JDK 21 (pre-JEP 491), while lock-based waiting parks the virtual thread only:
+  private final ReentrantLock lock = new ReentrantLock();
   /** Bounded max-heap - worst row at head - when a limit caps the result set; null otherwise. */
   private final PriorityQueue<ArcScriptResult.QueryResultRow> topK;
   /** Unbounded buffer when every survivor must be totally ordered; null otherwise. */
@@ -104,7 +107,8 @@ final class OrderingStage extends PipelineStage<IndexedEntry, IndexedEntry> {
   @Override
   protected void process(final IndexedEntry item) {
     final ArcScriptResult.QueryResultRow row = projector.project(item.entry());
-    synchronized (lock) {
+    lock.lock();
+    try {
       if (topK != null) {
         if (topK.size() < limit) {
           topK.offer(row);
@@ -135,13 +139,16 @@ final class OrderingStage extends PipelineStage<IndexedEntry, IndexedEntry> {
               warnThreshold);
         }
       }
+    } finally {
+      lock.unlock();
     }
   }
 
   @Override
   protected void onUpstreamComplete() {
     final List<ArcScriptResult.QueryResultRow> sorted;
-    synchronized (lock) {
+    lock.lock();
+    try {
       if (topK != null) {
         final var arr = new ArcScriptResult.QueryResultRow[topK.size()];
         // draining the worst-first heap fills the result back to front:
@@ -153,6 +160,8 @@ final class OrderingStage extends PipelineStage<IndexedEntry, IndexedEntry> {
         buffer.sort(comparator);
         sorted = buffer;
       }
+    } finally {
+      lock.unlock();
     }
 
     for (int i = 0; i < sorted.size(); i++) {

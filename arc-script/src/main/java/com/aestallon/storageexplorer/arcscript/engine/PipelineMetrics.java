@@ -30,18 +30,30 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 final class PipelineMetrics {
 
+  // the engine's pipeline code is kept monitor-free: virtual threads blocking on a contended
+  // synchronized block pin their carrier on JDK 21 (pre-JEP 491), locks merely park them:
+  private final java.util.concurrent.locks.ReentrantLock lock =
+      new java.util.concurrent.locks.ReentrantLock();
   private final List<StageMetrics> stages = new ArrayList<>();
 
-  synchronized StageMetrics register(final String name) {
+  StageMetrics register(final String name) {
     final var stage = new StageMetrics(name);
-    stages.add(stage);
+    lock.lock();
+    try {
+      stages.add(stage);
+    } finally {
+      lock.unlock();
+    }
     return stage;
   }
 
   ArcScriptResult.PipelineStats toStats() {
     final List<ArcScriptResult.StageStats> stats;
-    synchronized (this) {
+    lock.lock();
+    try {
       stats = stages.stream().map(StageMetrics::toStats).toList();
+    } finally {
+      lock.unlock();
     }
     return new ArcScriptResult.PipelineStats(stats);
   }
