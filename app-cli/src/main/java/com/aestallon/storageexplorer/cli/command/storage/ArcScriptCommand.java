@@ -56,7 +56,7 @@ public class ArcScriptCommand {
                             arityMin = 1,
                             arityMax = 1,
                             description = "The absolute or relative path to the script file.",
-                            label = "File") Path path,
+                            label = "File") String pathStr,
                         @Option(longNames = "verbose",
                             shortNames = 'v',
                             required = false,
@@ -82,6 +82,16 @@ public class ArcScriptCommand {
                             arityMax = 1,
                             description = "The format in which in the output file should be written (CSV or JSON).",
                             label = "Output File Format") String format) {
+    if (pathStr == null || pathStr.isBlank()) {
+      throw new IllegalArgumentException("File must not be empty or blank.");
+    }
+    final Path path;
+    try {
+      path = Path.of(pathStr).normalize();
+    } catch (final Exception e) {
+      throw new IllegalArgumentException("Invalid file path: [%s]".formatted(pathStr), e);
+    }
+
     if (path == null || !Files.exists(path)) {
       throw new IllegalArgumentException("File does not exist: [%s]".formatted(path));
     }
