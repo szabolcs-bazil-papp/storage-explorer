@@ -405,4 +405,44 @@ class ArcScriptEngineCharacterizationTest {
         .containsExactlyInAnyOrderElementsOf(legacy.resultSet().rows());
   }
 
+  /**
+   * Since source acquisition became streaming, a query's source set is exactly what discovery
+   * finds at execution time: entries deleted from the storage after a previous run no longer
+   * linger in query results (historically they survived in the index cache until a full
+   * re-index). Uses a dedicated schema so the shared fixture is unaffected.
+   */
+  @Test
+  void deletedEntries_dropOutOfSubsequentQueryResults() throws Exception {
+    final String schema = "deltest";
+    final ObjectApi objectApi = ctx.getBean(ObjectApi.class);
+    final List<java.net.URI> uris = new java.util.ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      uris.add(objectApi.saveAsNew(schema, new User()
+          .username("doomed_%02d".formatted(i))
+          .name("Doomed %02d".formatted(i))));
+    }
+
+    final String script = """
+        query {
+          every 'User'
+          from '%s'
+        }""".formatted(schema);
+    assertThat(runPipelined(script).resultSet().size()).isEqualTo(3);
+    assertThat(runLegacy(script).resultSet().size()).isEqualTo(3);
+
+    // remove one persisted object from discovery by deleting its .o file (discovery keys on .o
+    // files exclusively; the version artifacts stay behind, as the platform may still hold them
+    // open on Windows - irrelevant here, an entry without its .o file is gone from the storage's
+    // point of view):
+    final java.net.URI victim = uris.getFirst();
+    // saveAsNew returns a versioned URI (…uuid.v0); the .o file carries the unversioned name:
+    final String victimPath = victim.getPath().replaceAll("\\.v\\d+$", "");
+    final Path oFile = storagePath.resolve(Path.of(victim.getScheme() + victimPath + ".o"));
+    assertThat(oFile).exists();
+    Files.delete(oFile);
+
+    assertThat(runPipelined(script).resultSet().size()).isEqualTo(2);
+    assertThat(runLegacy(script).resultSet().size()).isEqualTo(2);
+  }
+
 }

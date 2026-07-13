@@ -18,6 +18,7 @@ package com.aestallon.storageexplorer.arcscript.engine;
 import java.util.Optional;
 import java.util.Set;
 import static java.util.stream.Collectors.toSet;
+import java.util.stream.Stream;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryInstructionImpl;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
@@ -34,23 +35,29 @@ import com.aestallon.storageexplorer.core.util.Uris;
  * implementation.
  *
  * <p>
- * Type-based queries ({@code a}/{@code an}/{@code every}) draw from the storage index, which the
- * engine-level implicit {@code index} instruction has already fully populated by the time a query
- * engine runs. Collection-based queries ({@code list}/{@code map}) instead acquire the named stored
- * collection directly - failing if it does not exist - and source the query from the object entries
- * its contained URIs point to; no schema-wide indexing is required for them.
+ * Type-based queries ({@code a}/{@code an}/{@code every}) draw from
+ * {@link com.aestallon.storageexplorer.core.service.StorageIndex#find(IndexingTarget)}: a lazily
+ * populated stream of entries, discovered (and indexed as a side effect) while the query is
+ * already consuming them. Collection-based queries ({@code list}/{@code map}) instead acquire the
+ * named stored collection eagerly - failing <em>before</em> any pipeline machinery spins up if it
+ * does not exist - and source the query from the object entries its contained URIs point to.
+ *
+ * <p>
+ * Callers <strong>must close</strong> the returned stream: for type-based queries it is chained to
+ * live storage resources (walker threads or an open database cursor), and closing it is also what
+ * cancels discovery on early termination.
  */
 final class QuerySourceResolver {
 
   private QuerySourceResolver() {}
 
-  static Set<StorageEntry> resolve(final StorageInstance storageInstance,
-                                   final QueryInstructionImpl query) {
+  static Stream<StorageEntry> resolveStream(final StorageInstance storageInstance,
+                                            final QueryInstructionImpl query) {
     if (query._collectionKind == null) {
-      return storageInstance.index().get(new IndexingTarget(query._schemas, query._types));
+      return storageInstance.index().find(new IndexingTarget(query._schemas, query._types));
     }
 
-    return resolveCollection(storageInstance, query);
+    return resolveCollection(storageInstance, query).stream();
   }
 
   private static Set<StorageEntry> resolveCollection(final StorageInstance storageInstance,

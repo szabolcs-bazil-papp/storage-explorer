@@ -15,10 +15,11 @@
 
 package com.aestallon.storageexplorer.arcscript.engine;
 
-import java.util.Collection;
+import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Flow;
 import java.util.concurrent.SubmissionPublisher;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -27,23 +28,27 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
  * Head of the query pipeline.
  *
  * <p>
- * By the time the query engine runs, the engine-level (implicit or explicit) {@code index}
- * instruction has already fully resolved the source set, so this publisher receives a complete,
- * in-memory collection. Its sole job is to turn that bulk collection into a {@link Flow.Publisher}
- * boundary: entries are submitted one at a time from a producer thread, so downstream stages start
- * consuming the first entry without waiting for the iteration to finish. Should source acquisition
- * ever become lazy, this is the seam where a streaming supplier would plug in.
+ * Bridges the lazily populated source stream (see
+ * {@code StorageIndex.find} / {@link QuerySourceResolver}) into the {@link Flow.Publisher}
+ * boundary: entries are submitted downstream one at a time from a producer thread <em>as
+ * discovery yields them</em>, so the first entry enters {@code where} evaluation while the
+ * storage walk (or database cursor) is still in progress.
+ *
+ * <p>
+ * This publisher owns the source stream's lifecycle: the stream is closed when iteration
+ * finishes, when every subscriber has cancelled (early termination - closing is what cancels the
+ * underlying discovery), or when iteration fails.
  */
 final class EntrySourcePublisher {
 
   private static final Logger log = LoggerFactory.getLogger(EntrySourcePublisher.class);
 
   private final SubmissionPublisher<StorageEntry> publisher;
-  private final Collection<StorageEntry> entries;
+  private final Stream<StorageEntry> entries;
   private final ExecutorService executor;
   private final PipelineMetrics.StageMetrics metrics;
 
-  EntrySourcePublisher(final Collection<StorageEntry> entries,
+  EntrySourcePublisher(final Stream<StorageEntry> entries,
                        final ExecutorService executor,
                        final int queueCapacity,
                        final PipelineMetrics.StageMetrics metrics) {
@@ -54,7 +59,7 @@ final class EntrySourcePublisher {
     this.publisher = new SubmissionPublisher<>(
         executor,
         queueCapacity,
-        (subscriber, throwable) -> subscriber.onError(throwable));
+        Flow.Subscriber::onError);
     this.metrics = metrics;
   }
 
@@ -68,16 +73,17 @@ final class EntrySourcePublisher {
    * termination) or the source set is exhausted.
    */
   void start() {
-    executor.submit(() -> {
-      try {
+    Thread.ofPlatform().start(() -> {
+      try (entries) {
 
-        for (final StorageEntry entry : entries) {
+        final Iterator<StorageEntry> it = entries.iterator();
+        while (it.hasNext()) {
           if (publisher.isClosed() || !publisher.hasSubscribers()) {
             log.debug("All subscribers are gone - halting source iteration.");
             metrics.earlyTerminated();
             break;
           }
-          publisher.submit(entry);
+          publisher.submit(it.next());
           metrics.out();
         }
 

@@ -20,17 +20,22 @@ import java.net.URI;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import static java.util.stream.Collectors.toSet;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.common.util.IO;
@@ -45,6 +50,12 @@ import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
  * This walker uses virtual threads to efficiently span the entire FS base directory and look for
  * object files. It only continues on special directories, which may contain further nested object
  * files unexpected for user defined schemas.
+ *
+ * <p>
+ * The stream returned by {@link #walk(IndexingTarget)} is <em>lazily populated</em>: URIs become
+ * available to the consumer as walker threads discover them, without waiting for the full traversal
+ * to complete. Closing the stream cancels the traversal; an unclosed, undrained stream leaks walker
+ * threads, so callers must consume or close it.
  *
  * <p>
  * This implementation swallows every potential exception (the end user should detect the indexing
@@ -62,6 +73,13 @@ public final class FileSystemStorageWalker {
       SPECIAL_SCHEMA_APIS,
       "storedSeq");
 
+  /**
+   * Bounds how far discovery may run ahead of the consumer. Not a tuning knob for consumers: the
+   * query pipeline applies its own demand discipline downstream.
+   */
+  private static final int QUEUE_CAPACITY = 4_096;
+  private static final long OFFER_POLL_TIMEOUT_MS = 50L;
+
   static FileSystemStorageWalker of(final Path pathToStorage) {
     if (pathToStorage == null || !pathToStorage.isAbsolute()) {
       throw new IllegalArgumentException("Path to storage must be absolute!");
@@ -76,17 +94,97 @@ public final class FileSystemStorageWalker {
   }
 
   Stream<URI> walk(final IndexingTarget target) {
-    final LinkedBlockingQueue<URI> queue = new LinkedBlockingQueue<>();
-    final List<Thread> virtualThreads = new ArrayList<>();
-    final var typeWalkers = schemaWalkers(target).stream()
-        .flatMap(it -> it.typeWalkers(target, queue).stream())
-        .collect(toSet());
-    for (final var walker : typeWalkers) {
-      virtualThreads.add(walker.walk(queue));
-    }
-    forEach(virtualThreads, Thread::join);
+    final var discovery = new Discovery();
+    // the coordinator performs the directory listing I/O off the caller's thread, starts the
+    // type walkers, and signals completion only once every walker has terminated - elements
+    // enqueued before the done flag flips are always observed by the consumer's re-poll:
+    final Thread coordinator = Thread.ofVirtual().start(() -> {
+      try {
+        final var typeWalkers = schemaWalkers(target).stream()
+            .flatMap(it -> it.typeWalkers(target, discovery).stream())
+            .collect(toSet());
+        final List<Thread> virtualThreads = typeWalkers.stream()
+            .map(walker -> walker.walk(discovery))
+            .toList();
+        forEach(virtualThreads, Thread::join);
+      } finally {
+        discovery.done.set(true);
+      }
+    });
 
-    return new ArrayList<>(queue).stream();
+    return StreamSupport
+        .stream(new UriSpliterator(discovery), false)
+        .onClose(() -> {
+          discovery.cancelled.set(true);
+          // unblock producers parked on a saturated queue; anything they enqueue afterwards is
+          // garbage-collected along with the queue:
+          discovery.queue.clear();
+          try {
+            coordinator.join(TimeUnit.SECONDS.toMillis(5L));
+          } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        });
+  }
+
+  /** Shared state between the consumer-facing stream and the producing walker threads. */
+  private static final class Discovery {
+    private final LinkedBlockingQueue<URI> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
+    private final AtomicBoolean cancelled = new AtomicBoolean();
+    private final AtomicBoolean done = new AtomicBoolean();
+
+    private boolean proceed() {
+      return !cancelled.get();
+    }
+
+    /**
+     * Enqueues a discovered URI, waiting for downstream demand if the queue is saturated - but
+     * never parking indefinitely: cancellation is re-checked between bounded offer attempts, so a
+     * departed consumer cannot strand producer threads.
+     */
+    private void emit(final URI uri) {
+      try {
+        while (proceed()) {
+          if (queue.offer(uri, OFFER_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+            return;
+          }
+        }
+      } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+
+  private static final class UriSpliterator extends Spliterators.AbstractSpliterator<URI> {
+
+    private final Discovery discovery;
+
+    private UriSpliterator(final Discovery discovery) {
+      super(Long.MAX_VALUE, Spliterator.ORDERED | Spliterator.NONNULL);
+      this.discovery = discovery;
+    }
+
+    @Override
+    public boolean tryAdvance(final Consumer<? super URI> action) {
+      try {
+        while (true) {
+          final URI uri = discovery.queue.poll(OFFER_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+          if (uri != null) {
+            action.accept(uri);
+            return true;
+          }
+          // a null poll is only terminal if the producers have all finished AND the queue has
+          // been re-checked afterwards - the done flag is set strictly after the final offer:
+          if (discovery.done.get() && discovery.queue.isEmpty()) {
+            return false;
+          }
+        }
+      } catch (final InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return false;
+      }
+    }
   }
 
   private List<SchemaWalker> schemaWalkers(final IndexingTarget target) {
@@ -112,8 +210,11 @@ public final class FileSystemStorageWalker {
 
   private record SchemaWalker(Path root, Path schemaFolder) {
 
-    private List<TypeWalker> typeWalkers(final IndexingTarget target,
-                                         LinkedBlockingQueue<URI> queue) {
+    private List<TypeWalker> typeWalkers(final IndexingTarget target, final Discovery discovery) {
+      if (!discovery.proceed()) {
+        return Collections.emptyList();
+      }
+
       final Predicate<Path> p = it -> it.toFile().isDirectory()
           && (target.types().isEmpty()) || target.types().stream()
           .anyMatch(t -> it.toString().endsWith(t));
@@ -128,7 +229,7 @@ public final class FileSystemStorageWalker {
             if (Files.isRegularFile(child) && child.getFileName().toString().endsWith(".o")) {
               final URI uri = IO.pathToUri(root.relativize(child));
               if (uri != null) {
-                queue.offer(uri);
+                discovery.emit(uri);
               }
             }
           }
@@ -146,16 +247,20 @@ public final class FileSystemStorageWalker {
 
   private record TypeWalker(Path root, Path typeFolder) {
 
-    private Thread walk(LinkedBlockingQueue<URI> queue) {
+    private Thread walk(final Discovery discovery) {
       final var absolute = root.resolve(typeFolder);
-      return processDir(root, absolute, queue);
+      return processDir(root, absolute, discovery);
     }
   }
 
   private static Thread processDir(final Path root,
                                    final Path dir,
-                                   final LinkedBlockingQueue<URI> queue) {
+                                   final Discovery discovery) {
     return Thread.ofVirtual().start(() -> {
+      if (!discovery.proceed()) {
+        return;
+      }
+
       try (final var es = Files.list(dir)) {
         final var children = es.collect(toSet());
         final Set<Path> oFiles = new HashSet<>();
@@ -175,16 +280,16 @@ public final class FileSystemStorageWalker {
               .map(root::relativize)
               .map(IO::pathToUri)
               .filter(Objects::nonNull)
-              .forEach(queue::offer);
+              .forEach(discovery::emit);
           final var dirStr = dir.toString();
           if (SPECIAL_DIRS.stream().noneMatch(dirStr::contains)) {
             return;
           }
         }
 
-        if (!subDirs.isEmpty()) {
+        if (!subDirs.isEmpty() && discovery.proceed()) {
           final var futures = subDirs.stream()
-              .map(it -> processDir(root, it, queue))
+              .map(it -> processDir(root, it, discovery))
               .toList();
           forEach(futures, Thread::join);
         }

@@ -36,7 +36,12 @@ public class QueryEngineImpl implements QueryEngine {
                                                    QueryInstructionImpl query) {
     final long start = System.nanoTime();
 
-    final Set<StorageEntry> entries = QuerySourceResolver.resolve(storageInstance, query);
+    // the legacy engine remains the eager baseline: the lazily populated source stream is fully
+    // collected up front, preserving the historical barrier semantics:
+    final Set<StorageEntry> entries;
+    try (final var s = QuerySourceResolver.resolveStream(storageInstance, query)) {
+      entries = s.collect(Collectors.toSet());
+    }
     final var examiner = storageInstance.examiner();
     final var condition = query.condition;
     final var limit = query._limit;

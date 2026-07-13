@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
+import com.aestallon.storageexplorer.common.util.IO;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
@@ -84,6 +85,15 @@ class PipelinedQueryEngineTest {
   }
 
   private void mint(final URI uri) {
+    // type-sourced queries discover their source set by walking the actual storage layout, so
+    // minting must create the backing .o file too (empty - the entries are never loaded):
+    try {
+      final Path path = IO.uriToPath(tempDir, uri);
+      java.nio.file.Files.createDirectories(path.getParent());
+      java.nio.file.Files.createFile(path);
+    } catch (final java.io.IOException e) {
+      throw new java.io.UncheckedIOException(e);
+    }
     final var result = storageInstance.index().getOrCreate(uri);
     if (result instanceof com.aestallon.storageexplorer.core.service.StorageIndex
         .EntryAcquisitionResult.New(StorageEntry entry)) {
@@ -175,6 +185,28 @@ class PipelinedQueryEngineTest {
 
     final var query = soleQueryResult(result);
     assertThat(query.resultSet().size()).isEqualTo(7);
+  }
+
+  @Test
+  void limitWithoutOrder_spanningMultiplePrefetchBatches_returnsExactlyLimitRows() {
+    // regression: with a prefetch smaller than the limit, the yield stage must keep consuming
+    // past its initial request - it used to complete after the first prefetch batch:
+    final var settings = QueryEngineSettings.builder()
+        .engineMode(QueryEngineSettings.EngineMode.PIPELINED)
+        .sourcePrefetch(4)
+        .queueCapacity(4)
+        .whereConcurrency(2)
+        .yieldConcurrency(2)
+        .build();
+    final var result = Arc.evaluate("""
+        query {
+          every 'Foo'
+          from 'test'
+          limit 20
+        }""", storageInstance, settings);
+
+    final var query = soleQueryResult(result);
+    assertThat(query.resultSet().size()).isEqualTo(20);
   }
 
   @Test
@@ -347,6 +379,9 @@ class PipelinedQueryEngineTest {
     final var where = stats.stages().get(1);
     assertThat(where.earlyTerminated()).isTrue();
     assertThat(source.entriesOut()).isLessThan(FOO_COUNT);
+    // with the lazily populated source stream, source-stage early termination means the
+    // underlying file-system walk itself was cancelled, not merely an in-memory iteration:
+    assertThat(source.earlyTerminated()).isTrue();
   }
 
   @Test

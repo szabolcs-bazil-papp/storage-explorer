@@ -51,7 +51,7 @@ abstract class PipelineStage<IN, OUT> implements Flow.Processor<IN, OUT> {
   private final ExecutorService executor;
   private final SubmissionPublisher<OUT> downstream;
   private final Semaphore permits;
-  private final int prefetch;
+  private final long prefetch;
   private final AtomicLong inFlight = new AtomicLong();
   private final AtomicBoolean upstreamDone = new AtomicBoolean();
   private final AtomicBoolean cancelled = new AtomicBoolean();
@@ -63,7 +63,7 @@ abstract class PipelineStage<IN, OUT> implements Flow.Processor<IN, OUT> {
   protected PipelineStage(final ExecutorService executor,
                           final int queueCapacity,
                           final int concurrency,
-                          final int prefetch,
+                          final long prefetch,
                           final PipelineMetrics.StageMetrics metrics) {
     this.executor = executor;
     // if the downstream subscriber's callback throws (instead of routing failures through the

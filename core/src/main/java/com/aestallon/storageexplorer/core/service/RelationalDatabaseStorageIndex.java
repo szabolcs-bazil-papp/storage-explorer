@@ -275,6 +275,7 @@ public final class RelationalDatabaseStorageIndex
     if (uris.isEmpty()) {
       return Collections.emptyList();
     }
+    log.info("Loading {} objects from database", uris.size());
 
     ensureKnownFeatureLevel();
 

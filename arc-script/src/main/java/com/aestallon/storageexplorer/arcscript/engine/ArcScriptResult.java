@@ -89,7 +89,17 @@ public sealed interface ArcScriptResult {
    * Only attached to a {@link QueryPerformed} result when the executing engine is pipeline-based
    * and stage timing collection is enabled; {@code null} otherwise.
    */
-  record PipelineStats(List<StageStats> stages) {}
+  record PipelineStats(List<StageStats> stages) {
+
+    @Override
+    public String toString() {
+      final var sb = new StringBuilder("Query pipeline stats:\n");
+      for (final var stage : stages) {
+        sb.append(stage).append("\n");
+      }
+      return sb.toString();
+    }
+  }
 
 
   /**
@@ -104,8 +114,47 @@ public sealed interface ArcScriptResult {
    *     either by cancelling its upstream (limit satisfied), or by discarding entries under a
    *     configured hard cap
    */
-  record StageStats(String stage, long entriesIn, long entriesOut, long timeTaken,
-      boolean earlyTerminated) {}
+  record StageStats(String stage, long entriesIn, long entriesOut, long timeTaken, long startedAt,
+      long endedAt,
+      boolean earlyTerminated) {
+
+    @Override
+    public String toString() {
+      final String fName = String.format("%1$-35s", stage);
+      final String entries = String.format("%1$-16s", entriesIn + " -> " + entriesOut);
+      final String started = String.format("%1$-16s", formatDuration(startedAt));
+      final String finished = String.format("%1$-16s", formatDuration(endedAt));
+      final String elapsed = String.format("%1$-16s", formatDuration(timeTaken));
+      final String term = String.format("%1$-16s", earlyTerminated);
+      return """
+          ┌───────────────────────────────────┐
+          │%s│
+          ├───────────────────────────────────┤
+          │Entries          : %s│
+          │Started          : %s│
+          │Finished         : %s│
+          │Time taken       : %s│
+          │Early terminated : %s│
+          └───────────────────────────────────┘""".formatted(fName, entries, started, finished, elapsed, term);
+    }
+
+    public static String formatDuration(long nanos) {
+      long hours = nanos / 3_600_000_000_000L;
+      nanos %= 3_600_000_000_000L;
+
+      long minutes = nanos / 60_000_000_000L;
+      nanos %= 60_000_000_000L;
+
+      long seconds = nanos / 1_000_000_000L;
+      nanos %= 1_000_000_000L;
+
+      // 100 µs precision (5 digits after decimal)
+      long fractional = nanos / 10_000L;
+
+      return String.format("%02d:%02d:%02d.%05d",
+          hours, minutes, seconds, fractional);
+    }
+  }
 
 
   record ColumnDescriptor(String prop, String title) {}

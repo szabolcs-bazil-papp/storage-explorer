@@ -110,6 +110,8 @@ final class PipelineMetrics {
           in.get(),
           out.get(),
           timeTaken(),
+          firstElementAt.get(),
+          completedAt,
           earlyTerminated);
     }
 

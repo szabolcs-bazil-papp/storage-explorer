@@ -18,12 +18,14 @@ package com.aestallon.storageexplorer.arcscript.engine;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryInstructionImpl;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
@@ -58,6 +60,7 @@ import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
  */
 public final class PipelinedQueryEngine implements QueryEngine {
 
+  private static final Logger log = LoggerFactory.getLogger(PipelinedQueryEngine.class);
   private final QueryEngineSettings settings;
 
   public PipelinedQueryEngine(final QueryEngineSettings settings) {
@@ -69,7 +72,11 @@ public final class PipelinedQueryEngine implements QueryEngine {
                                                    final QueryInstructionImpl query) {
     final long start = System.nanoTime();
 
-    final Set<StorageEntry> entries = QuerySourceResolver.resolve(storageInstance, query);
+    // collection-existence failures throw here, before any pipeline machinery spins up; for
+    // type-based queries this is a lazily populated discovery stream - the source stage owns and
+    // closes it (with a belt-and-braces close below for pipelines failing before the producer
+    // finishes):
+    final Stream<StorageEntry> entries = QuerySourceResolver.resolveStream(storageInstance, query);
     final var examiner = storageInstance.examiner();
     final var cache = settings.cacheMaxEntries() > 0L
         ? StorageInstanceExaminer.ObjectEntryLookupTable.adaptive(
@@ -159,6 +166,9 @@ public final class PipelinedQueryEngine implements QueryEngine {
         throw new IllegalStateException("Query pipeline execution interrupted.", e);
       }
     } finally {
+      // idempotent double close on the happy path; on timeout/failure this releases the walker
+      // threads / database cursor even if the producer virtual thread is wedged:
+      entries.close();
       if (orderly) {
         executor.close();
       } else {
@@ -170,11 +180,13 @@ public final class PipelinedQueryEngine implements QueryEngine {
         columns.isEmpty() ? Collections.emptyList() : columns,
         columns.isEmpty() ? -1L : yieldMetrics.timeTaken());
     final var resultSet = new ArcScriptResult.ResultSet(meta, rows);
+    final var stats = metrics.toStats();
+    log.info("Stats: {}", stats);
     return new ArcScriptResult.QueryPerformed(
         query.toString(),
         resultSet,
         System.nanoTime() - start,
-        settings.collectStageTimings() ? metrics.toStats() : null);
+        settings.collectStageTimings() ? stats : null);
   }
 
 }

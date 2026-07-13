@@ -52,14 +52,14 @@ import java.time.Duration;
  *     disables the cap
  * @param collectStageTimings attach per-stage instrumentation to query results (counters are
  *     maintained either way; this only controls attachment)
- * @param queryTimeout last-resort watchdog on a single query execution: if the pipeline fails to
- *     deliver a terminal signal within this duration, the query fails instead of blocking its
+ * @param queryTimeout last-resort watchdog on a single query execution: if the pipeline fails
+ *     to deliver a terminal signal within this duration, the query fails instead of blocking its
  *     caller forever; {@code null} disables the watchdog
  */
 public record QueryEngineSettings(
     EngineMode engineMode,
     boolean earlyTerminationEnabled,
-    int sourcePrefetch,
+    long sourcePrefetch,
     int whereConcurrency,
     int yieldConcurrency,
     int queueCapacity,
@@ -77,7 +77,12 @@ public record QueryEngineSettings(
       throw new IllegalArgumentException("engineMode cannot be null!");
     }
     if (sourcePrefetch < 1) {
-      throw new IllegalArgumentException("sourcePrefetch must be positive: " + sourcePrefetch);
+      if (sourcePrefetch == -1) {
+        sourcePrefetch = Long.MAX_VALUE;
+      } else {
+        throw new IllegalArgumentException(
+            "sourcePrefetch must be positive or -1: " + sourcePrefetch);
+      }
     }
     if (whereConcurrency < 1 && whereConcurrency != -1) {
       throw new IllegalArgumentException(
@@ -96,8 +101,8 @@ public record QueryEngineSettings(
     }
     if (cacheMaxEntries > 0L
         && (cacheExpireAfterAccess == null
-            || cacheExpireAfterAccess.isZero()
-            || cacheExpireAfterAccess.isNegative())) {
+        || cacheExpireAfterAccess.isZero()
+        || cacheExpireAfterAccess.isNegative())) {
       throw new IllegalArgumentException(
           "cacheExpireAfterAccess must be a positive duration for a bounded cache!");
     }
@@ -108,7 +113,7 @@ public record QueryEngineSettings(
     if (unboundedSortWarnThreshold < 1 && unboundedSortWarnThreshold != -1) {
       throw new IllegalArgumentException(
           "unboundedSortWarnThreshold must be positive or -1 (disabled): "
-          + unboundedSortWarnThreshold);
+              + unboundedSortWarnThreshold);
     }
     if (unboundedSortHardCap < 1 && unboundedSortHardCap != -1) {
       throw new IllegalArgumentException(
@@ -144,11 +149,11 @@ public record QueryEngineSettings(
 
     private EngineMode engineMode = EngineMode.PIPELINED;
     private boolean earlyTerminationEnabled = true;
-    private int sourcePrefetch = 256;
-    private int whereConcurrency = Runtime.getRuntime().availableProcessors() * 4;
-    private int yieldConcurrency = Runtime.getRuntime().availableProcessors() * 4;
-    private int queueCapacity = 512;
-    private long cacheMaxEntries = 10_000L;
+    private long sourcePrefetch = 150;
+    private int whereConcurrency = -1;
+    private int yieldConcurrency = -1;
+    private int queueCapacity = 1_024;
+    private long cacheMaxEntries = -1;
     private Duration cacheExpireAfterAccess = Duration.ofMinutes(2L);
     private int unboundedSortWarnThreshold = 50_000;
     private int unboundedSortHardCap = -1;
@@ -167,7 +172,7 @@ public record QueryEngineSettings(
       return this;
     }
 
-    public Builder sourcePrefetch(int sourcePrefetch) {
+    public Builder sourcePrefetch(long sourcePrefetch) {
       this.sourcePrefetch = sourcePrefetch;
       return this;
     }
