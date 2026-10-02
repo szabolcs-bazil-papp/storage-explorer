@@ -110,7 +110,7 @@ public final class Uris {
   }
 
   private static boolean containsTimestampPattern(final String input) {
-    return PATTERN_TIMESTAMP.matcher(input).find();
+    return input.contains("org_"); //PATTERN_TIMESTAMP.matcher(input).find();
   }
 
   public static URI constructMap(final String schema, final String name) {
