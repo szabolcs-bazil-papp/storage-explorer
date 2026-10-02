@@ -27,6 +27,7 @@ import {Drawer} from 'primeng/drawer';
 import {InspectorDrawer} from '../components/inspector.drawer';
 import {Toast} from 'primeng/toast';
 import {onLogOut} from '../auth/auth';
+import {VERSION_NUMBER} from '../version';
 
 @Component({
   selector: 'app-layout',
@@ -91,7 +92,7 @@ import {onLogOut} from '../auth/auth';
       <footer class="app-footer">
 
         <div class="footer-content">
-          <span>Storage Explorer v0.5.0</span>
+          <span>Storage Explorer v{{ versionNumber }}</span>
           <a href="https://github.com/szabolcs-bazil-papp/storage-explorer"
              target="_blank"
              rel="noopener noreferrer"
@@ -273,6 +274,7 @@ import {onLogOut} from '../auth/auth';
 })
 export class AppLayout {
 
+  readonly versionNumber = VERSION_NUMBER;
   readonly service = inject(AppService);
   readonly drawerVisible = model<boolean>(false);
   readonly router = inject(Router);
