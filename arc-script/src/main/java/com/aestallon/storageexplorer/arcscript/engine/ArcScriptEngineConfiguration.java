@@ -1,6 +1,9 @@
 package com.aestallon.storageexplorer.arcscript.engine;
 
+import java.net.URI;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public final class ArcScriptEngineConfiguration {
 
@@ -17,6 +20,7 @@ public final class ArcScriptEngineConfiguration {
     final QueryEngine queryEngine = switch (settings.engineMode()) {
       case LEGACY -> new QueryEngineImpl();
       case PIPELINED -> new PipelinedQueryEngine(settings);
+      case ARROW -> new ArrowQueryEngine(settings);
     };
     return new ArcScriptEngineConfiguration(queryEngine, settings);
   }
@@ -38,4 +42,15 @@ public final class ArcScriptEngineConfiguration {
     return settings;
   }
 
+  /**
+   * The pagination registry backing this configuration's large ARROW-engine results, for callers
+   * (Swing/Spring/CLI) that need to fetch subsequent pages of a {@link ArcScriptResult.PageInfo}.
+   * Empty when {@link #settings()}'s {@link QueryEngineSettings#engineMode()} isn't {@code ARROW}.
+   */
+  public Optional<ArrowResultSetStore> arrowResultStore() {
+    return (queryEngine instanceof ArrowQueryEngine arrow)
+        ? Optional.of(arrow.resultStore())
+        : Optional.empty();
+  }
+  
 }

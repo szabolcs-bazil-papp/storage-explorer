@@ -28,19 +28,36 @@ final class ConditionEvaluator {
   private final StorageInstanceExaminer.ObjectEntryLookupTable cache;
   private final QueryConditionImpl.AssertionIterator iterator;
   private final StorageInstanceExaminer.PropertyDiscoveryResult medial;
+  private final PropertySource propertySource;
 
   ConditionEvaluator(final StorageInstanceExaminer examiner,
                      final StorageEntry entry,
                      final StorageInstanceExaminer.ObjectEntryLookupTable cache,
                      final QueryConditionImpl c) {
-    this(examiner, entry, cache, c, null);
+    this(examiner, entry, cache, c, null, null);
+  }
+
+  /**
+   * Root-level constructor accepting a {@link PropertySource}: root ({@code medial == null})
+   * single-valued assertions consult it before falling back to a fresh
+   * {@code examiner.discoverProperty} call. Used by {@link ArrowQueryEngine} to source predicate
+   * inputs from its Arrow-backed projection; {@code null} reproduces the original,
+   * always-rediscover behaviour used by the LEGACY and PIPELINED engines.
+   */
+  ConditionEvaluator(final StorageInstanceExaminer examiner,
+                     final StorageEntry entry,
+                     final StorageInstanceExaminer.ObjectEntryLookupTable cache,
+                     final QueryConditionImpl c,
+                     final PropertySource propertySource) {
+    this(examiner, entry, cache, c, null, propertySource);
   }
 
   private ConditionEvaluator(final StorageInstanceExaminer examiner,
                              final StorageEntry entry,
                              final StorageInstanceExaminer.ObjectEntryLookupTable cache,
                              final QueryConditionImpl c,
-                             final StorageInstanceExaminer.PropertyDiscoveryResult medial) {
+                             final StorageInstanceExaminer.PropertyDiscoveryResult medial,
+                             final PropertySource propertySource) {
     this.examiner = examiner;
     this.entry = entry;
     this.cache = cache;
@@ -48,17 +65,18 @@ final class ConditionEvaluator {
         ? c.assertionIterator()
         : QueryConditionImpl.AssertionIterator.empty();
     this.medial = medial;
+    this.propertySource = propertySource;
   }
 
   private ConditionEvaluator(final ConditionEvaluator orig,
                              final QueryConditionImpl c) {
-    this(orig.examiner, orig.entry, orig.cache, c, orig.medial);
+    this(orig.examiner, orig.entry, orig.cache, c, orig.medial, orig.propertySource);
   }
 
   private ConditionEvaluator(final ConditionEvaluator orig,
                              final QueryConditionImpl c,
                              final StorageInstanceExaminer.PropertyDiscoveryResult medial) {
-    this(orig.examiner, orig.entry, orig.cache, c, medial);
+    this(orig.examiner, orig.entry, orig.cache, c, medial, orig.propertySource);
   }
 
   boolean evaluate() {
@@ -106,6 +124,16 @@ final class ConditionEvaluator {
     iterator.next();
   }
 
+  private StorageInstanceExaminer.PropertyDiscoveryResult discoverRootProperty(final String prop) {
+    if (propertySource != null) {
+      final var fromSource = propertySource.get(prop);
+      if (fromSource != null) {
+        return fromSource;
+      }
+    }
+    return examiner.discoverProperty(entry, prop, cache);
+  }
+
   private boolean evalNext() {
     final var next = iterator.next();
     return switch (next.element()) {
@@ -120,7 +148,7 @@ final class ConditionEvaluator {
 
   private boolean evalAssertion(final Assertion assertion) {
     final var val = (medial == null)
-        ? examiner.discoverProperty(entry, assertion.prop(), cache)
+        ? discoverRootProperty(assertion.prop())
         : examiner.discoverProperty(medial, assertion.prop(), cache);
     if (assertion.isSingle()) {
       return assertion.check(val);

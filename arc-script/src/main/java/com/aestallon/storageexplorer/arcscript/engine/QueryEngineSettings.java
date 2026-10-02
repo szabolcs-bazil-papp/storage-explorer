@@ -15,7 +15,13 @@
 
 package com.aestallon.storageexplorer.arcscript.engine;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
 import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tunable knobs of ArcScript query execution.
@@ -55,6 +61,19 @@ import java.time.Duration;
  * @param queryTimeout last-resort watchdog on a single query execution: if the pipeline fails
  *     to deliver a terminal signal within this duration, the query fails instead of blocking its
  *     caller forever; {@code null} disables the watchdog
+ * @param arrowSpillRowLimit the number of rows the {@code ARROW} engine's projection store may
+ *     hold in memory before it serialises its nascent Arrow table to a temp file and continues
+ *     accumulating on disk; counts every row the projection stage produces (i.e. every source
+ *     entry it discovers a row for), not only {@code where} survivors; {@code -1} disables
+ *     spilling - the whole projection is kept resident regardless of size
+ * @param arrowBatchSize the number of rows per Arrow record batch once spilling is engaged; also
+ *     the unit in which a spilled file is paged back in for scanning or random-access reads
+ * @param arrowPageSize default page size used by {@link ArrowResultSetStore#fetchPage} when a
+ *     caller does not specify one explicitly
+ * @param arrowResultRetention how long a paginated result handle remains fetchable after a
+ *     query completes before it is evicted and its spill file deleted
+ * @param arrowSpillDirectory directory in which spilled Arrow files are created; {@code null}
+ *     uses the JVM default temp directory
  */
 public record QueryEngineSettings(
     EngineMode engineMode,
@@ -68,9 +87,17 @@ public record QueryEngineSettings(
     int unboundedSortWarnThreshold,
     int unboundedSortHardCap,
     boolean collectStageTimings,
-    Duration queryTimeout) {
+    Duration queryTimeout,
+    long arrowSpillRowLimit,
+    int arrowBatchSize,
+    int arrowPageSize,
+    Duration arrowResultRetention,
+    Path arrowSpillDirectory) {
 
-  public enum EngineMode { LEGACY, PIPELINED }
+  private static final Logger log = LoggerFactory.getLogger(QueryEngineSettings.class);
+
+
+  public enum EngineMode { LEGACY, PIPELINED, ARROW }
 
   public QueryEngineSettings {
     if (engineMode == null) {
@@ -119,6 +146,22 @@ public record QueryEngineSettings(
       throw new IllegalArgumentException(
           "unboundedSortHardCap must be positive or -1 (disabled): " + unboundedSortHardCap);
     }
+    if (arrowSpillRowLimit < 1L && arrowSpillRowLimit != -1L) {
+      throw new IllegalArgumentException(
+          "arrowSpillRowLimit must be positive or -1 (disabled): " + arrowSpillRowLimit);
+    }
+    if (arrowBatchSize < 1) {
+      throw new IllegalArgumentException("arrowBatchSize must be positive: " + arrowBatchSize);
+    }
+    if (arrowPageSize < 1) {
+      throw new IllegalArgumentException("arrowPageSize must be positive: " + arrowPageSize);
+    }
+    if (arrowResultRetention == null
+        || arrowResultRetention.isZero()
+        || arrowResultRetention.isNegative()) {
+      throw new IllegalArgumentException(
+          "arrowResultRetention must be a positive duration: " + arrowResultRetention);
+    }
   }
 
   public static QueryEngineSettings defaults() {
@@ -142,12 +185,17 @@ public record QueryEngineSettings(
         .unboundedSortWarnThreshold(unboundedSortWarnThreshold)
         .unboundedSortHardCap(unboundedSortHardCap)
         .collectStageTimings(collectStageTimings)
-        .queryTimeout(queryTimeout);
+        .queryTimeout(queryTimeout)
+        .arrowSpillRowLimit(arrowSpillRowLimit)
+        .arrowBatchSize(arrowBatchSize)
+        .arrowPageSize(arrowPageSize)
+        .arrowResultRetention(arrowResultRetention)
+        .arrowSpillDirectory(arrowSpillDirectory);
   }
 
   public static final class Builder {
 
-    private EngineMode engineMode = EngineMode.PIPELINED;
+    private EngineMode engineMode = EngineMode.LEGACY;
     private boolean earlyTerminationEnabled = true;
     private long sourcePrefetch = 150;
     private int whereConcurrency = -1;
@@ -159,6 +207,11 @@ public record QueryEngineSettings(
     private int unboundedSortHardCap = -1;
     private boolean collectStageTimings = true;
     private Duration queryTimeout = Duration.ofHours(1L);
+    private long arrowSpillRowLimit = 1_024L;
+    private int arrowBatchSize = 1_024;
+    private int arrowPageSize = 500;
+    private Duration arrowResultRetention = Duration.ofMinutes(10L);
+    private Path arrowSpillDirectory;
 
     private Builder() {}
 
@@ -222,7 +275,41 @@ public record QueryEngineSettings(
       return this;
     }
 
+    public Builder arrowSpillRowLimit(long arrowSpillRowLimit) {
+      this.arrowSpillRowLimit = arrowSpillRowLimit;
+      return this;
+    }
+
+    public Builder arrowBatchSize(int arrowBatchSize) {
+      this.arrowBatchSize = arrowBatchSize;
+      return this;
+    }
+
+    public Builder arrowPageSize(int arrowPageSize) {
+      this.arrowPageSize = arrowPageSize;
+      return this;
+    }
+
+    public Builder arrowResultRetention(Duration arrowResultRetention) {
+      this.arrowResultRetention = arrowResultRetention;
+      return this;
+    }
+
+    public Builder arrowSpillDirectory(Path arrowSpillDirectory) {
+      this.arrowSpillDirectory = arrowSpillDirectory;
+      return this;
+    }
+
     public QueryEngineSettings build() {
+      if (engineMode == EngineMode.ARROW && arrowSpillDirectory == null) {
+        try {
+          this.arrowSpillDirectory = Files.createTempDirectory("storage-explorer-arrow-");
+        } catch (final IOException e) {
+          log.error("Could not create temp directory at [ storage-explorer-arrow- ]");
+          log.error(e.getMessage(), e);
+          this.arrowSpillDirectory = null;
+        }
+      }
       return new QueryEngineSettings(
           engineMode,
           earlyTerminationEnabled,
@@ -235,7 +322,12 @@ public record QueryEngineSettings(
           unboundedSortWarnThreshold,
           unboundedSortHardCap,
           collectStageTimings,
-          queryTimeout);
+          queryTimeout,
+          arrowSpillRowLimit,
+          arrowBatchSize,
+          arrowPageSize,
+          arrowResultRetention,
+          arrowSpillDirectory);
     }
 
   }

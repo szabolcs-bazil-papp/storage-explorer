@@ -20,7 +20,7 @@ dependencies {
 //   ./gradlew benchmark:jmh -PjmhArgs="-lp"   (list parameter combinations)
 tasks.register('jmh', JavaExec) {
   group = 'benchmark'
-  description = 'Runs the LEGACY vs PIPELINED ArcScript query engine JMH benchmarks.'
+  description = 'Runs the LEGACY vs PIPELINED vs ARROW ArcScript query engine JMH benchmarks.'
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'org.openjdk.jmh.Main'
   javaLauncher = javaToolchains.launcherFor {

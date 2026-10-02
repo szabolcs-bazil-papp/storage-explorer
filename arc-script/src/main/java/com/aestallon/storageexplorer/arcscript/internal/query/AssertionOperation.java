@@ -91,6 +91,19 @@ public abstract sealed class AssertionOperation<T> permits
 
   protected abstract PropertyPredicate equality(final T value);
 
+  public abstract sealed class BetweenRhs<T> {
+
+    protected final T lhs;
+
+    protected BetweenRhs(final T lhs) {
+      this.lhs = lhs;
+    }
+
+    public abstract void and(final T rhs);
+  }
+
+  public abstract BetweenRhs<T> between(final T lhs);
+
   public static final class AssertionOperationStr extends AssertionOperation<String> {
     public AssertionOperationStr(Assertion assertion) {
       super(assertion);
@@ -99,7 +112,7 @@ public abstract sealed class AssertionOperation<T> permits
     @Override
     protected PropertyPredicate equality(final String value) {
       return it -> it instanceof StorageInstanceExaminer.StringFound str
-                   && str.string().equals(value);
+          && str.string().equals(value);
     }
 
     public void contains(final String value) {
@@ -108,7 +121,7 @@ public abstract sealed class AssertionOperation<T> permits
       }
 
       assertion.set("contains", value, it -> it instanceof StorageInstanceExaminer.StringFound str
-                                             && str.string().contains(value));
+          && str.string().contains(value));
     }
 
     public void starts_with(final String value) {
@@ -120,7 +133,7 @@ public abstract sealed class AssertionOperation<T> permits
           "starts_with",
           value,
           it -> it instanceof StorageInstanceExaminer.StringFound str
-                && str.string().startsWith(value));
+              && str.string().startsWith(value));
     }
 
     public void ends_with(final String value) {
@@ -132,7 +145,53 @@ public abstract sealed class AssertionOperation<T> permits
           "starts_with",
           value,
           it -> it instanceof StorageInstanceExaminer.StringFound str
-                && str.string().endsWith(value));
+              && str.string().endsWith(value));
+    }
+
+    public void is_greater_than(String value) {
+      assertion.set("is_greater_than", value, it -> {
+        if (!(it instanceof StorageInstanceExaminer.StringFound s)) {
+          return false;
+        }
+
+        final String actual = s.string();
+        return actual.compareTo(value) > 0;
+      });
+    }
+
+    public void is_lesser_than(String value) {
+      assertion.set("is_lesser_than", value, it -> {
+        if (!(it instanceof StorageInstanceExaminer.StringFound s)) {
+          return false;
+        }
+
+        final String actual = s.string();
+        return actual.compareTo(value) < 0;
+      });
+    }
+
+    public final class BetweenStr extends BetweenRhs<String> {
+
+      private BetweenStr(String lhs) {
+        super(lhs);
+      }
+
+      @Override
+      public void and(String rhs) {
+        assertion.set("between", lhs + " and " + rhs, it -> {
+          if (!(it instanceof StorageInstanceExaminer.StringFound s)) {
+            return false;
+          }
+
+          final String actual = s.string();
+          return actual.compareTo(lhs) >= 0 && actual.compareTo(rhs) <= 0;
+        });
+      }
+    }
+
+    @Override
+    public BetweenStr between(String lhs) {
+      return new BetweenStr(lhs);
     }
   }
 
@@ -145,7 +204,12 @@ public abstract sealed class AssertionOperation<T> permits
     @Override
     protected PropertyPredicate equality(final Boolean value) {
       return it -> it instanceof StorageInstanceExaminer.BooleanFound bool
-                   && bool.bool() == value;
+          && bool.bool() == value;
+    }
+
+    @Override
+    public BetweenRhs<Boolean> between(Boolean lhs) {
+      throw new UnsupportedOperationException("Operation 'between' on bools is not interpreted!");
     }
   }
 
@@ -164,8 +228,8 @@ public abstract sealed class AssertionOperation<T> permits
 
         final var actual = complex.value();
         return actual.size() == value.size()
-               && actual.keySet().containsAll(value.keySet())
-               && actual.entrySet().stream().allMatch((e) -> {
+            && actual.keySet().containsAll(value.keySet())
+            && actual.entrySet().stream().allMatch((e) -> {
           final var k = e.getKey();
           final var actualV = e.getValue();
           final var expectedV = value.get(k);
@@ -199,6 +263,11 @@ public abstract sealed class AssertionOperation<T> permits
       }
 
       assertion.set(op, strVal, p);
+    }
+
+    @Override
+    public BetweenRhs<Map<String, Object>> between(Map<String, Object> lhs) {
+      throw new UnsupportedOperationException("Operation 'between' on maps is not interpreted!");
     }
   }
 
@@ -265,6 +334,49 @@ public abstract sealed class AssertionOperation<T> permits
         }
       });
     }
+
+    public final class BetweenNum extends BetweenRhs<Number> {
+
+      private BetweenNum(Number lhs) {
+        super(lhs);
+      }
+
+      @Override
+      public void and(Number rhs) {
+        assertion.set("between", lhs + " and " + rhs, it -> {
+          if (!(it instanceof StorageInstanceExaminer.NumberFound n)) {
+            return false;
+          }
+
+          final Number actual = n.number();
+          if (actual instanceof Float f) {
+            return betweenDoubleImpl(rhs, f.doubleValue());
+          } else if (actual instanceof Double d) {
+            return betweenDoubleImpl(rhs, d);
+          } else {
+            final var lActual = actual.longValue();
+            final var a = lhs.longValue();
+            final var b = rhs.longValue();
+            final var lBound = Math.min(a, b);
+            final var uBound = Math.max(a, b);
+            return lActual >= lBound && lActual <= uBound;
+          }
+        });
+      }
+
+      private boolean betweenDoubleImpl(Number rhs, Double d) {
+        final var a = lhs.doubleValue();
+        final var b = rhs.doubleValue();
+        final var lBound = Math.min(a, b);
+        final var uBound = Math.max(a, b);
+        return d >= lBound && d <= uBound;
+      }
+    }
+
+    @Override
+    public BetweenNum between(Number lhs) {
+      return new BetweenNum(lhs);
+    }
   }
 
 
@@ -278,9 +390,14 @@ public abstract sealed class AssertionOperation<T> permits
       throw new IllegalArgumentException("Q!");
     }
 
+    @Override
+    public BetweenRhs<List<Object>> between(List<Object> lhs) {
+      throw new UnsupportedOperationException("Operation 'between' on lists is not interpreted!");
+    }
+
     public void has_size(final int expected) {
       assertion.set("has_size", expected, it -> it instanceof StorageInstanceExaminer.ListFound list
-                                                && list.value().size() == expected);
+          && list.value().size() == expected);
     }
 
     public void contains(Object... expected) {

@@ -72,14 +72,32 @@ public sealed interface ArcScriptResult {
 
 
   record QueryPerformed(String prettyPrint, ResultSet resultSet, long timeTaken,
-      PipelineStats pipelineStats)
+      PipelineStats pipelineStats, PageInfo pageInfo)
       implements InstructionResult {
 
     public QueryPerformed(String prettyPrint, ResultSet resultSet, long timeTaken) {
-      this(prettyPrint, resultSet, timeTaken, null);
+      this(prettyPrint, resultSet, timeTaken, null, null);
+    }
+
+    public QueryPerformed(String prettyPrint, ResultSet resultSet, long timeTaken,
+        PipelineStats pipelineStats) {
+      this(prettyPrint, resultSet, timeTaken, pipelineStats, null);
     }
 
   }
+
+
+  /**
+   * Pagination handle attached to a {@link QueryPerformed} whose {@link ResultSet} holds only the
+   * first page of a larger result produced by the {@code ARROW} engine.
+   *
+   * @param resultToken opaque key to pass to {@code ArrowResultSetStore.fetchPage} for subsequent
+   *     pages
+   * @param pageSize number of rows per page
+   * @param totalRows total number of rows in the full (filtered, sorted, limited) result
+   * @param totalPages {@code ceil(totalRows / pageSize)}
+   */
+  record PageInfo(String resultToken, int pageSize, long totalRows, int totalPages) {}
 
 
   /**
