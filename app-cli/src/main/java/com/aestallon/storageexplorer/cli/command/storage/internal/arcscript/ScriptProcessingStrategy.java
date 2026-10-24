@@ -42,7 +42,7 @@ public final class ScriptProcessingStrategy {
   }
 
   public void process() {
-    switch (Arc.evaluate(ctx.script(), ctx.storageInstance())) {
+    switch (Arc.evaluate(ctx.script(), ctx.storageInstance(), ctx.queryEngineSettings())) {
       case ArcScriptResult.Ok(var results, var verbose) -> processResults(results, verbose);
       case ArcScriptResult.CompilationError compErr -> printCompilationError(compErr);
       case ArcScriptResult.ImpermissibleInstruction(String msg, String cause) ->

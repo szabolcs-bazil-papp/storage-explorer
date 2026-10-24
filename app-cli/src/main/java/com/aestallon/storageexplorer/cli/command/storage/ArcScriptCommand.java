@@ -29,6 +29,7 @@ import com.aestallon.storageexplorer.cli.command.storage.internal.arcscript.ArcS
 import com.aestallon.storageexplorer.cli.command.storage.internal.arcscript.ScriptProcessingStrategy;
 import com.aestallon.storageexplorer.cli.service.StorageInstanceContext;
 import com.aestallon.storageexplorer.client.asexport.ResultSetExporterFactory;
+import com.aestallon.storageexplorer.client.userconfig.service.ArcScriptEngineSettingsService;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.google.common.base.Strings;
 
@@ -40,9 +41,12 @@ import com.google.common.base.Strings;
 public class ArcScriptCommand {
 
   private final StorageInstanceContext storageInstanceContext;
+  private final ArcScriptEngineSettingsService arcScriptEngineSettingsService;
 
-  public ArcScriptCommand(StorageInstanceContext storageInstanceContext) {
+  public ArcScriptCommand(StorageInstanceContext storageInstanceContext,
+                          ArcScriptEngineSettingsService arcScriptEngineSettingsService) {
     this.storageInstanceContext = storageInstanceContext;
+    this.arcScriptEngineSettingsService = arcScriptEngineSettingsService;
   }
 
   @Command(command = "file", description = "Execute an ArcScript query from a file.")
@@ -168,7 +172,14 @@ public class ArcScriptCommand {
 
     final Path path = Strings.isNullOrEmpty(output) ? null : Path.of(output).normalize();
     ScriptProcessingStrategy
-        .of(new ArcScriptContext(ctx, script, storageInstance, verbose, path, explicitFormat))
+        .of(new ArcScriptContext(
+            ctx,
+            script,
+            storageInstance,
+            verbose,
+            path,
+            explicitFormat,
+            arcScriptEngineSettingsService.settings()))
         .process();
   }
 

@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.client.userconfig.model.Theme;
+import com.aestallon.storageexplorer.client.userconfig.service.ArcScriptEngineSettingsService;
 import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.client.userconfig.service.ThemeService;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
@@ -40,6 +41,8 @@ import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryControll
 import com.aestallon.storageexplorer.swing.ui.dialog.loadentry.LoadEntryDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptController;
 import com.aestallon.storageexplorer.swing.ui.dialog.newscript.NewScriptDialog;
+import com.aestallon.storageexplorer.swing.ui.dialog.queryenginesettings.QueryEngineSettingsController;
+import com.aestallon.storageexplorer.swing.ui.dialog.queryenginesettings.QueryEngineSettingsDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.umlexportsettings.UmlExportSettingsController;
 import com.aestallon.storageexplorer.swing.ui.dialog.umlexportsettings.UmlExportSettingsDialog;
 import com.aestallon.storageexplorer.swing.ui.dialog.yaml.YamlCatalogDialog;
@@ -59,6 +62,7 @@ public class AppFrame extends JFrame {
   private final transient ThemeService themeService;
   private final transient ColourService colourService;
   private final transient NominalTypeService nominalTypeService;
+  private final transient ArcScriptEngineSettingsService arcScriptEngineSettingsService;
 
   public AppFrame(StorageInstanceProvider storageInstanceProvider,
                   UserConfigService userConfigService,
@@ -68,7 +72,8 @@ public class AppFrame extends JFrame {
                   FindTabController findTabController,
                   ThemeService themeService,
                   ColourService colourService,
-                  NominalTypeService nominalTypeService) {
+                  NominalTypeService nominalTypeService,
+                  ArcScriptEngineSettingsService arcScriptEngineSettingsService) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.userConfigService = userConfigService;
     this.appContentView = appContentView;
@@ -78,6 +83,7 @@ public class AppFrame extends JFrame {
     this.themeService = themeService;
     this.colourService = colourService;
     this.nominalTypeService = nominalTypeService;
+    this.arcScriptEngineSettingsService = arcScriptEngineSettingsService;
 
     setTitle("Storage Explorer");
     setSize(900, 600);
@@ -177,6 +183,17 @@ public class AppFrame extends JFrame {
       dialog.setVisible(true);
     });
     settings.add(umlExportSettings);
+
+    final var queryEngineSettings = new JMenuItem("Query Engine Settings...");
+    queryEngineSettings.addActionListener(e -> {
+      final var controller = QueryEngineSettingsController.newInstance(
+          arcScriptEngineSettingsService);
+      final var dialog = new QueryEngineSettingsDialog(controller);
+      dialog.pack();
+      dialog.setLocationRelativeTo(this);
+      dialog.setVisible(true);
+    });
+    settings.add(queryEngineSettings);
 
     final var keymapSettings = new JMenuItem("Keymap Settings...");
     keymapSettings.addActionListener(e -> {

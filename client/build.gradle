@@ -6,6 +6,7 @@ dependencies {
   compileOnly 'org.smartbit4all.platform:api'
   implementation project(':common')
   compileOnly 'org.springframework.boot:spring-boot-starter-web'
+  testImplementation 'org.springframework.boot:spring-boot-starter-web'
   compileOnly 'jakarta.validation:jakarta.validation-api:3.0.2'
 
   compileOnly 'org.smartbit4all.platform:sql'

@@ -147,7 +147,7 @@ public record QueryEngineSettings(
 
   public static final class Builder {
 
-    private EngineMode engineMode = EngineMode.PIPELINED;
+    private EngineMode engineMode = EngineMode.LEGACY;
     private boolean earlyTerminationEnabled = true;
     private long sourcePrefetch = 150;
     private int whereConcurrency = -1;
