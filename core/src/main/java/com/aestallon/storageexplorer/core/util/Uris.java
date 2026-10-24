@@ -29,6 +29,7 @@ import com.google.common.base.Strings;
 
 public final class Uris {
 
+
   private Uris() {}
 
   private static final Set<String> STORED_COLLECTION_IDENTIFIERS = Set.of(
@@ -110,7 +111,11 @@ public final class Uris {
   }
 
   private static boolean containsTimestampPattern(final String input) {
-    return input.contains("org_"); //PATTERN_TIMESTAMP.matcher(input).find();
+    return PATTERN_TIMESTAMP.matcher(input).find();
+  }
+
+  private static boolean isObjectReferenceById(final String input) {
+    return input.contains(":/org_smartbit4all_api_object_bean_ObjectReferenceById");
   }
 
   public static URI constructMap(final String schema, final String name) {
@@ -149,7 +154,9 @@ public final class Uris {
     }
 
     // must contain a stored collection identifier or a timestamp segment:
-    if (!containsStoredCollectionIdentifier(s) && !containsTimestampPattern(s)) {
+    if (!containsStoredCollectionIdentifier(s)
+        && !containsTimestampPattern(s)
+        && !isObjectReferenceById(s)) {
       return Optional.empty();
     }
 
