@@ -50,7 +50,6 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.MapPropertySource;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
-import com.aestallon.storageexplorer.arcscript.engine.ArrowQueryEngine;
 import com.aestallon.storageexplorer.arcscript.engine.PipelinedQueryEngine;
 import com.aestallon.storageexplorer.arcscript.engine.QueryEngine;
 import com.aestallon.storageexplorer.arcscript.engine.QueryEngineImpl;
@@ -68,7 +67,7 @@ import com.aestallon.storageexplorer.core.service.FileSystemStorageIndex;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
 
 /**
- * LEGACY vs PIPELINED vs ARROW ArcScript query engine benchmarks over real-world query shapes.
+ * LEGACY vs PIPELINED ArcScript query engine benchmarks over real-world query shapes.
  *
  * <p>
  * A trial builds a genuine file-system smartbit4all storage in a temporary directory (a platform
@@ -87,23 +86,18 @@ import com.aestallon.storageexplorer.core.service.IndexingStrategy;
  * <p>
  * Sweep any knob from the JMH command line, e.g.
  * {@code ./gradlew benchmark:jmh -PjmhArgs="-p whereConcurrency=4,32,default -p entryCount=5000"}.
- * ARROW-specific knobs ({@code arrowSpillRowLimit}, {@code arrowBatchSize}) are left at their
- * defaults here since {@code entryCount} in these benchmarks is far below the default spill
- * threshold - lower {@code arrowSpillRowLimit} explicitly to benchmark the spilling path.
  */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Warmup(iterations = 3, time = 2)
 @Measurement(iterations = 5, time = 2)
-// arrow-memory-netty's MemoryUtil reflectively pokes java.nio.Buffer.address; required on the JDK
-// module system since JDK 16 (see https://arrow.apache.org/docs/java/install.html):
-@Fork(value = 1, jvmArgsAppend = { "-Xmx2g", "--add-opens=java.base/java.nio=ALL-UNNAMED" })
+@Fork(value = 1, jvmArgsAppend = "-Xmx2g")
 public class QueryEngineBenchmark {
 
   private static final String SCHEMA = "bench";
 
-  @Param({ "LEGACY", "PIPELINED", "ARROW" })
+  @Param({ "LEGACY", "PIPELINED" })
   public String engineMode;
 
   @Param({ "2000" })
@@ -257,7 +251,6 @@ public class QueryEngineBenchmark {
     return switch (settings.engineMode()) {
       case LEGACY -> new QueryEngineImpl();
       case PIPELINED -> new PipelinedQueryEngine(settings);
-      case ARROW -> new ArrowQueryEngine(settings);
     };
   }
 
