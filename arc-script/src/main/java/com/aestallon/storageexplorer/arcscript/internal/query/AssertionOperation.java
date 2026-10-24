@@ -31,6 +31,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import static java.util.stream.Collectors.joining;
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
@@ -143,6 +145,57 @@ public abstract sealed class AssertionOperation<T> permits
           value,
           it -> it instanceof StorageInstanceExaminer.StringFound str
                 && str.string().endsWith(value));
+    }
+
+    public void matches(final String regex) {
+      if (regex == null) {
+        throw new IllegalArgumentException("Cannot call str matches with null value!");
+      }
+
+      final Pattern pattern;
+      try {
+        pattern = Pattern.compile(regex);
+      } catch (PatternSyntaxException e) {
+        throw new IllegalArgumentException(
+            "\"%s\" is not a valid regular expression: %s".formatted(regex, e.getMessage()), e);
+      }
+
+      assertion.set(
+          "matches",
+          regex,
+          it -> it instanceof StorageInstanceExaminer.StringFound str
+                && pattern.matcher(str.string()).matches());
+    }
+
+    public StrRangeStart between(final String from) {
+      if (from == null) {
+        throw new IllegalArgumentException(
+            "Cannot use null as a range start for BETWEEN! Try `is null` or `in (null)` instead.");
+      }
+
+      return new StrRangeStart(from);
+    }
+
+    public final class StrRangeStart {
+      private final String from;
+
+      private StrRangeStart(final String from) {
+        this.from = from;
+      }
+
+      public void and(final String to) {
+        if (to == null) {
+          throw new IllegalArgumentException(
+              "Cannot use null as a range end for BETWEEN! Try `is null` or `in (null)` instead.");
+        }
+
+        assertion.set(
+            "between",
+            from + " and " + to,
+            it -> it instanceof StorageInstanceExaminer.StringFound str
+                  && str.string().compareTo(from) >= 0
+                  && str.string().compareTo(to) <= 0);
+      }
     }
   }
 
@@ -274,6 +327,48 @@ public abstract sealed class AssertionOperation<T> permits
           return actualLong < expectedLong;
         }
       });
+    }
+
+    public NumRangeStart between(final Number from) {
+      if (from == null) {
+        throw new IllegalArgumentException(
+            "Cannot use null as a range start for BETWEEN! Try `is null` or `in (null)` instead.");
+      }
+
+      return new NumRangeStart(from);
+    }
+
+    public final class NumRangeStart {
+      private final Number from;
+
+      private NumRangeStart(final Number from) {
+        this.from = from;
+      }
+
+      public void and(final Number to) {
+        if (to == null) {
+          throw new IllegalArgumentException(
+              "Cannot use null as a range end for BETWEEN! Try `is null` or `in (null)` instead.");
+        }
+
+        assertion.set(
+            "between",
+            from + " and " + to,
+            it -> {
+              if (!(it instanceof StorageInstanceExaminer.NumberFound n)) {
+                return false;
+              }
+
+              final Number actual = n.number();
+              if (actual instanceof Float || actual instanceof Double) {
+                final double actualDouble = actual.doubleValue();
+                return actualDouble >= from.doubleValue() && actualDouble <= to.doubleValue();
+              } else {
+                final long actualLong = actual.longValue();
+                return actualLong >= from.longValue() && actualLong <= to.longValue();
+              }
+            });
+      }
     }
   }
 

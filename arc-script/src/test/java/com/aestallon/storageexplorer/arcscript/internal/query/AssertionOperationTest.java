@@ -294,6 +294,161 @@ class AssertionOperationTest {
         .hasMessageContaining("Cannot call str ends_with with null value");
   }
 
+  // ~~MATCHES~~ ------------------------------------------------------------------------------------
+
+  @Test
+  void stringMatchesChecksOut_whenDiscoveredStringFullyMatchesRegex() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("email").matches("[a-z]+@[a-z]+\\.[a-z]{2,}");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("foo@bar.com", null, null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringMatchesFails_whenDiscoveredStringOnlyPartiallyMatchesRegex() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("email").matches("[a-z]+@[a-z]+\\.[a-z]{2,}");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("not foo@bar.com really", null, null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringMatchesFails_whenDiscoveredStringDoesNotMatchRegex() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("email").matches("[a-z]+@[a-z]+\\.[a-z]{2,}");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("not-an-email", null, null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringMatchesFails_whenDiscoveryIsNotStringFound() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("email").matches(".*");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NumberFound(1, null, null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringMatchesDoesNotAcceptNullValue() {
+    // given
+    final var assertion = new Assertion();
+    final var op = assertion.str("email");
+
+    // when
+    assertThatCode(() -> op.matches(null))
+        // then
+        .as("Invoking str matches with null value")
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot call str matches with null value");
+  }
+
+  @Test
+  void stringMatchesRejectsInvalidRegexImmediately() {
+    // given
+    final var assertion = new Assertion();
+    final var op = assertion.str("email");
+
+    // when
+    assertThatCode(() -> op.matches("[a-z"))
+        // then
+        .as("Invoking str matches with an invalid regular expression")
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("is not a valid regular expression");
+  }
+
+  // ~~BETWEEN~~ ------------------------------------------------------------------------------------
+
+  @Test
+  void stringBetweenChecksOut_whenDiscoveredStringFallsWithinBounds_inclusive() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").between("Bar").and("Foo");
+
+    // when
+    final var lowerBound = new StorageInstanceExaminer.StringFound("Bar", null, null);
+    final var upperBound = new StorageInstanceExaminer.StringFound("Foo", null, null);
+    final var withinBounds = new StorageInstanceExaminer.StringFound("Baz", null, null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(lowerBound), lowerBound.toString());
+    assertThat(assertion).matches(it -> it.check(upperBound), upperBound.toString());
+    assertThat(assertion).matches(it -> it.check(withinBounds), withinBounds.toString());
+  }
+
+  @Test
+  void stringBetweenFails_whenDiscoveredStringFallsOutsideBounds() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").between("Bar").and("Foo");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("Qux", null, null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringBetweenFails_whenDiscoveryIsNotStringFound() {
+    // given
+    final var assertion = new Assertion();
+    assertion.str("name").between("Bar").and("Foo");
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NumberFound(1, null, null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void stringBetweenDoesNotAcceptNullStart() {
+    // given
+    final var assertion = new Assertion();
+    final var op = assertion.str("name");
+
+    // when
+    assertThatCode(() -> op.between(null))
+        // then
+        .as("Invoking str between with null start")
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot use null as a range start for BETWEEN");
+  }
+
+  @Test
+  void stringBetweenDoesNotAcceptNullEnd() {
+    // given
+    final var assertion = new Assertion();
+    final var op = assertion.str("name");
+
+    // when
+    assertThatCode(() -> op.between("Bar").and(null))
+        // then
+        .as("Invoking str between with null end")
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot use null as a range end for BETWEEN");
+  }
+
   // -----------------------------------------------------------------------------------------------
   // NUMERIC OPERATIONS
   // -----------------------------------------------------------------------------------------------
@@ -415,6 +570,92 @@ class AssertionOperationTest {
 
     // then
     assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  // ~~BETWEEN~~ ------------------------------------------------------------------------------------
+
+  @Test
+  void numBetweenChecksOut_whenDiscoveredNumberFallsWithinBounds_inclusive() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").between(18).and(65);
+
+    // when
+    final var lowerBound = new StorageInstanceExaminer.NumberFound(18, null, null);
+    final var upperBound = new StorageInstanceExaminer.NumberFound(65, null, null);
+    final var withinBounds = new StorageInstanceExaminer.NumberFound(30, null, null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(lowerBound), lowerBound.toString());
+    assertThat(assertion).matches(it -> it.check(upperBound), upperBound.toString());
+    assertThat(assertion).matches(it -> it.check(withinBounds), withinBounds.toString());
+  }
+
+  @Test
+  void numBetweenFails_whenDiscoveredNumberFallsOutsideBounds() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").between(18).and(65);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NumberFound(70, null, null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void numBetweenChecksOut_whenBoundsAreFloatingPoint_andDiscoveredNumberIsEquivalentDouble() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").between(18.5).and(65.5);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.NumberFound(30.0d, null, null);
+
+    // then
+    assertThat(assertion).matches(it -> it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void numBetweenFails_whenDiscoveryIsNotNumberFound() {
+    // given
+    final var assertion = new Assertion();
+    assertion.num("age").between(18).and(65);
+
+    // when
+    final var discovery = new StorageInstanceExaminer.StringFound("30", null, null);
+
+    // then
+    assertThat(assertion).matches(it -> !it.check(discovery), discovery.toString());
+  }
+
+  @Test
+  void numBetweenDoesNotAcceptNullStart() {
+    // given
+    final var assertion = new Assertion();
+    final var op = assertion.num("age");
+
+    // when
+    assertThatCode(() -> op.between(null))
+        // then
+        .as("Invoking num between with null start")
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot use null as a range start for BETWEEN");
+  }
+
+  @Test
+  void numBetweenDoesNotAcceptNullEnd() {
+    // given
+    final var assertion = new Assertion();
+    final var op = assertion.num("age");
+
+    // when
+    assertThatCode(() -> op.between(18).and(null))
+        // then
+        .as("Invoking num between with null end")
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Cannot use null as a range end for BETWEEN");
   }
 
   // -----------------------------------------------------------------------------------------------
