@@ -20,7 +20,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
+import com.formdev.flatlaf.util.SystemFileChooser;
 import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 
@@ -125,15 +125,16 @@ public class YamlCatalogDialog extends JDialog {
   }
 
   private void onSelectNew() {
-    JFileChooser chooser = new JFileChooser();
+    SystemFileChooser chooser = new SystemFileChooser();
     chooser.setDialogTitle("Select YAML File(s)");
     chooser.setMultiSelectionEnabled(true);
-    chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-    chooser.setFileFilter(new FileNameExtensionFilter("YAML files (*.yaml, *.yml)", "yaml", "yml"));
+    chooser.setFileSelectionMode(SystemFileChooser.FILES_ONLY);
+    chooser.setFileFilter(new SystemFileChooser.FileNameExtensionFilter(
+        "YAML files (*.yaml, *.yml)", "yaml", "yml"));
     chooser.setAcceptAllFileFilterUsed(false);
 
     int result = chooser.showOpenDialog(this);
-    if (result != JFileChooser.APPROVE_OPTION) {
+    if (result != SystemFileChooser.APPROVE_OPTION) {
       return;
     }
 

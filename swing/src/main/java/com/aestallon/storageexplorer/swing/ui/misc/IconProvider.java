@@ -38,7 +38,7 @@ public final class IconProvider {
   private IconProvider() {}
 
   private static String location(final String iconName) {
-    return String.format("/icons/%s.png", iconName);
+    return String.format("/icons_2/%s.png", iconName);
   }
 
   private static byte[] loadIcon(String iconName) {

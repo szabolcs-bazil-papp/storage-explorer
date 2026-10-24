@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
-import javax.swing.filechooser.FileSystemView;
 import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreePath;
 import org.slf4j.Logger;
@@ -30,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.formdev.flatlaf.util.SystemFileChooser;
 import com.aestallon.storageexplorer.client.graph.service.GraphExportService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
@@ -304,12 +304,11 @@ public class StorageTreeView
     private JMenuItem createExportMenuItem(StorageInstanceTreeNode sitn) {
       final var export = new JMenuItem("Export", IconProvider.GRAPH);
       export.addActionListener(e -> {
-        final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
-        fileChooser.setDialogType(JFileChooser.SAVE_DIALOG);
+        final var fileChooser = new SystemFileChooser();
         fileChooser.setDialogTitle("Save export");
 
         final int result = fileChooser.showDialog(this, "Export");
-        if (JFileChooser.APPROVE_OPTION == result) {
+        if (SystemFileChooser.APPROVE_OPTION == result) {
           final File f = fileChooser.getSelectedFile();
           final Path target;
           if (!f.getName().endsWith(".gexf")) {

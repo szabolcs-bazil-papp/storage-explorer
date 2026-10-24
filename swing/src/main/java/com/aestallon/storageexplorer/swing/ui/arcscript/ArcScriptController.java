@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.swing.*;
-import javax.swing.filechooser.FileSystemView;
+import com.formdev.flatlaf.util.SystemFileChooser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -293,12 +293,11 @@ public class ArcScriptController {
 
 
   public void export(ArcScriptResult.ResultSet resultSet, ResultSetExporterFactory.Target target) {
-    final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
-    fileChooser.setDialogType(JFileChooser.SAVE_DIALOG);
+    final var fileChooser = new SystemFileChooser();
     fileChooser.setDialogTitle("Export as " + target);
 
     final int result = fileChooser.showDialog(null, "Export");
-    if (JFileChooser.APPROVE_OPTION == result) {
+    if (SystemFileChooser.APPROVE_OPTION == result) {
       final File selectedFile = fileChooser.getSelectedFile();
       if (selectedFile.isDirectory()) {
         System.err.println("REEEE");

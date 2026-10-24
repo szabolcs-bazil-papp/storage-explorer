@@ -33,7 +33,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.swing.*;
-import javax.swing.filechooser.FileSystemView;
+import com.formdev.flatlaf.util.SystemFileChooser;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.MultiGraph;
 import org.graphstream.stream.file.FileSinkImages;
@@ -276,12 +276,11 @@ public class GraphView extends JPanel {
   }
 
   private void exportUml() {
-    final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
-    fileChooser.setDialogType(JFileChooser.SAVE_DIALOG);
+    final var fileChooser = new SystemFileChooser();
     fileChooser.setDialogTitle("Export as PlantUML");
 
     final int result = fileChooser.showDialog(this, "Export");
-    if (JFileChooser.APPROVE_OPTION == result) {
+    if (SystemFileChooser.APPROVE_OPTION == result) {
       final File selectedFile = fileChooser.getSelectedFile();
       if (selectedFile.isDirectory()) {
         System.err.println("REEEE");

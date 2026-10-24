@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
-import javax.swing.filechooser.FileSystemView;
+import com.formdev.flatlaf.util.SystemFileChooser;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
@@ -213,13 +213,12 @@ public class ImportStorageDialog extends JDialog {
       f = new File(textFieldFsRootDir.getText());
     }
 
-    final var fileChooser = new JFileChooser(f, FileSystemView.getFileSystemView());
-    fileChooser.setDialogType(JFileChooser.OPEN_DIALOG);
-    fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+    final var fileChooser = new SystemFileChooser(f);
+    fileChooser.setFileSelectionMode(SystemFileChooser.DIRECTORIES_ONLY);
     fileChooser.setDialogTitle("Import Storage...");
 
     final int result = fileChooser.showDialog(this, "Import");
-    if (JFileChooser.APPROVE_OPTION == result) {
+    if (SystemFileChooser.APPROVE_OPTION == result) {
       final File selectedFile = fileChooser.getSelectedFile();
       if (!selectedFile.isDirectory()) {
         System.err.println("REEEE");
