@@ -142,7 +142,7 @@ public abstract sealed class AssertionOperation<T> permits
       }
 
       assertion.set(
-          "starts_with",
+          "ends_with",
           value,
           it -> it instanceof StorageInstanceExaminer.StringFound str
               && str.string().endsWith(value));
