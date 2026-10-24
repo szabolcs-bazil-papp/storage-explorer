@@ -425,6 +425,7 @@ URL						= (((https?|f(tp|ile))"://"|"www.")({URLCharacters}{URLEndCharacter})?)
   "an"     |
   "every"  |
   "map"    |
+  "list"   |
   "from"   |
   "where"  |
   "and"    |
@@ -452,14 +453,20 @@ URL						= (((https?|f(tp|ile))"://"|"www.")({URLCharacters}{URLEndCharacter})?)
   "all_match"                     |
   "any_match"                     |
   "none_match"                    |
-  
+
+  "in_the_year_of"  | // time
+  "in_the_month_of" |
+  "in_the_day_of"   |
+  "in_the_hour_of"  |
+
   "starts_with"              | // string and nums
   "ends_with"                |
+  "matches"                  |
   "is_greater_than"          |
   "is_lesser_than"           |
   "is_strictly_greater_than" |
   "is_strictly_lesser_than"  |
-  "is_between"               { addToken(Token.RESERVED_WORD_2); }
+  "between"               { addToken(Token.RESERVED_WORD_2); }
 
 	/* Data types. */
 	"boolean" |
