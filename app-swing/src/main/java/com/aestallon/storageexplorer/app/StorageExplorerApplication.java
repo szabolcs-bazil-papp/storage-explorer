@@ -50,8 +50,13 @@ public class StorageExplorerApplication {
 
   private static volatile SplashScreen splashScreen;
 
+  private static String appVersion() {
+    final String version = StorageExplorerApplication.class.getPackage().getImplementationVersion();
+    return version != null ? version : "dev";
+  }
+
   private static void initSplashScreen() {
-    final String version = "0.6.0";
+    final String version = appVersion();
     SwingUtilities.invokeLater(() -> {
       splashScreen = SplashScreen
           .create(version, "/splash/splash_1280x789.png")
@@ -87,10 +92,10 @@ public class StorageExplorerApplication {
   }
 
   public static void main(String[] args) {
-    initSplashScreen();
     FeatureFlag.parse(args);
-
+    System.setProperty("sun.java2d.metal", "false");
     System.setProperty("org.graphstream.ui", "swing");
+    initSplashScreen();
     FlatMTMaterialLighterIJTheme.setup();
 
     new SpringApplicationBuilder(StorageExplorerApplication.class)

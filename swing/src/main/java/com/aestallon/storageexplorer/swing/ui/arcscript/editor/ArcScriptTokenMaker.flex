@@ -424,6 +424,7 @@ URL						= (((https?|f(tp|ile))"://"|"www.")({URLCharacters}{URLEndCharacter})?)
   "a"      |
   "an"     |
   "every"  |
+  "map"    |
   "from"   |
   "where"  |
   "and"    |

@@ -29,6 +29,7 @@ import com.google.common.base.Strings;
 
 public final class Uris {
 
+
   private Uris() {}
 
   private static final Set<String> STORED_COLLECTION_IDENTIFIERS = Set.of(
@@ -112,7 +113,25 @@ public final class Uris {
   private static boolean containsTimestampPattern(final String input) {
     return PATTERN_TIMESTAMP.matcher(input).find();
   }
-  
+
+  private static boolean isObjectReferenceById(final String input) {
+    return input.contains(":/org_smartbit4all_api_object_bean_ObjectReferenceById");
+  }
+
+  public static URI constructMap(final String schema, final String name) {
+    if (Strings.isNullOrEmpty(schema) || Strings.isNullOrEmpty(name)) {
+      throw new IllegalArgumentException("Both schema and name must be non-empty!");
+    }
+
+    return URI.create(
+        schema + "-collections:" + StorageEntryFactory.STORED_MAP_MARKER + "/" + name + "-s");
+  }
+
+  public static URI constructList(final String schema, final String name) {
+    return URI.create(
+        schema + "-collections:" + StorageEntryFactory.STORED_LIST_MARKER + "/" + name + "-s");
+  }
+
   public static Optional<URI> parseStr(final String s) {
     if (s == null || s.isBlank()) {
       return Optional.empty();
@@ -129,22 +148,24 @@ public final class Uris {
     if (s.endsWith(".") || s.endsWith(".v")) {
       return Optional.empty();
     }
-    
+
     if (Strings.isNullOrEmpty(s.substring(0, s.indexOf(':')))) {
       return Optional.empty();
     }
 
     // must contain a stored collection identifier or a timestamp segment:
-    if (!containsStoredCollectionIdentifier(s) && !containsTimestampPattern(s)) {
+    if (!containsStoredCollectionIdentifier(s)
+        && !containsTimestampPattern(s)
+        && !isObjectReferenceById(s)) {
       return Optional.empty();
     }
 
     try {
-      
+
       return Optional.of(new URI(s));
     } catch (final URISyntaxException e) {
       return Optional.empty();
     }
   }
-  
+
 }

@@ -117,6 +117,15 @@ public final class Assertion implements QueryElement {
     return list(al.toString());
   }
 
+  public AssertionOperation.AssertionOperationTime time(final String prop) {
+    this.prop = prop;
+    return new AssertionOperation.AssertionOperationTime(this);
+  }
+
+  public AssertionOperation.AssertionOperationTime time(final ArcLiteral al) {
+    return time(al.toString());
+  }
+
   public boolean isSingle() {
     return _predicate != null;
   }

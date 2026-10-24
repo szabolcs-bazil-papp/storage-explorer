@@ -14,13 +14,47 @@ import groovy.lang.Closure;
 
 public class QueryInstructionImpl implements QueryInstruction, Instruction {
 
+  public enum CollectionSourceKind { LIST, MAP }
+
   public final Set<String> _types = new HashSet<>();
   public final Set<String> _schemas = new HashSet<>();
   public final List<ShowColumn> _columns = new ArrayList<>();
   public final List<SortInstruction.SortKey> _sortKeys = new ArrayList<>();
 
+  public CollectionSourceKind _collectionKind;
+  public String _collectionName;
+
   public long _limit = -1L;
   public QueryConditionImpl condition;
+
+  private void requireTypeSourcePermitted() {
+    if (_collectionKind != null) {
+      throw new IllegalArgumentException(
+          "Cannot query types: this query already targets a stored collection [ %s %s ]! Specify exactly one of 'a'/'an'/'every', 'list' or 'map' per query."
+              .formatted(_collectionKind.name().toLowerCase(), _collectionName));
+    }
+  }
+
+  private void setCollectionSource(final CollectionSourceKind kind, final String name) {
+    if (name == null || name.isBlank()) {
+      throw new IllegalArgumentException("Collection name cannot be null or blank!");
+    }
+
+    if (_collectionKind != null) {
+      throw new IllegalArgumentException(
+          "This query already targets a stored collection [ %s %s ]! Specify exactly one of 'a'/'an'/'every', 'list' or 'map' per query."
+              .formatted(_collectionKind.name().toLowerCase(), _collectionName));
+    }
+
+    if (!_types.isEmpty()) {
+      throw new IllegalArgumentException(
+          "Cannot query a stored collection: this query already targets types %s! Specify exactly one of 'a'/'an'/'every', 'list' or 'map' per query."
+              .formatted(_types));
+    }
+
+    _collectionKind = kind;
+    _collectionName = name.trim();
+  }
 
   @Override
   public void a(String typeName) {
@@ -31,6 +65,7 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
 
   @Override
   public void every(String... typeNames) {
+    requireTypeSourcePermitted();
     if (typeNames == null || typeNames.length == 0) {
       throw new IllegalArgumentException("typeNames cannot be null or empty");
     }
@@ -43,6 +78,16 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
       _types.add(typeName);
     }
     this._limit = -1L;
+  }
+
+  @Override
+  public void list(String name) {
+    setCollectionSource(CollectionSourceKind.LIST, name);
+  }
+
+  @Override
+  public void map(String name) {
+    setCollectionSource(CollectionSourceKind.MAP, name);
   }
 
   @Override
@@ -185,7 +230,10 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder("select ");
-    if (_types.isEmpty()) {
+    if (_collectionKind != null) {
+      sb.append(_collectionKind == CollectionSourceKind.LIST ? "list " : "map ")
+          .append(_collectionName).append(" ");
+    } else if (_types.isEmpty()) {
       sb.append("every type ");
     } else if (_types.size() == 1) {
       sb.append("type ").append(_types.iterator().next()).append(" ");

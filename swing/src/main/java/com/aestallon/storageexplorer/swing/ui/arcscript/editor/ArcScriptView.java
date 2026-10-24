@@ -234,7 +234,10 @@ public class ArcScriptView extends JPanel implements TabView {
     CompletableFuture.runAsync(() -> {
       controller.eventPublisher().publishEvent(
           new BackgroundWorkStartedEvent(uuid, "Running ArcScript on " + storageInstance.name()));
-      switch (Arc.evaluate(editor.getText(), storageInstance)) {
+      switch (Arc.evaluate(
+          editor.getText(),
+          storageInstance,
+          controller.queryEngineSettings())) {
         case ArcScriptResult.CompilationError cErr -> showCompilationError(cErr);
         case ArcScriptResult.ImpermissibleInstruction iErr ->
             showErr("Impermissible instruction", iErr.msg());

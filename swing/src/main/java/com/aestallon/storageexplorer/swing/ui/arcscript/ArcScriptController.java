@@ -29,9 +29,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
+import com.aestallon.storageexplorer.arcscript.engine.QueryEngineSettings;
 import com.aestallon.storageexplorer.client.asexport.ResultSetExporter;
 import com.aestallon.storageexplorer.client.asexport.ResultSetExporterFactory;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.service.ArcScriptEngineSettingsService;
 import com.aestallon.storageexplorer.client.userconfig.service.ArcScriptFileService;
 import com.aestallon.storageexplorer.client.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
@@ -63,6 +65,7 @@ public class ArcScriptController {
   private final StorageInstanceProvider storageInstanceProvider;
   private final ApplicationEventPublisher applicationEventPublisher;
   private final UserConfigService userConfigService;
+  private final ArcScriptEngineSettingsService arcScriptEngineSettingsService;
   private final RSyntaxTextAreaThemeProvider themeProvider;
   private final MonospaceFontProvider monospaceFontProvider;
   private final ArcScriptTextareaFactory arcScriptTextareaFactory;
@@ -74,6 +77,7 @@ public class ArcScriptController {
   public ArcScriptController(final StorageInstanceProvider storageInstanceProvider,
                              final ApplicationEventPublisher applicationEventPublisher,
                              final UserConfigService userConfigService,
+                             final ArcScriptEngineSettingsService arcScriptEngineSettingsService,
                              final RSyntaxTextAreaThemeProvider themeProvider,
                              final MonospaceFontProvider monospaceFontProvider,
                              ArcScriptResultContainerView resultContainerView,
@@ -81,6 +85,7 @@ public class ArcScriptController {
     this.storageInstanceProvider = storageInstanceProvider;
     this.applicationEventPublisher = applicationEventPublisher;
     this.userConfigService = userConfigService;
+    this.arcScriptEngineSettingsService = arcScriptEngineSettingsService;
     this.themeProvider = themeProvider;
     this.monospaceFontProvider = monospaceFontProvider;
     this.resultContainerView = resultContainerView;
@@ -88,6 +93,10 @@ public class ArcScriptController {
     this.resultSetExporterFactory = new ResultSetExporterFactory();
 
     arcScriptTextareaFactory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
+  }
+
+  public QueryEngineSettings queryEngineSettings() {
+    return arcScriptEngineSettingsService.settings();
   }
 
   public ArcScriptTextareaFactory arcScriptTextareaFactory() {

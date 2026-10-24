@@ -4,9 +4,10 @@
   "packageManager": "npm@11.5.2",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build --configuration production",
-    "watch": "ng build --watch --configuration development",
+    "generate-version": "node scripts/generate-version.js",
+    "start": "npm run generate-version && ng serve",
+    "build": "npm run generate-version && ng build --configuration production",
+    "watch": "npm run generate-version && ng build --watch --configuration development",
     "test": "ng test",
     "gen-api": "openapi-generator-cli generate --generator-key storage-explorer"
   },

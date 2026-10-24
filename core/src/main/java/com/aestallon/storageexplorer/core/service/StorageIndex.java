@@ -22,8 +22,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
@@ -99,9 +101,11 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
     if (!strategy.fetchEntries()) {
       return 0;
     }
-    final var res = strategy.processEntries(fetchEntries(), storageEntryFactory::create);
-    cache.putAll(res);
-    return res.size();
+    try (final var uris = fetchEntries()) {
+      final var res = strategy.processEntries(uris, storageEntryFactory::create);
+      cache.putAll(res);
+      return res.size();
+    }
   }
 
   /**
@@ -206,14 +210,95 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
   }
 
   public Set<StorageEntry> get(final IndexingTarget target) {
+    return cache.stream().filter(matching(target)).collect(toSet());
+  }
+
+  /**
+   * The exact entry-level predicate an {@link IndexingTarget} denotes.
+   *
+   * <p>
+   * The physical fetch layers over-approximate the target (the file-system walker matches type
+   * directories by suffix, the relational query uses {@code CLASSNAME LIKE '%Type'}), so results
+   * drawn directly from {@link #fetchEntries(IndexingTarget)} must be re-filtered with this
+   * predicate to match what {@link #get(IndexingTarget)} would return.
+   */
+  private static Predicate<StorageEntry> matching(final IndexingTarget target) {
     final Predicate<StorageEntry> schema = target.schemas().isEmpty()
         ? e -> true
         : e -> target.schemas().contains(e.uri().getScheme());
     final Predicate<StorageEntry> type = target.types().isEmpty()
         ? e -> true
         : e -> e instanceof ObjectEntry o && target.types().contains(o.typeName());
-    final var p = schema.and(type);
-    return cache.stream().filter(p).collect(toSet());
+    return schema.and(type);
+  }
+
+  /**
+   * Lazily discovers the {@link StorageEntry}s matching the provided {@link IndexingTarget},
+   * populating the stream as the underlying storage yields them.
+   *
+   * <p>
+   * Every discovered entry is included in this index as a side effect, exactly as a
+   * {@link #refresh(IndexingStrategy, IndexingTarget)} pass would include it - but callers observe
+   * entries one by one, without waiting for the full discovery to complete. Entries already known
+   * to the index are returned as their canonical, cached instances.
+   *
+   * <p>
+   * The returned stream <strong>must be closed</strong> (it is {@code onClose}-chained to the
+   * underlying storage resources: file-system walker threads or an open database cursor - for
+   * relational storages the connection is held until the stream is closed, not merely until
+   * discovery finishes). Closing the stream before exhaustion cancels the underlying discovery.
+   * The stream is single-consumer and not thread-safe.
+   *
+   * @param target the {@link IndexingTarget} defining the storage schemas and types to discover,
+   *     not null
+   *
+   * @return a lazily populated {@link Stream} of matching {@link StorageEntry} instances
+   */
+  public Stream<StorageEntry> find(final IndexingTarget target) {
+    final Stream<URI> uris = fetchEntries(target);
+    final Queue<StorageEntry> newEntries = new ConcurrentLinkedQueue<>();
+    return uris
+        .map(uri -> acquire(uri, newEntries))
+        .flatMap(Optional::stream)
+        .filter(matching(target))
+        .onClose(() -> {
+          try {
+            uris.close();
+          } finally {
+            // batch-local scoped-entry association, identical to what a refresh pass performs -
+            // deliberately deferred to completion: doing it per entry would scan the entire cache
+            // for every new entry (see prepareNewEntry), turning a streaming walk quadratic:
+            IndexingStrategy.associateScopedEntries(newEntries);
+          }
+        });
+  }
+
+  /**
+   * Acquires the canonical entry for the given URI, creating and indexing it if absent - the
+   * per-element "include in the index" side effect of {@link #find(IndexingTarget)}.
+   */
+  private Optional<StorageEntry> acquire(final URI uri,
+                                         final Collection<StorageEntry> newEntries) {
+    final var present = cache.get(uri);
+    if (present.isPresent()) {
+      return present;
+    }
+
+    return storageEntryFactory.create(uri)
+        .map(created -> {
+          final StorageEntry canonical = cache.compute(uri, (k, v) -> {
+            if (v == null) {
+              return created;
+            }
+
+            v.accept(created);
+            return v;
+          });
+          if (canonical == created) {
+            newEntries.add(canonical);
+          }
+          return canonical;
+        });
   }
 
   public EntryAcquisitionResult getOrCreate(final URI uri) {

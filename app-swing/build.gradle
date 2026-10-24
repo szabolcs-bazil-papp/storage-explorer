@@ -39,3 +39,9 @@ tasks.named('bootJar') {
       'Implementation-Version': project.version)
   }
 }
+
+tasks.named('processResources') {
+  filesMatching('application.properties') {
+    filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: [version: project.version.toString()])
+  }
+}

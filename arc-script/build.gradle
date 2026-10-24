@@ -9,10 +9,13 @@ dependencies {
 
   implementation project(':core')
   implementation project(':common')
+  implementation 'org.slf4j:slf4j-api'
 
   testImplementation platform('org.junit:junit-bom:5.10.0')
   testImplementation 'org.junit.jupiter:junit-jupiter'
   testImplementation 'org.assertj:assertj-core:3.25.3'
+  testImplementation 'org.smartbit4all.platform:api'
+  testRuntimeOnly 'org.slf4j:slf4j-simple'
 }
 
 test {

@@ -106,6 +106,9 @@ public final class InspectorTextareaFactory {
     textarea.setCodeFoldingEnabled(true);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
+    textarea.setWhitespaceVisible(true);
+    textarea.setEOLMarkersVisible(true);
+    SpecialCharHighlighter.install(textarea);
     textarea.setEditable(!config.readOnly());
     textarea.setFont(inspectorViewFactory.monospaceFontProvider().getFont());
 

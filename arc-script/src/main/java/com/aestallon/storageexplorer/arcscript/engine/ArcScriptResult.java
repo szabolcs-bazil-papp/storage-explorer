@@ -71,8 +71,90 @@ public sealed interface ArcScriptResult {
       implements InstructionResult {}
 
 
-  record QueryPerformed(String prettyPrint, ResultSet resultSet, long timeTaken)
-      implements InstructionResult {}
+  record QueryPerformed(String prettyPrint, ResultSet resultSet, long timeTaken,
+      PipelineStats pipelineStats)
+      implements InstructionResult {
+
+    public QueryPerformed(String prettyPrint, ResultSet resultSet, long timeTaken) {
+      this(prettyPrint, resultSet, timeTaken, null);
+    }
+
+  }
+
+
+  /**
+   * Per-stage instrumentation of a pipelined query execution.
+   *
+   * <p>
+   * Only attached to a {@link QueryPerformed} result when the executing engine is pipeline-based
+   * and stage timing collection is enabled; {@code null} otherwise.
+   */
+  record PipelineStats(List<StageStats> stages) {
+
+    @Override
+    public String toString() {
+      final var sb = new StringBuilder("Query pipeline stats:\n");
+      for (final var stage : stages) {
+        sb.append(stage).append("\n");
+      }
+      return sb.toString();
+    }
+  }
+
+
+  /**
+   * Instrumentation of a single pipeline stage.
+   *
+   * @param stage the name of the pipeline stage
+   * @param entriesIn number of elements the stage received from its upstream
+   * @param entriesOut number of elements the stage emitted downstream
+   * @param timeTaken nanos elapsed from the stage's first processed element until the stage
+   *     completed; {@code -1} if the stage never received an element
+   * @param earlyTerminated whether the stage stopped exhausting its input before completion:
+   *     either by cancelling its upstream (limit satisfied), or by discarding entries under a
+   *     configured hard cap
+   */
+  record StageStats(String stage, long entriesIn, long entriesOut, long timeTaken, long startedAt,
+      long endedAt,
+      boolean earlyTerminated) {
+
+    @Override
+    public String toString() {
+      final String fName = String.format("%1$-35s", stage);
+      final String entries = String.format("%1$-16s", entriesIn + " -> " + entriesOut);
+      final String started = String.format("%1$-16s", formatDuration(startedAt));
+      final String finished = String.format("%1$-16s", formatDuration(endedAt));
+      final String elapsed = String.format("%1$-16s", formatDuration(timeTaken));
+      final String term = String.format("%1$-16s", earlyTerminated);
+      return """
+          ┌───────────────────────────────────┐
+          │%s│
+          ├───────────────────────────────────┤
+          │Entries          : %s│
+          │Started          : %s│
+          │Finished         : %s│
+          │Time taken       : %s│
+          │Early terminated : %s│
+          └───────────────────────────────────┘""".formatted(fName, entries, started, finished, elapsed, term);
+    }
+
+    public static String formatDuration(long nanos) {
+      long hours = nanos / 3_600_000_000_000L;
+      nanos %= 3_600_000_000_000L;
+
+      long minutes = nanos / 60_000_000_000L;
+      nanos %= 60_000_000_000L;
+
+      long seconds = nanos / 1_000_000_000L;
+      nanos %= 1_000_000_000L;
+
+      // 100 µs precision (5 digits after decimal)
+      long fractional = nanos / 10_000L;
+
+      return String.format("%02d:%02d:%02d.%05d",
+          hours, minutes, seconds, fractional);
+    }
+  }
 
 
   record ColumnDescriptor(String prop, String title) {}
