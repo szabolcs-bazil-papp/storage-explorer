@@ -286,7 +286,7 @@ public class StorageIndexService {
           new ArcScriptQueryEvalResult.Err(new ArcScriptEvalError().msg(iErr.msg()));
       case ArcScriptResult.UnknownError uErr ->
           new ArcScriptQueryEvalResult.Err(new ArcScriptEvalError().msg(uErr.msg()));
-      case ArcScriptResult.Ok(List<ArcScriptResult.InstructionResult> results) -> results.stream()
+      case ArcScriptResult.Ok(var results, var verbose) -> results.stream()
           .filter(it -> it instanceof ArcScriptResult.QueryPerformed)
           .map(ArcScriptResult.QueryPerformed.class::cast)
           .findFirst()

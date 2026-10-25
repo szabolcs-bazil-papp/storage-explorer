@@ -1,28 +1,45 @@
 package com.aestallon.storageexplorer.arcscript.engine;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Objects;
+import com.aestallon.storageexplorer.arcscript.api.ArcInterpreterFlag;
 import com.aestallon.storageexplorer.arcscript.api.ArcScript;
 import com.aestallon.storageexplorer.arcscript.internal.ArcScriptImpl;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import com.aestallon.storageexplorer.arcscript.internal.index.IndexInstructionImpl;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryInstructionImpl;
 import com.aestallon.storageexplorer.arcscript.internal.update.UpdateInstructionImpl;
-import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.service.IndexingStrategy;
-import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 
+/**
+ * Interprets and executes a compiled {@link ArcScript}.
+ *
+ * <p>
+ * Historically this engine inserted an <em>implicit</em> {@code index} instruction before every
+ * type-sourced query, barrier-waiting on a full discovery pass so query engines could draw their
+ * source set from the populated index. Query source acquisition is now streaming
+ * ({@code StorageIndex.find} via {@code QuerySourceResolver}): each query lazily discovers - and
+ * indexes as a side effect - exactly the entries it needs, so no implicit indexing is performed
+ * anymore. Consequences:
+ *
+ * <ul>
+ * <li>script results no longer contain implicit {@code IndexingPerformed} elements; discovery
+ * cost is part of {@link ArcScriptResult.QueryPerformed#timeTaken()},</li>
+ * <li>a query's source set is exactly what discovery finds at execution time - entries deleted
+ * from the storage since a previous indexing run no longer linger in query results,</li>
+ * <li>explicit {@code index} instructions keep working unchanged, and remain useful for warming
+ * the index on demand.</li>
+ * </ul>
+ */
 public class ArcScriptEngine {
 
   private final ArcScriptEngineConfiguration config;
 
   public ArcScriptEngine(ArcScriptEngineConfiguration config) {
-    this.config = config;
+    this.config = Objects.requireNonNull(config, "config cannot be null!");
   }
 
   public ArcScriptResult execute(ArcScript arcScript, StorageInstance storageInstance) {
@@ -35,93 +52,31 @@ public class ArcScriptEngine {
       return ArcScriptResult.empty();
     }
 
-    // we must find missing or incomplete indexing instructions and amend them...
-    record IndexInsert(int idx, ImplicitIndexInstruction instruction) {}
-    final List<IndexInsert> inserts = new ArrayList<>();
-    OUTER:
-    for (int i = 0; i < instructions.size(); i++) {
-      final Instruction instruction = instructions.get(i);
+    final boolean verbose = as.isFlagSet(ArcInterpreterFlag.VERBOSE);
+    for (final Instruction instruction : instructions) {
       if (instruction instanceof IndexInstructionImpl index && index._schemas.isEmpty()) {
         return ArcScriptResult.impermissible("Specify at least one schema for indexing: ", index);
       }
 
       if (instruction instanceof QueryInstructionImpl query) {
-        Set<String> schemas = query._schemas;
-        Set<String> types = query._types;
-        if (schemas.isEmpty()) {
+        if (query._schemas.isEmpty()) {
           return ArcScriptResult.impermissible("Specify at least one schema for query: ", query);
         }
 
-        for (int j = 0; j < i; j++) {
-          final Instruction instruction2 = instructions.get(j);
-          if (instruction2 instanceof IndexInstructionImpl index) {
-            if (index._schemas.equals(schemas) && index._types.equals(types)) {
-              // everything perfectly matches for this query, nothing to be done!
-              continue OUTER;
-            }
-          }
+        if (query._collectionKind != null && query._schemas.size() != 1) {
+          return ArcScriptResult.impermissible(
+              "Specify exactly one schema for a collection query: ",
+              query);
         }
-
-        // here would come a complex implicit indexing check, where we widen the indexing 
-        // instructions not covering the full landscape of later queries, and as a last resort, we 
-        // add an extra, implicit index. I don't have the energy to properly implement that, maybe 
-        // later...
-        final var implicit = new ImplicitIndexInstruction();
-        implicit._schemas.addAll(schemas);
-        implicit._types.addAll(types);
-        inserts.addFirst(new IndexInsert(i, implicit));
       }
     }
-    inserts.forEach(it -> instructions.add(it.idx, it.instruction));
 
     final List<ArcScriptResult.InstructionResult> instructionResults = new ArrayList<>();
     for (final Instruction instruction : instructions) {
       switch (instruction) {
-        case QueryInstructionImpl query -> {
-          final long start = System.nanoTime();
-
-          final IndexingTarget target = new IndexingTarget(query._schemas, query._types);
-          final Set<StorageEntry> entries = storageInstance.index().get(target);
-          final var examiner = storageInstance.examiner();
-          final var condition = query.condition;
-          final var limit = query._limit;
-          final var runningOnFs = StorageInstanceType.FS == storageInstance.type();
-          final var cache = StorageInstanceExaminer.ObjectEntryLookupTable.newInstance();
-          final var res = ConditionEvaluationExecutor.builder(examiner, entries, condition, limit)
-              //.useSemaphore(!runningOnFs)
-              .useCache(cache)
-              .build()
-              .execute();
-          final long end = System.nanoTime();
-
-          final var showColumns = query._columns;
-          final ArcScriptResult.ResultSet resultSet;
-          if (showColumns.isEmpty()) {
-            resultSet = new ArcScriptResult.ResultSet(
-                new ArcScriptResult.ResultSetMeta(Collections.emptyList(), -1L),
-                res.stream().map(ArcScriptResult.QueryResultRow::new).toList());
-          } else {
-            final long renderStart = System.nanoTime();
-            final var columns = showColumns.stream()
-                .map(it -> new ArcScriptResult.ColumnDescriptor(
-                    it.propertyInternal(),
-                    it.displayNameInternal()))
-                .toList();
-            final var rows = QueryResultRowEvaluationExecutor.builder(examiner, res, columns)
-                //.useSemaphore(!runningOnFs)
-                .useCache(cache)
-                .build()
-                .execute();
-            final long renderEnd = System.nanoTime();
-            final var meta = new ArcScriptResult.ResultSetMeta(columns, renderEnd - renderStart);
-            resultSet = new ArcScriptResult.ResultSet(meta, new ArrayList<>(rows));
-          }
-
-          instructionResults.add(new ArcScriptResult.QueryPerformed(
-              query.toString(),
-              resultSet,
-              end - start));
-        }
+        case QueryInstructionImpl query -> instructionResults.add(config.queryEngine.execute(
+            storageInstance,
+            query));
         case IndexInstructionImpl index -> {
           final long start = System.nanoTime();
           final IndexingTarget target = new IndexingTarget(index._schemas, index._types);
@@ -130,7 +85,7 @@ public class ArcScriptEngine {
               .refresh(IndexingStrategy.of(index._strategy), target);
           final long end = System.nanoTime();
           instructionResults.add(new ArcScriptResult.IndexingPerformed(
-              index instanceof ImplicitIndexInstruction,
+              false,
               index._schemas,
               index._types,
               index.toString(),
@@ -143,10 +98,7 @@ public class ArcScriptEngine {
       }
     }
 
-    return new ArcScriptResult.Ok(instructionResults);
+    return ArcScriptResult.ok(instructionResults, verbose);
   }
-
-
-  private static final class ImplicitIndexInstruction extends IndexInstructionImpl {}
 
 }

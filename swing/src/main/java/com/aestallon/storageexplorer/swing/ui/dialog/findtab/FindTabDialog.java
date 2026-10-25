@@ -18,6 +18,8 @@ package com.aestallon.storageexplorer.swing.ui.dialog.findtab;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -69,6 +71,21 @@ public class FindTabDialog extends JDialog {
     setLocationRelativeTo(parent);
   }
 
+  private void onEnter() {
+    TabViewThumbnail selectedValue = null;
+    int selectedIndex = list.getSelectedIndex();
+
+    if (selectedIndex != -1) {
+      selectedValue = list.getSelectedValue();
+    } else if (list.getModel().getSize() > 0) {
+      selectedValue = list.getModel().getElementAt(0);
+    }
+
+    if (selectedValue != null) {
+      processSelection(selectedValue);
+    }
+  }
+
   private void setupKeyBindings() {
     final Action transferToListAction = new AbstractAction() {
       @Override
@@ -84,18 +101,7 @@ public class FindTabDialog extends JDialog {
     final Action enterAction = new AbstractAction() {
       @Override
       public void actionPerformed(ActionEvent e) {
-        TabViewThumbnail selectedValue = null;
-        int selectedIndex = list.getSelectedIndex();
-
-        if (selectedIndex != -1) {
-          selectedValue = list.getSelectedValue();
-        } else if (list.getModel().getSize() > 0) {
-          selectedValue = list.getModel().getElementAt(0);
-        }
-
-        if (selectedValue != null) {
-          processSelection(selectedValue);
-        }
+        onEnter();
       }
     };
 
@@ -128,6 +134,19 @@ public class FindTabDialog extends JDialog {
     query.getActionMap().put(enterActionKey, enterAction);
     list.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(enterKey, enterActionKey);
     list.getActionMap().put(enterActionKey, enterAction);
+
+    list.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        super.mouseClicked(e);
+
+        if (e.getClickCount() < 2 || !SwingUtilities.isLeftMouseButton(e)) {
+          return;
+        }
+
+        onEnter();
+      }
+    });
   }
 
   private void processSelection(TabViewThumbnail selectedValue) {

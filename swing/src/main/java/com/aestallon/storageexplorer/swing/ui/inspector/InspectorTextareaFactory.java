@@ -16,6 +16,8 @@
 package com.aestallon.storageexplorer.swing.ui.inspector;
 
 import java.awt.*;
+import java.awt.event.ItemEvent;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
 import org.fife.ui.rsyntaxtextarea.LinkGeneratorResult;
@@ -27,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.util.Uris;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.PaneAndTextarea;
 import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
@@ -38,6 +41,8 @@ public final class InspectorTextareaFactory {
 
 
   public enum Type { SIMPLE, FANCY }
+
+  private static final String SPECIAL_CHAR_HIGHLIGHT_TAGS_KEY = "specialCharHighlightTags";
 
 
   public record Config(Type type, boolean readOnly, boolean track) {}
@@ -106,6 +111,11 @@ public final class InspectorTextareaFactory {
     textarea.setCodeFoldingEnabled(true);
     textarea.setWrapStyleWord(true);
     textarea.setLineWrap(true);
+    textarea.setWhitespaceVisible(true);
+    textarea.setEOLMarkersVisible(true);
+    textarea.putClientProperty(
+        SPECIAL_CHAR_HIGHLIGHT_TAGS_KEY,
+        SpecialCharHighlighter.install(textarea));
     textarea.setEditable(!config.readOnly());
     textarea.setFont(inspectorViewFactory.monospaceFontProvider().getFont());
 
@@ -119,6 +129,36 @@ public final class InspectorTextareaFactory {
     final var scrollPane = new RTextScrollPane(textarea);
     scrollPane.setMinimumSize(new Dimension(200, 200));
     return new PaneAndTextarea(scrollPane, textarea);
+  }
+
+  /**
+   * A toggle button that turns the whitespace / EOL-marker / special-character markings of
+   * {@code textarea} on and off. The markings are assumed to be on already (as installed by
+   * {@link #createFancy}), so the button starts selected.
+   */
+  public static JToggleButton createSpecialMarkupToggle(final RSyntaxTextArea textarea) {
+    final var button = new JToggleButton(IconProvider.HIGHLIGHTER);
+    button.setSelected(true);
+    button.setToolTipText("Toggle whitespace, EOL and special character markers");
+    button.addItemListener(e -> {
+      final boolean visible = e.getStateChange() == ItemEvent.SELECTED;
+      textarea.setWhitespaceVisible(visible);
+      textarea.setEOLMarkersVisible(visible);
+      if (visible) {
+        textarea.putClientProperty(
+            SPECIAL_CHAR_HIGHLIGHT_TAGS_KEY,
+            SpecialCharHighlighter.install(textarea));
+      } else {
+        @SuppressWarnings("unchecked")
+        final var tags =
+            (List<Object>) textarea.getClientProperty(SPECIAL_CHAR_HIGHLIGHT_TAGS_KEY);
+        if (tags != null) {
+          SpecialCharHighlighter.uninstall(textarea, tags);
+          textarea.putClientProperty(SPECIAL_CHAR_HIGHLIGHT_TAGS_KEY, null);
+        }
+      }
+    });
+    return button;
   }
 
   private void enableUriLinks(StorageEntry storageEntry, RSyntaxTextArea textarea) {

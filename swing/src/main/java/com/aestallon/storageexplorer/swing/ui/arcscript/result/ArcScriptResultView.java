@@ -58,11 +58,11 @@ public sealed interface ArcScriptResultView extends TabView {
   default List<JTextArea> textAreas() {
     return Collections.emptyList();
   }
-  
+
   default TabViewThumbnail thumbnail() {
     return null;
   }
-  
+
   final class Initial extends JPanel implements ArcScriptResultView {
 
     public Initial() {
@@ -82,6 +82,7 @@ public sealed interface ArcScriptResultView extends TabView {
 
   }
 
+
   final class ResultDisplayDiv extends JScrollPane implements ArcScriptResultView {
 
     private final ResultDisplay resultDisplay;
@@ -95,7 +96,7 @@ public sealed interface ArcScriptResultView extends TabView {
     public JComponent asComponent() {
       return this;
     }
-    
+
     public ResultDisplay resultDisplay() {
       return resultDisplay;
     }
@@ -106,10 +107,11 @@ public sealed interface ArcScriptResultView extends TabView {
     }
   }
 
+
   final class ResultDisplay extends JPanel implements ArcScriptResultView {
-    
+
     private final transient StorageId storageId;
-    
+
     public ResultDisplay(ArcScriptResult.Ok result,
                          StorageInstance storageInstance,
                          ArcScriptController controller) {
@@ -119,12 +121,15 @@ public sealed interface ArcScriptResultView extends TabView {
 
       for (int i = 0; i < result.elements().size(); i++) {
         switch (result.elements().get(i)) {
-          case ArcScriptResult.IndexingPerformed ip -> add(new IndexResultPanel(i, ip));
+          case ArcScriptResult.IndexingPerformed ip when (!ip.implicit() || result.verbose()) ->
+              add(new IndexResultPanel(i, ip));
+          case ArcScriptResult.IndexingPerformed ip -> {}
           case ArcScriptResult.QueryPerformed qp -> add(new QueryResultPanel(
               controller,
               i,
               qp,
-              storageInstance));
+              storageInstance,
+              result.verbose()));
         }
       }
     }
@@ -133,7 +138,7 @@ public sealed interface ArcScriptResultView extends TabView {
     public JComponent asComponent() {
       return this;
     }
-    
+
     @Override
     public StorageId storageId() {
       return storageId;
@@ -145,8 +150,8 @@ public sealed interface ArcScriptResultView extends TabView {
         setAlignmentX(LEFT_ALIGNMENT);
 
         final var label = new JLabel((idx + 1) + ". Performed"
-                                     + ((i.implicit() ? " implicit " : " "))
-                                     + "indexing: ");
+            + ((i.implicit() ? " implicit " : " "))
+            + "indexing: ");
         label.putClientProperty("FlatLaf.styleClass", "h2");
         label.setAlignmentX(LEFT_ALIGNMENT);
         label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
@@ -310,28 +315,35 @@ public sealed interface ArcScriptResultView extends TabView {
       public QueryResultPanel(ArcScriptController controller,
                               int idx,
                               ArcScriptResult.QueryPerformed q,
-                              StorageInstance storageInstance) {
+                              StorageInstance storageInstance,
+                              boolean verbose) {
         setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
         setAlignmentX(LEFT_ALIGNMENT);
 
         final var resultSet = q.resultSet();
         final boolean customRender = !resultSet.meta().columns().isEmpty();
 
-        final var label = new JLabel(getQueryPerformedLabel(idx, customRender));
-        label.putClientProperty("FlatLaf.styleClass", "h2");
-        label.setAlignmentX(LEFT_ALIGNMENT);
-        label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
-        add(label);
+        if (verbose) {
+          final var label = new JLabel(getQueryPerformedLabel(idx, customRender));
+          label.putClientProperty("FlatLaf.styleClass", "h2");
+          label.setAlignmentX(LEFT_ALIGNMENT);
+          label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
+          add(label);
+        }
 
-        add(createOperationResultTable(q, false));
+        if (verbose) {
+          add(createOperationResultTable(q, false));
+        }
 
         if (customRender) {
-          final var renderLabel = new JLabel((idx + 1) + "/B. Retrieved columns:");
-          renderLabel.putClientProperty("FlatLaf.styleClass", "h2");
-          renderLabel.setAlignmentX(LEFT_ALIGNMENT);
-          renderLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
-          add(renderLabel);
-          add(createOperationResultTable(q, true));
+          if (verbose) {
+            final var renderLabel = new JLabel((idx + 1) + "/B. Retrieved columns:");
+            renderLabel.putClientProperty("FlatLaf.styleClass", "h2");
+            renderLabel.setAlignmentX(LEFT_ALIGNMENT);
+            renderLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
+            add(renderLabel);
+            add(createOperationResultTable(q, true));
+          }
 
           addExportToolbar(controller, resultSet);
         }

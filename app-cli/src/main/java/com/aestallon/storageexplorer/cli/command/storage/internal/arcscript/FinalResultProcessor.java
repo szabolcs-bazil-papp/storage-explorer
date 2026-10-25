@@ -55,4 +55,17 @@ final class FinalResultProcessor {
     writer.write(result);
   }
 
+  FinalResultProcessor verbose(boolean verbose) {
+    if (!verbose) {
+      return this;
+    }
+
+    return switch (writer) {
+      case InstructionResultWriter.FileWriter f -> this;
+      case InstructionResultWriter.VerboseConsoleWriter vcw -> this;
+      case InstructionResultWriter.ConsoleWriter cw ->
+          new FinalResultProcessor(new InstructionResultWriter.VerboseConsoleWriter(cw.ctx));
+    };
+  }
+
 }

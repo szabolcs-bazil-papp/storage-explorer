@@ -29,10 +29,10 @@ class FileSystemStorageEntryModificationService
 
   @Override
   public StorageEntryModificationResult modify(final StorageEntry storageEntry,
-                                               final String content, 
+                                               final String content,
                                                final ModificationMode mode) {
-    throw new NotImplementedException(
-        "Not yet implemented: FileSystemStorageEntryModificationService.modify(StorageEntry, String, ModificationMode)");
+    throw NotImplementedException.ofMethod(
+        "FileSystemStorageEntryModificationService.modify(StorageEntry, String, ModificationMode)");
   }
 
 }

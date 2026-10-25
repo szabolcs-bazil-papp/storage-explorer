@@ -113,8 +113,8 @@ public class StorageIndexCacheCaffeineSqliteImpl implements StorageIndexCache {
             }
 
           } catch (InterruptedException e) {
+            log.warn("SqliteWriter is interrupted");
             Thread.currentThread().interrupt();
-            log.info("SqliteWriter is interrupted");
             return;
           }
         }

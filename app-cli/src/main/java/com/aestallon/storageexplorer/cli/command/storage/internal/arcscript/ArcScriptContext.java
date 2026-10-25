@@ -17,6 +17,7 @@ package com.aestallon.storageexplorer.cli.command.storage.internal.arcscript;
 
 import java.nio.file.Path;
 import org.springframework.shell.command.CommandContext;
+import com.aestallon.storageexplorer.arcscript.engine.QueryEngineSettings;
 import com.aestallon.storageexplorer.client.asexport.ResultSetExporterFactory;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 
@@ -26,4 +27,5 @@ public record ArcScriptContext(
     StorageInstance storageInstance,
     boolean verbose,
     Path output,
-    ResultSetExporterFactory.Target format) {}
+    ResultSetExporterFactory.Target format,
+    QueryEngineSettings queryEngineSettings) {}

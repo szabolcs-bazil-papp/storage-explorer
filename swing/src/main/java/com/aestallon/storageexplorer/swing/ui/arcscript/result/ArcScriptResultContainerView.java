@@ -105,7 +105,7 @@ public class ArcScriptResultContainerView
   }
 
   @Override
-  public void discardTabView(TabView tabView) {
+  public void discardTabView(TabView tabView, boolean forget) {
     remove(tabView.asComponent());
   }
   

@@ -4,19 +4,57 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.arcscript.api.QueryInstruction;
+import com.aestallon.storageexplorer.arcscript.api.SortInstruction;
+import com.aestallon.storageexplorer.arcscript.api.YieldInstruction;
 import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import groovy.lang.Closure;
 
 public class QueryInstructionImpl implements QueryInstruction, Instruction {
 
+  public enum CollectionSourceKind { LIST, MAP }
+
   public final Set<String> _types = new HashSet<>();
   public final Set<String> _schemas = new HashSet<>();
   public final List<ShowColumn> _columns = new ArrayList<>();
+  public final List<SortInstruction.SortKey> _sortKeys = new ArrayList<>();
+
+  public CollectionSourceKind _collectionKind;
+  public String _collectionName;
 
   public long _limit = -1L;
   public QueryConditionImpl condition;
+
+  private void requireTypeSourcePermitted() {
+    if (_collectionKind != null) {
+      throw new IllegalArgumentException(
+          "Cannot query types: this query already targets a stored collection [ %s %s ]! Specify exactly one of 'a'/'an'/'every', 'list' or 'map' per query."
+              .formatted(_collectionKind.name().toLowerCase(), _collectionName));
+    }
+  }
+
+  private void setCollectionSource(final CollectionSourceKind kind, final String name) {
+    if (name == null || name.isBlank()) {
+      throw new IllegalArgumentException("Collection name cannot be null or blank!");
+    }
+
+    if (_collectionKind != null) {
+      throw new IllegalArgumentException(
+          "This query already targets a stored collection [ %s %s ]! Specify exactly one of 'a'/'an'/'every', 'list' or 'map' per query."
+              .formatted(_collectionKind.name().toLowerCase(), _collectionName));
+    }
+
+    if (!_types.isEmpty()) {
+      throw new IllegalArgumentException(
+          "Cannot query a stored collection: this query already targets types %s! Specify exactly one of 'a'/'an'/'every', 'list' or 'map' per query."
+              .formatted(_types));
+    }
+
+    _collectionKind = kind;
+    _collectionName = name.trim();
+  }
 
   @Override
   public void a(String typeName) {
@@ -27,6 +65,7 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
 
   @Override
   public void every(String... typeNames) {
+    requireTypeSourcePermitted();
     if (typeNames == null || typeNames.length == 0) {
       throw new IllegalArgumentException("typeNames cannot be null or empty");
     }
@@ -42,6 +81,16 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
   }
 
   @Override
+  public void list(String name) {
+    setCollectionSource(CollectionSourceKind.LIST, name);
+  }
+
+  @Override
+  public void map(String name) {
+    setCollectionSource(CollectionSourceKind.MAP, name);
+  }
+
+  @Override
   public void from(String... schemas) {
     if (schemas == null || schemas.length == 0) {
       throw new IllegalArgumentException("schemas cannot be null or empty");
@@ -54,6 +103,10 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
 
       _schemas.add(schema);
     }
+  }
+
+  public String propertyMissing(final String name) {
+    return name;
   }
 
   @Override
@@ -79,6 +132,16 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
   @Override
   public QueryCondition expr(QueryCondition condition) {
     return condition;
+  }
+
+  @Override
+  public QueryCondition e(Closure closure) {
+    return expr(closure);
+  }
+
+  @Override
+  public QueryCondition e(QueryCondition condition) {
+    return expr(condition);
   }
 
   @Override
@@ -113,6 +176,30 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
     }
   }
 
+  @Override
+  public YieldInstruction yield(Closure closure) {
+    final YieldInstructionImpl yieldIns = new YieldInstructionImpl();
+    closure = closure.rehydrate(yieldIns, yieldIns, yieldIns);
+    closure.call();
+
+    this._columns.addAll(yieldIns._columns);
+    return yieldIns;
+  }
+
+  @Override
+  public SortInstruction order(Closure closure) {
+    if (!_sortKeys.isEmpty()) {
+      throw new IllegalArgumentException("Only one order clause is allowed!");
+    }
+
+    final var sort = new SortInstructionImpl();
+    final var code = closure.rehydrate(sort, sort, sort);
+    code.call();
+
+    _sortKeys.addAll(sort._ops.stream().map(SortInstructionImpl.SortOpImpl::asSortKey).toList());
+    return null;
+  }
+
   public static final class ShowColumn implements Column {
     private final String property;
     private String displayName;
@@ -143,7 +230,10 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder("select ");
-    if (_types.isEmpty()) {
+    if (_collectionKind != null) {
+      sb.append(_collectionKind == CollectionSourceKind.LIST ? "list " : "map ")
+          .append(_collectionName).append(" ");
+    } else if (_types.isEmpty()) {
       sb.append("every type ");
     } else if (_types.size() == 1) {
       sb.append("type ").append(_types.iterator().next()).append(" ");
@@ -169,8 +259,23 @@ public class QueryInstructionImpl implements QueryInstruction, Instruction {
     }
     sb.append("where ").append(conditionStr);
 
+    if (!_sortKeys.isEmpty()) {
+      sb.append(" order by ");
+      final var sortList = _sortKeys.stream()
+          .map(it -> it.target() + " " + (it.asc() ? "asc" : "desc")).collect(
+          Collectors.joining(", "));
+      sb.append(sortList);
+    }
     if (_limit > 0) {
       sb.append(" limit ").append(_limit);
+    }
+
+    if (!_columns.isEmpty()) {
+      sb.append(" yield columns ( ");
+      final String columnList = _columns.stream()
+          .map(ShowColumn::displayNameInternal)
+          .collect(Collectors.joining(", "));
+      sb.append(columnList).append( " )");
     }
 
     return sb.toString();

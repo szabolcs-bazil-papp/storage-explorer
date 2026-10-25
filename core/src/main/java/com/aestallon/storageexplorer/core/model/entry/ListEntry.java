@@ -15,7 +15,6 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -28,23 +27,17 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.api.collection.CollectionApi;
-import org.smartbit4all.api.collection.StoredListStorageImpl;
-import org.smartbit4all.core.object.ObjectApi;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.util.Uris;
 
-public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
+public sealed class ListEntry
+    extends AbstractStorageEntry
+    implements StorageEntry
+    permits ScopedListEntry {
 
   private static final Logger log = LoggerFactory.getLogger(ListEntry.class);
-  private final WeakReference<StorageIndex<?>> storageIndex;
-  private final StorageId id;
-  private final Path path;
-  private final URI uri;
-  private final ObjectApi objectApi;
-  protected final CollectionApi collectionApi;
   private final String schema;
   private final String name;
 
@@ -52,15 +45,8 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
-  ListEntry(final StorageIndex<?> storageIndex, StorageId id, Path path, URI uri,
-            ObjectApi objectApi,
-            CollectionApi collectionApi) {
-    this.storageIndex = new WeakReference<>(storageIndex);
-    this.id = id;
-    this.path = path;
-    this.uri = uri;
-    this.objectApi = objectApi;
-    this.collectionApi = collectionApi;
+  ListEntry(StorageIndex<?> storageIndex, Path path, URI uri) {
+    super(storageIndex, path, uri);
 
     final String fullScheme = uri.getScheme();
     this.schema = fullScheme.substring(0, fullScheme.lastIndexOf('-'));
@@ -94,17 +80,14 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
   }
 
   public Optional<ObjectEntryLoadResult.SingleVersion> asSingleVersion() {
-    final var list = impl();
     try {
-      return Optional.of(storageIndex.get().loader().loadExact(list.getUri(), 0));
+      return Optional.of(storageIndex.get().loader().loadExact(uri, 0));
     } catch (Exception e) {
-      log.error(e.getMessage(), e);
+      log.error("Cannot load list [ {} ] as a single object version: [ {} ]",
+          uri, e.getMessage());
+      log.debug(e.getMessage(), e);
       return Optional.empty();
     }
-  }
-
-  protected StoredListStorageImpl impl() {
-    return (StoredListStorageImpl) collectionApi.list(schema, name);
   }
 
   @Override
@@ -181,25 +164,8 @@ public sealed class ListEntry implements StorageEntry permits ScopedListEntry {
     }
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ListEntry listEntry = (ListEntry) o;
-    return Uris.equalIgnoringVersion(uri, listEntry.uri);
-  }
-
   public String displayName() {
     return schema + " / " + name;
-  }
-
-  @Override
-  public int hashCode() {
-    return uri.hashCode();
   }
 
   @Override

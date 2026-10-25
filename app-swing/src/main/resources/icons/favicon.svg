@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+    <!-- teal background -->
+    <circle cx="32" cy="32" r="32" fill="#14919B"/>
+    <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <!-- storage cylinder -->
+        <ellipse cx="28" cy="20" rx="12" ry="4.5"/>
+        <path d="M16 20 V40 A12 4.5 0 0 0 40 40 V20"/>
+        <path d="M16 30 A12 4.5 0 0 0 40 30"/>
+        <!-- magnifier (lens filled to mask the cylinder behind it) -->
+        <circle cx="40" cy="39" r="8" fill="#14919B"/>
+        <path d="M45.7 44.7 L51.5 50.5"/>
+    </g>
+</svg>

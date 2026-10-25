@@ -67,6 +67,7 @@ public class GraphExportService {
       return map;
     });
     exporter.registerAttribute("viz:color", GEXFExporter.AttributeCategory.NODE, GEXFAttributeType.STRING);
+    exporter.registerAttribute("viz:schemacolor", GEXFExporter.AttributeCategory.NODE, GEXFAttributeType.STRING);
     return exporter;
   }
 

@@ -25,8 +25,14 @@ public final class JumpToUri {
   public static void jump(ApplicationEventPublisher eventPublisher,
                           URI uri,
                           StorageInstance storageInstance) {
+    final URI latestUri = Uris.latest(uri);
+    if (Uris.isBinaryData(latestUri)) {
+      BinaryDataDownloader.download(storageInstance, latestUri, null);
+      return;
+    }
+
     CompletableFuture.runAsync(() -> storageInstance
-        .acquire(Uris.latest(uri))
+        .acquire(latestUri)
         .ifPresentOrElse(
             it -> eventPublisher.publishEvent(new EntryAcquired(storageInstance, it)),
             () -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(

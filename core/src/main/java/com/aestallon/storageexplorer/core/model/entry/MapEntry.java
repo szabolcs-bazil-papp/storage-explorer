@@ -15,7 +15,6 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -28,25 +27,19 @@ import java.util.concurrent.locks.ReentrantLock;
 import static java.util.stream.Collectors.toSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.api.collection.CollectionApi;
-import org.smartbit4all.api.collection.StoredMapStorageImpl;
-import org.smartbit4all.core.object.ObjectApi;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
 import com.aestallon.storageexplorer.core.util.Uris;
 
-public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
+public sealed class MapEntry
+    extends AbstractStorageEntry
+    implements StorageEntry
+    permits ScopedMapEntry {
 
   private static final Logger log = LoggerFactory.getLogger(MapEntry.class);
 
-  private final WeakReference<StorageIndex<?>> storageIndex;
-  private final StorageId id;
-  private final Path path;
-  private final URI uri;
-  private final ObjectApi objectApi;
-  protected final CollectionApi collectionApi;
   private final String schema;
   private final String name;
 
@@ -54,14 +47,8 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   private boolean valid = false;
   private Set<UriProperty> uriProperties;
 
-  MapEntry(final StorageIndex<?> storageIndex, StorageId id, Path path, URI uri,
-           ObjectApi objectApi, CollectionApi collectionApi) {
-    this.storageIndex = new WeakReference<>(storageIndex);
-    this.id = id;
-    this.path = path;
-    this.uri = uri;
-    this.objectApi = objectApi;
-    this.collectionApi = collectionApi;
+  MapEntry(StorageIndex<?> storageIndex, Path path, URI uri) {
+    super(storageIndex, path, uri);
 
     final String fullScheme = uri.getScheme();
     this.schema = fullScheme.substring(0, fullScheme.lastIndexOf('-'));
@@ -95,17 +82,14 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   }
 
   public Optional<ObjectEntryLoadResult.SingleVersion> asSingleVersion() {
-    final var map = impl();
     try {
-      return Optional.of(storageIndex.get().loader().loadExact(map.getUri(), 0));
+      return Optional.of(storageIndex.get().loader().loadExact(uri, 0));
     } catch (final Exception e) {
-      log.error(e.getMessage(), e);
+      log.error("Cannot load map [ {} ] as a single object version: {}",
+          uri, e.getMessage());
+      log.debug(e.getMessage(), e);
       return Optional.empty();
     }
-  }
-
-  protected StoredMapStorageImpl impl() {
-    return (StoredMapStorageImpl) collectionApi.map(schema, name);
   }
 
   @Override
@@ -184,23 +168,6 @@ public sealed class MapEntry implements StorageEntry permits ScopedMapEntry {
   public void setUriProperties(Set<UriProperty> uriProperties) {
     this.uriProperties = uriProperties;
     this.valid = true;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    MapEntry mapEntry = (MapEntry) o;
-    return Uris.equalIgnoringVersion(uri, mapEntry.uri);
-  }
-
-  @Override
-  public int hashCode() {
-    return uri.hashCode();
   }
 
   @Override

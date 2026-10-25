@@ -41,6 +41,7 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.swing.ui.arcscript.ArcScriptController;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
+import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptTreeView;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabView;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
@@ -161,7 +162,7 @@ public class ArcScriptView extends JPanel implements TabView {
         storedArcScript.title(),
         storageInstance.name(),
         new TreeEntityLocator(
-            "ArcScript Tree",
+            ArcScriptTreeView.TREE_NAME_ARC_SCRIPTS,
             new ArcScriptSelectorTree.ArcScriptNodeLocator(storageId(), storedArcScript.title())));
   }
 
@@ -233,7 +234,10 @@ public class ArcScriptView extends JPanel implements TabView {
     CompletableFuture.runAsync(() -> {
       controller.eventPublisher().publishEvent(
           new BackgroundWorkStartedEvent(uuid, "Running ArcScript on " + storageInstance.name()));
-      switch (Arc.evaluate(editor.getText(), storageInstance)) {
+      switch (Arc.evaluate(
+          editor.getText(),
+          storageInstance,
+          controller.queryEngineSettings())) {
         case ArcScriptResult.CompilationError cErr -> showCompilationError(cErr);
         case ArcScriptResult.ImpermissibleInstruction iErr ->
             showErr("Impermissible instruction", iErr.msg());

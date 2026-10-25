@@ -28,9 +28,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.userconfig.event.GraphConfigChanged;
 import com.aestallon.storageexplorer.client.userconfig.event.KeymapChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.UmlExportSettingsChanged;
 import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.aestallon.storageexplorer.client.userconfig.model.Keymap;
 import com.aestallon.storageexplorer.client.userconfig.model.StorageLocationSettings;
+import com.aestallon.storageexplorer.client.userconfig.model.UmlExportSettings;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -41,6 +43,7 @@ public class UserConfigService {
   private static final Logger log = LoggerFactory.getLogger(UserConfigService.class);
 
   public static final String GRAPH_SETTINGS = "graph.settings";
+  public static final String UML_EXPORT_SETTINGS = "uml.export.settings";
   public static final String STORAGE_SETTINGS = "storage.settings";
   public static final String KEYMAP_SETTINGS = "keymap.settings";
   public static final String MISC_STATE = "misc.state";
@@ -51,6 +54,7 @@ public class UserConfigService {
   private final ApplicationEventPublisher eventPublisher;
 
   private final AtomicReference<GraphSettings> graphSettings;
+  private final AtomicReference<UmlExportSettings> umlExportSettings;
   private final AtomicReference<StorageLocationSettings> storageLocationSettings;
   private final AtomicReference<Map<String, Keymap>> keymapSettings;
   private final AtomicReference<Map<String, String>> miscState;
@@ -63,6 +67,10 @@ public class UserConfigService {
         GRAPH_SETTINGS,
         new TypeReference<>() {},
         GraphSettings::new));
+    umlExportSettings = new AtomicReference<>(persistenceService.readSettingsAt(
+        UML_EXPORT_SETTINGS,
+        new TypeReference<>() {},
+        UmlExportSettings::new));
     storageLocationSettings = new AtomicReference<>(persistenceService.readSettingsAt(
         STORAGE_SETTINGS,
         new TypeReference<>() {},
@@ -79,6 +87,10 @@ public class UserConfigService {
 
   public GraphSettings graphSettings() {
     return graphSettings.get();
+  }
+
+  public UmlExportSettings umlExportSettings() {
+    return umlExportSettings.get();
   }
 
   public StorageLocationSettings storageLocationSettings() {
@@ -134,8 +146,23 @@ public class UserConfigService {
     eventPublisher.publishEvent(new GraphConfigChanged());
   }
 
+  public void updateUmlExportSettings(final UmlExportSettings umlExportSettings) {
+    final var baseline = umlExportSettings();
+    if (baseline.equals(umlExportSettings)) {
+      return;
+    }
+
+    this.umlExportSettings.set(umlExportSettings);
+    persistenceService.writeSettingsTo(UML_EXPORT_SETTINGS, umlExportSettings);
+    eventPublisher.publishEvent(new UmlExportSettingsChanged());
+  }
+
   public ArcScriptFileService arcScriptFileService() {
     return new ArcScriptFileService(persistenceService.settingsFolder());
+  }
+
+  public TypeInfoRepository typeInfoRepository() {
+    return new TypeInfoRepository(persistenceService.settingsFolder());
   }
 
   public void updateKeymapSettings(Map<String, Keymap> keymapSettings) {
@@ -148,7 +175,7 @@ public class UserConfigService {
     persistenceService.writeSettingsTo(KEYMAP_SETTINGS, keymapSettings);
     eventPublisher.publishEvent(new KeymapChanged());
   }
-  
+
   public void setMostRecentStorageInstanceLoad(StorageId storageId) {
     final var miscStateMap = miscState.updateAndGet(it -> {
       it.put(MOST_RECENT_STORAGE_INSTANCE_LOAD, storageId.toString());
@@ -156,7 +183,7 @@ public class UserConfigService {
     });
     persistenceService.writeSettingsTo(MISC_STATE, miscStateMap);
   }
-  
+
   public Optional<StorageId> getMostRecentStorageInstanceLoad() {
     return Optional.ofNullable(miscState.get().get(MOST_RECENT_STORAGE_INSTANCE_LOAD))
         .map(UUID::fromString)

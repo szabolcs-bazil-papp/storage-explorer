@@ -18,12 +18,15 @@ package com.aestallon.storageexplorer.swing.ui.controller;
 import java.awt.event.ActionListener;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.swing.ui.commander.CommanderView;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
 import com.aestallon.storageexplorer.swing.ui.tree.TreeEntityLocator;
 import com.aestallon.storageexplorer.swing.ui.tree.TreeView;
@@ -60,13 +63,26 @@ public class SideBarController {
   private final ApplicationEventPublisher eventPublisher;
   private final LinkedHashMap<String, TreeViewContext> treeContextByName;
   private final LinkedHashMap<String, CommanderViewContext> commanderContextByName;
-  
+
   private volatile boolean treeMayShow = true;
 
   public SideBarController(ApplicationEventPublisher eventPublisher) {
     this.eventPublisher = eventPublisher;
     this.treeContextByName = new LinkedHashMap<>();
     this.commanderContextByName = new LinkedHashMap<>();
+  }
+
+  @EventListener(LafChanged.class)
+  @Order(1_000)
+  public void onLafChanged(final LafChanged event) {
+    SwingUtilities.invokeLater(() -> {
+      treeContextByName.values().forEach(it -> SwingUtilities.updateComponentTreeUI(it
+          .treeView()
+          .asComponent()));
+      commanderContextByName.values().forEach(it -> SwingUtilities.updateComponentTreeUI(it
+          .commanderView()
+          .asComponent()));
+    });
   }
 
   public void registerTreeView(final TreeView<?, ?> treeView) {
@@ -133,7 +149,11 @@ public class SideBarController {
     if (!treeMayShow) {
       return;
     }
-    
+
+    if (treeContextByName.get(treeView.name()).toggleButton().isSelected()) {
+      return;
+    }
+
     treeContextByName.get(treeView.name()).toggleButton().setSelected(true);
     showTreeViewInternal(treeView);
   }
@@ -163,12 +183,19 @@ public class SideBarController {
     return Optional.ofNullable(treeContextByName.get(name)).map(TreeViewContext::treeView);
   }
 
+  public Optional<? extends TreeView<?, ?>> treeViewContaining(final DefaultMutableTreeNode node) {
+    return treeContextByName.values().stream()
+        .map(TreeViewContext::treeView)
+        .filter(it -> it.hasNode(node))
+        .findFirst();
+  }
+
   public Optional<CommanderView> commanderView(final String name) {
     return Optional
         .ofNullable(commanderContextByName.get(name))
         .map(CommanderViewContext::commanderView);
   }
-  
+
   @SuppressWarnings({"rawtypes", "unchecked"})
   public void select(TreeEntityLocator locator) {
     Optional.ofNullable(treeContextByName.get(locator.treeName()))
@@ -176,5 +203,12 @@ public class SideBarController {
         .map(it -> (TreeView) it)
         .ifPresent(tree -> tree.selectNode(locator.entityLocator()));
   }
+
+  //  @EventListener
+  //  public void clearTreeSelections(TreeSelectionCeased e) {
+  //    SwingUtilities.invokeLater(() ->treeContextByName
+  //        .values()
+  //        .forEach(ctx -> ctx.treeView.clearSelection()));
+  //  }
 
 }

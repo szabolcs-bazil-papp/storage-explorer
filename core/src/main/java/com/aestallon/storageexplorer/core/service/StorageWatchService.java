@@ -6,6 +6,10 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
@@ -17,10 +21,6 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
-import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
 public final class StorageWatchService {
 
@@ -66,7 +66,8 @@ public final class StorageWatchService {
       try {
         return Optional.of(new StorageWatchService(this));
       } catch (IOException e) {
-        log.error(e.getMessage(), e);
+        log.error("Cannot initialise StorageWatchService for [ {} ]", pathToStorage);
+        log.debug(e.getMessage(), e);
         return Optional.empty();
       }
     }
@@ -112,11 +113,12 @@ public final class StorageWatchService {
           return FileVisitResult.SKIP_SUBTREE;
         }
       });
+      log.info("Watched folders in directory subtree at [ {} ]: {}", root, watchKeys.size());
 
     } catch (IOException e) {
-      log.error(e.getMessage(), e);
+      log.error("Could note register directory subtree for [ path: {} ]", root);
+      log.debug(e.getMessage(), e);
     }
-    log.info("Watched folders: {}", watchKeys.size());
   }
 
   void start() {
@@ -201,7 +203,8 @@ public final class StorageWatchService {
     try {
       watchService.close();
     } catch (Exception e) {
-      log.error(e.getMessage(), e);
+      log.error("Could not stop watch service: {}", pathToStorage);
+      log.debug(e.getMessage(), e);
     }
   }
 }

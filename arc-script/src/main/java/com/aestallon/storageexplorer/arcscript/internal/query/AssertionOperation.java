@@ -15,12 +15,24 @@
 
 package com.aestallon.storageexplorer.arcscript.internal.query;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import static java.util.stream.Collectors.joining;
 import com.aestallon.storageexplorer.arcscript.api.QueryCondition;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
@@ -32,8 +44,8 @@ public abstract sealed class AssertionOperation<T> permits
     AssertionOperation.AssertionOperationBool,
     AssertionOperation.AssertionOperationJson,
     AssertionOperation.AssertionOperationNum,
-    AssertionOperation.AssertionOperationList/*,
-    AssertionOperation.AssertionOperationTime*/ {
+    AssertionOperation.AssertionOperationList,
+    AssertionOperation.AssertionOperationTime {
 
   protected final Assertion assertion;
 
@@ -129,10 +141,61 @@ public abstract sealed class AssertionOperation<T> permits
       }
 
       assertion.set(
-          "starts_with",
+          "ends_with",
           value,
           it -> it instanceof StorageInstanceExaminer.StringFound str
                 && str.string().endsWith(value));
+    }
+
+    public void matches(final String regex) {
+      if (regex == null) {
+        throw new IllegalArgumentException("Cannot call str matches with null value!");
+      }
+
+      final Pattern pattern;
+      try {
+        pattern = Pattern.compile(regex);
+      } catch (PatternSyntaxException e) {
+        throw new IllegalArgumentException(
+            "\"%s\" is not a valid regular expression: %s".formatted(regex, e.getMessage()), e);
+      }
+
+      assertion.set(
+          "matches",
+          regex,
+          it -> it instanceof StorageInstanceExaminer.StringFound str
+                && pattern.matcher(str.string()).matches());
+    }
+
+    public StrRangeStart between(final String from) {
+      if (from == null) {
+        throw new IllegalArgumentException(
+            "Cannot use null as a range start for BETWEEN! Try `is null` or `in (null)` instead.");
+      }
+
+      return new StrRangeStart(from);
+    }
+
+    public final class StrRangeStart {
+      private final String from;
+
+      private StrRangeStart(final String from) {
+        this.from = from;
+      }
+
+      public void and(final String to) {
+        if (to == null) {
+          throw new IllegalArgumentException(
+              "Cannot use null as a range end for BETWEEN! Try `is null` or `in (null)` instead.");
+        }
+
+        assertion.set(
+            "between",
+            from + " and " + to,
+            it -> it instanceof StorageInstanceExaminer.StringFound str
+                  && str.string().compareTo(from) >= 0
+                  && str.string().compareTo(to) <= 0);
+      }
     }
   }
 
@@ -226,6 +289,86 @@ public abstract sealed class AssertionOperation<T> permits
           return actualLong == expectedLong;
         }
       };
+    }
+
+    public void is_greater_than(Number value) {
+      assertion.set("is_greater_than", value, it -> {
+        if (!(it instanceof StorageInstanceExaminer.NumberFound n)) {
+          return false;
+        }
+
+        final Number actual = n.number();
+        if (actual instanceof Float || actual instanceof Double) {
+          final double actualDouble = actual.doubleValue();
+          final double expectedDouble = value.doubleValue();
+          return Double.compare(actualDouble, expectedDouble) > 0;
+        } else {
+          final long actualLong = actual.longValue();
+          final long expectedLong = value.longValue();
+          return actualLong > expectedLong;
+        }
+      });
+    }
+
+    public void is_lesser_than(Number value) {
+      assertion.set("is_lesser_than", value, it -> {
+        if (!(it instanceof StorageInstanceExaminer.NumberFound n)) {
+          return false;
+        }
+
+        final Number actual = n.number();
+        if (actual instanceof Float || actual instanceof Double) {
+          final double actualDouble = actual.doubleValue();
+          final double expectedDouble = value.doubleValue();
+          return Double.compare(actualDouble, expectedDouble) < 0;
+        } else {
+          final long actualLong = actual.longValue();
+          final long expectedLong = value.longValue();
+          return actualLong < expectedLong;
+        }
+      });
+    }
+
+    public NumRangeStart between(final Number from) {
+      if (from == null) {
+        throw new IllegalArgumentException(
+            "Cannot use null as a range start for BETWEEN! Try `is null` or `in (null)` instead.");
+      }
+
+      return new NumRangeStart(from);
+    }
+
+    public final class NumRangeStart {
+      private final Number from;
+
+      private NumRangeStart(final Number from) {
+        this.from = from;
+      }
+
+      public void and(final Number to) {
+        if (to == null) {
+          throw new IllegalArgumentException(
+              "Cannot use null as a range end for BETWEEN! Try `is null` or `in (null)` instead.");
+        }
+
+        assertion.set(
+            "between",
+            from + " and " + to,
+            it -> {
+              if (!(it instanceof StorageInstanceExaminer.NumberFound n)) {
+                return false;
+              }
+
+              final Number actual = n.number();
+              if (actual instanceof Float || actual instanceof Double) {
+                final double actualDouble = actual.doubleValue();
+                return actualDouble >= from.doubleValue() && actualDouble <= to.doubleValue();
+              } else {
+                final long actualLong = actual.longValue();
+                return actualLong >= from.longValue() && actualLong <= to.longValue();
+              }
+            });
+      }
     }
   }
 
@@ -356,10 +499,185 @@ public abstract sealed class AssertionOperation<T> permits
   }
 
 
-  //  public static final class AssertionOperationTime extends AssertionOperation<Temporal> {
-  //    public AssertionOperationTime(Assertion assertion) {
-  //      super(assertion);
-  //    }
-  //  }
+  public static final class AssertionOperationTime extends AssertionOperation<String> {
+
+    // Literal DSL arguments are parsed with Java's standard (strict) ISO formatters: a malformed
+    // literal must fail the moment the assertion is built, not at evaluation time.
+    private static final List<Function<String, Temporal>> LITERAL_PARSERS = List.of(
+        ZonedDateTime::parse, OffsetDateTime::parse, LocalDateTime::parse, LocalDate::parse);
+
+    // Discovered values come from arbitrary stored JSON: only LocalDate, LocalDateTime and
+    // OffsetDateTime are attempted here, per the leniency contract of this operation.
+    private static final List<Function<String, Temporal>> DISCOVERED_PARSERS = List.of(
+        OffsetDateTime::parse, LocalDateTime::parse, LocalDate::parse);
+
+    public AssertionOperationTime(Assertion assertion) {
+      super(assertion);
+    }
+
+    private static Optional<Temporal> cascade(
+        final String s,
+        final List<Function<String, Temporal>> parsers) {
+      for (final var parser : parsers) {
+        try {
+          return Optional.of(parser.apply(s));
+        } catch (DateTimeParseException ignored) {
+          // try the next, less specific pattern
+        }
+      }
+      return Optional.empty();
+    }
+
+    private static Temporal parseLiteral(final String raw) {
+      if (raw == null) {
+        throw new IllegalArgumentException(
+            "Cannot use null as a time literal! Try `is null` or `in (null)` instead.");
+      }
+
+      final String s = raw.strip();
+      return cascade(s, LITERAL_PARSERS).orElseThrow(() -> new IllegalArgumentException(
+          "\"%s\" is not a valid ISO-8601 LocalDate, LocalDateTime, OffsetDateTime or ZonedDateTime literal!"
+              .formatted(raw)));
+    }
+
+    private static Optional<Temporal> parseDiscovered(final String raw) {
+      if (raw == null) {
+        return Optional.empty();
+      }
+
+      final String s = raw.strip();
+      final var direct = cascade(s, DISCOVERED_PARSERS);
+      if (direct.isPresent() || s.length() <= 10 || s.charAt(10) != ' ') {
+        return direct;
+      }
+
+      // be lenient about a space used instead of the 'T' date/time separator
+      return cascade(s.substring(0, 10) + 'T' + s.substring(11), DISCOVERED_PARSERS);
+    }
+
+    private static Optional<Temporal> discovered(
+        final StorageInstanceExaminer.PropertyDiscoveryResult it) {
+      return (it instanceof StorageInstanceExaminer.StringFound str)
+          ? parseDiscovered(str.string())
+          : Optional.empty();
+    }
+
+    private static LocalDateTime localDateTime(final Temporal t) {
+      return switch (t) {
+        case LocalDate ld -> ld.atStartOfDay();
+        case LocalDateTime ldt -> ldt;
+        case OffsetDateTime odt -> odt.toLocalDateTime();
+        case ZonedDateTime zdt -> zdt.toLocalDateTime();
+        default -> throw new IllegalArgumentException("Unsupported temporal: " + t);
+      };
+    }
+
+    private static boolean isAbsolute(final Temporal t) {
+      return t instanceof OffsetDateTime || t instanceof ZonedDateTime;
+    }
+
+    private static Instant instant(final Temporal t) {
+      return (t instanceof OffsetDateTime odt) ? odt.toInstant() : ((ZonedDateTime) t).toInstant();
+    }
+
+    // Two absolute points in time (OffsetDateTime / ZonedDateTime) are compared as instants;
+    // otherwise both sides are compared as local (zone-less) date-times, since a LocalDate or a
+    // LocalDateTime literal carries no zone information to reconcile against.
+    private static int compare(final Temporal a, final Temporal b) {
+      return (isAbsolute(a) && isAbsolute(b))
+          ? instant(a).compareTo(instant(b))
+          : localDateTime(a).compareTo(localDateTime(b));
+    }
+
+    @Override
+    protected PropertyPredicate equality(final String value) {
+      final Temporal literal = parseLiteral(value);
+      return it -> discovered(it).filter(d -> compare(d, literal) == 0).isPresent();
+    }
+
+    public void is_lesser_than(final String value) {
+      final Temporal literal = parseLiteral(value);
+      assertion.set(
+          "is_lesser_than",
+          value,
+          it -> discovered(it).filter(d -> compare(d, literal) < 0).isPresent());
+    }
+
+    public void is_greater_than(final String value) {
+      final Temporal literal = parseLiteral(value);
+      assertion.set(
+          "is_greater_than",
+          value,
+          it -> discovered(it).filter(d -> compare(d, literal) > 0).isPresent());
+    }
+
+    public TimeRangeStart between(final String from) {
+      return new TimeRangeStart(from, parseLiteral(from));
+    }
+
+    public final class TimeRangeStart {
+      private final String fromDisplay;
+      private final Temporal from;
+
+      private TimeRangeStart(final String fromDisplay, final Temporal from) {
+        this.fromDisplay = fromDisplay;
+        this.from = from;
+      }
+
+      public void and(final String to) {
+        final Temporal toLiteral = parseLiteral(to);
+        assertion.set(
+            "between",
+            fromDisplay + " and " + to,
+            it -> discovered(it)
+                .filter(d -> compare(d, from) >= 0 && compare(d, toLiteral) <= 0)
+                .isPresent());
+      }
+    }
+
+    public void in_the_day_of(final String value) {
+      final LocalDate day = localDateTime(parseLiteral(value)).toLocalDate();
+      assertion.set(
+          "in_the_day_of",
+          value,
+          it -> discovered(it)
+              .map(d -> localDateTime(d).toLocalDate())
+              .filter(day::equals)
+              .isPresent());
+    }
+
+    public void in_the_hour_of(final String value) {
+      final LocalDateTime hour = localDateTime(parseLiteral(value)).truncatedTo(ChronoUnit.HOURS);
+      assertion.set(
+          "in_the_hour_of",
+          value,
+          it -> discovered(it)
+              .map(d -> localDateTime(d).truncatedTo(ChronoUnit.HOURS))
+              .filter(hour::equals)
+              .isPresent());
+    }
+
+    public void in_the_month_of(final String value) {
+      final LocalDate ref = localDateTime(parseLiteral(value)).toLocalDate();
+      assertion.set(
+          "in_the_month_of",
+          value,
+          it -> discovered(it)
+              .map(d -> localDateTime(d).toLocalDate())
+              .filter(d -> d.getYear() == ref.getYear() && d.getMonth() == ref.getMonth())
+              .isPresent());
+    }
+
+    public void in_the_year_of(final String value) {
+      final int year = localDateTime(parseLiteral(value)).getYear();
+      assertion.set(
+          "in_the_year_of",
+          value,
+          it -> discovered(it)
+              .filter(d -> localDateTime(d).getYear() == year)
+              .isPresent());
+    }
+
+  }
 
 }

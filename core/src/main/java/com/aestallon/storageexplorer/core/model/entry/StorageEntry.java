@@ -23,10 +23,11 @@ import org.smartbit4all.core.utility.StringConstant;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.util.Uris;
 
-public sealed interface StorageEntry permits
-    ListEntry, MapEntry, ObjectEntry,
-    SequenceEntry, ScopedListEntry, ScopedMapEntry,
-    ScopedObjectEntry {
+public sealed interface StorageEntry
+    permits AbstractStorageEntry, GodObjectEntry, ListEntry, MapEntry, ObjectEntry,
+    ObjectReferenceByIdEntry, ScopedListEntry,
+    ScopedMapEntry,
+    ScopedObjectEntry, SequenceEntry {
 
   static String typeNameOf(StorageEntry storageEntry) {
     return switch (storageEntry) {
@@ -34,6 +35,8 @@ public sealed interface StorageEntry permits
       case ListEntry l -> "List";
       case MapEntry m -> "Map";
       case SequenceEntry s -> "Sequence";
+      case GodObjectEntry g -> "God Object (" + g.typeName() + ")";
+      case ObjectReferenceByIdEntry r -> "Reference";
       case ObjectEntry o -> o.typeName();
     };
   }
@@ -41,7 +44,7 @@ public sealed interface StorageEntry permits
   StorageId storageId();
 
   URI uri();
-  
+
   Path path();
 
   Set<UriProperty> uriProperties();
@@ -49,7 +52,7 @@ public sealed interface StorageEntry permits
   void refresh();
 
   boolean valid();
-  
+
   void accept(StorageEntry storageEntry);
 
   default boolean references(StorageEntry that) {
@@ -57,9 +60,9 @@ public sealed interface StorageEntry permits
         .map(it -> it.uri)
         .anyMatch(Uris.equalsIgnoringVersion(that.uri()));
   }
-  
+
   void setUriProperties(Set<UriProperty> uriProperties);
-  
+
   default Set<UriProperty> uriPropertiesStrict() {
     return valid() ? uriProperties() : Collections.emptySet();
   }

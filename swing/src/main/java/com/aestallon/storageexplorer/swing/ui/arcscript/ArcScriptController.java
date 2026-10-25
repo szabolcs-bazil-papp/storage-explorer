@@ -22,16 +22,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.swing.*;
-import javax.swing.filechooser.FileSystemView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
+import com.aestallon.storageexplorer.arcscript.engine.QueryEngineSettings;
 import com.aestallon.storageexplorer.client.asexport.ResultSetExporter;
 import com.aestallon.storageexplorer.client.asexport.ResultSetExporterFactory;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.service.ArcScriptEngineSettingsService;
 import com.aestallon.storageexplorer.client.userconfig.service.ArcScriptFileService;
 import com.aestallon.storageexplorer.client.userconfig.service.StoredArcScript;
 import com.aestallon.storageexplorer.client.userconfig.service.UserConfigService;
@@ -47,11 +49,11 @@ import com.aestallon.storageexplorer.swing.ui.arcscript.result.ArcScriptResultVi
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptSelectorTree;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptTreeView;
 import com.aestallon.storageexplorer.swing.ui.event.ArcScriptViewRenamed;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.event.StorageInstanceRenamed;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.MonospaceFontProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.RSyntaxTextAreaThemeProvider;
+import com.formdev.flatlaf.util.SystemFileChooser;
 
 @Service
 public class ArcScriptController {
@@ -63,6 +65,7 @@ public class ArcScriptController {
   private final StorageInstanceProvider storageInstanceProvider;
   private final ApplicationEventPublisher applicationEventPublisher;
   private final UserConfigService userConfigService;
+  private final ArcScriptEngineSettingsService arcScriptEngineSettingsService;
   private final RSyntaxTextAreaThemeProvider themeProvider;
   private final MonospaceFontProvider monospaceFontProvider;
   private final ArcScriptTextareaFactory arcScriptTextareaFactory;
@@ -74,6 +77,7 @@ public class ArcScriptController {
   public ArcScriptController(final StorageInstanceProvider storageInstanceProvider,
                              final ApplicationEventPublisher applicationEventPublisher,
                              final UserConfigService userConfigService,
+                             final ArcScriptEngineSettingsService arcScriptEngineSettingsService,
                              final RSyntaxTextAreaThemeProvider themeProvider,
                              final MonospaceFontProvider monospaceFontProvider,
                              ArcScriptResultContainerView resultContainerView,
@@ -81,6 +85,7 @@ public class ArcScriptController {
     this.storageInstanceProvider = storageInstanceProvider;
     this.applicationEventPublisher = applicationEventPublisher;
     this.userConfigService = userConfigService;
+    this.arcScriptEngineSettingsService = arcScriptEngineSettingsService;
     this.themeProvider = themeProvider;
     this.monospaceFontProvider = monospaceFontProvider;
     this.resultContainerView = resultContainerView;
@@ -88,6 +93,10 @@ public class ArcScriptController {
     this.resultSetExporterFactory = new ResultSetExporterFactory();
 
     arcScriptTextareaFactory = new ArcScriptTextareaFactory(themeProvider, monospaceFontProvider);
+  }
+
+  public QueryEngineSettings queryEngineSettings() {
+    return arcScriptEngineSettingsService.settings();
   }
 
   public ArcScriptTextareaFactory arcScriptTextareaFactory() {
@@ -277,19 +286,18 @@ public class ArcScriptController {
 
   public void drop(ArcScriptView arcScriptView) {
     arcScriptViews.remove(arcScriptView);
-    log.info("Dropped ArcScriptView {}, size remaining: {}",
+    log.debug("Dropped ArcScriptView {}, size remaining: {}",
         arcScriptView.storedArcScript().title(),
         arcScriptViews.size());
   }
 
 
   public void export(ArcScriptResult.ResultSet resultSet, ResultSetExporterFactory.Target target) {
-    final var fileChooser = new JFileChooser(FileSystemView.getFileSystemView());
-    fileChooser.setDialogType(JFileChooser.SAVE_DIALOG);
+    final var fileChooser = new SystemFileChooser();
     fileChooser.setDialogTitle("Export as " + target);
 
-    final int result = fileChooser.showDialog(null, "Export");
-    if (JFileChooser.APPROVE_OPTION == result) {
+    final int result = fileChooser.showSaveDialog(null);
+    if (SystemFileChooser.APPROVE_OPTION == result) {
       final File selectedFile = fileChooser.getSelectedFile();
       if (selectedFile.isDirectory()) {
         System.err.println("REEEE");

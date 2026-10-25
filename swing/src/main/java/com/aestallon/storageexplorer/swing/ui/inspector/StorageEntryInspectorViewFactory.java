@@ -30,18 +30,23 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.swing.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.ff.FeatureFlag;
 import com.aestallon.storageexplorer.client.graph.event.GraphRenderingRequest;
+import com.aestallon.storageexplorer.client.graph.event.UmlRenderingRequest;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.ObjectReferenceByIdEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
@@ -50,7 +55,7 @@ import com.aestallon.storageexplorer.core.util.Uris;
 import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorController;
 import com.aestallon.storageexplorer.swing.ui.dialog.entrymeta.EntryMetaEditorDialog;
 import com.aestallon.storageexplorer.swing.ui.editor.StorageEntryEditorController;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.swing.ui.event.EntryForgotten;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.JumpToUri;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
@@ -62,6 +67,8 @@ public class StorageEntryInspectorViewFactory {
 
   private record TextAreasByDiffView(ObjectEntryDiffView view, List<JTextArea> textAreas) {}
 
+
+  private static final Logger log = LoggerFactory.getLogger(StorageEntryInspectorViewFactory.class);
 
   private final ApplicationEventPublisher eventPublisher;
   private final StorageInstanceProvider storageInstanceProvider;
@@ -105,9 +112,10 @@ public class StorageEntryInspectorViewFactory {
     return textareaFactory;
   }
 
-  public void dropInspector(final InspectorView<? extends StorageEntry> inspector) {
+  public void dropInspector(final InspectorView<? extends StorageEntry> inspector,
+                            final boolean forget) {
     final var storageEntry = inspector.storageEntry();
-    dropInspector(storageEntry);
+    dropInspector(storageEntry, forget);
   }
 
   ApplicationEventPublisher eventPublisher() {
@@ -129,11 +137,14 @@ public class StorageEntryInspectorViewFactory {
         });
   }
 
-  private void dropInspector(final StorageEntry storageEntry) {
+  private void dropInspector(final StorageEntry storageEntry, final boolean forget) {
     openedDialogs.remove(storageEntry);
     openedInspectors.remove(storageEntry);
     textAreas.remove(storageEntry);
-    trackingService.removeTrackedInspector(storageEntry);
+    trackingService.removeTrackedInspector(storageEntry, forget);
+    if (forget) {
+      eventPublisher.publishEvent(new EntryForgotten(storageEntry));
+    }
   }
 
   public enum InspectorRendering { TAB, DIALOG, NONE }
@@ -156,7 +167,9 @@ public class StorageEntryInspectorViewFactory {
     }
 
     final InspectorView<? extends StorageEntry> inspector;
-    if (storageEntry instanceof ObjectEntry o) {
+    if (storageEntry instanceof ObjectReferenceByIdEntry r) {
+      inspector = new ObjectReferenceByIdInspectorView(r, this);
+    } else if (storageEntry instanceof ObjectEntry o) {
       inspector = new ObjectEntryInspectorView(o, this);
     } else if (storageEntry instanceof ListEntry || storageEntry instanceof MapEntry) {
       inspector = new CollectionEntryInspectorView(storageEntry, this);
@@ -185,7 +198,7 @@ public class StorageEntryInspectorViewFactory {
       @Override
       public void windowClosing(WindowEvent e) {
         super.windowClosing(e);
-        dropInspector(storageEntry);
+        dropInspector(storageEntry, false);
       }
 
     });
@@ -310,6 +323,10 @@ public class StorageEntryInspectorViewFactory {
 
   void addRenderAction(final StorageEntry storageEntry, final JToolBar toolbar) {
     toolbar.add(new AbstractAction(null, IconProvider.GRAPH) {
+      {
+        putValue(SHORT_DESCRIPTION, "Show this entry in the graph view");
+      }
+
       @Override
       public void actionPerformed(ActionEvent e) {
         eventPublisher.publishEvent(new GraphRenderingRequest(storageEntry));
@@ -317,8 +334,25 @@ public class StorageEntryInspectorViewFactory {
     });
   }
 
+  void addRenderTypeAction(final ObjectEntry objectEntry, final JToolBar toolbar) {
+    toolbar.add(new AbstractAction(null, IconProvider.UML) {
+      {
+        putValue(SHORT_DESCRIPTION, "Show this entry's type as a UML diagram");
+      }
+
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        eventPublisher.publishEvent(new UmlRenderingRequest(objectEntry));
+      }
+    });
+  }
+
   void addEditMetaAction(final StorageEntry storageEntry, final JToolBar toolbar) {
     toolbar.add(new AbstractAction(null, IconProvider.EDIT) {
+      {
+        putValue(SHORT_DESCRIPTION, "Edit the name and description of this entry");
+      }
+
       @Override
       public void actionPerformed(ActionEvent e) {
         final var controller = EntryMetaEditorController.newInstance(storageEntry, trackingService);
@@ -330,12 +364,34 @@ public class StorageEntryInspectorViewFactory {
     });
   }
 
+  void addCloseAndForgetAction(final InspectorView<?> inspector, final JToolBar toolBar) {
+    toolBar.add(new AbstractAction(null, IconProvider.NOT_OK) {
+      {
+        putValue(SHORT_DESCRIPTION, "Close this tab and stop tracking this entry");
+      }
+
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        final var container = inspector.container();
+        if (container == null) {
+          return;
+        }
+
+        container.discardTabView(inspector, true);
+      }
+    });
+  }
+
   void addDiffAction(final ObjectEntry objectEntry,
                      final ObjectEntryLoadResult.SingleVersion singleVersion,
                      final long versionNr,
                      final JToolBar toolbar,
                      final Component parent) {
     toolbar.add(new AbstractAction(null, IconProvider.DIFF) {
+      {
+        putValue(SHORT_DESCRIPTION, "Compare this version with the current (head) version");
+      }
+
       @Override
       public void actionPerformed(ActionEvent e) {
         showDiffDialog(objectEntry, singleVersion, versionNr, parent);
@@ -357,6 +413,10 @@ public class StorageEntryInspectorViewFactory {
     }
 
     toolbar.add(new AbstractAction("MODIFY ENTRY") {
+      {
+        putValue(SHORT_DESCRIPTION, "Edit the contents of this entry and save a new version");
+      }
+
       @Override
       public void actionPerformed(ActionEvent e) {
         final var controller = new StorageEntryEditorController(
@@ -396,7 +456,7 @@ public class StorageEntryInspectorViewFactory {
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
         .forEach((entry, dialog) -> {
           dialog.dispose();
-          dropInspector(entry); // just to make sure if the listener is not called.
+          dropInspector(entry, true); // just to make sure if the listener is not called.
         });
   }
 

@@ -1,5 +1,6 @@
 package com.aestallon.storageexplorer.core.model.instance;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Objects;
@@ -140,7 +141,10 @@ public final class StorageInstance {
         publishEvent(new EntryAcquisitionFailed(this, uri));
         yield Optional.empty();
       }
-      case StorageIndex.EntryAcquisitionResult.Present(StorageEntry e) -> Optional.of(e);
+      case StorageIndex.EntryAcquisitionResult.Present(StorageEntry e) -> {
+        publishEvent(new EntryAcquired(this, e));
+        yield Optional.of(e);
+      }
       case StorageIndex.EntryAcquisitionResult.New(StorageEntry entry) -> {
         try {
           // we must refresh the requested entry right away:
@@ -155,7 +159,8 @@ public final class StorageInstance {
             entry.refresh();
           }
         } catch (final Exception e) {
-          log.error(e.getMessage(), e);
+          log.error("Could not verify newly acquired entry [ {} ]: {}", uri, e.getMessage());
+          log.debug(e.getMessage(), e);
           publishEvent(new EntryAcquisitionFailed(this, uri));
           yield Optional.empty();
         }
@@ -188,6 +193,18 @@ public final class StorageInstance {
         yield Optional.of(entry);
       }
     };
+  }
+
+  /**
+   * Loads the raw binary content of a {@code BinaryDataObject} identified by {@code uri}.
+   *
+   * @param uri the {@code URI} of the {@code BinaryDataObject} to load, not null
+   *
+   * @return an {@link Optional} containing an {@link InputStream} over the binary content, or an
+   *     empty {@code Optional} if the object could not be loaded
+   */
+  public Optional<InputStream> loadBinaryData(final URI uri) {
+    return index.loadBinaryData(uri);
   }
 
   public Optional<StorageEntry> discover(final URI uri) {

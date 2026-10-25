@@ -6,6 +6,7 @@ dependencies {
   compileOnly 'org.smartbit4all.platform:api'
   implementation project(':common')
   compileOnly 'org.springframework.boot:spring-boot-starter-web'
+  testImplementation 'org.springframework.boot:spring-boot-starter-web'
   compileOnly 'jakarta.validation:jakarta.validation-api:3.0.2'
 
   compileOnly 'org.smartbit4all.platform:sql'
@@ -19,4 +20,10 @@ dependencies {
   api 'org.graphstream:gs-core:2.0'
   implementation 'org.jgrapht:jgrapht-core:1.5.2'
   implementation 'org.jgrapht:jgrapht-io:1.5.2'
+
+  api files('../lib/prefuse.jar')
+
+  implementation platform('com.fasterxml.jackson:jackson-bom:2.19.4')
+  implementation 'com.fasterxml.jackson.core:jackson-databind'
+  implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
 }

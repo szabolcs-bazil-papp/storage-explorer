@@ -23,6 +23,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -121,7 +122,9 @@ public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends A
             log.warn(e.getMessage(), e);
             Thread.currentThread().interrupt();
           } catch (final Exception e) {
-            log.error(e.getMessage(), e);
+            log.error("Error occurred during evaluation of [ {} ]: {}",
+                entry.uri(), e.getMessage());
+            log.debug(e.getMessage(), e);
           } finally {
             if (semaphore != null) {
               semaphore.release();
@@ -132,7 +135,9 @@ public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends A
       }
 
       log.debug("Awaiting termination of executor...");
-      counter.await();
+      while (!counter.await(2_000L, TimeUnit.MILLISECONDS)) {
+        log.debug("Entries remaining: {}", counter.getCount());
+      }
       log.debug("Executor terminated.");
 
     } catch (Exception e) {

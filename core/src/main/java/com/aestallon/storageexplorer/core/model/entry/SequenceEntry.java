@@ -7,31 +7,22 @@ import java.util.Objects;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.api.collection.CollectionApi;
-import org.smartbit4all.api.collection.StoredSequence;
 import org.smartbit4all.core.utility.StringConstant;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.util.Uris;
+import com.aestallon.storageexplorer.core.service.StorageIndex;
 
-public final class SequenceEntry implements StorageEntry {
+public final class SequenceEntry extends AbstractStorageEntry implements StorageEntry {
 
   private static final Logger log = LoggerFactory.getLogger(SequenceEntry.class);
 
-  private final StorageId id;
-  private final Path path;
-  private final URI uri;
-  private final CollectionApi collectionApi;
   private final String schema;
   private final String name;
 
   private boolean valid = false;
   private long current = -1L;
 
-  SequenceEntry(StorageId id, Path path, URI uri, CollectionApi collectionApi) {
-    this.id = id;
-    this.path = path;
-    this.uri = uri;
-    this.collectionApi = collectionApi;
+  SequenceEntry(StorageIndex<?> index, Path path, URI uri) {
+    super(index, path, uri);
 
     final String fullScheme = uri.getScheme();
     this.schema = fullScheme.substring(0, fullScheme.lastIndexOf('-'));
@@ -97,15 +88,18 @@ public final class SequenceEntry implements StorageEntry {
       return;
     }
 
-    final StoredSequence sequence = collectionApi.sequence(schema, name);
     try {
-      final Long currentBoxed = sequence.current();
-      current = (currentBoxed != null) ? currentBoxed : -1L;
+      current = Long.parseLong(String.valueOf(storageIndex.get()
+          .loader()
+          .loadExact(uri, 0)
+          .objectAsMap()
+          .get("current")));
     } catch (Exception e) {
-      log.error(e.getMessage(), e);
+      log.error("Cannot determine the current value of sequence [ {} ]: {}", uri, e.getMessage());
+      log.debug(e.getMessage(), e);
       current = -1L;
     }
-    
+
     valid = true;
   }
 
@@ -121,20 +115,6 @@ public final class SequenceEntry implements StorageEntry {
   @Override
   public void setUriProperties(Set<UriProperty> uriProperties) {
     // NO OP
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    SequenceEntry that = (SequenceEntry) o;
-    return Uris.equalIgnoringVersion(uri, that.uri);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hashCode(uri);
   }
 
   @Override

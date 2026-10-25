@@ -19,6 +19,7 @@ import javax.swing.*;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.swing.ui.explorer.TabContainer;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabView;
 
 public interface InspectorView<T extends StorageEntry> extends TabView {
@@ -35,5 +36,9 @@ public interface InspectorView<T extends StorageEntry> extends TabView {
   }
 
   void onUserDataChanged(StorageEntryTrackingService.StorageEntryUserData userData);
+
+  void container(TabContainer container);
+
+  TabContainer container();
 
 }

@@ -17,44 +17,19 @@ package com.aestallon.storageexplorer.core.model.entry;
 
 import java.net.URI;
 import java.nio.file.Path;
-import org.smartbit4all.api.collection.CollectionApi;
-import org.smartbit4all.api.collection.StoredMapStorageImpl;
-import org.smartbit4all.core.object.ObjectApi;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.service.StorageIndex;
-import com.aestallon.storageexplorer.core.util.Uris;
 
 public final class ScopedMapEntry extends MapEntry implements ScopedEntry, StorageEntry {
   private final URI scopeUri;
 
-  ScopedMapEntry(final StorageIndex<?> storageIndex, StorageId id, Path path, URI uri, ObjectApi objectApi, CollectionApi collectionApi,
-                 URI scopeUri) {
-    super(storageIndex, id, path, uri, objectApi, collectionApi);
+  ScopedMapEntry(final StorageIndex<?> storageIndex, Path path, URI uri, URI scopeUri) {
+    super(storageIndex, path, uri);
     this.scopeUri = scopeUri;
-  }
-
-  @Override
-  protected StoredMapStorageImpl impl() {
-    return (StoredMapStorageImpl) collectionApi.map(scopeUri, schema(), name());
   }
 
   @Override
   public URI scope() {
     return scopeUri;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) { return true; }
-    if (o == null || getClass() != o.getClass()) { return false; }
-    if (!super.equals(o)) { return false; }
-    ScopedMapEntry that = (ScopedMapEntry) o;
-    return Uris.equalIgnoringVersion(uri(), that.uri());
-  }
-
-  @Override
-  public int hashCode() {
-    return uri().hashCode();
   }
 
 }

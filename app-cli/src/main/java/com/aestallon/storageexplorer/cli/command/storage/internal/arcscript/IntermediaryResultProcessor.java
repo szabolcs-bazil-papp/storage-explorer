@@ -32,6 +32,17 @@ sealed abstract class IntermediaryResultProcessor {
     this.ctx = arcScriptContext;
   }
 
+  protected final IntermediaryResultProcessor verbose(final boolean verbose) {
+    if (!verbose) {
+      return this;
+    }
+
+    return switch (this) {
+      case ConsoleWriter cw -> this;
+      case NoOp noOp -> new ConsoleWriter(ctx);
+    };
+  }
+
   abstract void process(List<ArcScriptResult.InstructionResult> elements);
 
 

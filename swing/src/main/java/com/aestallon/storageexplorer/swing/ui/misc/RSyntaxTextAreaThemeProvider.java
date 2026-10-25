@@ -24,7 +24,7 @@ import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.folding.CurlyFoldParser;
 import org.fife.ui.rsyntaxtextarea.folding.FoldParserManager;
 import org.springframework.stereotype.Service;
-import com.aestallon.storageexplorer.swing.ui.event.LafChanged;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 
 @Service
 public class RSyntaxTextAreaThemeProvider {
@@ -51,8 +51,7 @@ public class RSyntaxTextAreaThemeProvider {
 
   private Theme loadLightTheme() {
     try {
-      return Theme.load(getClass().getResourceAsStream(
-          "/org/fife/ui/rsyntaxtextarea/themes/idea.xml"));
+      return Theme.load(getClass().getResourceAsStream("/rsta/light.xml"));
     } catch (IOException ignored) {
       return null;
     }
@@ -78,8 +77,7 @@ public class RSyntaxTextAreaThemeProvider {
 
   private Theme loadDarkTheme() {
     try {
-      return Theme.load(getClass().getResourceAsStream(
-          "/org/fife/ui/rsyntaxtextarea/themes/dark.xml"));
+      return Theme.load(getClass().getResourceAsStream("/rsta/dark.xml"));
     } catch (IOException ignored) {
       return null;
     }

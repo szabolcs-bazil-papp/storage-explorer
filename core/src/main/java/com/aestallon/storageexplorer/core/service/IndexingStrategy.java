@@ -16,6 +16,7 @@
 package com.aestallon.storageexplorer.core.service;
 
 import java.net.URI;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -28,6 +29,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.common.util.Pair;
+import com.aestallon.storageexplorer.core.model.entry.GodObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
@@ -63,6 +65,35 @@ public interface IndexingStrategy {
   boolean fetchEntries();
 
   Map<URI, StorageEntry> processEntries(Stream<URI> uris, StorageEntryCreator creator);
+
+  /**
+   * Associates the {@link ScopedEntry}s found in the provided batch with the batch's
+   * {@link ObjectEntry} hosts (batch-local: entries outside the batch are not considered on
+   * either side). Shared by the bulk indexing strategies and the streaming
+   * {@code StorageIndex.find} path so their wiring semantics cannot drift.
+   */
+  static void associateScopedEntries(final Collection<StorageEntry> entries) {
+    final Map<String, List<ScopedEntry>> scopedEntries = entries.stream()
+        .filter(ScopedEntry.class::isInstance)
+        .map(ScopedEntry.class::cast)
+        .collect(groupingBy(it -> it.scope().getPath()));
+    if (scopedEntries.isEmpty()) {
+      return;
+    }
+
+    entries.stream()
+        .filter(ObjectEntry.class::isInstance)
+        .filter(it -> !(it instanceof GodObjectEntry))
+        .map(ObjectEntry.class::cast)
+        .forEach(it -> {
+          final var scopedChildren = scopedEntries.get(it.uri().getPath());
+          if (scopedChildren == null) {
+            return;
+          }
+
+          scopedChildren.forEach(it::addScopedEntry);
+        });
+  }
 
   final class NoOpIndexingStrategy implements IndexingStrategy {
 
@@ -102,22 +133,7 @@ public interface IndexingStrategy {
           .map(Pair.onB(StorageEntry.class::cast))
           .collect(Pair.toMap());
 
-      Map<String, List<ScopedEntry>> scopedEntries = map.values().stream()
-          .filter(ScopedEntry.class::isInstance)
-          .map(ScopedEntry.class::cast)
-          .collect(groupingBy(it -> it.scope().getPath()));
-
-      map.values().stream()
-          .filter(ObjectEntry.class::isInstance)
-          .map(ObjectEntry.class::cast)
-          .forEach(it -> {
-            final var scopedChildren = scopedEntries.get(it.uri().getPath());
-            if (scopedChildren == null) {
-              return;
-            }
-
-            scopedChildren.forEach(it::addScopedEntry);
-          });
+      IndexingStrategy.associateScopedEntries(map.values());
       return map;
     }
   }
@@ -136,7 +152,7 @@ public interface IndexingStrategy {
     public Map<URI, StorageEntry> processEntries(Stream<URI> uris, StorageEntryCreator creator) {
       final var map = super.processEntries(uris, creator);
       log.info("Indexing strategy FULL: {} entries indexed", map.size());
-      log.info("Refreshing {} entries...", map.size());
+      log.debug("Refreshing {} entries...", map.size());
       new EntryProcessor.Builder(null, new HashSet<>(map.values()))
           .build()
           .execute()

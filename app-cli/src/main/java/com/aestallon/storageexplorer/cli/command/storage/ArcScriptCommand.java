@@ -29,6 +29,7 @@ import com.aestallon.storageexplorer.cli.command.storage.internal.arcscript.ArcS
 import com.aestallon.storageexplorer.cli.command.storage.internal.arcscript.ScriptProcessingStrategy;
 import com.aestallon.storageexplorer.cli.service.StorageInstanceContext;
 import com.aestallon.storageexplorer.client.asexport.ResultSetExporterFactory;
+import com.aestallon.storageexplorer.client.userconfig.service.ArcScriptEngineSettingsService;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.google.common.base.Strings;
 
@@ -40,9 +41,12 @@ import com.google.common.base.Strings;
 public class ArcScriptCommand {
 
   private final StorageInstanceContext storageInstanceContext;
+  private final ArcScriptEngineSettingsService arcScriptEngineSettingsService;
 
-  public ArcScriptCommand(StorageInstanceContext storageInstanceContext) {
+  public ArcScriptCommand(StorageInstanceContext storageInstanceContext,
+                          ArcScriptEngineSettingsService arcScriptEngineSettingsService) {
     this.storageInstanceContext = storageInstanceContext;
+    this.arcScriptEngineSettingsService = arcScriptEngineSettingsService;
   }
 
   @Command(command = "file", description = "Execute an ArcScript query from a file.")
@@ -56,7 +60,7 @@ public class ArcScriptCommand {
                             arityMin = 1,
                             arityMax = 1,
                             description = "The absolute or relative path to the script file.",
-                            label = "File") Path path,
+                            label = "File") String pathStr,
                         @Option(longNames = "verbose",
                             shortNames = 'v',
                             required = false,
@@ -82,6 +86,16 @@ public class ArcScriptCommand {
                             arityMax = 1,
                             description = "The format in which in the output file should be written (CSV or JSON).",
                             label = "Output File Format") String format) {
+    if (pathStr == null || pathStr.isBlank()) {
+      throw new IllegalArgumentException("File must not be empty or blank.");
+    }
+    final Path path;
+    try {
+      path = Path.of(pathStr).normalize();
+    } catch (final Exception e) {
+      throw new IllegalArgumentException("Invalid file path: [%s]".formatted(pathStr), e);
+    }
+
     if (path == null || !Files.exists(path)) {
       throw new IllegalArgumentException("File does not exist: [%s]".formatted(path));
     }
@@ -158,7 +172,14 @@ public class ArcScriptCommand {
 
     final Path path = Strings.isNullOrEmpty(output) ? null : Path.of(output).normalize();
     ScriptProcessingStrategy
-        .of(new ArcScriptContext(ctx, script, storageInstance, verbose, path, explicitFormat))
+        .of(new ArcScriptContext(
+            ctx,
+            script,
+            storageInstance,
+            verbose,
+            path,
+            explicitFormat,
+            arcScriptEngineSettingsService.settings()))
         .process();
   }
 

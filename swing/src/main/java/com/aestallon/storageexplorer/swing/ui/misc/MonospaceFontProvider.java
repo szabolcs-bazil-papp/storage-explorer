@@ -19,8 +19,11 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseWheelListener;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -29,7 +32,45 @@ import org.springframework.stereotype.Service;
 @Service
 public class MonospaceFontProvider {
 
+  private static final Logger log = LoggerFactory.getLogger(MonospaceFontProvider.class);
+
   public static final int DEFAULT_FONT_SIZE = 12;
+
+  private static final String FONT_DIR = "classpath:/fonts/";
+
+  private static final List<String> FONT_FILES = List.of(
+      "JetBrainsMono-Thin.ttf",
+      "JetBrainsMono-ExtraLight.ttf",
+      "JetBrainsMono-Light.ttf",
+      "JetBrainsMono-Regular.ttf",
+      "JetBrainsMono-Medium.ttf",
+      "JetBrainsMono-SemiBold.ttf",
+      "JetBrainsMono-Bold.ttf",
+      "JetBrainsMono-ExtraBold.ttf",
+      "JetBrainsMono-ThinItalic.ttf",
+      "JetBrainsMono-ExtraLightItalic.ttf",
+      "JetBrainsMono-LightItalic.ttf",
+      "JetBrainsMono-Italic.ttf",
+      "JetBrainsMono-MediumItalic.ttf",
+      "JetBrainsMono-SemiBoldItalic.ttf",
+      "JetBrainsMono-BoldItalic.ttf",
+      "JetBrainsMono-ExtraBoldItalic.ttf",
+      "JetBrainsMonoNL-Thin.ttf",
+      "JetBrainsMonoNL-ExtraLight.ttf",
+      "JetBrainsMonoNL-Light.ttf",
+      "JetBrainsMonoNL-Regular.ttf",
+      "JetBrainsMonoNL-Medium.ttf",
+      "JetBrainsMonoNL-SemiBold.ttf",
+      "JetBrainsMonoNL-Bold.ttf",
+      "JetBrainsMonoNL-ExtraBold.ttf",
+      "JetBrainsMonoNL-ThinItalic.ttf",
+      "JetBrainsMonoNL-ExtraLightItalic.ttf",
+      "JetBrainsMonoNL-LightItalic.ttf",
+      "JetBrainsMonoNL-Italic.ttf",
+      "JetBrainsMonoNL-MediumItalic.ttf",
+      "JetBrainsMonoNL-SemiBoldItalic.ttf",
+      "JetBrainsMonoNL-BoldItalic.ttf",
+      "JetBrainsMonoNL-ExtraBoldItalic.ttf");
 
   private final ResourceLoader resourceLoader;
   private final ApplicationEventPublisher eventPublisher;
@@ -42,10 +83,11 @@ public class MonospaceFontProvider {
     this.eventPublisher = eventPublisher;
     this.fontSize = new AtomicInteger(DEFAULT_FONT_SIZE);
     this.monospace = loadFont().deriveFont((float) fontSize.get());
+    registerFonts();
   }
 
   private Font loadFont() {
-    final Resource r = resourceLoader.getResource("classpath:/fonts/JetBrainsMono-Regular.ttf");
+    final Resource r = resourceLoader.getResource(FONT_DIR + "JetBrainsMono-Regular.ttf");
     if (!r.exists()) {
       throw new RuntimeException("asd");
     }
@@ -53,6 +95,26 @@ public class MonospaceFontProvider {
       return Font.createFont(Font.TRUETYPE_FONT, in);
     } catch (IOException | FontFormatException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private void registerFonts() {
+    final GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+    for (final String fontFile : FONT_FILES) {
+      final Resource r = resourceLoader.getResource(FONT_DIR + fontFile);
+      if (!r.exists()) {
+        log.warn("Font resource not found, skipping: [ {} ]", fontFile);
+        continue;
+      }
+
+      try (final var in = r.getInputStream()) {
+        final Font font = Font.createFont(Font.TRUETYPE_FONT, in);
+        if (!ge.registerFont(font)) {
+          log.warn("Graphics environment rejected font, skipping: [ {} ]", fontFile);
+        }
+      } catch (IOException | FontFormatException e) {
+        log.warn("Could not load font, skipping: [ {} ]", fontFile, e);
+      }
     }
   }
 

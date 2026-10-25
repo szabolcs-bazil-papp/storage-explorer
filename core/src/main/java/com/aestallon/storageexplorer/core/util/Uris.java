@@ -29,6 +29,7 @@ import com.google.common.base.Strings;
 
 public final class Uris {
 
+
   private Uris() {}
 
   private static final Set<String> STORED_COLLECTION_IDENTIFIERS = Set.of(
@@ -38,6 +39,9 @@ public final class Uris {
       StorageEntryFactory.STORED_SEQ_MARKER);
   private static final String REGEX_TIMESTAMP = "/\\d{4}/\\d{1,2}/\\d{1,2}/\\d{1,2}";
   private static final Pattern PATTERN_TIMESTAMP = Pattern.compile(REGEX_TIMESTAMP);
+
+  private static final String REGEX_VERSIONED_URI = "^.*\\.v\\d+$";
+  private static final Pattern PATTERN_VERSIONED_URI = Pattern.compile(REGEX_VERSIONED_URI);
 
   public static boolean equalIgnoringVersion(URI u1, URI u2) {
     return Objects.equals(
@@ -55,6 +59,10 @@ public final class Uris {
 
   public static URI latest(URI uri) {
     final String uriString = uri.toString();
+    if (!PATTERN_VERSIONED_URI.matcher(uriString).matches()) {
+      return uri;
+    }
+
     final int dotIdx = uriString.lastIndexOf('.');
     if (dotIdx > -1) {
       return URI.create(uriString.substring(0, dotIdx));
@@ -78,6 +86,24 @@ public final class Uris {
   public static String getTypeName(final URI uri) {
     final String[] typeElements = uri.getPath().split("/")[1].split("_");
     return typeElements[typeElements.length - 1];
+  }
+
+  private static final String BINARY_DATA_OBJECT_TYPE_NAME = "BinaryDataObject";
+
+  public static boolean isBinaryData(final URI uri) {
+    return BINARY_DATA_OBJECT_TYPE_NAME.equals(getTypeName(uri));
+  }
+
+  private static final String OBJECT_REFERENCE_BY_ID_TYPE_NAME = "ObjectReferenceById";
+
+  /**
+   * Exact, post-parse check: does {@code uri}'s type segment denote an
+   * {@code ObjectReferenceById}? Distinct from the looser {@link #isObjectReferenceById(String)}
+   * substring heuristic below, which only has to decide whether a raw, not-yet-parsed string is
+   * plausibly a navigable URI.
+   */
+  public static boolean isObjectReferenceById(final URI uri) {
+    return OBJECT_REFERENCE_BY_ID_TYPE_NAME.equals(getTypeName(uri));
   }
 
   public static String getUuid(final URI uri) {
@@ -105,7 +131,25 @@ public final class Uris {
   private static boolean containsTimestampPattern(final String input) {
     return PATTERN_TIMESTAMP.matcher(input).find();
   }
-  
+
+  private static boolean isObjectReferenceById(final String input) {
+    return input.contains(":/org_smartbit4all_api_object_bean_ObjectReferenceById");
+  }
+
+  public static URI constructMap(final String schema, final String name) {
+    if (Strings.isNullOrEmpty(schema) || Strings.isNullOrEmpty(name)) {
+      throw new IllegalArgumentException("Both schema and name must be non-empty!");
+    }
+
+    return URI.create(
+        schema + "-collections:" + StorageEntryFactory.STORED_MAP_MARKER + "/" + name + "-s");
+  }
+
+  public static URI constructList(final String schema, final String name) {
+    return URI.create(
+        schema + "-collections:" + StorageEntryFactory.STORED_LIST_MARKER + "/" + name + "-s");
+  }
+
   public static Optional<URI> parseStr(final String s) {
     if (s == null || s.isBlank()) {
       return Optional.empty();
@@ -122,22 +166,24 @@ public final class Uris {
     if (s.endsWith(".") || s.endsWith(".v")) {
       return Optional.empty();
     }
-    
+
     if (Strings.isNullOrEmpty(s.substring(0, s.indexOf(':')))) {
       return Optional.empty();
     }
 
     // must contain a stored collection identifier or a timestamp segment:
-    if (!containsStoredCollectionIdentifier(s) && !containsTimestampPattern(s)) {
+    if (!containsStoredCollectionIdentifier(s)
+        && !containsTimestampPattern(s)
+        && !isObjectReferenceById(s)) {
       return Optional.empty();
     }
 
     try {
-      
+
       return Optional.of(new URI(s));
     } catch (final URISyntaxException e) {
       return Optional.empty();
     }
   }
-  
+
 }

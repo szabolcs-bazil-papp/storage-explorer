@@ -109,7 +109,7 @@ public final class GraphRenderingService {
         .collect(collectingAndThen(toSet(), s -> Map.of(storageEntry, s)));
     int c = 0;
     do {
-      log.info("OUTGOING REFERENCES: loop enter");
+      log.trace("OUTGOING REFERENCES: loop enter");
       refs.forEach(
           (from, tos) -> tos.forEach(it -> nodeAdditionService.add(graph, from, it.a(), it.b())));
 
@@ -128,7 +128,7 @@ public final class GraphRenderingService {
     } while (!Thread.currentThread().isInterrupted()
              && (++c < limit || limit < 0)
              && hasValues(refs));
-    log.info("OUTGOING REFERENCES: loop exit");
+    log.trace("OUTGOING REFERENCES: loop exit");
   }
 
   private void renderIncomingReferences(Graph graph, StorageEntry storageEntry) {
@@ -139,7 +139,7 @@ public final class GraphRenderingService {
             collect(toSet()));
     int c = 0;
     do {
-      log.info("INCOMING REFERENCES: loop enter");
+      log.trace("INCOMING REFERENCES: loop enter");
       Set<StorageEntry> candidates = referrers.values().stream()
           .flatMap(Set::stream)
           .collect(toSet());
@@ -157,7 +157,7 @@ public final class GraphRenderingService {
     } while (!Thread.currentThread().isInterrupted()
              && (++c < limit || limit < 1)
              && hasValues(referrers));
-    log.info("INCOMING REFERENCES: loop exit");
+    log.trace("INCOMING REFERENCES: loop exit");
   }
 
   private static boolean hasValues(Map<?, ? extends Set<?>> m) {
