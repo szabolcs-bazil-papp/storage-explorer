@@ -15,6 +15,7 @@
 
 package com.aestallon.storageexplorer.core.service;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,8 +37,11 @@ import static java.util.stream.Collectors.toSet;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.smartbit4all.api.binarydata.BinaryData;
+import org.smartbit4all.api.binarydata.BinaryDataObject;
 import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.core.object.ObjectApi;
+import org.smartbit4all.core.object.ObjectNode;
 import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.core.event.TypeInfoUpdated;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -207,6 +211,32 @@ public abstract sealed class StorageIndex<T extends StorageIndex<T>>
 
   public Optional<StorageEntry> get(final URI uri) {
     return cache.get(uri);
+  }
+
+  /**
+   * Loads the raw binary content of a {@code BinaryDataObject} identified by {@code uri}.
+   *
+   * <p>
+   * Unlike regular {@link StorageEntry} instances, a {@code BinaryDataObject}'s content is not
+   * JSON and is never kept in the {@link StorageIndexCache} - it is streamed straight from the
+   * underlying platform storage on every call.
+   *
+   * @param uri the {@code URI} of the {@code BinaryDataObject} to load, not null
+   *
+   * @return an {@link Optional} containing an {@link InputStream} over the binary content, or an
+   *     empty {@code Optional} if the object could not be loaded
+   */
+  public Optional<InputStream> loadBinaryData(final URI uri) {
+    try {
+      final ObjectNode node = objectApi.loadLatest(uri);
+      final BinaryDataObject binaryDataObject = node.getObject(BinaryDataObject.class);
+      final BinaryData binaryData = binaryDataObject.getBinaryData();
+      return (binaryData == null) ? Optional.empty() : Optional.of(binaryData.inputStream());
+    } catch (final Exception e) {
+      log.error("Could not load binary data of [ {} ]: {}", uri, e.getMessage());
+      log.debug(e.getMessage(), e);
+      return Optional.empty();
+    }
   }
 
   public Set<StorageEntry> get(final IndexingTarget target) {

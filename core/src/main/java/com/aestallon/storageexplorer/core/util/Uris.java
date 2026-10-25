@@ -88,6 +88,12 @@ public final class Uris {
     return typeElements[typeElements.length - 1];
   }
 
+  private static final String BINARY_DATA_OBJECT_TYPE_NAME = "BinaryDataObject";
+
+  public static boolean isBinaryData(final URI uri) {
+    return BINARY_DATA_OBJECT_TYPE_NAME.equals(getTypeName(uri));
+  }
+
   public static String getUuid(final URI uri) {
     final var pathElements = uri.getPath().split("/");
     return pathElements[pathElements.length - 1];
