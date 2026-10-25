@@ -65,3 +65,7 @@ screens/
 /*.md
 !/README.md
 /.claude/
+
+
+### devlog
+!/devlog_0.6.0/screens
