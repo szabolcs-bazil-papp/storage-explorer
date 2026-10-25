@@ -76,6 +76,9 @@ public final class StorageEntryFactory {
       } else if (uriString.contains(STORED_SEQ_MARKER)) {
         return Optional.of(new SequenceEntry(storageIndex, path, latestUri));
 
+      } else if (Uris.isObjectReferenceById(latestUri)) {
+        return Optional.of(new ObjectReferenceByIdEntry(storageIndex, path, latestUri));
+
       } else {
         return Optional.of(new ObjectEntry(storageIndex, path, latestUri));
 

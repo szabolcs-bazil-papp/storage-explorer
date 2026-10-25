@@ -46,6 +46,7 @@ import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.ObjectReferenceByIdEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
@@ -166,7 +167,9 @@ public class StorageEntryInspectorViewFactory {
     }
 
     final InspectorView<? extends StorageEntry> inspector;
-    if (storageEntry instanceof ObjectEntry o) {
+    if (storageEntry instanceof ObjectReferenceByIdEntry r) {
+      inspector = new ObjectReferenceByIdInspectorView(r, this);
+    } else if (storageEntry instanceof ObjectEntry o) {
       inspector = new ObjectEntryInspectorView(o, this);
     } else if (storageEntry instanceof ListEntry || storageEntry instanceof MapEntry) {
       inspector = new CollectionEntryInspectorView(storageEntry, this);

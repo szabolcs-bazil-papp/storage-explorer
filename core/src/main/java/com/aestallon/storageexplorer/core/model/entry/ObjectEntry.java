@@ -41,7 +41,7 @@ import jakarta.annotation.Nullable;
 public sealed class ObjectEntry
     extends AbstractStorageEntry
     implements StorageEntry
-    permits ScopedObjectEntry, GodObjectEntry {
+    permits ScopedObjectEntry, GodObjectEntry, ObjectReferenceByIdEntry {
 
   public sealed interface Versioning {
 
