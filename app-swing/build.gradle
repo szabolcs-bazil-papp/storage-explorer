@@ -38,6 +38,7 @@ tasks.named('bootJar') {
       'Implementation-Title': project.name,
       'Implementation-Version': project.version)
   }
+  archiveFileName = "storage-explorer-swing-${archiveVersion.get()}.${archiveExtension.get()}"
 }
 
 tasks.named('processResources') {
