@@ -212,6 +212,7 @@ public final class PlantUmlExportService {
             ? union.toString()
             : (union.arity() == PropertyType.Arity.ONE) ? "COMPLEX_UNION" : "[COMPLEX_UNION]";
       }
+      case PropertyType.Record record -> record.toString();
     };
 
     if (type == null || complexVariant >= 0) {

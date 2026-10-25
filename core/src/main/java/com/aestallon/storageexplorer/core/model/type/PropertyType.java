@@ -189,8 +189,54 @@ public sealed interface PropertyType {
             .allMatch(PropertyType.NULL::satisfies);
       }
 
+      if (other instanceof Record r) {
+        return properties.stream().allMatch(p -> p.type().satisfies(r.valueType()));
+      }
+
       if (other instanceof Union u) {
         return checkWithUnion(this, u);
+      }
+
+      return false;
+    }
+  }
+
+
+  record Record(PropertyType valueType, Arity arity) implements PropertyType {
+    @Override
+    public PropertyType withArity(Arity arity) {
+      if (this.arity == arity) {
+        return this;
+      }
+
+      return new Record(valueType, arity);
+    }
+
+    @Override
+    public String toString() {
+      final var sb = new StringBuilder();
+      if (arity == Arity.MANY) {
+        sb.append("[");
+      }
+      sb.append("{ ").append(valueType).append(" }");
+      if (arity == Arity.MANY) {
+        sb.append("]");
+      }
+      return sb.toString();
+    }
+
+    @Override
+    public boolean satisfies(PropertyType other) {
+      if (other instanceof Unknown) {
+        return true;
+      }
+
+      if (other instanceof Union u) {
+        return checkWithUnion(this, u);
+      }
+
+      if (other instanceof Record r) {
+        return valueType.satisfies(r.valueType());
       }
 
       return false;

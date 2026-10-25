@@ -69,6 +69,7 @@ public record EntityType(String name, List<Property> properties)
           .map(it -> collectAssociations(joinDot(prefix, pKey), it))
           .flatMap(Set::stream)
           .collect(Collectors.toSet());
+      case PropertyType.Record record -> collectAssociations(prefix, pKey, record.valueType());
       case PropertyType.Union union -> union.types().stream()
           .map(it -> collectAssociations(prefix, pKey, it))
           .flatMap(Set::stream)

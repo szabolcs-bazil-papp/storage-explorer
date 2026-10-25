@@ -20,6 +20,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import com.aestallon.storageexplorer.core.model.type.NominalType;
+import com.aestallon.storageexplorer.core.model.type.PropertyType;
 
 class YamlSchemaExtractorTest {
 
@@ -75,6 +76,111 @@ class YamlSchemaExtractorTest {
         .returns(NominalType.Primitive.I32, NominalType.ObjProperty::type)
         .returns(false, NominalType.ObjProperty::required);
 
+  }
+
+  @Test
+  void additionalPropertiesWithRef() throws IOException {
+    final var input = """
+        components:
+          schemas:
+            Bar:
+              type: object
+              properties:
+                byId:
+                  type: object
+                  additionalProperties:
+                    $ref: '#/components/schemas/Attribute'""";
+    final var extractor = new YamlSchemaExtractor();
+    final var bar = (NominalType.Obj) extractor.extract(input).get("Bar");
+
+    final var byId = bar.properties().get(0);
+    assertThat(byId.key()).isEqualTo("byId");
+    assertThat(byId.type()).isInstanceOf(NominalType.Record.class);
+    final var record = (NominalType.Record) byId.type();
+    assertThat(record.valueType()).isEqualTo(new NominalType.Ref("Attribute"));
+  }
+
+  @Test
+  void additionalPropertiesWithInlinePrimitive() throws IOException {
+    final var input = """
+        components:
+          schemas:
+            Bar:
+              type: object
+              properties:
+                countsByLabel:
+                  additionalProperties:
+                    type: integer
+                    format: int32""";
+    final var extractor = new YamlSchemaExtractor();
+    final var bar = (NominalType.Obj) extractor.extract(input).get("Bar");
+
+    final var prop = bar.properties().get(0);
+    assertThat(prop.type()).isInstanceOf(NominalType.Record.class);
+    final var record = (NominalType.Record) prop.type();
+    assertThat(record.valueType()).isEqualTo(NominalType.Primitive.I32);
+  }
+
+  @Test
+  void additionalPropertiesTrueYieldsUnknownValuedRecord() throws IOException {
+    final var input = """
+        components:
+          schemas:
+            Bar:
+              type: object
+              properties:
+                anything:
+                  type: object
+                  additionalProperties: true""";
+    final var extractor = new YamlSchemaExtractor();
+    final var bar = (NominalType.Obj) extractor.extract(input).get("Bar");
+
+    final var prop = bar.properties().get(0);
+    assertThat(prop.type()).isInstanceOf(NominalType.Record.class);
+    final var record = (NominalType.Record) prop.type();
+    assertThat(record.valueType()).isInstanceOf(NominalType.Unknown.class);
+  }
+
+  @Test
+  void additionalPropertiesFalseIsNotAMap() throws IOException {
+    final var input = """
+        components:
+          schemas:
+            Bar:
+              type: object
+              properties:
+                sealed:
+                  type: object
+                  additionalProperties: false""";
+    final var extractor = new YamlSchemaExtractor();
+    final var bar = (NominalType.Obj) extractor.extract(input).get("Bar");
+
+    final var prop = bar.properties().get(0);
+    assertThat(prop.type()).isInstanceOf(NominalType.Unknown.class);
+  }
+
+  @Test
+  void additionalPropertiesInsideArrayItems() throws IOException {
+    final var input = """
+        components:
+          schemas:
+            Bar:
+              type: object
+              properties:
+                listOfMaps:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties:
+                      type: string""";
+    final var extractor = new YamlSchemaExtractor();
+    final var bar = (NominalType.Obj) extractor.extract(input).get("Bar");
+
+    final var prop = bar.properties().get(0);
+    assertThat(prop.arity()).isEqualTo(PropertyType.Arity.MANY);
+    assertThat(prop.type()).isInstanceOf(NominalType.Record.class);
+    final var record = (NominalType.Record) prop.type();
+    assertThat(record.valueType()).isEqualTo(NominalType.Primitive.STR);
   }
 
 }

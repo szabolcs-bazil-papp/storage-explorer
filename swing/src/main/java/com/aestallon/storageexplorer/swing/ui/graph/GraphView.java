@@ -279,7 +279,7 @@ public class GraphView extends JPanel {
     final var fileChooser = new SystemFileChooser();
     fileChooser.setDialogTitle("Export as PlantUML");
 
-    final int result = fileChooser.showDialog(this, "Export");
+    final int result = fileChooser.showSaveDialog(this);
     if (SystemFileChooser.APPROVE_OPTION == result) {
       final File selectedFile = fileChooser.getSelectedFile();
       if (selectedFile.isDirectory()) {
