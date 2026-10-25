@@ -129,7 +129,8 @@ public class GraphView extends JPanel {
     discard(true);
 
     final StorageInstance storageInstance = storageInstanceProvider.storageInstanceOf(objectEntry);
-    final var service = new UmlRenderingService(storageInstance, this::onGraphStateChanged);
+    final var service = new UmlRenderingService(
+        storageInstance, this::onGraphStateChanged, nominalTypeService);
     origin = objectEntry;
     service.render(objectEntry);
 

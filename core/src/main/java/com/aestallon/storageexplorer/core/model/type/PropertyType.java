@@ -15,6 +15,7 @@
 
 package com.aestallon.storageexplorer.core.model.type;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,25 @@ public sealed interface PropertyType {
 
   static PropertyType.Union union(PropertyType... types) {
     return new PropertyType.Union(List.of(types), Arity.ONE);
+  }
+
+  /**
+   * Widens {@code type} to also accept {@code null}, flattening into an existing {@link Union}
+   * rather than nesting one, so a property's declared value type and its nullable variant are
+   * treated as "the same uniform type" when matching against a {@link Record}'s {@code valueType}.
+   */
+  private static PropertyType nullable(final PropertyType type) {
+    if (type instanceof Union u) {
+      if (u.types().stream().anyMatch(NULL::equals)) {
+        return u;
+      }
+
+      final var members = new ArrayList<>(u.types());
+      members.add(NULL);
+      return new Union(members, u.arity());
+    }
+
+    return union(type, NULL);
   }
 
   private static boolean checkWithUnion(PropertyType lhs, Union rhs) {
@@ -190,7 +210,8 @@ public sealed interface PropertyType {
       }
 
       if (other instanceof Record r) {
-        return properties.stream().allMatch(p -> p.type().satisfies(r.valueType()));
+        final var nullableValueType = nullable(r.valueType());
+        return properties.stream().allMatch(p -> p.type().satisfies(nullableValueType));
       }
 
       if (other instanceof Union u) {

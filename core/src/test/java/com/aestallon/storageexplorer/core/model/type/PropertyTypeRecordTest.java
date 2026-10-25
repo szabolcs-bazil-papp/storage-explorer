@@ -19,6 +19,10 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import static com.aestallon.storageexplorer.core.model.type.PropertyTest.complex;
+import static com.aestallon.storageexplorer.core.model.type.PropertyType.NULL;
+import static com.aestallon.storageexplorer.core.model.type.PropertyType.STR;
+import static com.aestallon.storageexplorer.core.model.type.PropertyType.union;
 import com.aestallon.storageexplorer.core.model.type.dto.PropertyTypeDto;
 
 class PropertyTypeRecordTest {
@@ -130,6 +134,26 @@ class PropertyTypeRecordTest {
     final var dto = PropertyTypeDto.of(record);
     final var roundTripped = dto.toDomainObject();
     assertThat(roundTripped).isEqualTo(record);
+  }
+
+  @Test
+  @DisplayName("{ a: str } | { b: str, c: str } ~satisfies~> map<str>")
+  void disjointDeFactoMapsShouldSatisfyRecordType() {
+    final var record = recordOf(PropertyType.STR);
+    PropertyType.Union actualType = union(
+        complex(prop("a", STR)),
+        complex(prop("b", STR), prop("c", STR)));
+    assertThat(actualType.satisfies(record)).isTrue();
+  }
+
+  @Test
+  @DisplayName("{ a: str } | { b: str | null, c: str } ~satisfies~> map<str>")
+  void disjointDeFactoMapsShouldSatisfyRecordTypeWithPossibleNullity() {
+    final var record = recordOf(PropertyType.STR);
+    PropertyType.Union actualType = union(
+        complex(prop("a", STR)),
+        complex(prop("b", union(STR, NULL)), prop("c", STR)));
+    assertThat(actualType.satisfies(record)).isTrue();
   }
 
 }

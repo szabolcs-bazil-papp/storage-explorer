@@ -10,10 +10,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.client.userconfig.model.UmlExportSettings;
+import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.client.util.OpResult;
 import com.aestallon.storageexplorer.common.util.NotImplementedException;
 import com.aestallon.storageexplorer.core.model.type.Association;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
+import com.aestallon.storageexplorer.core.model.type.NominalType;
 import com.aestallon.storageexplorer.core.model.type.Property;
 import com.aestallon.storageexplorer.core.model.type.PropertyType;
 import com.aestallon.storageexplorer.core.model.type.StructuredType;
@@ -67,15 +69,17 @@ public final class PlantUmlExportService {
   private final Set<StructuredType> entities;
   private final Set<Association> associations;
   private final UmlExportSettings settings;
+  private final NominalTypeService nominalTypeService;
   private int internalTypeNum = 0;
 
 
 
   PlantUmlExportService(Set<StructuredType> entities, Set<Association> associations,
-                        UmlExportSettings settings) {
+                        UmlExportSettings settings, NominalTypeService nominalTypeService) {
     this.entities = entities;
     this.associations = associations;
     this.settings = settings;
+    this.nominalTypeService = nominalTypeService;
   }
 
   OpResult exportEntityRelationshipDiagram(final Path target) {
@@ -146,9 +150,10 @@ public final class PlantUmlExportService {
         yield ref.toString();
       }
       case PropertyType.Complex complex -> {
+        final var legibleName = legibleTypeName(hostEntity.name(), propPath, complex);
         final var dataClass = new PumlComplex(
             symbolicName(hostEntity.name(), propPath, complexVariant),
-            typify(hostEntity.name(), propPath),
+            legibleName,
             new ArrayList<>());
         if (settings.isDetailComplexProps()) {
           diagram.dataClasses.add(dataClass);
@@ -193,7 +198,7 @@ public final class PlantUmlExportService {
                 innerP,
                 -1);
           }
-          yield complexVariant < 0 ? typify(hostEntity.name(), propPath) : null;
+          yield complexVariant < 0 ? legibleName : null;
         }
       }
       case PropertyType.Union union -> {
@@ -336,6 +341,36 @@ public final class PlantUmlExportService {
         .map(PlantUmlExportService::capitalise)
         .collect(Collectors.joining("_"));
     return variant >= 0 ? raw + "_v" + variant : raw;
+  }
+
+  /**
+   * Prefers the name of the declared nominal type the given discovered {@code complex} shape
+   * {@link PropertyType#satisfies(PropertyType) satisfies}, if one is known for this
+   * {@code entityName}/{@code propPath}, over the synthetic {@code Entity.PropPath} label
+   * produced by {@link #typify(String, String)}.
+   */
+  private String legibleTypeName(final String entityName,
+                                 final String propPath,
+                                 final PropertyType.Complex complex) {
+    final var nominalName = matchingNominalTypeName(entityName, propPath, complex);
+    return nominalName != null ? nominalName : typify(entityName, propPath);
+  }
+
+  private String matchingNominalTypeName(final String entityName,
+                                         final String propPath,
+                                         final PropertyType.Complex complex) {
+    if (nominalTypeService == null) {
+      return null;
+    }
+
+    return nominalTypeService.get(entityName)
+        .map(root -> root instanceof NominalType.Obj obj ? obj : null)
+        .flatMap(obj -> nominalTypeService.getProperty(obj, propPath))
+        .filter(pair -> !(pair.b().type() instanceof NominalType.Unknown))
+        .filter(pair -> complex.satisfies(
+            nominalTypeService.asPropertyType(pair.a().typeName(), pair.b())))
+        .map(pair -> pair.b().type().typeName())
+        .orElse(null);
   }
 
 }
