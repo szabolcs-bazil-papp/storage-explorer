@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import com.aestallon.storageexplorer.client.BatchLoaderExecutor;
 import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.userconfig.model.UmlExportSettings;
+import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.client.util.OpResult;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
@@ -53,14 +54,17 @@ public final class UmlRenderingService {
   private final Graph graph;
   private final Map<String, Node> nodesByTypeName;
   private final StorageInstanceExaminer.ObjectEntryLookupTable cache;
+  private final NominalTypeService nominalTypeService;
 
   private String originTypename;
 
 
   public UmlRenderingService(final StorageInstance storageInstance,
-                             final Consumer<GraphState> graphStateListener) {
+                             final Consumer<GraphState> graphStateListener,
+                             final NominalTypeService nominalTypeService) {
     this.storageInstance = storageInstance;
     this.graphStateListener = graphStateListener;
+    this.nominalTypeService = nominalTypeService;
     typesByTypeName = new HashMap<>();
     assocationsBySourceTypeName = new HashMap<>();
     instanceCandidatesByTypeName = new HashMap<>();
@@ -179,7 +183,7 @@ public final class UmlRenderingService {
                                                   final UmlExportSettings settings) {
     final var types = new HashSet<>(typesByTypeName.values());
     final var associations = new HashSet<>(assocationsBySourceTypeName.values());
-    return new PlantUmlExportService(types, associations, settings)
+    return new PlantUmlExportService(types, associations, settings, nominalTypeService)
         .exportEntityRelationshipDiagram(target);
   }
 

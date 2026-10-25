@@ -280,6 +280,7 @@ public class StructuredTypeRenderer extends AbstractShapeRenderer {
       case PropertyType.Complex c -> c.properties().isEmpty() ? "{ }" : "{ ... }";
       case PropertyType.Union union ->
           union.types().stream().map(this::formatType).collect(Collectors.joining(" | "));
+      case PropertyType.Record record -> "map<" + formatType(record.valueType()) + ">";
       case PropertyType.EmptyArray e -> "?";
       case null, default -> "unknown";
     };

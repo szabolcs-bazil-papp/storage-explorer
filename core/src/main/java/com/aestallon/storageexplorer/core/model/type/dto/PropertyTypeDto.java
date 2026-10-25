@@ -57,6 +57,10 @@ public class PropertyTypeDto {
             .toList());
         dto.setTag(PropertyTypeTag.UNION);
       }
+      case PropertyType.Record r -> {
+        dto.setrValueType(PropertyTypeDto.of(r.valueType()));
+        dto.setTag(PropertyTypeTag.RECORD);
+      }
       case PropertyType.EmptyArray e -> dto.setTag(PropertyTypeTag.EMPTY_ARRAY);
       case PropertyType.Unknown u -> dto.setTag(PropertyTypeTag.UNKNOWN);
     }
@@ -70,6 +74,7 @@ public class PropertyTypeDto {
   private String rType;
   private List<PropertyTypeDto> uMembers = new ArrayList<>();
   private List<PropertyDto> cProps = new ArrayList<>();
+  private PropertyTypeDto rValueType;
 
   public PropertyTypeDto() {}
 
@@ -103,6 +108,7 @@ public class PropertyTypeDto {
             .toList();
         yield new PropertyType.Union(members, pArity);
       }
+      case RECORD -> new PropertyType.Record(rValueType.toDomainObject(), pArity);
       case EMPTY_ARRAY -> new PropertyType.EmptyArray();
       case UNKNOWN ->  PropertyType.UNKNOWN;
     };
@@ -170,6 +176,16 @@ public class PropertyTypeDto {
     this.cProps = cProps;
   }
 
+  @JsonProperty("rValueType")
+  public PropertyTypeDto getrValueType() {
+    return rValueType;
+  }
+
+  @JsonProperty("rValueType")
+  public void setrValueType(PropertyTypeDto rValueType) {
+    this.rValueType = rValueType;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass())
@@ -177,12 +193,13 @@ public class PropertyTypeDto {
     PropertyTypeDto that = (PropertyTypeDto) o;
     return tag == that.tag && arity == that.arity && pVariant == that.pVariant
         && Objects.equals(rType, that.rType) && Objects.equals(uMembers,
-        that.uMembers) && Objects.equals(cProps, that.cProps);
+        that.uMembers) && Objects.equals(cProps, that.cProps)
+        && Objects.equals(rValueType, that.rValueType);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(tag, arity, pVariant, rType, uMembers, cProps);
+    return Objects.hash(tag, arity, pVariant, rType, uMembers, cProps, rValueType);
   }
 
   @Override
@@ -194,6 +211,7 @@ public class PropertyTypeDto {
         ",\n  rType: " + rType +
         ",\n  uMembers: " + uMembers +
         ",\n  cProps: " + cProps +
+        ",\n  rValueType: " + rValueType +
         "\n}";
   }
 }

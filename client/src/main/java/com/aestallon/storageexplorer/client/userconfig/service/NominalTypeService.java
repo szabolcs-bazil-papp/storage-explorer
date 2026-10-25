@@ -212,30 +212,36 @@ public class NominalTypeService {
                                           Map<String, PropertyType.Complex> nascentComplexTypes) {
     final var arity = nominalProp.arity();
     final var required = nominalProp.required();
-    final NominalType nominalType = nominalProp.type();
-    PropertyType structuralType = switch (nominalType) {
-      case NominalType.Primitive primitive -> switch (primitive) {
-        case F32, F64, I32, I64, NUM -> PropertyType.NUM;
-        case STR, DATE, TIME, UUID -> PropertyType.STR;
-        case BOOL -> PropertyType.BOOL;
-        case URI -> new PropertyType.Ref("?", arity);
-      };
-      case NominalType.Enumeration e -> PropertyType.STR;
-      case NominalType.Unknown u -> PropertyType.UNKNOWN;
-      case NominalType.Ref(var target) -> target == null
-          ? new PropertyType.Complex(Collections.emptyList(), arity)
-          : asPropertyType(target, nascentComplexTypes);
-      case NominalType.Obj obj -> {
-        log.warn("Huh? {} on {}", obj, nominalProp);
-        yield asPropertyType(obj.typeName(), nascentComplexTypes);
-      }
-    };
-
-    structuralType = structuralType.withArity(arity);
+    PropertyType structuralType =
+        toStructuralType(nominalProp.type(), nascentComplexTypes).withArity(arity);
     if (!required) {
       structuralType = PropertyType.union(structuralType, PropertyType.NULL);
     }
 
     return structuralType;
+  }
+
+  private PropertyType toStructuralType(final NominalType nominalType,
+                                        final Map<String, PropertyType.Complex> nascentComplexTypes) {
+    return switch (nominalType) {
+      case NominalType.Primitive primitive -> switch (primitive) {
+        case F32, F64, I32, I64, NUM -> PropertyType.NUM;
+        case STR, DATE, TIME, UUID -> PropertyType.STR;
+        case BOOL -> PropertyType.BOOL;
+        case URI -> new PropertyType.Ref("?", PropertyType.Arity.ONE);
+      };
+      case NominalType.Enumeration e -> PropertyType.STR;
+      case NominalType.Unknown u -> PropertyType.UNKNOWN;
+      case NominalType.Ref(var target) -> target == null
+          ? new PropertyType.Complex(Collections.emptyList(), PropertyType.Arity.ONE)
+          : asPropertyType(target, nascentComplexTypes);
+      case NominalType.Obj obj -> {
+        log.warn("Huh? {} on {}", obj, nominalType);
+        yield asPropertyType(obj.typeName(), nascentComplexTypes);
+      }
+      case NominalType.Record(var valueType) -> new PropertyType.Record(
+          toStructuralType(valueType, nascentComplexTypes),
+          PropertyType.Arity.ONE);
+    };
   }
 }

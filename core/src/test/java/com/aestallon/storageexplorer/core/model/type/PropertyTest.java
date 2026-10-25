@@ -26,7 +26,7 @@ class PropertyTest {
     return new Property(name, type);
   }
 
-  private static PropertyType complex(final Property... properties) {
+  static PropertyType complex(final Property... properties) {
     return PropertyType.ofComplex(properties);
   }
 

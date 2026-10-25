@@ -129,7 +129,8 @@ public class GraphView extends JPanel {
     discard(true);
 
     final StorageInstance storageInstance = storageInstanceProvider.storageInstanceOf(objectEntry);
-    final var service = new UmlRenderingService(storageInstance, this::onGraphStateChanged);
+    final var service = new UmlRenderingService(
+        storageInstance, this::onGraphStateChanged, nominalTypeService);
     origin = objectEntry;
     service.render(objectEntry);
 
@@ -279,7 +280,7 @@ public class GraphView extends JPanel {
     final var fileChooser = new SystemFileChooser();
     fileChooser.setDialogTitle("Export as PlantUML");
 
-    final int result = fileChooser.showDialog(this, "Export");
+    final int result = fileChooser.showSaveDialog(this);
     if (SystemFileChooser.APPROVE_OPTION == result) {
       final File selectedFile = fileChooser.getSelectedFile();
       if (selectedFile.isDirectory()) {

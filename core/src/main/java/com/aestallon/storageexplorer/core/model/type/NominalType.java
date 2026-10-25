@@ -156,6 +156,18 @@ public sealed interface NominalType {
     }
   }
 
+  record Record(NominalType valueType) implements NominalType {
+    @Override
+    public String typeName() {
+      return "map<" + valueType.typeName() + ">";
+    }
+
+    @Override
+    public String description() {
+      return "Map-like object; every property value is of type " + valueType.typeName() + ".";
+    }
+  }
+
   record Unknown() implements NominalType, Root {
     @Override
     public String typeName() {

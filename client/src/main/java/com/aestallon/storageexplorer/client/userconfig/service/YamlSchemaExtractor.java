@@ -154,12 +154,25 @@ public final class YamlSchemaExtractor {
     String type = node.path(YAML_PROP_TYPE).asText(null);
     String format = node.path(YAML_PROP_FORMAT).asText(null);
 
-    // Inline anonymous object
-    if (YAML_VALUE_OBJECT.equals(type) || (type == null && node.has(YAML_PROP_PROPERTIES))) {
-      return unknown();
+    // Map-shaped node (OpenAPI additionalProperties) - must be checked before the generic
+    // inline-object fallback below, since a map can be declared either as
+    // `type: object, additionalProperties: ...` or with `type` omitted entirely.
+    if (!node.has(YAML_PROP_PROPERTIES)) {
+      JsonNode additionalProperties = node.path("additionalProperties");
+      if (!additionalProperties.isMissingNode() && !additionalProperties.isNull()) {
+        if (additionalProperties.isBoolean()) {
+          // `additionalProperties: true` -> map of unknown-typed values; `: false` means "no
+          // extra properties allowed", which is not a map shape at all.
+          return additionalProperties.asBoolean()
+              ? new NominalType.Record(unknown())
+              : unknown();
+        }
+        return new NominalType.Record(resolveType(additionalProperties));
+      }
     }
 
-    if (!node.path("additionalProperties").isMissingNode()) {
+    // Inline anonymous object
+    if (YAML_VALUE_OBJECT.equals(type) || (type == null && node.has(YAML_PROP_PROPERTIES))) {
       return unknown();
     }
 
