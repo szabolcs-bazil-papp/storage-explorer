@@ -28,6 +28,7 @@ import javax.swing.border.EmptyBorder;
 import org.fife.rsta.ui.search.FindDialog;
 import org.fife.rsta.ui.search.SearchEvent;
 import org.fife.rsta.ui.search.SearchListener;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
@@ -254,6 +255,9 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
             findAction,
             KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK),
             JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+      }
+      if (pane.textArea() instanceof RSyntaxTextArea rSyntaxTextArea) {
+        toolbar.add(InspectorTextareaFactory.createSpecialMarkupToggle(rSyntaxTextArea));
       }
       ObjectEntryInspectorView.this.textAreas.add(pane.textArea());
       box2.add(pane.scrollPane());

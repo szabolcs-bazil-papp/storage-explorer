@@ -196,4 +196,7 @@ public final class IconProvider {
   public static final FlatSVGIcon LINK = new IconFactory("link", IconColour.BLUE).create();
   public static final FlatSVGIcon PUML = new IconFactory("plantuml", null).create();
 
+  public static final FlatSVGIcon HIGHLIGHTER = new IconFactory("highlighter", IconColour.ORANGE)
+      .create();
+
 }

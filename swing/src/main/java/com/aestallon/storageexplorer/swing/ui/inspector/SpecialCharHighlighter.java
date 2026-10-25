@@ -11,7 +11,9 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Shape;
 import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -64,12 +66,13 @@ public final class SpecialCharHighlighter {
   }
 
   /** Installs highlights for the default character set. */
-  public static void install(RSyntaxTextArea textArea) {
-    install(textArea, defaultStyles());
+  public static List<Object> install(RSyntaxTextArea textArea) {
+    return install(textArea, defaultStyles());
   }
 
   /** Installs highlights for a caller-supplied character/style map. */
-  public static void install(RSyntaxTextArea textArea, Map<Character, SpecialCharStyle> styles) {
+  public static List<Object> install(RSyntaxTextArea textArea,
+                                     Map<Character, SpecialCharStyle> styles) {
     String text;
     try {
       text = textArea.getDocument().getText(0, textArea.getDocument().getLength());
@@ -79,6 +82,7 @@ public final class SpecialCharHighlighter {
     }
 
     Highlighter highlighter = textArea.getHighlighter();
+    List<Object> tags = new ArrayList<>();
 
     for (int i = 0; i < text.length(); i++) {
       SpecialCharStyle style = styles.get(text.charAt(i));
@@ -86,11 +90,21 @@ public final class SpecialCharHighlighter {
         continue;
       }
       try {
-        highlighter.addHighlight(i, i + 1, new SpecialCharPainter(style));
+        tags.add(highlighter.addHighlight(i, i + 1, new SpecialCharPainter(style)));
       } catch (BadLocationException e) {
         // Can't happen: offsets come directly from the text we just read.
         throw new IllegalStateException(e);
       }
+    }
+
+    return tags;
+  }
+
+  /** Removes highlights previously installed via {@link #install(RSyntaxTextArea)}. */
+  public static void uninstall(RSyntaxTextArea textArea, List<Object> tags) {
+    Highlighter highlighter = textArea.getHighlighter();
+    for (Object tag : tags) {
+      highlighter.removeHighlight(tag);
     }
   }
 
