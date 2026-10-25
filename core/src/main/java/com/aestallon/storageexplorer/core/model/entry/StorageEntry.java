@@ -24,7 +24,8 @@ import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.util.Uris;
 
 public sealed interface StorageEntry
-    permits AbstractStorageEntry, GodObjectEntry, ListEntry, MapEntry, ObjectEntry, ScopedListEntry,
+    permits AbstractStorageEntry, GodObjectEntry, ListEntry, MapEntry, ObjectEntry,
+    ObjectReferenceByIdEntry, ScopedListEntry,
     ScopedMapEntry,
     ScopedObjectEntry, SequenceEntry {
 
@@ -35,6 +36,7 @@ public sealed interface StorageEntry
       case MapEntry m -> "Map";
       case SequenceEntry s -> "Sequence";
       case GodObjectEntry g -> "God Object (" + g.typeName() + ")";
+      case ObjectReferenceByIdEntry r -> "Reference";
       case ObjectEntry o -> o.typeName();
     };
   }

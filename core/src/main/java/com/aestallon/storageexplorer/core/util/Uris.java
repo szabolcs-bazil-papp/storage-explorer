@@ -94,6 +94,18 @@ public final class Uris {
     return BINARY_DATA_OBJECT_TYPE_NAME.equals(getTypeName(uri));
   }
 
+  private static final String OBJECT_REFERENCE_BY_ID_TYPE_NAME = "ObjectReferenceById";
+
+  /**
+   * Exact, post-parse check: does {@code uri}'s type segment denote an
+   * {@code ObjectReferenceById}? Distinct from the looser {@link #isObjectReferenceById(String)}
+   * substring heuristic below, which only has to decide whether a raw, not-yet-parsed string is
+   * plausibly a navigable URI.
+   */
+  public static boolean isObjectReferenceById(final URI uri) {
+    return OBJECT_REFERENCE_BY_ID_TYPE_NAME.equals(getTypeName(uri));
+  }
+
   public static String getUuid(final URI uri) {
     final var pathElements = uri.getPath().split("/");
     return pathElements[pathElements.length - 1];

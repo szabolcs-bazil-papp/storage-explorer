@@ -21,6 +21,7 @@ import com.aestallon.storageexplorer.core.model.entry.GodObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.ObjectReferenceByIdEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedListEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedMapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedObjectEntry;
@@ -129,6 +130,7 @@ public final class IconProvider {
       case ObjectEntry object -> switch (object) {
         case ScopedObjectEntry scoped -> SCOPED_OBJ;
         case GodObjectEntry god -> GOD_OBJ;
+        case ObjectReferenceByIdEntry ref -> LINK;
         default -> OBJ;
       };
       case SequenceEntry seq -> SEQUENCE;
@@ -191,6 +193,7 @@ public final class IconProvider {
   public static final FlatSVGIcon JSON = new IconFactory("json", IconColour.YELLOW).create();
 
   public static final FlatSVGIcon UML = new IconFactory("uml", IconColour.INDIGO).create();
+  public static final FlatSVGIcon LINK = new IconFactory("link", IconColour.BLUE).create();
   public static final FlatSVGIcon PUML = new IconFactory("plantuml", null).create();
 
 }
