@@ -41,6 +41,7 @@ import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabContainer;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
+import com.aestallon.storageexplorer.swing.ui.misc.DownloadBinaryDataAction;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
 import com.aestallon.storageexplorer.swing.ui.misc.OpenInSystemExplorerAction;
@@ -286,6 +287,10 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     toolbar.setOrientation(SwingConstants.HORIZONTAL);
     toolbar.setAlignmentX(LEFT_ALIGNMENT);
     toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
+    if ("BinaryDataObject".equals(objectEntry.typeName())) {
+      final var storageInstance = factory.storageInstanceProvider().get(objectEntry.storageId());
+      toolbar.add(new DownloadBinaryDataAction(storageInstance, objectEntry.uri(), this));
+    }
     factory.addCloseAndForgetAction(this, toolbar);
     container.add(toolbar, BorderLayout.NORTH);
 
