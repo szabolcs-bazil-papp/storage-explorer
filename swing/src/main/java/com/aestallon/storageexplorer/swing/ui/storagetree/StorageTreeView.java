@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import com.formdev.flatlaf.util.SystemFileChooser;
 import com.aestallon.storageexplorer.client.graph.service.GraphExportService;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
@@ -69,6 +68,7 @@ import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageMapT
 import com.aestallon.storageexplorer.swing.ui.storagetree.model.node.StorageObjectTreeNode;
 import com.aestallon.storageexplorer.swing.ui.tree.AbstractTreeView;
 import com.aestallon.storageexplorer.swing.ui.tree.TreeView;
+import com.formdev.flatlaf.util.SystemFileChooser;
 
 @Component
 public class StorageTreeView
@@ -307,7 +307,7 @@ public class StorageTreeView
         final var fileChooser = new SystemFileChooser();
         fileChooser.setDialogTitle("Save export");
 
-        final int result = fileChooser.showDialog(this, "Export");
+        final int result = fileChooser.showSaveDialog(this);
         if (SystemFileChooser.APPROVE_OPTION == result) {
           final File f = fileChooser.getSelectedFile();
           final Path target;
