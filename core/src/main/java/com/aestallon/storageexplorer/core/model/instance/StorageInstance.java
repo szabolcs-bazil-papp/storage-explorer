@@ -1,5 +1,6 @@
 package com.aestallon.storageexplorer.core.model.instance;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Objects;
@@ -192,6 +193,18 @@ public final class StorageInstance {
         yield Optional.of(entry);
       }
     };
+  }
+
+  /**
+   * Loads the raw binary content of a {@code BinaryDataObject} identified by {@code uri}.
+   *
+   * @param uri the {@code URI} of the {@code BinaryDataObject} to load, not null
+   *
+   * @return an {@link Optional} containing an {@link InputStream} over the binary content, or an
+   *     empty {@code Optional} if the object could not be loaded
+   */
+  public Optional<InputStream> loadBinaryData(final URI uri) {
+    return index.loadBinaryData(uri);
   }
 
   public Optional<StorageEntry> discover(final URI uri) {
