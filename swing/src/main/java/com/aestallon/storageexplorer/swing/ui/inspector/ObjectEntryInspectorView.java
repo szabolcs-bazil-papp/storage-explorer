@@ -238,6 +238,10 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
           new InspectorTextareaFactory.Config(null, true, true));
       if (pane.textArea() instanceof RTextArea rTextArea) {
         final var findAction = new AbstractAction(null, IconProvider.MAGNIFY) {
+          {
+            putValue(SHORT_DESCRIPTION, "Find text in the entry content (Ctrl+F)");
+          }
+
           @Override
           public void actionPerformed(ActionEvent e) {
             final var sd = new FindDialog((Frame) null, searchListener(rTextArea));

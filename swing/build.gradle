@@ -20,6 +20,8 @@ dependencies {
 
   api 'com.formdev:flatlaf:3.7'
   api 'com.formdev:flatlaf-intellij-themes:3.7'
+  api 'com.github.weisj:jsvg:2.2.0'
+  api 'com.formdev:flatlaf-extras:3.7.2'
 
   implementation 'io.github.dj-raven:swing-color-picker:2.0.0'
 }

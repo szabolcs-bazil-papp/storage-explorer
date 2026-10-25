@@ -33,7 +33,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.swing.*;
-import com.formdev.flatlaf.util.SystemFileChooser;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.MultiGraph;
 import org.graphstream.stream.file.FileSinkImages;
@@ -78,6 +77,7 @@ import com.aestallon.storageexplorer.swing.ui.misc.ColourService;
 import com.aestallon.storageexplorer.swing.ui.misc.GraphStylingProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
 import com.aestallon.storageexplorer.swing.ui.misc.LafService;
+import com.formdev.flatlaf.util.SystemFileChooser;
 import prefuse.Display;
 
 @Component

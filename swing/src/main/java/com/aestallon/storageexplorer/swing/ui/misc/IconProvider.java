@@ -15,10 +15,8 @@
 
 package com.aestallon.storageexplorer.swing.ui.misc;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.awt.*;
 import javax.swing.*;
-import org.springframework.util.StreamUtils;
 import com.aestallon.storageexplorer.core.model.entry.GodObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
@@ -32,26 +30,93 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseVendor;
 import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 public final class IconProvider {
 
+  public static final int ICON_SIZE = 18;
+
   private IconProvider() {}
 
-  private static String location(final String iconName) {
-    return String.format("/icons_2/%s.png", iconName);
+  public record IconColour(Color light, Color dark) {
+
+    Color get() {
+      return FlatSVGIcon.isDarkLaf() ? dark : light;
+    }
+
+    static final IconColour RED = new IconColour(
+        new Color(201, 56, 69),
+        new Color(255, 118, 128)
+    );
+
+    static final IconColour ORANGE = new IconColour(
+        new Color(212, 110, 24),
+        new Color(255, 170, 82)
+    );
+
+    static final IconColour YELLOW = new IconColour(
+        new Color(184, 134, 11),
+        new Color(255, 214, 90)
+    );
+
+    static final IconColour GREEN = new IconColour(
+        new Color(34, 139, 94),
+        new Color(94, 212, 150)
+    );
+
+    static final IconColour TEAL = new IconColour(
+        new Color(16, 140, 150),
+        new Color(78, 208, 214)
+    );
+
+    static final IconColour BLUE = new IconColour(
+        new Color(44, 104, 214),
+        new Color(110, 168, 255)
+    );
+
+    static final IconColour INDIGO = new IconColour(
+        new Color(84, 74, 208),
+        new Color(146, 138, 255)
+    );
+
+    static final IconColour PURPLE = new IconColour(
+        new Color(140, 70, 186),
+        new Color(192, 142, 240)
+    );
+
+    static final IconColour PINK = new IconColour(
+        new Color(200, 60, 128),
+        new Color(255, 134, 186)
+    );
+
+    static final IconColour SLATE = new IconColour(
+        new Color(84, 96, 114),
+        new Color(158, 170, 188)
+    );
+
+    static final IconColour BLACK_N_WHITE = new IconColour(
+        new Color(36, 39, 46),
+        new Color(216, 219, 225)
+    );
+
   }
 
-  private static byte[] loadIcon(String iconName) {
-    InputStream resourceAsStream = IconProvider.class.getResourceAsStream(location(iconName));
 
-    try {
-      return StreamUtils.copyToByteArray(resourceAsStream);
-    } catch (final IOException e) {
-      throw new IllegalStateException("Cannot load icon [ " + iconName + " ]", e);
+  public record IconFactory(String name, IconColour colour) {
+
+    FlatSVGIcon create() {
+      final FlatSVGIcon icon = new FlatSVGIcon("icons/" + name + ".svg", ICON_SIZE, ICON_SIZE);
+      if (colour != null) {
+        icon.setColorFilter(new FlatSVGIcon.ColorFilter(it -> colour.get()));
+      }
+
+      return icon;
     }
   }
 
-  public static ImageIcon getIconForStorageEntry(StorageEntry entry) {
+
+
+  public static FlatSVGIcon getIconForStorageEntry(StorageEntry entry) {
     return switch (entry) {
       case ListEntry list -> switch (list) {
         case ScopedListEntry scoped -> SCOPED_LIST;
@@ -70,7 +135,7 @@ public final class IconProvider {
     };
   }
 
-  public static ImageIcon getIconForStorageInstance(final StorageInstance storageInstance) {
+  public static FlatSVGIcon getIconForStorageInstance(final StorageInstance storageInstance) {
     return switch (storageInstance.location()) {
       case null -> DB;
       case FsStorageLocation fs -> DB_FS;
@@ -83,48 +148,49 @@ public final class IconProvider {
     };
   }
 
-  public static final ImageIcon FAVICON = new ImageIcon(loadIcon("favicon"));
+  public static final ImageIcon FAVICON = new IconFactory("favicon", null).create();
 
-  public static final ImageIcon LIST = new ImageIcon(loadIcon("list"));
-  public static final ImageIcon MAP = new ImageIcon(loadIcon("map"));
-  public static final ImageIcon OBJ = new ImageIcon(loadIcon("object"));
-  public static final ImageIcon SCOPED_LIST = new ImageIcon(loadIcon("scoped_list"));
-  public static final ImageIcon SCOPED_MAP = new ImageIcon(loadIcon("scoped_map"));
-  public static final ImageIcon SCOPED_OBJ = new ImageIcon(loadIcon("scoped_object"));
-  public static final ImageIcon GOD_OBJ = new ImageIcon(loadIcon("god_object"));
-  public static final ImageIcon GRAPH = new ImageIcon(loadIcon("graph"));
-  public static final ImageIcon CLOSE = new ImageIcon(loadIcon("close"));
-  public static final ImageIcon REFRESH = new ImageIcon(loadIcon("refresh"));
-  public static final ImageIcon DB = new ImageIcon(loadIcon("db"));
-  public static final ImageIcon SE = new ImageIcon(loadIcon("se"));
-  public static final ImageIcon MAGNIFY = new ImageIcon(loadIcon("magnify"));
-  public static final ImageIcon SEQUENCE = new ImageIcon(loadIcon("sequence"));
-  public static final ImageIcon EDIT = new ImageIcon(loadIcon("edit"));
-  public static final ImageIcon DIFF = new ImageIcon(loadIcon("diff"));
-  public static final ImageIcon DB_FS = new ImageIcon(loadIcon("db_fs"));
-  public static final ImageIcon DB_PG = new ImageIcon(loadIcon("db_pg"));
-  public static final ImageIcon DB_ORA = new ImageIcon(loadIcon("db_ora"));
-  public static final ImageIcon DB_H2 = new ImageIcon(loadIcon("db_h2"));
-  public static final ImageIcon DATA_TRANSFER = new ImageIcon(loadIcon("data_transfer"));
-  public static final ImageIcon OK = new ImageIcon(loadIcon("ok"));
-  public static final ImageIcon NOT_OK = new ImageIcon(loadIcon("not_ok"));
-  public static final ImageIcon TREE = new ImageIcon(loadIcon("tree"));
-  public static final ImageIcon TERMINAL = new ImageIcon(loadIcon("terminal"));
+  public static final FlatSVGIcon LIST = new IconFactory("list", IconColour.INDIGO).create();
+  public static final FlatSVGIcon MAP = new IconFactory("map", IconColour.ORANGE).create();
+  public static final FlatSVGIcon OBJ = new IconFactory("object", IconColour.GREEN).create();
+  public static final FlatSVGIcon SCOPED_LIST = new IconFactory("scoped_list", IconColour.TEAL).create();
+  public static final FlatSVGIcon SCOPED_MAP = new IconFactory("scoped_map", IconColour.PURPLE).create();
+  public static final FlatSVGIcon SCOPED_OBJ = new IconFactory("scoped_object", IconColour.SLATE).create();
+  public static final FlatSVGIcon GOD_OBJ = new IconFactory("god_object", IconColour.RED).create();
+  public static final FlatSVGIcon GRAPH = new IconFactory("graph", IconColour.BLACK_N_WHITE).create();
+  public static final FlatSVGIcon CLOSE = new IconFactory("close", IconColour.RED).create();
 
-  public static final ImageIcon ERROR = new ImageIcon(loadIcon("error"));
-  public static final ImageIcon WARNING = new ImageIcon(loadIcon("warn"));
-  public static final ImageIcon INFO = new ImageIcon(loadIcon("info"));
+  public static final FlatSVGIcon REFRESH = new IconFactory("refresh", IconColour.GREEN).create();
+  public static final FlatSVGIcon DB = new IconFactory("db", IconColour.SLATE).create();
+  public static final FlatSVGIcon SE = new IconFactory("se", IconColour.BLUE).create();
+  public static final FlatSVGIcon MAGNIFY = new IconFactory("magnify", IconColour.BLACK_N_WHITE).create();
+  public static final FlatSVGIcon SEQUENCE = new IconFactory("sequence", IconColour.INDIGO).create();
+  public static final FlatSVGIcon EDIT = new IconFactory("edit", IconColour.ORANGE).create();
+  public static final FlatSVGIcon DIFF = new IconFactory("diff", IconColour.PINK).create();
+  public static final FlatSVGIcon DB_FS = new IconFactory("db_fs", IconColour.YELLOW).create();
+  public static final FlatSVGIcon DB_PG = new IconFactory("db_pg", null).create();
+  public static final FlatSVGIcon DB_ORA = new IconFactory("db_ora", null).create();
+  public static final FlatSVGIcon DB_H2 = new IconFactory("db_h2", null).create();
+  public static final FlatSVGIcon DATA_TRANSFER = new IconFactory("data_transfer", IconColour.TEAL).create();
+  public static final FlatSVGIcon OK = new IconFactory("ok", IconColour.GREEN).create();
+  public static final FlatSVGIcon NOT_OK = new IconFactory("not_ok", IconColour.RED).create();
+  public static final FlatSVGIcon TREE = new IconFactory("tree", IconColour.GREEN).create();
+  public static final FlatSVGIcon TERMINAL = new IconFactory("terminal", IconColour.BLACK_N_WHITE).create();
 
-  public static final ImageIcon ARC_SCRIPT = new ImageIcon(loadIcon("arc_script"));
-  public static final ImageIcon SAVE = new ImageIcon(loadIcon("save"));
-  public static final ImageIcon PLAY = new ImageIcon(loadIcon("play"));
-  public static final ImageIcon PLUS = new ImageIcon(loadIcon("plus"));
-  public static final ImageIcon DELETE = new ImageIcon(loadIcon("delete"));
+  public static final FlatSVGIcon ERROR = new IconFactory("error", IconColour.RED).create();
+  public static final FlatSVGIcon WARNING = new IconFactory("warn", IconColour.YELLOW).create();
+  public static final FlatSVGIcon INFO = new IconFactory("info", IconColour.BLUE).create();
 
-  public static final ImageIcon CSV = new ImageIcon(loadIcon("csv"));
-  public static final ImageIcon JSON = new ImageIcon(loadIcon("json"));
+  public static final FlatSVGIcon ARC_SCRIPT = new IconFactory("arc_script", IconColour.TEAL).create();
+  public static final FlatSVGIcon SAVE = new IconFactory("save", IconColour.BLUE).create();
+  public static final FlatSVGIcon PLAY = new IconFactory("play", IconColour.GREEN).create();
+  public static final FlatSVGIcon PLUS = new IconFactory("plus", IconColour.GREEN).create();
+  public static final FlatSVGIcon DELETE = new IconFactory("delete", IconColour.RED).create();
 
-  public static final ImageIcon UML = new ImageIcon(loadIcon("uml"));
-  public static final ImageIcon PUML = new ImageIcon(loadIcon("plantuml"));
+  public static final FlatSVGIcon CSV = new IconFactory("csv", IconColour.GREEN).create();
+  public static final FlatSVGIcon JSON = new IconFactory("json", IconColour.YELLOW).create();
+
+  public static final FlatSVGIcon UML = new IconFactory("uml", IconColour.INDIGO).create();
+  public static final FlatSVGIcon PUML = new IconFactory("plantuml", null).create();
 
 }

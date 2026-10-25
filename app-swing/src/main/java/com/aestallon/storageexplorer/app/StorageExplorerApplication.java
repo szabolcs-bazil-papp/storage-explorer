@@ -26,17 +26,17 @@ import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import com.aestallon.storageexplorer.client.ff.FeatureFlag;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
+import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.client.userconfig.service.ThemeService;
 import com.aestallon.storageexplorer.swing.ui.AppContentView;
 import com.aestallon.storageexplorer.swing.ui.AppFrame;
 import com.aestallon.storageexplorer.swing.ui.arcscript.tree.ArcScriptTreeView;
-import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
 import com.aestallon.storageexplorer.swing.ui.misc.WelcomePopup;
 import com.aestallon.storageexplorer.swing.ui.splash.SplashScreen;
 import com.aestallon.storageexplorer.swing.ui.storagetree.StorageTreeView;
+import com.formdev.flatlaf.extras.FlatInspector;
 import com.formdev.flatlaf.intellijthemes.FlatGruvboxDarkHardIJTheme;
-import com.formdev.flatlaf.intellijthemes.FlatMaterialDesignDarkIJTheme;
 import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTMaterialLighterIJTheme;
 
 @SpringBootApplication(
@@ -94,9 +94,11 @@ public class StorageExplorerApplication {
   public static void main(String[] args) {
     FeatureFlag.parse(args);
     System.setProperty("sun.java2d.metal", "false");
+    System.setProperty("sun.java2d.opengl", "true");
     System.setProperty("org.graphstream.ui", "swing");
     initSplashScreen();
     FlatMTMaterialLighterIJTheme.setup();
+    FlatInspector.install("ctrl shift alt X");
 
     new SpringApplicationBuilder(StorageExplorerApplication.class)
         .web(WebApplicationType.NONE)

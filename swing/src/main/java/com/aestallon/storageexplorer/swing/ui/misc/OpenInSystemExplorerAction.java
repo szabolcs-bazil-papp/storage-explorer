@@ -34,6 +34,7 @@ public class OpenInSystemExplorerAction extends AbstractAction {
     super(null, IconProvider.SE);
     this.storageEntry = storageEntry;
     this.parent = parent;
+    putValue(SHORT_DESCRIPTION, "Open this entry's location in the system file explorer");
   }
 
   @Override

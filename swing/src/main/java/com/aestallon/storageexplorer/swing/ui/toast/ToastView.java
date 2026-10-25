@@ -90,7 +90,7 @@ public class ToastView {
     button1.setDefaultCapable(false);
     button1.setFocusCycleRoot(false);
     button1.setFocusPainted(false);
-    button1.setIcon(new ImageIcon(getClass().getResource("/icons/close.png")));
+    button1.setIcon(IconProvider.CLOSE);
     button1.setText("");
     mainPanel.add(button1, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER,
         GridConstraints.FILL_HORIZONTAL,

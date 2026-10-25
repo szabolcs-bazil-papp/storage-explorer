@@ -9,11 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
-import com.formdev.flatlaf.util.SystemFileChooser;
-import com.intellij.uiDesigner.core.GridConstraints;
-import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.intellij.uiDesigner.core.Spacer;
-import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseConnectionData;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseVendor;
 import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
@@ -21,6 +16,12 @@ import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyTyp
 import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageLocation;
+import com.aestallon.storageexplorer.swing.ui.misc.IconProvider;
+import com.formdev.flatlaf.util.SystemFileChooser;
+import com.intellij.uiDesigner.core.GridConstraints;
+import com.intellij.uiDesigner.core.GridLayoutManager;
+import com.intellij.uiDesigner.core.Spacer;
 
 public class ImportStorageDialog extends JDialog {
   private JPanel contentPane;
@@ -304,7 +305,7 @@ public class ImportStorageDialog extends JDialog {
     fsPane = new JPanel();
     fsPane.setLayout(new GridLayoutManager(3, 1, new Insets(5, 5, 5, 5), -1, -1));
     storageTypePane.addTab("File System",
-        new ImageIcon(getClass().getResource("/icons/object.png")), fsPane);
+        IconProvider.DB_FS, fsPane);
     final JPanel panel4 = new JPanel();
     panel4.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
     fsPane.add(panel4,
@@ -347,7 +348,7 @@ public class ImportStorageDialog extends JDialog {
         false));
     sqlPane = new JPanel();
     sqlPane.setLayout(new GridLayoutManager(3, 1, new Insets(5, 5, 5, 5), -1, -1));
-    storageTypePane.addTab("SQL ", new ImageIcon(getClass().getResource("/icons/db.png")), sqlPane);
+    storageTypePane.addTab("SQL ", IconProvider.DB, sqlPane);
     databaseConnectionForm = new JPanel();
     databaseConnectionForm.setLayout(new GridLayoutManager(3, 5, new Insets(0, 0, 0, 0), -1, -1));
     sqlPane.add(databaseConnectionForm,

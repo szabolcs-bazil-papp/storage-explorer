@@ -320,6 +320,10 @@ public class StorageEntryInspectorViewFactory {
 
   void addRenderAction(final StorageEntry storageEntry, final JToolBar toolbar) {
     toolbar.add(new AbstractAction(null, IconProvider.GRAPH) {
+      {
+        putValue(SHORT_DESCRIPTION, "Show this entry in the graph view");
+      }
+
       @Override
       public void actionPerformed(ActionEvent e) {
         eventPublisher.publishEvent(new GraphRenderingRequest(storageEntry));
@@ -329,6 +333,10 @@ public class StorageEntryInspectorViewFactory {
 
   void addRenderTypeAction(final ObjectEntry objectEntry, final JToolBar toolbar) {
     toolbar.add(new AbstractAction(null, IconProvider.UML) {
+      {
+        putValue(SHORT_DESCRIPTION, "Show this entry's type as a UML diagram");
+      }
+
       @Override
       public void actionPerformed(ActionEvent e) {
         eventPublisher.publishEvent(new UmlRenderingRequest(objectEntry));
@@ -338,6 +346,10 @@ public class StorageEntryInspectorViewFactory {
 
   void addEditMetaAction(final StorageEntry storageEntry, final JToolBar toolbar) {
     toolbar.add(new AbstractAction(null, IconProvider.EDIT) {
+      {
+        putValue(SHORT_DESCRIPTION, "Edit the name and description of this entry");
+      }
+
       @Override
       public void actionPerformed(ActionEvent e) {
         final var controller = EntryMetaEditorController.newInstance(storageEntry, trackingService);
@@ -351,6 +363,10 @@ public class StorageEntryInspectorViewFactory {
 
   void addCloseAndForgetAction(final InspectorView<?> inspector, final JToolBar toolBar) {
     toolBar.add(new AbstractAction(null, IconProvider.NOT_OK) {
+      {
+        putValue(SHORT_DESCRIPTION, "Close this tab and stop tracking this entry");
+      }
+
       @Override
       public void actionPerformed(ActionEvent e) {
         final var container = inspector.container();
@@ -369,6 +385,10 @@ public class StorageEntryInspectorViewFactory {
                      final JToolBar toolbar,
                      final Component parent) {
     toolbar.add(new AbstractAction(null, IconProvider.DIFF) {
+      {
+        putValue(SHORT_DESCRIPTION, "Compare this version with the current (head) version");
+      }
+
       @Override
       public void actionPerformed(ActionEvent e) {
         showDiffDialog(objectEntry, singleVersion, versionNr, parent);
@@ -390,6 +410,10 @@ public class StorageEntryInspectorViewFactory {
     }
 
     toolbar.add(new AbstractAction("MODIFY ENTRY") {
+      {
+        putValue(SHORT_DESCRIPTION, "Edit the contents of this entry and save a new version");
+      }
+
       @Override
       public void actionPerformed(ActionEvent e) {
         final var controller = new StorageEntryEditorController(
