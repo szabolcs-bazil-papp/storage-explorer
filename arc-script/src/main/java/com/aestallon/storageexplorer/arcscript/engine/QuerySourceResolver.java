@@ -20,14 +20,18 @@ import java.util.Set;
 import static java.util.stream.Collectors.toSet;
 import java.util.stream.Stream;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryInstructionImpl;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
-import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.core.service.engine.LoadedContent;
+import com.aestallon.storageexplorer.core.service.index.result.AdjacencyResult;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
+import com.aestallon.storageexplorer.core.service.index.result.EntryResolution;
 import com.aestallon.storageexplorer.core.util.Uris;
 
 /**
@@ -36,11 +40,11 @@ import com.aestallon.storageexplorer.core.util.Uris;
  *
  * <p>
  * Type-based queries ({@code a}/{@code an}/{@code every}) draw from
- * {@link com.aestallon.storageexplorer.core.service.StorageIndex#find(IndexingTarget)}: a lazily
- * populated stream of entries, discovered (and indexed as a side effect) while the query is
- * already consuming them. Collection-based queries ({@code list}/{@code map}) instead acquire the
- * named stored collection eagerly - failing <em>before</em> any pipeline machinery spins up if it
- * does not exist - and source the query from the object entries its contained URIs point to.
+ * {@link StorageInstance#query(IndexingTarget)}: a lazily populated stream of entries, discovered
+ * (freshly, never cached) while the query is already consuming them. Collection-based queries
+ * ({@code list}/{@code map}) instead acquire the named stored collection eagerly - failing
+ * <em>before</em> any pipeline machinery spins up if it does not exist - and source the query
+ * from the object entries its contained URIs point to.
  *
  * <p>
  * Callers <strong>must close</strong> the returned stream: for type-based queries it is chained to
@@ -54,7 +58,7 @@ final class QuerySourceResolver {
   static Stream<StorageEntry> resolveStream(final StorageInstance storageInstance,
                                             final QueryInstructionImpl query) {
     if (query._collectionKind == null) {
-      return storageInstance.index().find(new IndexingTarget(query._schemas, query._types));
+      return storageInstance.query(new IndexingTarget(query._schemas, query._types));
     }
 
     return resolveCollection(storageInstance, query).stream();
@@ -72,10 +76,9 @@ final class QuerySourceResolver {
     final String name = query._collectionName;
     final var kind = query._collectionKind;
 
-    final StorageEntry collection = findInIndex(storageInstance, schema, name, kind)
-        .or(() -> acquireCanonical(storageInstance, schema, name, kind))
+    final StorageEntry collection = acquireCanonical(storageInstance, schema, name, kind)
         .orElse(null);
-    if (collection == null || !exists(collection)) {
+    if (collection == null || !exists(storageInstance, collection)) {
       throw new IllegalArgumentException(
           "Stored %s [ %s / %s ] does not exist in storage [ %s ]!".formatted(
               kind.name().toLowerCase(),
@@ -84,31 +87,13 @@ final class QuerySourceResolver {
               storageInstance.name()));
     }
 
-    return collection.uriProperties().stream()
-        .map(it -> it.uri)
-        .map(storageInstance::discover)
+    return outgoingReferences(storageInstance, collection)
+        .map(it -> resolve(storageInstance, it))
         .flatMap(Optional::stream)
         // collections are expected to hold object entry URIs exclusively; anything else present
         // cannot participate in predicate evaluation or projection, so it is dropped:
         .filter(ObjectEntry.class::isInstance)
         .collect(toSet());
-  }
-
-  private static Optional<StorageEntry> findInIndex(final StorageInstance storageInstance,
-                                                    final String schema,
-                                                    final String name,
-                                                    final QueryInstructionImpl.CollectionSourceKind kind) {
-    return storageInstance.index().entities()
-        .filter(it -> !(it instanceof ScopedEntry))
-        .filter(it -> switch (kind) {
-          case LIST -> it instanceof ListEntry l
-              && schema.equals(l.schema())
-              && name.equals(l.name());
-          case MAP -> it instanceof MapEntry m
-              && schema.equals(m.schema())
-              && name.equals(m.name());
-        })
-        .findFirst();
   }
 
   private static Optional<StorageEntry> acquireCanonical(final StorageInstance storageInstance,
@@ -121,29 +106,50 @@ final class QuerySourceResolver {
       case LIST -> Uris.constructList(schema, name);
       case MAP -> Uris.constructMap(schema, name);
     };
-    return storageInstance.softDiscover(uri)
+    return EntryUri.parse(uri.toString())
+        .map(storageInstance::resolve)
+        .flatMap(res -> switch (res) {
+          case EntryResolution.Known(var entry) -> Optional.of(entry);
+          case EntryResolution.Unknown u -> Optional.<StorageEntry>empty();
+        })
         .filter(it -> switch (kind) {
           case LIST -> it instanceof ListEntry;
           case MAP -> it instanceof MapEntry;
         });
   }
 
-  private static boolean exists(final StorageEntry collection) {
-    if (collection.valid()) {
-      // already refreshed from actual storage content:
-      return true;
-    }
-
-    final Optional<? extends ObjectEntryLoadResult.SingleVersion> version = switch (collection) {
-      case ListEntry l -> l.asSingleVersion();
-      case MapEntry m -> m.asSingleVersion();
-      default -> Optional.empty();
+  /** Whether {@code collection} actually carries stored content - a missing/placeholder
+   *  collection loads as empty content, while a real one always carries at least its "uris"
+   *  property. Replaces the old {@code StorageEntry#valid()}/{@code asSingleVersion()} check
+   *  (removed in Milestone 4, T4.1) with a direct content load. */
+  private static boolean exists(final StorageInstance storageInstance, final StorageEntry collection) {
+    return switch (storageInstance.read(collection)) {
+      case ContentLoadResult.Ok ok ->
+          ok.content().materialize() instanceof LoadedContent.JsonObject(var data) && !data.isEmpty();
+      case ContentLoadResult.Err err -> false;
     };
-    // a missing single-version entry "loads" as a placeholder with empty content, while a real
-    // stored collection always carries at least its "uris" property:
-    return version
-        .map(it -> !it.objectAsMap().isEmpty())
-        .orElse(false);
+  }
+
+  /** The URIs a stored collection's content points to - replaces the old {@code
+   *  StorageEntry#uriProperties()} (removed in T4.1) with the same adjacency scan every other
+   *  Milestone 3 index already uses for graph traversal; a stored collection's content is simply
+   *  scanned for its embedded URI leaves ({@code "uris": [...]}), same as any other entry's. */
+  private static Stream<java.net.URI> outgoingReferences(final StorageInstance storageInstance,
+                                                          final StorageEntry collection) {
+    return switch (storageInstance.newGraphIndex().outgoingReferences(collection)) {
+      case AdjacencyResult.Ok(var entry, var references) -> references.stream().map(UriProperty::uri);
+      case AdjacencyResult.Err err -> Stream.empty();
+    };
+  }
+
+  private static Optional<StorageEntry> resolve(final StorageInstance storageInstance,
+                                                 final java.net.URI uri) {
+    return EntryUri.parse(uri.toString())
+        .map(storageInstance::resolve)
+        .flatMap(res -> switch (res) {
+          case EntryResolution.Known(var entry) -> Optional.of(entry);
+          case EntryResolution.Unknown u -> Optional.<StorageEntry>empty();
+        });
   }
 
 }

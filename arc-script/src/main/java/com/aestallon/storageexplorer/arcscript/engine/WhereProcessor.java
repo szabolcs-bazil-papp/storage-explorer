@@ -20,6 +20,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryConditionImpl;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.QueryableIndex;
+import com.aestallon.storageexplorer.core.service.index.RowId;
+import com.aestallon.storageexplorer.core.service.index.impl.ExaminerBackedProjection;
 
 /**
  * Evaluates the {@code where} predicate on each incoming entry, pushing survivors downstream the
@@ -36,7 +39,9 @@ import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
 final class WhereProcessor extends PipelineStage<StorageEntry, IndexedEntry> {
 
   private final StorageInstanceExaminer examiner;
+  private final QueryableIndex index;
   private final StorageInstanceExaminer.ObjectEntryLookupTable cache;
+  private final ExaminerBackedProjection projection;
   private final QueryConditionImpl condition;
   private final long limit;
   private final boolean earlyTermination;
@@ -46,7 +51,9 @@ final class WhereProcessor extends PipelineStage<StorageEntry, IndexedEntry> {
                  final QueryEngineSettings settings,
                  final PipelineMetrics.StageMetrics metrics,
                  final StorageInstanceExaminer examiner,
+                 final QueryableIndex index,
                  final StorageInstanceExaminer.ObjectEntryLookupTable cache,
+                 final ExaminerBackedProjection projection,
                  final QueryConditionImpl condition,
                  final long limit) {
     super(
@@ -56,7 +63,9 @@ final class WhereProcessor extends PipelineStage<StorageEntry, IndexedEntry> {
         settings.sourcePrefetch(),
         metrics);
     this.examiner = examiner;
+    this.index = index;
     this.cache = cache;
+    this.projection = projection;
     this.condition = condition;
     this.limit = limit;
     this.earlyTermination = settings.earlyTerminationEnabled();
@@ -64,21 +73,28 @@ final class WhereProcessor extends PipelineStage<StorageEntry, IndexedEntry> {
 
   @Override
   protected void process(final StorageEntry entry) {
-    final var evaluator = new ConditionEvaluator(examiner, entry, cache, condition);
+    // seeded before evaluation so every property reference the condition touches (at any AND/OR
+    // nesting depth) is cached in the shared projection, ready for order/yield to reuse - dropped
+    // again immediately below if the entry doesn't survive:
+    final RowId row = projection.addRow(entry);
+    final var evaluator = new ConditionEvaluator(projection, row, examiner, entry, index, cache,
+        condition);
     if (!evaluator.evaluate()) {
+      projection.dropRow(row);
       return;
     }
 
     final long seq = survivors.getAndIncrement();
     if (limit > 0L && seq >= limit) {
       // enough entries satisfied the query already; drop this one:
+      projection.dropRow(row);
       if (earlyTermination) {
         cancelUpstream();
       }
       return;
     }
 
-    emit(new IndexedEntry(seq, entry));
+    emit(new IndexedEntry(seq, entry, row));
     if (earlyTermination && limit > 0L && seq + 1L >= limit) {
       cancelUpstream();
     }

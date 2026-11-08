@@ -8,6 +8,8 @@ import javax.swing.border.EmptyBorder;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.service.engine.LoadedContent;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabContainer;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
 import com.aestallon.storageexplorer.swing.ui.misc.AutoSizingTextArea;
@@ -73,7 +75,8 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
     final var toolbar = new JToolBar(JToolBar.TOP);
     toolbar.setOrientation(SwingConstants.HORIZONTAL);
     toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
-    toolbar.add(new OpenInSystemExplorerAction(sequenceEntry, this));
+    toolbar.add(new OpenInSystemExplorerAction(
+        factory.storageInstanceProvider().get(sequenceEntry.storageId()), sequenceEntry, this));
     factory.addEditMetaAction(sequenceEntry, toolbar);
     factory.addCloseAndForgetAction(this, toolbar);
     toolbar.setAlignmentX(LEFT_ALIGNMENT);
@@ -114,10 +117,30 @@ public class SequenceEntryInspectorView extends JPanel implements InspectorView<
     label.setAlignmentX(LEFT_ALIGNMENT);
     add(label);
     
-    final var value = new JLabel(String.valueOf(sequenceEntry.current()));
+    final var value = new JLabel(String.valueOf(currentValue()));
     value.setFont(LafService.font(LafService.FontToken.H2_SEMIBOLD));
     value.setAlignmentX(LEFT_ALIGNMENT);
     add(value);
+  }
+
+  /** The sequence's current value, read fresh off its content (the {@code "current"} field) —
+   *  replaces the removed {@code SequenceEntry#current()} (T4.1); sequences read through the
+   *  same {@code StorageEngine.read}/{@code ContentHandle} path as any other entry. */
+  private long currentValue() {
+    final var storageInstance = factory.storageInstanceProvider().get(sequenceEntry.storageId());
+    return switch (storageInstance.read(sequenceEntry)) {
+      case ContentLoadResult.Ok ok -> switch (ok.content().materialize()) {
+        case LoadedContent.JsonObject(var data) -> {
+          try {
+            yield Long.parseLong(String.valueOf(data.get("current")));
+          } catch (final Exception e) {
+            yield -1L;
+          }
+        }
+        default -> -1L;
+      };
+      case ContentLoadResult.Err err -> -1L;
+    };
   }
 
   @Override

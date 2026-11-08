@@ -15,62 +15,32 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import static java.util.stream.Collectors.toSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import com.aestallon.storageexplorer.common.util.Pair;
+import java.util.List;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
-import com.aestallon.storageexplorer.core.util.Uris;
 
+/**
+ * A {@code storedmap}-rooted map entry — identity only. See {@link ListEntry}'s class javadoc:
+ * the same "asSingleVersion() needs a Milestone 5 replacement" note applies here.
+ */
 public sealed class MapEntry
     extends AbstractStorageEntry
     implements StorageEntry
     permits ScopedMapEntry {
 
-  private static final Logger log = LoggerFactory.getLogger(MapEntry.class);
-
   private final String schema;
   private final String name;
 
-  private final Lock refreshLock = new ReentrantLock(true);
-  private boolean valid = false;
-  private Set<UriProperty> uriProperties;
+  MapEntry(final StorageId id, final EntryUri uri) {
+    super(id, uri);
 
-  MapEntry(StorageIndex<?> storageIndex, Path path, URI uri) {
-    super(storageIndex, path, uri);
-
-    final String fullScheme = uri.getScheme();
+    final String fullScheme = uri.scheme();
     this.schema = fullScheme.substring(0, fullScheme.lastIndexOf('-'));
 
-    final String pathElements[] = uri.getPath().split("/");
-    final String terminalElement = pathElements[pathElements.length - 1];
-    this.name = terminalElement.substring(0, terminalElement.lastIndexOf('-'));
-  }
-
-  @Override
-  public StorageId storageId() {
-    return id;
-  }
-
-  @Override
-  public URI uri() {
-    return uri;
-  }
-
-  @Override
-  public Path path() {
-    return path;
+    final List<String> segments = uri.segments();
+    final String terminalElement = segments.isEmpty() ? "" : segments.get(segments.size() - 1);
+    final int dash = terminalElement.lastIndexOf('-');
+    this.name = (dash >= 0) ? terminalElement.substring(0, dash) : terminalElement;
   }
 
   public String schema() {
@@ -81,93 +51,8 @@ public sealed class MapEntry
     return name;
   }
 
-  public Optional<ObjectEntryLoadResult.SingleVersion> asSingleVersion() {
-    try {
-      return Optional.of(storageIndex.get().loader().loadExact(uri, 0));
-    } catch (final Exception e) {
-      log.error("Cannot load map [ {} ] as a single object version: {}",
-          uri, e.getMessage());
-      log.debug(e.getMessage(), e);
-      return Optional.empty();
-    }
-  }
-
-  @Override
-  public Set<UriProperty> uriProperties() {
-    if (!valid) {
-      refresh();
-    }
-
-    return uriProperties;
-  }
-
-  @Override
-  public void refresh() {
-    if (valid) {
-      return;
-    }
-
-    refreshLock.lock();
-    try {
-
-      this.uriProperties = asSingleVersion()
-          .map(this::asUriMap)
-          .orElseGet(Collections::emptyMap)
-          .entrySet().stream()
-          .map(e -> UriProperty.of(
-              new UriProperty.Segment[] { UriProperty.Segment.key(e.getKey()) },
-              e.getValue()))
-          .collect(toSet());
-      valid = true;
-
-    } finally {
-      refreshLock.unlock();
-    }
-  }
-
-  private Map<String, URI> asUriMap(ObjectEntryLoadResult.SingleVersion singleVersion) {
-    final Object urisObj = singleVersion.objectAsMap().get("uris");
-    if (urisObj instanceof Map<?, ?> m) {
-      return m.entrySet().stream()
-          .map(Pair::of)
-          .map(Pair.onA(String::valueOf))
-          .map(Pair.onB(Uris::parse))
-          .flatMap(Pair.streamOnB())
-          .collect(Pair.toMap());
-    }
-
-    return Collections.emptyMap();
-  }
-
-  @Override
-  public boolean valid() {
-    return valid;
-  }
-
   public String displayName() {
     return schema + " / " + name;
-  }
-
-  @Override
-  public void accept(StorageEntry storageEntry) {
-    refreshLock.lock();
-
-    try {
-
-      if (Objects.requireNonNull(storageEntry) instanceof MapEntry that && that.valid) {
-        uriProperties = that.uriProperties();
-        valid = true;
-      }
-
-    } finally {
-      refreshLock.unlock();
-    }
-  }
-
-  @Override
-  public void setUriProperties(Set<UriProperty> uriProperties) {
-    this.uriProperties = uriProperties;
-    this.valid = true;
   }
 
   @Override

@@ -24,9 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import com.aestallon.storageexplorer.core.service.ObjectEntryLoadingService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.base.Strings;
 
 @Service
@@ -34,7 +34,7 @@ public class UserConfigPersistenceService {
 
   private static final Logger log = LoggerFactory.getLogger(UserConfigPersistenceService.class);
 
-  static final ObjectMapper OBJECT_MAPPER = ObjectEntryLoadingService.OBJECT_MAPPER;
+  static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
 
   private static Path getSettingsFolder(final String customFolder) {
     if (!Strings.isNullOrEmpty(customFolder)) {

@@ -29,9 +29,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.smartbit4all.api.collection.CollectionApi;
 import org.smartbit4all.api.config.PlatformApiConfig;
-import org.smartbit4all.core.object.ObjectApi;
 import org.smartbit4all.core.object.ObjectDefinitionApi;
 import org.smartbit4all.domain.data.storage.ObjectStorage;
 import org.smartbit4all.storage.fs.StorageFS;
@@ -46,7 +44,8 @@ import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
-import com.aestallon.storageexplorer.core.service.FileSystemStorageIndex;
+import com.aestallon.storageexplorer.core.service.engine.EngineResult;
+import com.aestallon.storageexplorer.core.service.fs.FsStorageEngine;
 
 /**
  * End-to-end LEGACY vs PIPELINED characterization of ArcScript query execution against a real,
@@ -99,12 +98,8 @@ class ArcScriptEngineE2ETest {
     ctx.getEnvironment().getPropertySources().addFirst(new MapPropertySource("default", props));
     ctx.refresh();
 
-    storageInstance.setIndex(new FileSystemStorageIndex(
-        storageInstance.id(),
-        ctx.getBean(ObjectApi.class),
-        ctx.getBean(CollectionApi.class),
-        STORAGE_PATH,
-        false));
+    storageInstance.setEngine(
+        ((EngineResult.Ok<FsStorageEngine>) FsStorageEngine.open(STORAGE_PATH)).value().asStorageEngine());
   }
 
   @AfterAll

@@ -22,11 +22,13 @@ import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectReferenceByIdEntry;
+import com.aestallon.storageexplorer.core.model.entry.ObjectStreamEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedListEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedMapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.entry.TableDataEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.DatabaseVendor;
 import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
@@ -134,6 +136,10 @@ public final class IconProvider {
         default -> OBJ;
       };
       case SequenceEntry seq -> SEQUENCE;
+      // no dedicated icon asset yet - tree representation for these is still a placeholder
+      // (T6.7/T7.6, confirmed wanted but not designed):
+      case ObjectStreamEntry stream -> OBJ;
+      case TableDataEntry table -> OBJ;
     };
   }
 

@@ -30,7 +30,7 @@ public interface GraphContainmentPredicate extends BiPredicate<Graph, StorageEnt
     final var ps = new ArrayList<Predicate<StorageEntry>>(4);
     if (!settings.getBlacklistedSchemas().isEmpty()) {
       final var bs = new HashSet<>(settings.getBlacklistedSchemas());
-      ps.add(it -> !bs.contains(it.uri().getScheme()));
+      ps.add(it -> !bs.contains(it.uri().scheme()));
     }
     
     if (!settings.getBlacklistedTypes().isEmpty()) {
@@ -40,7 +40,7 @@ public interface GraphContainmentPredicate extends BiPredicate<Graph, StorageEnt
     
     if (!settings.getWhitelistedSchemas().isEmpty()) {
       final var ws = new HashSet<>(settings.getWhitelistedSchemas());
-      ps.add(it -> ws.contains(it.uri().getScheme()));
+      ps.add(it -> ws.contains(it.uri().scheme()));
     }
     
     if (!settings.getWhitelistedTypes().isEmpty()) {

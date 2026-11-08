@@ -15,27 +15,22 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.net.URI;
-import java.nio.file.Path;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.core.model.EntryUri;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 
 public final class ScopedObjectEntry extends ObjectEntry implements StorageEntry, ScopedEntry {
 
-  private final URI scopeUri;
+  private final EntryUri scopeUri;
 
-  ScopedObjectEntry(final StorageIndex<?> storageIndex,
-                    final Path path,
-                    final URI uri,
-                    final URI scopeUri) {
-    super(storageIndex, path, uri);
+  ScopedObjectEntry(final StorageId id, final EntryUri uri, final EntryUri scopeUri) {
+    super(id, uri);
     this.scopeUri = scopeUri;
   }
 
   @Override
-  public URI scope() {
+  public EntryUri scope() {
     return scopeUri;
   }
-
 
   @Override
   public String toString() {

@@ -15,12 +15,12 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.net.URI;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 
 public sealed interface ScopedEntry permits ScopedListEntry, ScopedMapEntry, ScopedObjectEntry {
 
-  URI uri();
+  EntryUri uri();
 
-  URI scope();
+  EntryUri scope();
 
 }

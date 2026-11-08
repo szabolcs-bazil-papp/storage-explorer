@@ -16,49 +16,83 @@
 package com.aestallon.storageexplorer.arcscript.engine;
 
 import java.util.List;
+import static com.aestallon.storageexplorer.arcscript.engine.ArcPropertyPaths.toPath;
 import com.aestallon.storageexplorer.arcscript.internal.query.Assertion;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryConditionImpl;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.QueryableIndex;
+import com.aestallon.storageexplorer.core.service.index.RowId;
+import com.aestallon.storageexplorer.core.service.index.impl.ExaminerBackedProjection;
 
 final class ConditionEvaluator {
 
   private final StorageInstanceExaminer examiner;
   private final StorageEntry entry;
+  private final QueryableIndex index;
   private final StorageInstanceExaminer.ObjectEntryLookupTable cache;
   private final QueryConditionImpl.AssertionIterator iterator;
   private final StorageInstanceExaminer.PropertyDiscoveryResult medial;
+  /** When set (alongside {@link #row}), a top-level assertion lookup (medial == null) resolves
+   *  through the query's shared {@link ExaminerBackedProjection} instead of calling {@code
+   *  discoverProperty} directly - every plain property reference at any AND/OR nesting depth
+   *  shares one cached cell this way. Recursive {@code any}/{@code all}/{@code none} list-element
+   *  lookups (medial != null) always go straight through {@link #examiner}: each list element is
+   *  a synthetic, non-columnar value, visited once regardless. Null for the legacy (non-pipelined)
+   *  evaluation path, which keeps its original, uncached behavior exactly. */
+  private final ExaminerBackedProjection projection;
+  private final RowId row;
 
   ConditionEvaluator(final StorageInstanceExaminer examiner,
                      final StorageEntry entry,
+                     final QueryableIndex index,
                      final StorageInstanceExaminer.ObjectEntryLookupTable cache,
                      final QueryConditionImpl c) {
-    this(examiner, entry, cache, c, null);
+    this(examiner, entry, index, cache, c, null, null, null);
+  }
+
+  ConditionEvaluator(final ExaminerBackedProjection projection,
+                     final RowId row,
+                     final StorageInstanceExaminer examiner,
+                     final StorageEntry entry,
+                     final QueryableIndex index,
+                     final StorageInstanceExaminer.ObjectEntryLookupTable cache,
+                     final QueryConditionImpl c) {
+    this(examiner, entry, index, cache, c, null, projection, row);
   }
 
   private ConditionEvaluator(final StorageInstanceExaminer examiner,
                              final StorageEntry entry,
+                             final QueryableIndex index,
                              final StorageInstanceExaminer.ObjectEntryLookupTable cache,
                              final QueryConditionImpl c,
-                             final StorageInstanceExaminer.PropertyDiscoveryResult medial) {
+                             final StorageInstanceExaminer.PropertyDiscoveryResult medial,
+                             final ExaminerBackedProjection projection,
+                             final RowId row) {
     this.examiner = examiner;
     this.entry = entry;
+    this.index = index;
     this.cache = cache;
     this.iterator = (c != null)
         ? c.assertionIterator()
         : QueryConditionImpl.AssertionIterator.empty();
     this.medial = medial;
+    this.projection = projection;
+    this.row = row;
   }
 
   private ConditionEvaluator(final ConditionEvaluator orig,
                              final QueryConditionImpl c) {
-    this(orig.examiner, orig.entry, orig.cache, c, orig.medial);
+    this(orig.examiner, orig.entry, orig.index, orig.cache, c, orig.medial, orig.projection,
+        orig.row);
   }
 
   private ConditionEvaluator(final ConditionEvaluator orig,
                              final QueryConditionImpl c,
                              final StorageInstanceExaminer.PropertyDiscoveryResult medial) {
-    this(orig.examiner, orig.entry, orig.cache, c, medial);
+    // descending into a list element's own sub-condition: the projection no longer applies (that
+    // element isn't a row), so every lookup below here goes straight through the examiner:
+    this(orig.examiner, orig.entry, orig.index, orig.cache, c, medial, null, null);
   }
 
   boolean evaluate() {
@@ -119,9 +153,11 @@ final class ConditionEvaluator {
   }
 
   private boolean evalAssertion(final Assertion assertion) {
-    final var val = (medial == null)
-        ? examiner.discoverProperty(entry, assertion.prop(), cache)
-        : examiner.discoverProperty(medial, assertion.prop(), cache);
+    final var val = (medial != null)
+        ? examiner.discoverProperty(medial, assertion.prop(), index, cache)
+        : (projection != null)
+            ? projection.discover(row, projection.column(toPath(assertion.prop())))
+            : examiner.discoverProperty(entry, assertion.prop(), index, cache);
     if (assertion.isSingle()) {
       return assertion.check(val);
     }

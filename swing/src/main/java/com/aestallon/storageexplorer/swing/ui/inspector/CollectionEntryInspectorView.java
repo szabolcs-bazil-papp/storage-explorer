@@ -33,7 +33,9 @@ import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.core.service.index.result.AdjacencyResult;
 import com.aestallon.storageexplorer.core.util.Uris;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabContainer;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabViewThumbnail;
@@ -59,10 +61,13 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
   private final transient StorageEntry storageEntry;
   private final transient StorageEntryInspectorViewFactory factory;
 
+  private final transient StorageInstance storageInstance;
+
   public CollectionEntryInspectorView(StorageEntry storageEntry,
                                       StorageEntryInspectorViewFactory factory) {
     this.storageEntry = storageEntry;
     this.factory = factory;
+    this.storageInstance = factory.storageInstanceProvider().get(storageEntry.storageId());
 
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -108,7 +113,7 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     toolbar.setOrientation(SwingConstants.HORIZONTAL);
     toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
     factory.addRenderAction(storageEntry, toolbar);
-    toolbar.add(new OpenInSystemExplorerAction(storageEntry, this));
+    toolbar.add(new OpenInSystemExplorerAction(storageInstance, storageEntry, this));
     factory.addEditMetaAction(storageEntry, toolbar);
     factory.addCloseAndForgetAction(this, toolbar);
     factory.addModifyAction(storageEntry, singleVersionSupplier(), -1, null, toolbar);
@@ -118,8 +123,8 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
 
   private Supplier<ObjectEntryLoadResult.SingleVersion> singleVersionSupplier() {
     return switch (storageEntry) {
-      case ListEntry l -> () -> l.asSingleVersion().orElse(null);
-      case MapEntry m -> () -> m.asSingleVersion().orElse(null);
+      case ListEntry l -> () -> ObjectEntryLoadResult.asSingleVersion(storageInstance, l).orElse(null);
+      case MapEntry m -> () -> ObjectEntryLoadResult.asSingleVersion(storageInstance, m).orElse(null);
       default -> null;
     };
   }
@@ -155,7 +160,7 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
   }
 
   private void initTable() {
-    tableModel = new StorageCollectionTableModel(storageEntry);
+    tableModel = new StorageCollectionTableModel(storageInstance, storageEntry);
     table = new JTable(tableModel);
     table.setAutoCreateRowSorter(true);
     table.addMouseListener(new MouseAdapter() {
@@ -200,11 +205,16 @@ public class CollectionEntryInspectorView extends JPanel implements InspectorVie
     private final StorageEntry storageEntry;
     private final List<UriProperty> uris;
 
-    private StorageCollectionTableModel(StorageEntry storageEntry) {
+    private StorageCollectionTableModel(StorageInstance storageInstance, StorageEntry storageEntry) {
       this.storageEntry = storageEntry;
-      uris = storageEntry.uriProperties().stream()
-          .sorted()
-          .collect(toList());
+      try (var index = storageInstance.newGraphIndex()) {
+        uris = (switch (index.outgoingReferences(storageEntry)) {
+          case AdjacencyResult.Ok(var e, var refs) -> refs;
+          case AdjacencyResult.Err err -> java.util.Set.<UriProperty>of();
+        }).stream()
+            .sorted()
+            .collect(toList());
+      }
     }
 
     @Override

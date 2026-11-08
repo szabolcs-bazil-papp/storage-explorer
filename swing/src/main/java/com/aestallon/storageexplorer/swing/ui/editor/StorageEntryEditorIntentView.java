@@ -128,6 +128,7 @@ public class StorageEntryEditorIntentView extends JPanel {
             case ListEntry l -> "list";
             case MapEntry m -> "map";
             case SequenceEntry s -> "sequence";
+            default -> "entry";
           })
           .append(", which is stored with a <B>single version policy</B> (uri: ")
           .append(controller.storageEntry().uri())

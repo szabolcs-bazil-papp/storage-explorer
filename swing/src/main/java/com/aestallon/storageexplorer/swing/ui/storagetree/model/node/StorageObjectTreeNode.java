@@ -15,12 +15,15 @@
 
 package com.aestallon.storageexplorer.swing.ui.storagetree.model.node;
 
+import java.util.List;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.ScopedEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedListEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedMapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ScopedObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 
 public final class StorageObjectTreeNode extends ClickableTreeNode {
 
@@ -33,12 +36,15 @@ public final class StorageObjectTreeNode extends ClickableTreeNode {
     super(objectEntry, true);
     this.trackingService = trackingService;
 
-    objectEntry.scopedEntries().forEach(it -> add(switch (it) {
+    final StorageInstance storageInstance =
+        trackingService.storageInstanceProvider().get(objectEntry.storageId());
+    final List<ScopedEntry> scopedChildren = storageInstance.scopedChildrenOf(objectEntry);
+    scopedChildren.forEach(it -> add(switch (it) {
       case ScopedMapEntry m -> new StorageMapTreeNode(m, trackingService);
       case ScopedObjectEntry o -> new StorageObjectTreeNode(o, trackingService);
       case ScopedListEntry l -> new StorageListTreeNode(l, trackingService);
     }));
-    supportsChildren = !objectEntry.scopedEntries().isEmpty();
+    supportsChildren = !scopedChildren.isEmpty();
   }
 
   @Override

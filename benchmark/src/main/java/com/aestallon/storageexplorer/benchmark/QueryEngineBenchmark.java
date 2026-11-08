@@ -22,7 +22,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -62,21 +61,21 @@ import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
-import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
-import com.aestallon.storageexplorer.core.service.FileSystemStorageIndex;
-import com.aestallon.storageexplorer.core.service.IndexingStrategy;
+import com.aestallon.storageexplorer.core.service.engine.EngineResult;
+import com.aestallon.storageexplorer.core.service.fs.FsStorageEngine;
 
 /**
  * LEGACY vs PIPELINED ArcScript query engine benchmarks over real-world query shapes.
  *
  * <p>
  * A trial builds a genuine file-system smartbit4all storage in a temporary directory (a platform
- * context wrapping {@link StorageFS}), persists {@code entryCount} {@code User} objects plus a
- * stored list and a stored map referencing them, and indexes the schema <em>once</em> - mirroring
- * the production flow, where the engine-level implicit {@code index} instruction always completes
- * before a query engine runs. Each benchmark then measures a single pre-parsed {@code query}
- * instruction executed directly on the selected {@link QueryEngine}, so the measured difference is
- * exactly the engine, not script parsing or indexing.
+ * context wrapping {@link StorageFS}, used only to <em>write</em> the fixture data - queries
+ * themselves run through a separate, from-scratch {@code FsStorageEngine}), persisting {@code
+ * entryCount} {@code User} objects plus a stored list and a stored map referencing them. Each
+ * benchmark then measures a single pre-parsed {@code query} instruction executed directly on the
+ * selected {@link QueryEngine}, so the measured difference is exactly the engine, not script
+ * parsing. Query source discovery is always a fresh, lazy walk now (no implicit whole-storage
+ * indexing pass precedes it, per Milestone 5's T5.1), matching production exactly.
  *
  * <p>
  * Note that entry <em>content</em> is not cached across invocations (each execution constructs a
@@ -172,17 +171,8 @@ public class QueryEngineBenchmark {
     }
     collectionApi.map(SCHEMA, "byUsername").putAll(byUsername);
 
-    storageInstance.setIndex(new FileSystemStorageIndex(
-        storageInstance.id(),
-        objectApi,
-        ctx.getBean(CollectionApi.class),
-        storagePath,
-        false));
-    // one indexing pass up front, mirroring the implicit index instruction that always precedes
-    // query execution in production:
-    storageInstance.index().refresh(
-        IndexingStrategy.of(IndexingStrategyType.INITIAL),
-        new IndexingTarget(Set.of(SCHEMA), Set.of()));
+    storageInstance.setEngine(
+        ((EngineResult.Ok<FsStorageEngine>) FsStorageEngine.open(storagePath)).value().asStorageEngine());
 
     engine = createEngine();
 

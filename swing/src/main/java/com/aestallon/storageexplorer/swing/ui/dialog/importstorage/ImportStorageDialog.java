@@ -74,6 +74,8 @@ public class ImportStorageDialog extends JDialog {
     setModal(true);
     getRootPane().setDefaultButton(buttonOK);
 
+    fullIndex.setEnabled(false);
+
     StorageInstanceDto storageInstanceDto = controller.initialModel();
     final boolean editing = storageInstanceDto.getId() != null;
     setTitle(editing
@@ -90,7 +92,9 @@ public class ImportStorageDialog extends JDialog {
           indexEntries.setSelected(true);
           break;
         case FULL:
-          fullIndex.setSelected(true);
+          // FULL indexing is no longer offered; a storage previously saved with it is treated
+          // as INITIAL when its settings are reopened.
+          indexEntries.setSelected(true);
           break;
       }
 
@@ -162,10 +166,6 @@ public class ImportStorageDialog extends JDialog {
 
     if (indexEntries.isSelected()) {
       return IndexingStrategyType.INITIAL;
-    }
-
-    if (fullIndex.isSelected()) {
-      return IndexingStrategyType.FULL;
     }
 
     throw new IllegalStateException("No indexing strategy selected!");

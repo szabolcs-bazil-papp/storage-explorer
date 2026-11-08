@@ -40,7 +40,9 @@ public class CommandConfig {
   CompletionProvider uriCompletionProvider(StorageInstanceContext storageInstanceContext) {
     return ctx -> storageInstanceContext.current()
         .map(it -> Stream
-            .concat(it.index().uris().stream(), storageInstanceContext.completionSet().stream())
+            .concat(
+                it.treeIndex().entries().stream().map(e -> e.uri().toString()),
+                storageInstanceContext.completionSet().stream())
             .map(String::valueOf)
             .filter(uri -> uri.contains(ctx.currentWord()))
             .map(CompletionProposal::new)

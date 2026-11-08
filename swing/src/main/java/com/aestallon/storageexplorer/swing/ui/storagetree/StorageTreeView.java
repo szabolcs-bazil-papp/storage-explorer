@@ -161,7 +161,7 @@ public class StorageTreeView
     switch (storageEntry) {
       case ScopedEntry scopedEntry -> {
         final var hostEntry = treePathsByLeaf.keySet().stream()
-            .filter(it -> it.uri().getPath().equals(scopedEntry.scope().getPath()))
+            .filter(it -> it.uri().path().equals(scopedEntry.scope().path()))
             .findFirst();
         if (hostEntry.isEmpty()) {
           node = null;
@@ -289,6 +289,7 @@ public class StorageTreeView
       final var loadEntry = new JMenuItem("Load entry...", IconProvider.DATA_TRANSFER);
       loadEntry.addActionListener(e -> {
         final var controller = LoadEntryController.create(
+            eventPublisher,
             sitn.storageInstance(),
             storageInstanceProvider,
             userConfigService);

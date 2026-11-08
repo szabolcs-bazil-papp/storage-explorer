@@ -19,6 +19,7 @@ import java.util.Set;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryConditionImpl;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.QueryableIndex;
 import com.aestallon.storageexplorer.core.util.AbstractEntryEvaluationExecutor;
 
 public final class ConditionEvaluationExecutor
@@ -31,10 +32,11 @@ public final class ConditionEvaluationExecutor
     private final long limit;
 
     private Builder(final StorageInstanceExaminer examiner,
+                    final QueryableIndex index,
                     final Set<StorageEntry> entries,
                     final QueryConditionImpl c,
                     final long limit) {
-      super(examiner, entries);
+      super(examiner, index, entries);
       this.c = c;
       this.limit = limit;
     }
@@ -51,10 +53,11 @@ public final class ConditionEvaluationExecutor
   }
 
   static Builder builder(final StorageInstanceExaminer examiner,
+                         final QueryableIndex index,
                          final Set<StorageEntry> entries,
                          final QueryConditionImpl c,
                          final long limit) {
-    return new Builder(examiner, entries, c, limit);
+    return new Builder(examiner, index, entries, c, limit);
   }
 
 
@@ -79,7 +82,7 @@ public final class ConditionEvaluationExecutor
 
   @Override
   protected void work(StorageEntry entry) {
-    final var evaluator = new ConditionEvaluator(examiner, entry, cache, c);
+    final var evaluator = new ConditionEvaluator(examiner, entry, index, cache, c);
     if (evaluator.evaluate()) {
       results.add(entry);
     }

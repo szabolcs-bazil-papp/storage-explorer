@@ -15,10 +15,9 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.net.URI;
-import java.nio.file.Path;
+import com.aestallon.storageexplorer.core.model.EntryUri;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
 
 /**
  * An {@code org_smartbit4all_api_object_bean_ObjectReferenceById} entry: a pure pointer object
@@ -33,21 +32,19 @@ import com.aestallon.storageexplorer.core.service.StorageIndex;
  */
 public final class ObjectReferenceByIdEntry extends ObjectEntry implements StorageEntry {
 
-  private static String reconstructUuid(final URI uri) {
-    final String[] pathElements = uri.getPath().split("/");
+  private static String reconstructUuid(final EntryUri uri) {
+    final var segments = uri.segments();
     final var sb = new StringBuilder();
-    for (int i = 2; i < pathElements.length; i++) {
-      sb.append(pathElements[i]);
+    for (int i = 1; i < segments.size(); i++) {
+      sb.append(segments.get(i));
     }
     return sb.toString();
   }
 
   private final String uuid;
 
-  ObjectReferenceByIdEntry(final StorageIndex<?> storageIndex,
-                           final Path path,
-                           final URI uri) {
-    super(storageIndex, path, uri);
+  ObjectReferenceByIdEntry(final StorageId id, final EntryUri uri) {
+    super(id, uri);
     this.uuid = reconstructUuid(uri);
   }
 

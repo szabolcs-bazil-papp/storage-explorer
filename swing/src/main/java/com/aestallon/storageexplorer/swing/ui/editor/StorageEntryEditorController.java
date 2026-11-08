@@ -21,7 +21,6 @@ import javax.swing.*;
 import org.springframework.context.ApplicationEventPublisher;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.core.event.EntryModified;
-import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
@@ -124,8 +123,7 @@ public class StorageEntryEditorController {
     this.storageEntry = storageEntry;
     this.version = version;
     srcVersionNr = versionNr;
-    singleVersionMode = !(storageEntry instanceof ObjectEntry o)
-                        || o.versioning() instanceof ObjectEntry.Versioning.Single;
+    singleVersionMode = storageEntry.uri().isSingleVersion();
     if (!singleVersionMode) {
       this.headVersion = headVersion;
       this.headVersionNr = headVersionNr;
@@ -175,9 +173,8 @@ public class StorageEntryEditorController {
           return;
         }
 
-        CompletableFuture.supplyAsync(() -> storageInstance
-                .index()
-                .modifier()
+        CompletableFuture.supplyAsync(() -> StorageEntryModificationService
+                .of(storageInstance)
                 .modify(storageEntry, text(), modificationMode))
             .thenAccept(result -> {
               switch (result) {

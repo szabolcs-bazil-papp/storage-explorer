@@ -68,9 +68,10 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
 
     this.objectEntry = objectEntry;
     this.factory = factory;
-    this.openInSystemExplorerAction = new OpenInSystemExplorerAction(objectEntry, this);
+    final var storageInstance = factory.storageInstanceProvider().get(objectEntry.storageId());
+    this.openInSystemExplorerAction = new OpenInSystemExplorerAction(storageInstance, objectEntry, this);
 
-    final var result = objectEntry.tryLoad().get();
+    final var result = ObjectEntryLoadResult.load(storageInstance, objectEntry);
     switch (result) {
       case ObjectEntryLoadResult.Err err -> setUpLoadingErrorDisplay(err);
       case ObjectEntryLoadResult.SingleVersion sv -> setUpObjectNodeDisplay(sv);
@@ -291,9 +292,12 @@ public class ObjectEntryInspectorView extends JTabbedPane implements InspectorVi
     toolbar.setOrientation(SwingConstants.HORIZONTAL);
     toolbar.setAlignmentX(LEFT_ALIGNMENT);
     toolbar.setBorder(new EmptyBorder(5, 0, 5, 0));
-    if ("BinaryDataObject".equals(objectEntry.typeName())) {
+    if (objectEntry.isBinaryData()) {
       final var storageInstance = factory.storageInstanceProvider().get(objectEntry.storageId());
-      toolbar.add(new DownloadBinaryDataAction(storageInstance, objectEntry.uri(), this));
+      toolbar.add(new DownloadBinaryDataAction(
+          storageInstance,
+          java.net.URI.create(objectEntry.uri().toString()),
+          this));
     }
     factory.addCloseAndForgetAction(this, toolbar);
     container.add(toolbar, BorderLayout.NORTH);

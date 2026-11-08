@@ -15,7 +15,6 @@
 
 package com.aestallon.storageexplorer.client.graph.service.internal;
 
-import java.net.URI;
 import java.util.Set;
 import static java.util.stream.Collectors.joining;
 import org.graphstream.graph.Edge;
@@ -25,19 +24,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.common.util.Attributes;
 import com.aestallon.storageexplorer.common.util.MsgStrings;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
-import com.aestallon.storageexplorer.core.util.Uris;
 
 public class NodeAdditionService {
 
   private static final Logger log = LoggerFactory.getLogger(NodeAdditionService.class);
 
-  private static String stringKey(URI uri) {
-    return Uris.latest(uri).toString();
+  private static String stringKey(EntryUri uri) {
+    return uri.latest().toString();
   }
 
-  private static String edgeKey(URI from, URI to) {
+  private static String edgeKey(EntryUri from, EntryUri to) {
     return stringKey(from) + "-ref-" + stringKey(to);
   }
 
@@ -45,7 +44,7 @@ public class NodeAdditionService {
     return edgeMissing(graph, from.uri(), to.uri());
   }
 
-  private static boolean edgeMissing(Graph graph, URI from, URI to) {
+  private static boolean edgeMissing(Graph graph, EntryUri from, EntryUri to) {
     return graph.getEdge(edgeKey(from, to)) == null;
   }
 
@@ -61,7 +60,7 @@ public class NodeAdditionService {
     return graph.getNode(stringKey(storageEntry.uri()));
   }
 
-  private static boolean containsNode(Graph graph, URI uri) {
+  private static boolean containsNode(Graph graph, EntryUri uri) {
     return graph.getNode(stringKey(uri)) != null;
   }
 

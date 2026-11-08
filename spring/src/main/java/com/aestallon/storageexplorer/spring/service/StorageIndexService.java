@@ -1,5 +1,6 @@
 package com.aestallon.storageexplorer.spring.service;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -7,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 import java.util.stream.IntStream;
@@ -14,6 +16,7 @@ import java.util.stream.Stream;
 import com.aestallon.storageexplorer.arcscript.api.Arc;
 import com.aestallon.storageexplorer.arcscript.engine.ArcScriptResult;
 import com.aestallon.storageexplorer.common.util.Pair;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
@@ -28,15 +31,15 @@ import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.Availability;
 import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
-import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
+import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.service.FileSystemStorageIndex;
-import com.aestallon.storageexplorer.core.service.IndexingStrategy;
-import com.aestallon.storageexplorer.core.service.RelationalDatabaseStorageIndex;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.core.service.engine.LoadedContent;
+import com.aestallon.storageexplorer.core.service.engine.StorageEngine;
+import com.aestallon.storageexplorer.core.service.index.result.AdjacencyResult;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
+import com.aestallon.storageexplorer.core.service.index.result.EntryResolution;
 import com.aestallon.storageexplorer.spring.rest.model.ArcScriptColumnDescriptor;
 import com.aestallon.storageexplorer.spring.rest.model.ArcScriptEvalError;
 import com.aestallon.storageexplorer.spring.rest.model.EntryAcquisitionRequest;
@@ -52,6 +55,16 @@ import com.aestallon.storageexplorer.spring.rest.model.StorageEntryType;
 import com.aestallon.storageexplorer.spring.rest.model.StorageIndexDto;
 import com.aestallon.storageexplorer.spring.util.IndexingMethod;
 
+/**
+ * Rewritten for Milestone 7 (T7.5): a fresh {@link StorageInstance} (backed by a fresh {@link
+ * StorageEngine} the {@link StorageIndexProvider} opens) is built per request, mirroring the old
+ * per-call {@code StorageIndexProvider#provide()} index construction exactly — nothing here was
+ * ever cached across requests, so the new architecture's transient, operation-scoped philosophy
+ * is a close match, not a behavior change. The RDB side (the old {@code
+ * RelationalDatabaseStorageIndex}-backed branch) is gone with no replacement, per the same
+ * explicit decision Milestone 4 (T4.2) made for {@code core}/{@code client} — {@code
+ * RdbStorageEngine} doesn't exist yet.
+ */
 public class StorageIndexService {
 
   private final StorageIndexProvider indexProvider;
@@ -60,73 +73,127 @@ public class StorageIndexService {
     this.indexProvider = indexProvider;
   }
 
-  public StorageIndexDto index(final IndexingMethod indexingMethod) {
-    final IndexingStrategy indexingStrategy = switch (indexingMethod) {
-      case NONE -> IndexingStrategy.STRATEGY_ON_DEMAND;
-      case SURFACE -> IndexingStrategy.STRATEGY_INITIAL;
-      case FULL -> IndexingStrategy.STRATEGY_FULL;
-    };
+  private StorageInstance newStorageInstance() {
+    final StorageInstance storageInstance = StorageInstance.fromDto(new StorageInstanceDto()
+        .type(StorageInstanceType.FS)
+        .fs(new FsStorageLocation())
+        .indexingStrategy(IndexingStrategyType.ON_DEMAND)
+        .availability(Availability.AVAILABLE));
+    storageInstance.setEngine(indexProvider.provide());
+    return storageInstance;
+  }
 
-    final var index = indexProvider.provide();
-    index.refresh(indexingStrategy);
-    return index.entities()
-        .flatMap(it -> entryToDto(it, IndexingMethod.FULL == indexingMethod))
+  public StorageIndexDto index(final IndexingMethod indexingMethod) {
+    final StorageInstance storageInstance = newStorageInstance();
+    if (IndexingMethod.NONE == indexingMethod) {
+      return new StorageIndexDto().entries(List.of());
+    }
+
+    storageInstance.treeIndex().rebuildSurface(IndexingTarget.any());
+    final boolean needRefs = IndexingMethod.FULL == indexingMethod;
+    return storageInstance.treeIndex().entries().stream()
+        .flatMap(it -> entryToDto(storageInstance, it, needRefs))
         .collect(collectingAndThen(toList(), new StorageIndexDto()::entries));
   }
 
-  private Stream<StorageEntryDto> entryToDto(final StorageEntry entry, boolean needRefs) {
+  private Stream<StorageEntryDto> entryToDto(final StorageInstance storageInstance,
+                                             final StorageEntry entry, boolean needRefs) {
     return switch (entry) {
       case ScopedEntry scoped -> Stream.empty();
       case ObjectEntry o -> Stream.concat(
-          Stream.of(convertObjectEntry(needRefs, o)),
-          o.scopedEntries().stream()
+          Stream.of(convertObjectEntry(storageInstance, needRefs, o)),
+          storageInstance.scopedChildrenOf(o).stream()
               .map(it -> switch (it) {
-                case ScopedObjectEntry soe -> convertObjectEntry(needRefs, soe);
-                case ScopedListEntry sle -> convertListEntry(needRefs, sle);
-                case ScopedMapEntry sme -> convertMapEntry(needRefs, sme);
+                case ScopedObjectEntry soe -> convertObjectEntry(storageInstance, needRefs, soe);
+                case ScopedListEntry sle -> convertListEntry(storageInstance, needRefs, sle);
+                case ScopedMapEntry sme -> convertMapEntry(storageInstance, needRefs, sme);
               })
-              .map(it -> it.scopeHost(o.uri())));
-      case ListEntry l -> Stream.of(convertListEntry(needRefs, l));
-      case MapEntry m -> Stream.of(convertMapEntry(needRefs, m));
-      case SequenceEntry s -> Stream.of(convertSequenceEntry(s));
+              .map(it -> it.scopeHost(URI.create(o.uri().toString()))));
+      case ListEntry l -> Stream.of(convertListEntry(storageInstance, needRefs, l));
+      case MapEntry m -> Stream.of(convertMapEntry(storageInstance, needRefs, m));
+      case SequenceEntry s -> Stream.of(convertSequenceEntry(storageInstance, s));
+      // ObjectStreamEntry/TableDataEntry: not yet representable by this DTO (T6.7/T7.6, confirmed
+      // wanted, not designed):
+      default -> Stream.empty();
     };
   }
 
-  private static StorageEntryDto convertSequenceEntry(SequenceEntry s) {
+  private StorageEntryDto convertSequenceEntry(final StorageInstance storageInstance,
+                                               final SequenceEntry s) {
     return new StorageEntryDto()
         .type(StorageEntryType.SEQUENCE)
-        .uri(s.uri())
+        .uri(URI.create(s.uri().toString()))
         .schema(s.schema())
         .name(s.name())
-        .seqVal(s.current());
+        .seqVal(currentValueOf(storageInstance, s));
   }
 
-  private StorageEntryDto convertMapEntry(boolean needRefs, MapEntry m) {
+  /** The sequence's current value, read fresh off its content (the {@code "current"} field) —
+   *  replaces the removed {@code SequenceEntry#current()} (T4.1). */
+  private long currentValueOf(final StorageInstance storageInstance, final SequenceEntry s) {
+    return switch (storageInstance.read(s)) {
+      case ContentLoadResult.Ok ok -> switch (ok.content().materialize()) {
+        case LoadedContent.JsonObject(var data) -> {
+          try {
+            yield Long.parseLong(String.valueOf(data.get("current")));
+          } catch (final Exception e) {
+            yield -1L;
+          }
+        }
+        default -> -1L;
+      };
+      case ContentLoadResult.Err err -> -1L;
+    };
+  }
+
+  private StorageEntryDto convertMapEntry(final StorageInstance storageInstance,
+                                          boolean needRefs, MapEntry m) {
     return new StorageEntryDto()
         .type(StorageEntryType.MAP)
-        .uri(m.uri())
+        .uri(URI.create(m.uri().toString()))
         .schema(m.schema())
         .name(m.name())
-        .references(needRefs ? uriPropertiesToReferences(m.uriProperties()) : new ArrayList<>());
+        .references(needRefs
+            ? uriPropertiesToReferences(outgoingReferences(storageInstance, m))
+            : new ArrayList<>());
   }
 
-  private StorageEntryDto convertListEntry(boolean needRefs, ListEntry l) {
+  private StorageEntryDto convertListEntry(final StorageInstance storageInstance,
+                                           boolean needRefs, ListEntry l) {
     return new StorageEntryDto()
         .type(StorageEntryType.LIST)
-        .uri(l.uri())
+        .uri(URI.create(l.uri().toString()))
         .schema(l.schema())
         .name(l.name())
-        .references(needRefs ? uriPropertiesToReferences(l.uriProperties()) : new ArrayList<>());
+        .references(needRefs
+            ? uriPropertiesToReferences(outgoingReferences(storageInstance, l))
+            : new ArrayList<>());
   }
 
-  private StorageEntryDto convertObjectEntry(boolean needRefs, ObjectEntry o) {
+  private StorageEntryDto convertObjectEntry(final StorageInstance storageInstance,
+                                             boolean needRefs, ObjectEntry o) {
     return new StorageEntryDto()
         .type(StorageEntryType.OBJECT)
-        .uri(o.uri())
-        .schema(o.uri().getScheme())
+        .uri(URI.create(o.uri().toString()))
+        .schema(o.uri().scheme())
         .name(o.uuid())
         .typeName(o.typeName())
-        .references(needRefs ? uriPropertiesToReferences(o.uriProperties()) : new ArrayList<>());
+        .references(needRefs
+            ? uriPropertiesToReferences(outgoingReferences(storageInstance, o))
+            : new ArrayList<>());
+  }
+
+  /** {@code entry}'s outgoing references — replaces the removed {@code
+   *  StorageEntry#uriProperties()} (T4.1) with the same adjacency scan every other Milestone 3
+   *  index already uses for graph traversal. */
+  private Set<UriProperty> outgoingReferences(final StorageInstance storageInstance,
+                                              final StorageEntry entry) {
+    try (var index = storageInstance.newGraphIndex()) {
+      return switch (index.outgoingReferences(entry)) {
+        case AdjacencyResult.Ok(var e, var refs) -> refs;
+        case AdjacencyResult.Err err -> Set.of();
+      };
+    }
   }
 
   private List<Reference> uriPropertiesToReferences(final Collection<UriProperty> uriProperties) {
@@ -138,55 +205,34 @@ public class StorageIndexService {
         .toList();
   }
 
+  private static Optional<StorageEntry> resolve(final StorageInstance storageInstance, final URI uri) {
+    return EntryUri.parse(uri.toString())
+        .map(storageInstance::resolve)
+        .flatMap(res -> switch (res) {
+          case EntryResolution.Known(var entry) -> Optional.of(entry);
+          case EntryResolution.Unknown u -> Optional.<StorageEntry>empty();
+        });
+  }
+
   public EntryAcquisitionResult acquire(final EntryAcquisitionRequest acquisitionRequest) {
     final var uris = acquisitionRequest.getUris();
     if (uris.isEmpty()) {
       return new EntryAcquisitionResult();
     }
 
-    final var index = indexProvider.provide();
-    // TODO: Should think hard about this: allow customisation of the provider!
-    // index.refresh(IndexingStrategy.STRATEGY_ON_DEMAND);
-    // entries.forEach(it -> index.accept(it.uri(), it));
-    return uris.stream().map(index::getOrCreate)
-        .flatMap(it -> switch (it) {
-          case StorageIndex.EntryAcquisitionResult.New(var e) -> Stream.of(e);
-          case StorageIndex.EntryAcquisitionResult.Present(var e) -> Stream.of(e);
-          case StorageIndex.EntryAcquisitionResult.Fail f -> Stream.empty();
-        })
-        .map(it -> Pair.of(
-            it,
-            it instanceof ObjectEntry o ? Optional.of(o) : Optional.<ObjectEntry>empty()))
-        .map(p -> Pair.of(p.a(), p.b().map(ObjectEntry::tryLoad)))
-        .collect(collectingAndThen(toList(), ps -> {
-          // we collect first so every - potentially background queued - load request would be 
-          // submitted:
-          final List<StorageEntry> result = new ArrayList<>();
-          for (final var p : ps) {
-            if (p.b().isPresent() && p.b().get().get() instanceof ObjectEntryLoadResult.Err) {
-              // if the entry needed a load to verify its validity and the load failed, we skip it:
-              continue;
-            }
-            result.add(p.a());
-          }
-          return result;
-        }))
-        .stream()
-        // TODO: The valid entries should be offered to the index first.
-        .flatMap(it -> entryToDto(it, true))
+    final StorageInstance storageInstance = newStorageInstance();
+    return uris.stream()
+        .flatMap(uri -> resolve(storageInstance, uri).stream())
+        // an ObjectEntry that fails to load is dropped, same as the old "verify validity" pass:
+        .filter(it -> !(it instanceof ObjectEntry o)
+            || storageInstance.read(o) instanceof ContentLoadResult.Ok)
+        .flatMap(it -> entryToDto(storageInstance, it, true))
         .collect(collectingAndThen(toList(), new EntryAcquisitionResult()::entries));
   }
 
   public EntryLoadResult load(final EntryLoadRequest loadRequest) {
-    final var uri = loadRequest.getUri();
-    final var index = indexProvider.provide();
-    final var result = index.getOrCreate(uri);
-
-    final StorageEntry entry = switch (result) {
-      case StorageIndex.EntryAcquisitionResult.New(var e) -> e;
-      case StorageIndex.EntryAcquisitionResult.Present(var e) -> e;
-      case StorageIndex.EntryAcquisitionResult.Fail f -> null;
-    };
+    final StorageInstance storageInstance = newStorageInstance();
+    final StorageEntry entry = resolve(storageInstance, loadRequest.getUri()).orElse(null);
     if (entry == null) {
       return new EntryLoadResult().type(EntryLoadResultType.FAILED);
     }
@@ -196,23 +242,23 @@ public class StorageIndexService {
     final EntryLoadResultType loadResultType;
     switch (entry) {
       case ListEntry l -> {
-        entryDto = convertListEntry(true, l);
+        entryDto = convertListEntry(storageInstance, true, l);
         versions = Collections.emptyList();
         loadResultType = EntryLoadResultType.SINGLE;
       }
       case MapEntry m -> {
-        entryDto = convertMapEntry(true, m);
+        entryDto = convertMapEntry(storageInstance, true, m);
         versions = Collections.emptyList();
         loadResultType = EntryLoadResultType.SINGLE;
       }
       case SequenceEntry s -> {
-        entryDto = convertSequenceEntry(s);
+        entryDto = convertSequenceEntry(storageInstance, s);
         versions = Collections.emptyList();
         loadResultType = EntryLoadResultType.SINGLE;
       }
       case ObjectEntry o -> {
-        entryDto = convertObjectEntry(true, o);
-        final var loadResult = o.tryLoad().get();
+        entryDto = convertObjectEntry(storageInstance, true, o);
+        final var loadResult = ObjectEntryLoadResult.load(storageInstance, o);
         switch (loadResult) {
           case ObjectEntryLoadResult.Err err -> {
             return new EntryLoadResult().type(EntryLoadResultType.FAILED);
@@ -226,6 +272,10 @@ public class StorageIndexService {
             loadResultType = EntryLoadResultType.MULTI;
           }
         }
+      }
+      default -> {
+        // ObjectStreamEntry/TableDataEntry: not yet representable (T6.7/T7.6):
+        return new EntryLoadResult().type(EntryLoadResultType.FAILED);
       }
     }
 
@@ -259,22 +309,7 @@ public class StorageIndexService {
   }
 
   public ArcScriptQueryEvalResult evalArcScript(final String script) {
-    final StorageIndex<?> index = indexProvider.provide();
-
-    final StorageInstanceDto temp = new StorageInstanceDto();
-    switch (index) {
-      case RelationalDatabaseStorageIndex rdsi -> temp
-          .db(new SqlStorageLocation())
-          .type(StorageInstanceType.DB);
-      case FileSystemStorageIndex fssi -> temp
-          .fs(new FsStorageLocation())
-          .type(StorageInstanceType.FS);
-    }
-
-    final StorageInstance storageInstance = StorageInstance.fromDto(temp
-        .indexingStrategy(IndexingStrategyType.ON_DEMAND)
-        .availability(Availability.AVAILABLE));
-    storageInstance.setIndex(index);
+    final StorageInstance storageInstance = newStorageInstance();
 
     return switch (Arc.evaluate(script, storageInstance)) {
       case ArcScriptResult.CompilationError cErr ->

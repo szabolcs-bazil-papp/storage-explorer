@@ -25,6 +25,7 @@ import javax.swing.border.EmptyBorder;
 import com.aestallon.storageexplorer.client.userconfig.service.StorageEntryTrackingService;
 import com.aestallon.storageexplorer.core.model.entry.ObjectReferenceByIdEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.util.Uris;
 import com.aestallon.storageexplorer.swing.ui.explorer.TabContainer;
@@ -55,7 +56,9 @@ public class ObjectReferenceByIdInspectorView extends JPanel
     setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
     setBorder(new EmptyBorder(5, 5, 5, 5));
 
-    final var result = objectReferenceByIdEntry.tryLoad().get();
+    final StorageInstance storageInstance =
+        factory.storageInstanceProvider().get(objectReferenceByIdEntry.storageId());
+    final var result = ObjectEntryLoadResult.load(storageInstance, objectReferenceByIdEntry);
     switch (result) {
       case ObjectEntryLoadResult.Err err -> initUi(null, err.msg());
       case ObjectEntryLoadResult.SingleVersion sv -> initUi(sv, null);

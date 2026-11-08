@@ -16,48 +16,31 @@
 package com.aestallon.storageexplorer.core.service;
 
 import java.net.URI;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntryFactory;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AdaptiveEntryLookupTableTest {
 
-  @TempDir
-  Path tempDir;
-
-  private FileSystemStorageIndex index;
-
-  @BeforeEach
-  void setUp() {
-    index = new FileSystemStorageIndex(
-        new StorageId(UUID.randomUUID()),
-        null,
-        null,
-        tempDir,
-        false);
-  }
+  private final StorageEntryFactory entryFactory = new StorageEntryFactory(new StorageId(UUID.randomUUID()));
 
   private ObjectEntry mint(final int i) {
     final var uri = URI.create("test:/com_example_Foo/2026/1/1/1/1/" + i);
-    final var result = index.getOrCreate(uri);
-    assertThat(result).isInstanceOf(StorageIndex.EntryAcquisitionResult.New.class);
-    return (ObjectEntry) ((StorageIndex.EntryAcquisitionResult.New) result).entry();
+    return (ObjectEntry) com.aestallon.storageexplorer.core.model.EntryUri.parse(uri.toString())
+        .flatMap(entryFactory::create)
+        .orElseThrow();
   }
 
-  private static ObjectEntryLoadRequest dummyLoad() {
-    return new ObjectEntryLoadRequest.FileSystemObjectEntryLoadRequest(
-        ObjectEntryLoadResult.err("test"));
+  private static ContentLoadResult dummyLoad() {
+    return new ContentLoadResult.Err(null, "test");
   }
 
   @Test
@@ -90,7 +73,7 @@ class AdaptiveEntryLookupTableTest {
       final var entry = mint(java.util.concurrent.ThreadLocalRandom.current().nextInt(1_000_000));
       final var invocations = new AtomicLong();
       final var results =
-          java.util.concurrent.ConcurrentHashMap.<ObjectEntryLoadRequest>newKeySet();
+          java.util.concurrent.ConcurrentHashMap.<ContentLoadResult>newKeySet();
 
       try (final var executor =
                java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {

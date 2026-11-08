@@ -45,7 +45,7 @@ public class DropCommand {
         storageInstanceContext.current(null);
       }
     });
-    instancesToRemove.forEach(storageInstanceProvider::discardIndex);
+    instancesToRemove.forEach(storageInstanceProvider::discard);
   }
 
 }

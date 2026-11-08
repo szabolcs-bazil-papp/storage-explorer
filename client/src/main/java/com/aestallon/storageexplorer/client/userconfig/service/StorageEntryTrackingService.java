@@ -34,8 +34,11 @@ import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.StorageEntryUserDataChanged;
 import com.aestallon.storageexplorer.client.userconfig.model.FavouriteStorageEntry;
 import com.aestallon.storageexplorer.client.userconfig.model.TrackedEntry;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
+import com.aestallon.storageexplorer.core.service.index.result.EntryResolution;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 @Service
@@ -78,8 +81,36 @@ public class StorageEntryTrackingService {
         ArrayList::new));
   }
 
+  /** Lets {@code swing} tree-node classes that already thread this service everywhere reach a
+   *  {@code StorageInstance} for a tracked entry's owning instance (e.g. to discover scoped
+   *  children, T7.3) without a second constructor parameter threaded through the same call
+   *  sites. */
+  public StorageInstanceProvider storageInstanceProvider() {
+    return storageInstanceProvider;
+  }
+
   private List<TrackedEntry> trackedEntries() {
     return Collections.unmodifiableList(trackedEntries.get());
+  }
+
+  /** Resolves a persisted (still {@code java.net.URI}-based, per {@link TrackedEntry}'s own DTO
+   *  shape) address against {@code storageInstance} — the replacement for the removed {@code
+   *  StorageInstance#discover(URI)}. */
+  private static Optional<StorageEntry> resolve(final StorageInstance storageInstance,
+                                                 final URI uri) {
+    return EntryUri.parse(uri.toString())
+        .map(storageInstance::resolve)
+        .flatMap(res -> switch (res) {
+          case EntryResolution.Known(var entry) -> Optional.of(entry);
+          case EntryResolution.Unknown u -> Optional.<StorageEntry>empty();
+        });
+  }
+
+  /** {@code storageEntry}'s address as the {@code java.net.URI} every persisted DTO here still
+   *  keys/stores by (per Milestone 2's additive discipline, these DTOs' own migration is out of
+   *  this task's scope). */
+  private static URI uriOf(final StorageEntry storageEntry) {
+    return URI.create(storageEntry.uri().toString());
   }
 
   private record ShowableEntry(
@@ -102,7 +133,7 @@ public class StorageEntryTrackingService {
             return new ShowableEntry(null, false, null);
           }
 
-          return storageInstance.discover(it.getUri())
+          return resolve(storageInstance, it.getUri())
               // the storage is available, and the entry is found: we show this inspector, if need be:
               .map(entry -> new ShowableEntry(it, it.isUnderInspection(), entry))
               .orElseGet(() -> {
@@ -135,7 +166,7 @@ public class StorageEntryTrackingService {
       boolean found = false;
       for (final var trackedEntry : trackedEntries) {
         if (Objects.equals(trackedEntry.getStorageId(), storageEntry.storageId().uuid())
-            && Objects.equals(trackedEntry.getUri(), storageEntry.uri())) {
+            && Objects.equals(trackedEntry.getUri(), uriOf(storageEntry))) {
 
           if (trackedEntry.isUnderInspection()) {
             return;
@@ -146,7 +177,7 @@ public class StorageEntryTrackingService {
       }
       if (!found) {
         final var newTrackedEntry = new TrackedEntry();
-        newTrackedEntry.setUri(storageEntry.uri());
+        newTrackedEntry.setUri(uriOf(storageEntry));
         newTrackedEntry.setStorageId(storageEntry.storageId().uuid());
         newTrackedEntry.setUnderInspection(true);
         trackedEntries.add(newTrackedEntry);
@@ -163,7 +194,7 @@ public class StorageEntryTrackingService {
     try {
       final var trackedInspectors = new ArrayList<>(trackedEntries());
       final var toRemove = trackedInspectors.stream()
-          .filter(it -> Objects.equals(it.getUri(), storageEntry.uri()))
+          .filter(it -> Objects.equals(it.getUri(), uriOf(storageEntry)))
           .toList();
       if (forget) {
         trackedInspectors.removeAll(toRemove);
@@ -190,7 +221,7 @@ public class StorageEntryTrackingService {
     Objects.requireNonNull(storageEntry, "storageEntry cannot be null!");
 
     return Optional
-        .ofNullable(favouriteStorageEntries.get().get(storageEntry.uri()))
+        .ofNullable(favouriteStorageEntries.get().get(uriOf(storageEntry)))
         .map(it -> new StorageEntryUserData(it.getName(), it.getDescription()));
   }
 
@@ -200,7 +231,7 @@ public class StorageEntryTrackingService {
     Objects.requireNonNull(storageEntryUserData, "storageEntryUserData cannot be null!");
 
     final var map = favouriteStorageEntries.updateAndGet(fse -> {
-      final FavouriteStorageEntry it = fse.computeIfAbsent(storageEntry.uri(), k -> {
+      final FavouriteStorageEntry it = fse.computeIfAbsent(uriOf(storageEntry), k -> {
         final var entry = new FavouriteStorageEntry();
         entry.setUri(k);
         entry.setStorageId(storageEntry.storageId().uuid());

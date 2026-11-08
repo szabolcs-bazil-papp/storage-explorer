@@ -18,14 +18,15 @@ package com.aestallon.storageexplorer.client;
 import java.util.Set;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.QueryableIndex;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
 import com.aestallon.storageexplorer.core.util.AbstractEntryEvaluationExecutor;
 
 public class BatchLoaderExecutor extends
     AbstractEntryEvaluationExecutor<BatchLoaderExecutor.EntryWithLoadResult, BatchLoaderExecutor> {
 
-  public record EntryWithLoadResult(ObjectEntry entry, ObjectEntryLoadResult result) {}
+  public record EntryWithLoadResult(ObjectEntry entry, ContentLoadResult result) {}
 
 
   public static final class BatchLoaderExecutorBuilder extends
@@ -33,8 +34,9 @@ public class BatchLoaderExecutor extends
 
     private BatchLoaderExecutorBuilder(
         StorageInstanceExaminer examiner,
+        QueryableIndex index,
         Set<StorageEntry> entries) {
-      super(examiner, entries);
+      super(examiner, index, entries);
     }
 
     @Override
@@ -49,8 +51,9 @@ public class BatchLoaderExecutor extends
   }
 
   public static BatchLoaderExecutorBuilder builder(StorageInstanceExaminer examiner,
+                                                   QueryableIndex index,
                                                    Set<StorageEntry> entries) {
-    return new BatchLoaderExecutorBuilder(examiner, entries);
+    return new BatchLoaderExecutorBuilder(examiner, index, entries);
   }
 
   private BatchLoaderExecutor(BatchLoaderExecutorBuilder builder) {
@@ -73,7 +76,7 @@ public class BatchLoaderExecutor extends
       return;
     }
 
-    results.add(new EntryWithLoadResult(e, e.tryLoad().get()));
+    results.add(new EntryWithLoadResult(e, index.load(e)));
   }
 
 }

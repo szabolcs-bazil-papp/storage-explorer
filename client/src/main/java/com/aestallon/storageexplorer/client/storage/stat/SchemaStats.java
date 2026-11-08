@@ -22,7 +22,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Stream;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
+import com.aestallon.storageexplorer.core.service.index.MetadataAware;
+import com.aestallon.storageexplorer.core.service.index.result.MetadataResult;
 
 public final class SchemaStats {
 
@@ -136,9 +141,13 @@ public final class SchemaStats {
 
 
   public static SchemaStatData of(StorageInstance storageInstance) {
-    final var stats = storageInstance.entities()
-        .map(it -> new EntryStat(it.uri().getScheme(), it.valid()))
-        .toList();
+    final List<EntryStat> stats;
+    try (MetadataAware metadata = storageInstance.newStatsIndex();
+         Stream<StorageEntry> all = storageInstance.query(IndexingTarget.any())) {
+      stats = all
+          .map(it -> new EntryStat(it.uri().scheme(), isValid(metadata, it)))
+          .toList();
+    }
     final var total = stats.size();
     final var valid = stats.stream().filter(it -> it.valid).count();
 
@@ -149,6 +158,13 @@ public final class SchemaStats {
     final var rows = new ArrayList<>(schemaMap.values());
     rows.sort(Comparator.comparing(SchemaRow::schema));
     return new SchemaStatData(total, valid, rows);
+  }
+
+  /** Whether {@code entry}'s header can be read at all — replaces the removed {@code
+   *  StorageEntry#valid()} (T4.1): a missing or unreadable entry reports {@code
+   *  MetadataResult.Err}, exactly the cases the old flag was meant to flag. */
+  private static boolean isValid(final MetadataAware metadata, final StorageEntry entry) {
+    return metadata.metadataOf(entry) instanceof MetadataResult.Ok;
   }
 
 }

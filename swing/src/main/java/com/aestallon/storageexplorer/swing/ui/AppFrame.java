@@ -20,6 +20,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import javax.swing.*;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.client.storage.StorageInstanceProvider;
 import com.aestallon.storageexplorer.client.userconfig.event.LafChanged;
@@ -63,6 +64,7 @@ public class AppFrame extends JFrame {
   private final transient ColourService colourService;
   private final transient NominalTypeService nominalTypeService;
   private final transient ArcScriptEngineSettingsService arcScriptEngineSettingsService;
+  private final transient ApplicationEventPublisher eventPublisher;
 
   public AppFrame(StorageInstanceProvider storageInstanceProvider,
                   UserConfigService userConfigService,
@@ -73,7 +75,8 @@ public class AppFrame extends JFrame {
                   ThemeService themeService,
                   ColourService colourService,
                   NominalTypeService nominalTypeService,
-                  ArcScriptEngineSettingsService arcScriptEngineSettingsService) {
+                  ArcScriptEngineSettingsService arcScriptEngineSettingsService,
+                  ApplicationEventPublisher eventPublisher) {
     this.storageInstanceProvider = storageInstanceProvider;
     this.userConfigService = userConfigService;
     this.appContentView = appContentView;
@@ -84,6 +87,7 @@ public class AppFrame extends JFrame {
     this.colourService = colourService;
     this.nominalTypeService = nominalTypeService;
     this.arcScriptEngineSettingsService = arcScriptEngineSettingsService;
+    this.eventPublisher = eventPublisher;
 
     setTitle("Storage Explorer");
     setSize(900, 600);
@@ -258,6 +262,7 @@ public class AppFrame extends JFrame {
           .map(storageInstanceProvider::get)
           .orElse(null);
       final var controller = LoadEntryController.create(
+          eventPublisher,
           storageInstance,
           storageInstanceProvider,
           userConfigService);

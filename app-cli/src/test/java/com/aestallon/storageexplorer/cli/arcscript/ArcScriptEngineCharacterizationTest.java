@@ -44,7 +44,8 @@ import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
-import com.aestallon.storageexplorer.core.service.FileSystemStorageIndex;
+import com.aestallon.storageexplorer.core.service.engine.EngineResult;
+import com.aestallon.storageexplorer.core.service.fs.FsStorageEngine;
 
 /**
  * LEGACY vs PIPELINED characterization of ArcScript query execution against a synthetic,
@@ -112,12 +113,8 @@ class ArcScriptEngineCharacterizationTest {
     }
     collectionApi.map(SCHEMA, "byUsername").putAll(byUsername);
 
-    storageInstance.setIndex(new FileSystemStorageIndex(
-        storageInstance.id(),
-        objectApi,
-        ctx.getBean(CollectionApi.class),
-        storagePath,
-        false));
+    storageInstance.setEngine(
+        ((EngineResult.Ok<FsStorageEngine>) FsStorageEngine.open(storagePath)).value().asStorageEngine());
   }
 
   @AfterAll

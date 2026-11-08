@@ -1,55 +1,50 @@
+/*
+ * Copyright (C) 2024 it4all Hungary Kft.
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the
+ * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License along with this program.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Set;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.smartbit4all.core.utility.StringConstant;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
 
+/**
+ * A {@code storedSeq}-rooted sequence entry — identity only. Its "current value" read needs no
+ * dedicated capability at all (per T4.1/the implementation plan): {@link StorageEntryFactory}
+ * recognizes it as a plain {@code .o}-rooted entry via the {@code /storedSeq} marker, so it reads
+ * through the exact same {@code StorageEngine.read(...)}/{@code ContentHandle} path as any other
+ * entry — a caller interested in "current" just reads this entry's content like any other and
+ * looks at its own {@code current} field, the same way it would for any other JSON payload.
+ */
 public final class SequenceEntry extends AbstractStorageEntry implements StorageEntry {
 
-  private static final Logger log = LoggerFactory.getLogger(SequenceEntry.class);
+  private static final String MARKER = "storedSeq/";
 
   private final String schema;
   private final String name;
 
-  private boolean valid = false;
-  private long current = -1L;
+  SequenceEntry(final StorageId id, final EntryUri uri) {
+    super(id, uri);
 
-  SequenceEntry(StorageIndex<?> index, Path path, URI uri) {
-    super(index, path, uri);
-
-    final String fullScheme = uri.getScheme();
+    final String fullScheme = uri.scheme();
     this.schema = fullScheme.substring(0, fullScheme.lastIndexOf('-'));
 
-    final String uriPath = uri.getPath();
-    final String marker = "storedSeq/";
-    final int markerIdx = uriPath.indexOf(marker);
-    if (markerIdx != -1) {
-      this.name = uriPath.substring(markerIdx + marker.length(), uriPath.length() - 2);
-    } else {
-      this.name = StringConstant.EMPTY;
-    }
-  }
-
-  @Override
-  public StorageId storageId() {
-    return id;
-  }
-
-  @Override
-  public URI uri() {
-    return uri;
-  }
-
-  @Override
-  public Path path() {
-    return path;
+    final String uriPath = uri.path();
+    final int markerIdx = uriPath.indexOf(MARKER);
+    this.name = (markerIdx != -1)
+        ? uriPath.substring(markerIdx + MARKER.length(), uriPath.length() - 2)
+        : StringConstant.EMPTY;
   }
 
   public String schema() {
@@ -60,61 +55,8 @@ public final class SequenceEntry extends AbstractStorageEntry implements Storage
     return name;
   }
 
-  @Override
-  public void accept(StorageEntry storageEntry) {
-    if (Objects.requireNonNull(storageEntry) instanceof SequenceEntry that && that.valid) {
-      current = that.current;
-      valid = true;
-    }
-  }
-
-  @Override
-  public Set<UriProperty> uriProperties() {
-    return Collections.emptySet();
-  }
-
-  public long current() {
-    if (!valid) {
-      refresh();
-    }
-
-    return current;
-  }
-
-  @Override
-  public void refresh() {
-    if (name.isEmpty()) {
-      log.warn("Cannot refresh sequence '{}' (sequence name is not valid)", uri);
-      return;
-    }
-
-    try {
-      current = Long.parseLong(String.valueOf(storageIndex.get()
-          .loader()
-          .loadExact(uri, 0)
-          .objectAsMap()
-          .get("current")));
-    } catch (Exception e) {
-      log.error("Cannot determine the current value of sequence [ {} ]: {}", uri, e.getMessage());
-      log.debug(e.getMessage(), e);
-      current = -1L;
-    }
-
-    valid = true;
-  }
-
-  @Override
-  public boolean valid() {
-    return valid;
-  }
-
   public String displayName() {
     return schema + " / " + name;
-  }
-
-  @Override
-  public void setUriProperties(Set<UriProperty> uriProperties) {
-    // NO OP
   }
 
   @Override

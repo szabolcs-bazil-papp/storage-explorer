@@ -29,7 +29,6 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import com.aestallon.storageexplorer.client.userconfig.model.Problem;
@@ -44,12 +43,22 @@ import com.aestallon.storageexplorer.core.event.StorageImportEvent;
 import com.aestallon.storageexplorer.core.event.StorageIndexDiscardedEvent;
 import com.aestallon.storageexplorer.core.event.StorageReimportedEvent;
 import com.aestallon.storageexplorer.core.event.StorageReindexed;
+import com.aestallon.storageexplorer.core.event.TypeInfoUpdated;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.model.instance.dto.Availability;
+import com.aestallon.storageexplorer.core.model.instance.dto.FsStorageLocation;
+import com.aestallon.storageexplorer.core.model.instance.dto.IndexingStrategyType;
+import com.aestallon.storageexplorer.core.model.instance.dto.SqlStorageLocation;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceDto;
+import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.core.service.engine.EngineResult;
+import com.aestallon.storageexplorer.core.service.engine.StorageEngine;
+import com.aestallon.storageexplorer.core.service.fs.FsStorageEngine;
+import com.aestallon.storageexplorer.core.service.index.impl.TreeBookmarkIndex;
+import com.aestallon.storageexplorer.core.service.rdb.RdbStorageEngine;
 
 @Service
 public class StorageInstanceProvider {
@@ -87,7 +96,6 @@ public class StorageInstanceProvider {
   private final UserConfigService userConfigService;
   private final ProblemService problemService;
   private final Map<StorageId, StorageInstance> storageInstancesById;
-  private final Map<StorageInstance, ConfigurableApplicationContext> contextsByInstance;
   private final ExecutorService executorService;
 
   public StorageInstanceProvider(ApplicationEventPublisher eventPublisher,
@@ -97,7 +105,6 @@ public class StorageInstanceProvider {
     this.userConfigService = userConfigService;
     this.problemService = problemService;
     storageInstancesById = new HashMap<>();
-    contextsByInstance = new HashMap<>();
     executorService = Executors.newSingleThreadExecutor(new HighPriorityThreadFactory());
   }
 
@@ -107,12 +114,6 @@ public class StorageInstanceProvider {
 
   public StorageInstance get(final StorageId id) {
     return storageInstancesById.get(id);
-  }
-
-  public Stream<StorageEntry> searchForUri(final String queryString) {
-    return storageInstancesById.values().stream()
-        .map(StorageInstance::index)
-        .flatMap(it -> it.searchForUri(queryString));
   }
 
   public StorageInstance storageInstanceOf(final StorageEntry storageEntry) {
@@ -130,7 +131,7 @@ public class StorageInstanceProvider {
         workId,
         "Importing storage: " + name + "..."));
     initialise(storageInstance);
-    storageInstance.refreshIndex();
+    rebuildSurfaceBestEffort(storageInstance);
 
     userConfigService.addStorageLocation(storageInstance.toDto());
     eventPublisher.publishEvent(new StorageImportEvent(storageInstance));
@@ -164,48 +165,92 @@ public class StorageInstanceProvider {
     eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok(workId));
   }
 
+  /**
+   * (Re)connects {@code storageInstance} to its configured {@link StorageEngine} and registers
+   * it, regardless of outcome — a failed connection still leaves the instance present (with
+   * {@code availability} set to {@code UNAVAILABLE}/{@code MISCONFIGURED}), fixing the old
+   * "zombie instance" bug where a failed import silently vanished instead of showing up as a
+   * broken storage (§10).
+   */
   private void initialise(final StorageInstance storageInstance) {
-    storageInstance.setEventPublisher(eventPublisher);
+    switch (storageInstance.location()) {
+      case FsStorageLocation fs -> connectFs(storageInstance, fs);
+      case SqlStorageLocation sql -> connectDb(storageInstance, sql);
+    }
+    storageInstancesById.put(storageInstance.id(), storageInstance);
+  }
 
-    final var factory = StorageIndexFactory.of(storageInstance.id());
-    switch (factory.create(storageInstance.location())) {
-      case StorageIndexFactory.StorageIndexCreationResult.Ok<?> ok -> {
-        final var index = ok.storageIndex();
-        final var ctx = ok.springContext();
+  private void connectFs(final StorageInstance storageInstance, final FsStorageLocation location) {
+    switch (FsStorageEngine.open(location)) {
+      case EngineResult.Ok<FsStorageEngine> ok -> {
+        storageInstance.setEngine(ok.value().asStorageEngine());
+        storageInstance.setAvailability(Availability.AVAILABLE);
+        storageInstance.addTypeInfoListener(
+            id -> eventPublisher.publishEvent(new TypeInfoUpdated(id)));
+      }
+      case EngineResult.Err<FsStorageEngine> err -> fail(storageInstance, err.error().toString());
+    }
+  }
 
-        storageInstance.setIndex(index);
-        storageInstancesById.put(storageInstance.id(), storageInstance);
-        contextsByInstance.put(storageInstance, ctx);
+  private void connectDb(final StorageInstance storageInstance, final SqlStorageLocation location) {
+    switch (RdbStorageEngine.open(location)) {
+      case EngineResult.Ok<RdbStorageEngine> ok -> {
+        storageInstance.setEngine(ok.value());
+        storageInstance.setAvailability(Availability.AVAILABLE);
+        storageInstance.addTypeInfoListener(
+            id -> eventPublisher.publishEvent(new TypeInfoUpdated(id)));
       }
-      case StorageIndexFactory.StorageIndexCreationResult.Err err -> {
-        eventPublisher.publishEvent(Msg.err(
-            "Failed to initialize " + storageInstance.name(),
-            "Storage instance is unavailable: " + err.errorMessage()));
-        problemService.add(Problem.ofStorage(storageInstance.id(),
-            "Failed to init Storage " + storageInstance.name() + ": " + err.errorMessage()));
-        log.error("Failed to initialise Storage instance [ {} ]: {}",
-            storageInstance.name(),
-            err.errorMessage());
-      }
+      case EngineResult.Err<RdbStorageEngine> err -> fail(storageInstance, err.error().toString());
+    }
+  }
+
+  private void fail(final StorageInstance storageInstance, final String reason) {
+    storageInstance.setAvailability(storageInstance.misconfigured()
+        ? Availability.MISCONFIGURED
+        : Availability.UNAVAILABLE);
+    eventPublisher.publishEvent(Msg.err(
+        "Failed to initialize " + storageInstance.name(),
+        "Storage instance is unavailable: " + reason));
+    problemService.add(Problem.ofStorage(storageInstance.id(),
+        "Failed to init Storage " + storageInstance.name() + ": " + reason));
+    log.error("Failed to initialise Storage instance [ {} ]: {}", storageInstance.name(), reason);
+  }
+
+  /** The SURFACE-mode rebuild from §10 — best-effort: a failure here leaves the instance
+   *  connected but with a stale/empty tree, never fails the surrounding operation. Skipped
+   *  entirely for an unavailable instance or an {@code ON_DEMAND} indexing strategy. */
+  private void rebuildSurfaceBestEffort(final StorageInstance storageInstance) {
+    if (storageInstance.availability() != Availability.AVAILABLE) {
+      return;
+    }
+    if (storageInstance.indexingStrategy() == IndexingStrategyType.ON_DEMAND) {
+      return;
+    }
+
+    try {
+      storageInstance.treeIndex().rebuildSurface(IndexingTarget.any());
+    } catch (final Exception e) {
+      log.warn("Best-effort surface rebuild failed for storage [ {} ]: {}",
+          storageInstance.name(), e.getMessage());
+      log.debug(e.getMessage(), e);
     }
   }
 
   public void reindex(final StorageInstance storageInstance) {
     executorService.submit(() -> {
-      final StorageIndex<?> storageIndex = storageInstance.index();
-      if (storageIndex == null) {
+      if (storageInstance.availability() != Availability.AVAILABLE) {
         eventPublisher.publishEvent(Msg.err(
             "Cannot reindex " + storageInstance.name() + "!",
-            "The index is not available. Check the connection settings for this storage!"));
-        log.warn("Cannot reindex storage at [ {} ] as it is unknown!", storageInstance);
+            "The storage is not connected. Check the connection settings for this storage!"));
+        log.warn("Cannot reindex storage [ {} ] as it is not connected!", storageInstance.name());
         return;
       }
 
       final UUID workId = UUID.randomUUID();
       eventPublisher.publishEvent(new BackgroundWorkStartedEvent(
           workId,
-          "Reindexing storage" + storageInstance.name() + "..."));
-      storageInstance.refreshIndex();
+          "Reindexing storage " + storageInstance.name() + "..."));
+      rebuildSurfaceBestEffort(storageInstance);
       eventPublisher.publishEvent(new StorageReindexed(storageInstance));
       eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok(workId));
       eventPublisher.publishEvent(Msg.info(storageInstance.name() + " reindexed!", null));
@@ -214,56 +259,35 @@ public class StorageInstanceProvider {
 
   @EventListener
   public void onStorageIndexDiscarded(StorageIndexDiscardedEvent e) {
-    CompletableFuture.runAsync(() -> discardIndex(e.storageInstance()));
+    CompletableFuture.runAsync(() -> discard(e.storageInstance()));
   }
 
-  public void discardIndex(final StorageInstance storageInstance) {
+  public void discard(final StorageInstance storageInstance) {
     storageInstancesById.remove(storageInstance.id());
-    final var idx = storageInstance.index();
-    if (idx != null) {
-      idx.clear();
-    }
-
-    final ConfigurableApplicationContext ctx = contextsByInstance.remove(storageInstance);
-    if (ctx == null) {
-      return;
-    }
-    tryCloseCtx(ctx, storageInstance);
+    // closes both the treeIndex and the engine itself (a connection pool, for RDB) - setEngine's
+    // own reconfigure path handles the "swap, don't leak" case; this is the "gone for good" case:
+    storageInstance.close();
 
     userConfigService.removeStorageLocation(storageInstance.toDto());
   }
 
   public void reimport(final StorageInstance storageInstance) {
     executorService.submit(() -> {
-      storageInstance.index().clear();
-
-      final ConfigurableApplicationContext ctx = contextsByInstance.remove(storageInstance);
-      tryCloseCtx(ctx, storageInstance);
+      final TreeBookmarkIndex treeIndex = storageInstance.treeIndex();
+      if (treeIndex != null) {
+        treeIndex.close();
+      }
 
       final UUID workId = UUID.randomUUID();
       eventPublisher.publishEvent(new BackgroundWorkStartedEvent(
           workId,
           "Importing storage: " + storageInstance.name() + "..."));
       initialise(storageInstance);
-      storageInstance.refreshIndex();
+      rebuildSurfaceBestEffort(storageInstance);
       eventPublisher.publishEvent(new StorageReindexed(storageInstance));
       eventPublisher.publishEvent(new StorageReimportedEvent(storageInstance));
       eventPublisher.publishEvent(BackgroundWorkCompletedEvent.ok(workId));
     });
-  }
-
-  private void tryCloseCtx(final ConfigurableApplicationContext ctx,
-                           final StorageInstance storageInstance) {
-    try {
-      ctx.close();
-    } catch (final Throwable t) {
-      problemService.add(Problem.ofStorage(
-          storageInstance.id(),
-          "Failed to close service context for Storage " + storageInstance.name() + "!"));
-      log.error("Cannot close application context [ {} ] belonging to storage at [ {} ]!!!",
-          ctx, storageInstance);
-      log.debug(t.getMessage(), t);
-    }
   }
 
   public void loadTypeInformation() {
@@ -271,13 +295,13 @@ public class StorageInstanceProvider {
     for (final var storageInstance : storageInstancesById.values()) {
       final var id = storageInstance.id();
       final List<EntityType> types = typeInfoRepository.loadStructuredTypeInfo(id);
-      storageInstance.index().addTypeInfo(types);
+      storageInstance.addTypeInfo(types);
     }
   }
 
   public void saveTypeInformation(StorageId storageId) {
     final StorageInstance storageInstance = get(storageId);
-    final Set<EntityType> types = storageInstance.index().getStructuredTypeInfo();
+    final Set<EntityType> types = storageInstance.getStructuredTypeInfo();
     final OpResult result = userConfigService
         .typeInfoRepository()
         .saveStructuredTypeInfo(storageId, types);

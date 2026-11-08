@@ -18,20 +18,25 @@ package com.aestallon.storageexplorer.swing.ui.misc;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.nio.file.Path;
+import java.util.Optional;
 import javax.swing.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 
 public class OpenInSystemExplorerAction extends AbstractAction {
-  
+
   private static final Logger log = LoggerFactory.getLogger(OpenInSystemExplorerAction.class);
-  
+
+  private final StorageInstance storageInstance;
   private final StorageEntry storageEntry;
   private final JComponent parent;
-  
-  public OpenInSystemExplorerAction(final StorageEntry storageEntry, JComponent parent) {
+
+  public OpenInSystemExplorerAction(final StorageInstance storageInstance,
+                                    final StorageEntry storageEntry, JComponent parent) {
     super(null, IconProvider.SE);
+    this.storageInstance = storageInstance;
     this.storageEntry = storageEntry;
     this.parent = parent;
     putValue(SHORT_DESCRIPTION, "Open this entry's location in the system file explorer");
@@ -48,9 +53,9 @@ public class OpenInSystemExplorerAction extends AbstractAction {
     }
 
     try {
-      final Path path = storageEntry.path();
-      if (path != null) {
-        Desktop.getDesktop().open(path.getParent().toFile());
+      final Optional<Path> path = storageInstance.pathOf(storageEntry);
+      if (path.isPresent()) {
+        Desktop.getDesktop().open(path.get().getParent().toFile());
       } else {
         JOptionPane.showMessageDialog(
             parent,

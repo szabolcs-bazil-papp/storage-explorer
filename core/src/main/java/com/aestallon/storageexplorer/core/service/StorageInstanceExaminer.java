@@ -1,6 +1,5 @@
 package com.aestallon.storageexplorer.core.service;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,12 +17,15 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.common.util.Pair;
-import static com.aestallon.storageexplorer.common.util.Streams.reverse;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
+import com.aestallon.storageexplorer.core.service.engine.LoadedContent;
+import com.aestallon.storageexplorer.core.service.index.QueryableIndex;
+import com.aestallon.storageexplorer.core.service.index.result.AdjacencyResult;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
+import com.aestallon.storageexplorer.core.service.index.result.EntryResolution;
 
 public class StorageInstanceExaminer {
 
@@ -68,16 +70,16 @@ public class StorageInstanceExaminer {
      * a cheap placeholder under the map's own synchronization and resolve the actual load under a
      * virtual-thread-friendly lock instead.
      *
-     * @param objectEntry the entry whose load request is looked up, not null
+     * @param objectEntry the entry whose load result is looked up, not null
      * @param f the loading function, invoked at most once per retained entry, not null
      *
-     * @return the (possibly newly created) {@link ObjectEntryLoadRequest}, never null
+     * @return the (possibly newly created) {@link ContentLoadResult}, never null
      */
-    ObjectEntryLoadRequest computeIfAbsent(final ObjectEntry objectEntry,
-                                           final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f);
+    ContentLoadResult computeIfAbsent(final ObjectEntry objectEntry,
+                                      final Function<? super ObjectEntry, ? extends ContentLoadResult> f);
 
     /**
-     * Memoizes a single entry's load request so the loading I/O runs under a
+     * Memoizes a single entry's load result so the loading I/O runs under a
      * {@link java.util.concurrent.locks.ReentrantLock} - parking, not pinning, virtual threads -
      * instead of inside the owning map's bin monitor.
      */
@@ -85,11 +87,11 @@ public class StorageInstanceExaminer {
 
       private final java.util.concurrent.locks.ReentrantLock lock =
           new java.util.concurrent.locks.ReentrantLock();
-      private volatile ObjectEntryLoadRequest value;
+      private volatile ContentLoadResult value;
 
-      ObjectEntryLoadRequest resolve(final ObjectEntry objectEntry,
-                                     final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f) {
-        final ObjectEntryLoadRequest present = value;
+      ContentLoadResult resolve(final ObjectEntry objectEntry,
+                                final Function<? super ObjectEntry, ? extends ContentLoadResult> f) {
+        final ContentLoadResult present = value;
         if (present != null) {
           return present;
         }
@@ -116,8 +118,8 @@ public class StorageInstanceExaminer {
       }
 
       @Override
-      public ObjectEntryLoadRequest computeIfAbsent(final ObjectEntry objectEntry,
-                                                    final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f) {
+      public ContentLoadResult computeIfAbsent(final ObjectEntry objectEntry,
+                                               final Function<? super ObjectEntry, ? extends ContentLoadResult> f) {
         // only a cheap placeholder is created inside the bin lock; the load itself resolves
         // outside it:
         return inner
@@ -129,26 +131,25 @@ public class StorageInstanceExaminer {
   }
 
 
-  private final Function<URI, Optional<StorageEntry>> discoverer;
-
-  public StorageInstanceExaminer(final Function<URI, Optional<StorageEntry>> discoverer) {
-    this.discoverer = discoverer;
+  public StorageInstanceExaminer() {
   }
 
   public PropertyDiscoveryResult discoverInlineProperty(final StorageEntry entry,
                                                         final String propQuery,
-                                                        final ObjectEntryLoadResult.SingleVersion sv) {
-    return new InlinePropertyDiscoverer(entry, new PropQuery(propQuery)).discover(sv.objectAsMap());
+                                                        final Map<String, Object> objectAsMap) {
+    return new InlinePropertyDiscoverer(entry, new PropQuery(propQuery)).discover(objectAsMap);
   }
 
   public PropertyDiscoveryResult discoverProperty(final PropertyDiscoveryResult medial,
                                                   final String propQuery,
+                                                  final QueryableIndex index,
                                                   final ObjectEntryLookupTable cache) {
-    return discoverProperty(medial, new PropQuery(propQuery), cache);
+    return discoverProperty(medial, new PropQuery(propQuery), index, cache);
   }
 
   private PropertyDiscoveryResult discoverProperty(final PropertyDiscoveryResult medial,
                                                    final PropQuery propQuery,
+                                                   final QueryableIndex index,
                                                    final ObjectEntryLookupTable cache) {
     return switch (medial) {
       case None none -> none;
@@ -157,45 +158,48 @@ public class StorageInstanceExaminer {
           : discoverProperty(
               some.host(),
               PropQuery.join(new PropQuery(some.path()), propQuery),
+              index,
               cache);
     };
   }
 
   public PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
                                                   final String propQuery,
+                                                  final QueryableIndex index,
                                                   final ObjectEntryLookupTable cache) {
-    return discoverProperty(entry, new PropQuery(propQuery), cache);
+    return discoverProperty(entry, new PropQuery(propQuery), index, cache);
   }
 
   private PropertyDiscoveryResult discoverProperty(final StorageEntry entry,
                                                    final PropQuery propQuery,
+                                                   final QueryableIndex index,
                                                    final ObjectEntryLookupTable cache) {
     if (propQuery.isOwnUri()) {
       return new StringFound(entry.uri().toString(), entry, UriProperty.OWN);
     }
 
     return switch (entry) {
+      case ObjectEntry o when o.isBinaryData() -> new NotFound(
+          "BinaryData content is never loaded for ArcScript property discovery (its payload can "
+          + "be arbitrarily large) - " + o.uri());
       case ObjectEntry o -> {
-        final var loadResult = cache.computeIfAbsent(o, ObjectEntry::tryLoad).get();
+        final var loadResult = cache.computeIfAbsent(o, index::load);
         yield switch (loadResult) {
-          case ObjectEntryLoadResult.Err(String msg) -> new NotFound(msg);
-          case ObjectEntryLoadResult.SingleVersion sv -> inVersion(sv, entry, propQuery, cache);
-          case ObjectEntryLoadResult.MultiVersion(var versions) -> versions.stream()
-              .collect(reverse())
-              .limit(1L) // TODO: hardcoded for now
-              .map(sv -> inVersion(sv, entry, propQuery, cache))
-              .filter(it -> !(it instanceof NotFound))
-              .findFirst()
-              .orElseGet(NoValue::new);
+          case ContentLoadResult.Err(var e, String msg) -> new NotFound(msg);
+          case ContentLoadResult.Ok(var e, var handle) -> switch (handle.materialize()) {
+            case LoadedContent.JsonObject(var data) -> inVersion(data, entry, propQuery, index, cache);
+            default -> new NotFound("Entry did not materialize to a JSON object.");
+          };
         };
       }
       case null, default -> new NotFound("Entry is not an object entry.");
     };
   }
 
-  private PropertyDiscoveryResult inVersion(final ObjectEntryLoadResult.SingleVersion sv,
+  private PropertyDiscoveryResult inVersion(final Map<String, Object> objectAsMap,
                                             final StorageEntry host,
                                             final PropQuery propQuery,
+                                            final QueryableIndex index,
                                             final ObjectEntryLookupTable cache) {
     /*
      * How propQueries work and how to interpret them
@@ -222,14 +226,15 @@ public class StorageInstanceExaminer {
      * a.5.c matches -> a.5.c.*
      *
      */
-    return host.uriProperties().stream()
+    final java.util.Set<UriProperty> hostProps = outgoingReferencesOf(host, index);
+    return hostProps.stream()
         .filter(propQuery::startsWith)
         .findFirst()
-        .map(it -> discoverer.apply(it.uri())
-            .map(e -> discoverProperty(e, propQuery.drop(it.length()), cache))
+        .map(it -> resolve(it, index)
+            .map(e -> discoverProperty(e, propQuery.drop(it.length()), index, cache))
             .orElseGet(() -> new NotFound(it.uri() + " is unreachable!")))
         .or(() -> {
-          final List<UriProperty> matchedListProps = host.uriProperties().stream()
+          final List<UriProperty> matchedListProps = hostProps.stream()
               .filter(it -> !it.isStandalone())
               .filter(propQuery::matches)
               .sorted()
@@ -239,12 +244,35 @@ public class StorageInstanceExaminer {
           }
 
           return matchedListProps.stream()
-              .map(it -> Pair.of(it, discoverer.apply(it.uri())))
+              .map(it -> Pair.of(it, resolve(it, index)))
               .flatMap(Pair.streamOnB())
-              .map(p -> discoverProperty(p.b(), propQuery.drop(p.a()), cache))
+              .map(p -> discoverProperty(p.b(), propQuery.drop(p.a()), index, cache))
               .collect(collectingAndThen(toList(), rs -> Optional.of(ListFound.of(rs, ""))));
         })
-        .orElseGet(() -> new InlinePropertyDiscoverer(host, propQuery).discover(sv.objectAsMap()));
+        .orElseGet(() -> new InlinePropertyDiscoverer(host, propQuery).discover(objectAsMap));
+  }
+
+  /** {@code host}'s outgoing references, per {@link QueryableIndex#outgoingReferences} —
+   *  replaces the removed {@code StorageEntry.uriProperties()} (T4.1/T4.4). An {@code Err} is
+   *  treated as "no references found" rather than propagated, matching the old method's own
+   *  contract (it never threw, just returned what it had). */
+  private static java.util.Set<UriProperty> outgoingReferencesOf(final StorageEntry host,
+                                                                   final QueryableIndex index) {
+    return switch (index.outgoingReferences(host)) {
+      case AdjacencyResult.Ok(var e, var refs) -> refs;
+      case AdjacencyResult.Err(var e, var reason) -> java.util.Set.of();
+    };
+  }
+
+  /** Resolves a {@link UriProperty}'s address (still {@code java.net.URI} today - its own
+   *  migration is deferred, per T3.2's landing note) through {@code index}, replacing the
+   *  removed constructor-captured {@code discoverer} field (T4.4, decision §6.9/§6.10). */
+  private static Optional<StorageEntry> resolve(final UriProperty prop, final QueryableIndex index) {
+    return EntryUri.parse(prop.uri().toString())
+        .flatMap(uri -> switch (index.resolve(uri)) {
+          case EntryResolution.Known(var entry) -> Optional.of(entry);
+          case EntryResolution.Unknown u -> Optional.<StorageEntry>empty();
+        });
   }
 
   private static final class InlinePropertyDiscoverer {

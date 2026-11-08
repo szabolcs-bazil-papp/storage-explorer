@@ -22,6 +22,7 @@ import java.util.Set;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.QueryableIndex;
 import com.aestallon.storageexplorer.core.util.AbstractEntryEvaluationExecutor;
 
 public class QueryResultRowEvaluationExecutor extends
@@ -33,9 +34,10 @@ public class QueryResultRowEvaluationExecutor extends
     private final Set<ArcScriptResult.ColumnDescriptor> columns;
 
     private Builder(final StorageInstanceExaminer examiner,
+                    final QueryableIndex index,
                     final Set<StorageEntry> entries,
                     final Collection<ArcScriptResult.ColumnDescriptor> columns) {
-      super(examiner, entries);
+      super(examiner, index, entries);
       this.columns = new HashSet<>(columns);
     }
 
@@ -51,9 +53,10 @@ public class QueryResultRowEvaluationExecutor extends
   }
 
   static Builder builder(final StorageInstanceExaminer examiner,
+                         final QueryableIndex index,
                          final Set<StorageEntry> entries,
                          final Collection<ArcScriptResult.ColumnDescriptor> columns) {
-    return new Builder(examiner, entries, columns);
+    return new Builder(examiner, index, entries, columns);
   }
 
   private final Set<ArcScriptResult.ColumnDescriptor> columns;
@@ -85,7 +88,7 @@ public class QueryResultRowEvaluationExecutor extends
       final ArcScriptResult.ColumnDescriptor column,
       final StorageEntry entry) {
     final String prop = column.prop();
-    final ArcScriptResult.DataCell cell = switch (examiner.discoverProperty(entry, prop, cache)) {
+    final ArcScriptResult.DataCell cell = switch (examiner.discoverProperty(entry, prop, index, cache)) {
       case StorageInstanceExaminer.None none -> ArcScriptResult.DataCell.noValue();
       case StorageInstanceExaminer.Some some -> ArcScriptResult.DataCell.of(some.val());
     };

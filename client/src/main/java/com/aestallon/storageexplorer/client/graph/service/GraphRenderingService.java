@@ -15,7 +15,6 @@
 
 package com.aestallon.storageexplorer.client.graph.service;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -38,10 +37,14 @@ import com.aestallon.storageexplorer.client.graph.service.internal.Styles;
 import com.aestallon.storageexplorer.client.userconfig.model.GraphSettings;
 import com.aestallon.storageexplorer.common.util.Attributes;
 import com.aestallon.storageexplorer.common.util.Pair;
-import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.service.index.AdjacencyAware;
+import com.aestallon.storageexplorer.core.service.index.MetadataAware;
+import com.aestallon.storageexplorer.core.service.index.result.EntryResolution;
+import com.aestallon.storageexplorer.core.service.index.result.MetadataResult;
 
 public final class GraphRenderingService {
 
@@ -78,15 +81,21 @@ public final class GraphRenderingService {
       nodeAdditionService.addOrigin(graph, storageEntry);
     }
     reportGraphState(graph);
-    
-    if (settings.getGraphTraversalOutboundLimit() != 0) {
-      renderOutgoingReferences(graph, storageEntry);
-    }
-    if (settings.getGraphTraversalInboundLimit() != 0) {
-      renderIncomingReferences(graph, storageEntry);
-    }
 
-    styleGraph(graph);
+    // operation-scoped, one per render() call (per StorageInstance.newGraphIndex()'s own
+    // javadoc) - shared by the outgoing/incoming discovery services and the version-count sizing
+    // strategy below, then discarded:
+    try (AdjacencyAware index = storageInstance.newGraphIndex();
+         MetadataAware stats = storageInstance.newStatsIndex()) {
+      if (settings.getGraphTraversalOutboundLimit() != 0) {
+        renderOutgoingReferences(graph, storageEntry, index);
+      }
+      if (settings.getGraphTraversalInboundLimit() != 0) {
+        renderIncomingReferences(graph, storageEntry, index);
+      }
+
+      styleGraph(graph, stats);
+    }
     showLabels(graph, showLabels);
   }
   
@@ -102,10 +111,11 @@ public final class GraphRenderingService {
     return storageInstance;
   }
 
-  private void renderOutgoingReferences(Graph graph, StorageEntry storageEntry) {
+  private void renderOutgoingReferences(Graph graph, StorageEntry storageEntry,
+                                        AdjacencyAware index) {
     final var limit = settings.getGraphTraversalOutboundLimit();
     Map<StorageEntry, Set<Pair<StorageEntry, Set<UriProperty>>>> refs = outgoingEdgeDiscoveryService
-        .execute(graph, storageEntry)
+        .execute(graph, storageEntry, index)
         .collect(collectingAndThen(toSet(), s -> Map.of(storageEntry, s)));
     int c = 0;
     do {
@@ -117,12 +127,11 @@ public final class GraphRenderingService {
           .flatMap(Set::stream)
           .map(Pair::a)
           .collect(toSet());
-      storageInstance.validate(candidates);
       refs = candidates.stream()
           .collect(toMap(
               Function.identity(),
               it -> outgoingEdgeDiscoveryService
-                  .execute(graph, it)
+                  .execute(graph, it, index)
                   .collect(toSet())));
       reportGraphState(graph);
     } while (!Thread.currentThread().isInterrupted()
@@ -131,11 +140,12 @@ public final class GraphRenderingService {
     log.trace("OUTGOING REFERENCES: loop exit");
   }
 
-  private void renderIncomingReferences(Graph graph, StorageEntry storageEntry) {
+  private void renderIncomingReferences(Graph graph, StorageEntry storageEntry,
+                                        AdjacencyAware index) {
     final var limit = settings.getGraphTraversalInboundLimit();
     Map<StorageEntry, Set<StorageEntry>> referrers = Map.of(
         storageEntry,
-        incomingEdgeDiscoveryService.execute(graph, storageEntry).
+        incomingEdgeDiscoveryService.execute(graph, storageEntry, index).
             collect(toSet()));
     int c = 0;
     do {
@@ -143,14 +153,13 @@ public final class GraphRenderingService {
       Set<StorageEntry> candidates = referrers.values().stream()
           .flatMap(Set::stream)
           .collect(toSet());
-      storageInstance.validate(candidates);
       candidates.forEach(it -> outgoingEdgeDiscoveryService
-          .findConnectionsWithExistingNodes(graph, it)
+          .findConnectionsWithExistingNodes(graph, it, index)
           .forEach(target -> nodeAdditionService.add(graph, it, target.a(), target.b())));
       referrers = candidates.stream().collect(toMap(
           Function.identity(),
           it -> incomingEdgeDiscoveryService
-              .execute(graph, it)
+              .execute(graph, it, index)
               .filter(r -> NodeAdditionService.edgeMissing(graph, r, it))
               .collect(toSet())));
       reportGraphState(graph);
@@ -165,11 +174,12 @@ public final class GraphRenderingService {
   }
 
   public Optional<StorageEntry> getStorageEntry(String uriString) {
-    return getStorageEntry(URI.create(uriString));
-  }
-
-  public Optional<StorageEntry> getStorageEntry(URI uri) {
-    return storageInstance.index().get(uri);
+    return EntryUri.parse(uriString)
+        .map(storageInstance::resolve)
+        .flatMap(res -> switch (res) {
+          case EntryResolution.Known(var entry) -> Optional.of(entry);
+          case EntryResolution.Unknown u -> Optional.<StorageEntry>empty();
+        });
   }
 
   public void changeHighlight(final Graph graph, final StorageEntry from, final StorageEntry to) {
@@ -215,8 +225,8 @@ public final class GraphRenderingService {
     return newStyle;
   }
 
-  private void styleGraph(final Graph graph) {
-    final var sStrategy = createNodeSizingStrategy(graph, settings.getNodeSizing());
+  private void styleGraph(final Graph graph, final MetadataAware stats) {
+    final var sStrategy = createNodeSizingStrategy(graph, settings.getNodeSizing(), stats);
     final var cStrategy = createNodeColouringStrategy(graph, settings.getNodeColouring());
     graph.nodes().forEach(node -> {
       final String sizing = sStrategy.compute(node);
@@ -273,12 +283,13 @@ public final class GraphRenderingService {
   }
 
   private NodeStylingStrategy createNodeSizingStrategy(final Graph graph,
-                                                       final GraphSettings.NodeSizing sizing) {
+                                                       final GraphSettings.NodeSizing sizing,
+                                                       final MetadataAware stats) {
     return switch (sizing) {
       case DEGREE -> new DegreeNodeSizingStrategy(graph);
       case IN_DEGREE -> new InDegreeNodeSizingStrategy(graph);
       case OUT_DEGREE -> new OutDegreeNodeSizingStrategy(graph);
-      case VERSION_COUNT -> new VersionCountNodeSizingStrategy(graph);
+      case VERSION_COUNT -> new VersionCountNodeSizingStrategy(graph, stats);
       case SIZE, UNIFORM -> new UniformNodeSizingStrategy(graph);
     };
   }
@@ -375,20 +386,22 @@ public final class GraphRenderingService {
 
 
   private final class VersionCountNodeSizingStrategy extends NodeSizingStrategy {
-    VersionCountNodeSizingStrategy(Graph graph) {
+    private final MetadataAware stats;
+
+    VersionCountNodeSizingStrategy(Graph graph, MetadataAware stats) {
       super(graph);
+      this.stats = stats;
     }
 
     @Override
     protected int computeSize(Node node) {
-      return getStorageEntry(node.getId()).stream()
-          .mapToInt(it -> it instanceof ObjectEntry o
-              ? switch (o.versioning()) {
-            case ObjectEntry.Versioning.Single s -> 10;
-            case ObjectEntry.Versioning.Multi(long head) -> 10 + ((int) head);
-          }
-              : 10)
-          .findFirst()
+      return getStorageEntry(node.getId())
+          .map(stats::metadataOf)
+          .map(res -> switch (res) {
+            case MetadataResult.Ok(var e, var meta) ->
+                10 + (meta.versionNr() == null ? 0 : meta.versionNr().intValue());
+            case MetadataResult.Err err -> 10;
+          })
           .orElse(10);
     }
   }

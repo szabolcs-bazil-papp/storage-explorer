@@ -1,81 +1,103 @@
 package com.aestallon.storageexplorer.core.model.loading;
 
 import java.net.URI;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
-import static java.util.stream.Collectors.toCollection;
-import java.util.stream.LongStream;
-import org.smartbit4all.core.object.ObjectNode;
-import com.aestallon.storageexplorer.core.util.Uris;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.service.engine.ContentHandle;
+import com.aestallon.storageexplorer.core.service.engine.EngineResult;
+import com.aestallon.storageexplorer.core.service.engine.EntryMetadata;
+import com.aestallon.storageexplorer.core.service.engine.LoadedContent;
+import com.aestallon.storageexplorer.core.service.engine.VersionedContent;
+import com.aestallon.storageexplorer.core.service.index.MetadataAware;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
+import com.aestallon.storageexplorer.core.service.index.result.MetadataResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+/**
+ * Still-live display model for {@code swing}/{@code app-cli}'s entry inspectors — nobody built
+ * its instances anymore after {@code ObjectEntryLoadingService} was deleted (Milestone 4) until
+ * {@link #load}/{@link #asSingleVersion} (T7.1) took over that job against the new {@link
+ * StorageInstance#read}/{@link StorageInstance#history} primitives, replacing the old {@code
+ * ObjectNode}-based factories (removed here, dead since Milestone 4 — their only caller was the
+ * deleted loading service) entirely.
+ */
 public sealed interface ObjectEntryLoadResult permits
     ObjectEntryLoadResult.Err,
     ObjectEntryLoadResult.SingleVersion,
     ObjectEntryLoadResult.MultiVersion {
 
+  ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
+
   static ObjectEntryLoadResult.Err err(String msg) {
     return new ObjectEntryLoadResult.Err(msg);
   }
 
-  static ObjectEntryLoadResult.SingleVersion singleVersion(final ObjectNode node,
-                                                           final ObjectMapper objectMapper) {
-    return new ObjectEntryLoadResult.SingleVersion.Eager(node, objectMapper);
-  }
-
-  static ObjectEntryLoadResult.SingleVersion singleVersion(
-      final Supplier<SingleVersion.Eager> supplier) {
-    return new ObjectEntryLoadResult.SingleVersion.Lazy(supplier);
-  }
-
-  @FunctionalInterface
-  interface ExactVersionLoader {
-
-    SingleVersion.Eager load(final URI uri, final long version);
-
-    default Supplier<SingleVersion.Eager> asSupplier(final URI uri, final long version) {
-      return () -> load(uri, version);
+  /** Loads {@code entry}'s full version history (single-version entries report one "version":
+   *  their one content) — the display-level replacement for the removed {@code
+   *  StorageEntry#tryLoad()} (T4.1). */
+  static ObjectEntryLoadResult load(final StorageInstance storageInstance, final StorageEntry entry) {
+    if (entry.uri().isSingleVersion()) {
+      return switch (storageInstance.read(entry)) {
+        case ContentLoadResult.Ok ok -> singleVersionOf(entry, metadataOf(storageInstance, entry), ok.content());
+        case ContentLoadResult.Err err -> new ObjectEntryLoadResult.Err(err.reason());
+      };
     }
 
+    return switch (storageInstance.history(entry)) {
+      case EngineResult.Ok<List<VersionedContent>> ok -> new ObjectEntryLoadResult.MultiVersion(
+          ok.value().stream()
+              .map(vc -> singleVersionOf(entry, vc.metadata(), vc.content()))
+              .toList());
+      case EngineResult.Err<List<VersionedContent>> err -> new ObjectEntryLoadResult.Err(err.error().toString());
+    };
   }
 
-  static ObjectEntryLoadResult.MultiVersion multiVersion(final ObjectNode node,
-                                                         final ExactVersionLoader loader,
-                                                         final ObjectMapper objectMapper,
-                                                         final long versionLimit) {
-    final URI objectUri = node.getObjectUri();
-    long vn = Uris.getVersion(objectUri);
-    final var head = singleVersion(node, objectMapper);
-    return createLazyVersions(loader, versionLimit, objectUri, vn, head);
+  /** For a stored {@code ListEntry}/{@code MapEntry}'s own content (always single-version) —
+   *  the replacement for the removed {@code ListEntry}/{@code MapEntry#asSingleVersion()}
+   *  (T4.1). */
+  static Optional<ObjectEntryLoadResult.SingleVersion> asSingleVersion(
+      final StorageInstance storageInstance, final StorageEntry entry) {
+    return switch (load(storageInstance, entry)) {
+      case ObjectEntryLoadResult.SingleVersion sv -> Optional.of(sv);
+      case ObjectEntryLoadResult.MultiVersion mv -> Optional.of(mv.head());
+      case ObjectEntryLoadResult.Err err -> Optional.empty();
+    };
   }
 
-  static ObjectEntryLoadResult.MultiVersion multiVersion(
-      final ObjectEntryLoadResult.SingleVersion singleVersion,
-      final ExactVersionLoader loader,
-      final long versionLimit) {
-    final URI objectUri = singleVersion.meta().uri();
-    long vn = singleVersion.meta().versionNr();
-    return createLazyVersions(loader, versionLimit, objectUri, vn, singleVersion);
+  private static EntryMetadata metadataOf(final StorageInstance storageInstance, final StorageEntry entry) {
+    try (MetadataAware stats = storageInstance.newStatsIndex()) {
+      return switch (stats.metadataOf(entry)) {
+        case MetadataResult.Ok(var e, var meta) -> meta;
+        case MetadataResult.Err err -> new EntryMetadata(entry.uri(), null, null, null, null, null);
+      };
+    }
   }
 
-  private static ObjectEntryLoadResult.MultiVersion createLazyVersions(
-      final ExactVersionLoader loader,
-      final long versionLimit,
-      final URI objectUri, long vn,
-      final ObjectEntryLoadResult.SingleVersion head) {
-    final List<ObjectEntryLoadResult.SingleVersion> versions = (versionLimit < 2)
-        ? new ArrayList<>()
-        : LongStream
-            .range(0, Math.min(versionLimit, vn))
-            .mapToObj(i -> loader.asSupplier(objectUri, i))
-            .map(SingleVersion.Lazy::new)
-            .collect(toCollection(ArrayList::new));
-    versions.add(head);
-    return new ObjectEntryLoadResult.MultiVersion(versions);
+  @SuppressWarnings("unchecked")
+  private static ObjectEntryLoadResult.SingleVersion singleVersionOf(final StorageEntry entry,
+                                                                      final EntryMetadata meta,
+                                                                      final ContentHandle content) {
+    final Map<String, Object> objectAsMap = switch (content.materialize()) {
+      case LoadedContent.JsonObject(var data) -> (Map<String, Object>) data;
+      default -> new LinkedHashMap<>();
+    };
+    final ObjectEntryMeta m = new ObjectEntryMeta(
+        URI.create(entry.uri().toString()),
+        meta.qualifiedName(),
+        entry.uri().scheme(),
+        meta.versionNr(),
+        meta.createdAt(),
+        meta.lastModified(),
+        meta.entryId());
+    return new ObjectEntryLoadResult.SingleVersion.Eager(m, objectAsMap, OBJECT_MAPPER);
   }
 
 
@@ -126,10 +148,6 @@ public sealed interface ObjectEntryLoadResult permits
             return "ERROR SERIALIZING OBJECT-AS-MAP!";
           }
         };
-      }
-
-      Eager(final ObjectNode node, final ObjectMapper objectMapper) {
-        this(ObjectEntryMeta.of(node.getData()), node.getObjectAsMap(), objectMapper);
       }
 
       @Override

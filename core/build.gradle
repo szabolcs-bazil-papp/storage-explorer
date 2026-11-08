@@ -9,7 +9,9 @@ dependencies {
   compileOnly 'jakarta.validation:jakarta.validation-api:3.0.2'
 
   compileOnly 'org.smartbit4all.platform:sql'
-  compileOnly 'org.springframework.boot:spring-boot-starter-jdbc'
+  // RdbStorageEngine's own JdbcClient/HikariCP (the latter transitive via this starter) - a real
+  // runtime dependency now, not just a compile-time stub:
+  implementation 'org.springframework.boot:spring-boot-starter-jdbc'
   compileOnly 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.19.4'
 
   implementation 'org.xerial:sqlite-jdbc:3.50.1.0'
@@ -17,5 +19,7 @@ dependencies {
   implementation 'org.apache.fury:fury-core:0.10.3'
 
   testImplementation 'org.smartbit4all.platform:api'
+  // RdbStorageEngineTest's embeddable real-database fixture:
+  testImplementation 'com.h2database:h2'
   testRuntimeOnly 'org.slf4j:slf4j-simple'
 }

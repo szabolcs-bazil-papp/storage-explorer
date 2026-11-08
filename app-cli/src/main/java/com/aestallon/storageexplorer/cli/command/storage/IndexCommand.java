@@ -16,15 +16,13 @@
 package com.aestallon.storageexplorer.cli.command.storage;
 
 import org.springframework.shell.command.CommandContext;
-import org.springframework.shell.command.CommandRegistration;
 import org.springframework.shell.command.annotation.Command;
 import org.springframework.shell.command.annotation.CommandAvailability;
-import org.springframework.shell.command.annotation.Option;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.cli.command.CommandConstants;
 import com.aestallon.storageexplorer.cli.service.StorageInstanceContext;
-import com.aestallon.storageexplorer.core.service.IndexingStrategy;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
+import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
+import com.aestallon.storageexplorer.core.service.index.impl.TreeBookmarkIndex;
 
 @Component
 @Command
@@ -41,24 +39,18 @@ public class IndexCommand {
       description = "Indexes the object storage.",
       group = CommandConstants.COMMAND_GROUP_STORAGE)
   @CommandAvailability(provider = CommandConstants.REQUIRES_STORAGE)
-  public void index(CommandContext ctx,
-                    @Option(
-                        longNames = "full",
-                        shortNames = 'f',
-                        description = "Whether to perform a FULL index.",
-                        arity = CommandRegistration.OptionArity.ZERO_OR_ONE,
-                        arityMin = 0,
-                        arityMax = 1,
-                        label = "Full",
-                        defaultValue = "false",
-                        required = false) boolean full) {
-    StorageIndex<?> index = storageInstanceContext.current()
+  public void index(CommandContext ctx) {
+    final var treeIndex = storageInstanceContext.current()
         .orElseThrow(() -> new IllegalStateException(
             "No storage instance selected! Use the 'use' command to select one!"))
-        .index();
-    index.refresh(full ? IndexingStrategy.STRATEGY_FULL : IndexingStrategy.STRATEGY_INITIAL);
+        .treeIndex();
     final var writer = ctx.getTerminal().writer();
-    writer.println("Indexed " + index.uris().size() + " entries.");
+    switch (treeIndex.rebuildSurface(IndexingTarget.any())) {
+      case TreeBookmarkIndex.SurfaceRebuildResult.Completed(int count) ->
+          writer.println("Indexed " + count + " entries.");
+      case TreeBookmarkIndex.SurfaceRebuildResult.Aborted(String reason) ->
+          writer.println("Indexing aborted: " + reason);
+    }
     writer.flush();
   }
 

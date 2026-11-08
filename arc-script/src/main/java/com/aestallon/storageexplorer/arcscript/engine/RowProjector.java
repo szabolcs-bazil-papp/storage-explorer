@@ -17,9 +17,12 @@ package com.aestallon.storageexplorer.arcscript.engine;
 
 import java.util.Collection;
 import java.util.Map;
+import static com.aestallon.storageexplorer.arcscript.engine.ArcPropertyPaths.toPath;
 import com.aestallon.storageexplorer.common.util.Pair;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
-import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.CellValue;
+import com.aestallon.storageexplorer.core.service.index.RowId;
+import com.aestallon.storageexplorer.core.service.index.impl.ExaminerBackedProjection;
 
 /**
  * Projects a {@link StorageEntry} onto a set of columns, forming a
@@ -27,27 +30,29 @@ import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
  *
  * <p>
  * The pipelined counterpart of {@link QueryResultRowEvaluationExecutor}'s per-entry work: sort key
- * discovery and {@code show} column rendering both funnel through here.
+ * discovery and {@code show} column rendering both funnel through the same shared {@link
+ * ExaminerBackedProjection} now (T8.2) - a path referenced by both {@code order} and {@code show}
+ * mints (and resolves) the same column once, not twice.
  */
 record RowProjector(
-    StorageInstanceExaminer examiner,
-    StorageInstanceExaminer.ObjectEntryLookupTable cache,
+    ExaminerBackedProjection projection,
     Collection<ArcScriptResult.ColumnDescriptor> columns) {
 
-  ArcScriptResult.QueryResultRow project(final StorageEntry entry) {
+  ArcScriptResult.QueryResultRow project(final StorageEntry entry, final RowId row) {
     final Map<String, ArcScriptResult.DataCell> cells = columns.stream()
-        .map(it -> discoverCell(it, entry))
+        .map(it -> discoverCell(it, row))
         .collect(Pair.toMap());
     return new ArcScriptResult.QueryResultRow(entry, cells);
   }
 
   private Pair<String, ArcScriptResult.DataCell> discoverCell(
       final ArcScriptResult.ColumnDescriptor column,
-      final StorageEntry entry) {
+      final RowId row) {
     final String prop = column.prop();
-    final ArcScriptResult.DataCell cell = switch (examiner.discoverProperty(entry, prop, cache)) {
-      case StorageInstanceExaminer.None none -> ArcScriptResult.DataCell.noValue();
-      case StorageInstanceExaminer.Some some -> ArcScriptResult.DataCell.of(some.val());
+    final CellValue value = projection.get(row, projection.column(toPath(prop)));
+    final ArcScriptResult.DataCell cell = switch (value) {
+      case CellValue.Missing ignored -> ArcScriptResult.DataCell.noValue();
+      case CellValue.Scalar(var v) -> ArcScriptResult.DataCell.of(v);
     };
     return Pair.of(prop, cell);
   }

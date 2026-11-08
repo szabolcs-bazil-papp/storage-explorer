@@ -30,6 +30,8 @@ import com.aestallon.storageexplorer.arcscript.internal.query.QueryInstructionIm
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.QueryableIndex;
+import com.aestallon.storageexplorer.core.service.index.impl.ExaminerBackedProjection;
 
 /**
  * Push-pull, pipelined {@link QueryEngine} implementation.
@@ -77,12 +79,19 @@ public final class PipelinedQueryEngine implements QueryEngine {
     // closes it (with a belt-and-braces close below for pipelines failing before the producer
     // finishes):
     final Stream<StorageEntry> entries = QuerySourceResolver.resolveStream(storageInstance, query);
-    final var examiner = storageInstance.examiner();
+    final var examiner = new StorageInstanceExaminer();
+    final QueryableIndex index = storageInstance.newQueryIndex();
     final var cache = settings.cacheMaxEntries() > 0L
         ? StorageInstanceExaminer.ObjectEntryLookupTable.adaptive(
         settings.cacheMaxEntries(),
         settings.cacheExpireAfterAccess())
         : StorageInstanceExaminer.ObjectEntryLookupTable.newInstance();
+    // one shared projection for the whole execution (T8.2): where/order/yield all route their
+    // property-path lookups through it, so a path referenced more than once (e.g. a sort key
+    // that's also a show column) resolves once, and rows/columns are dropped as their purpose is
+    // served instead of surviving to the end of the query unconditionally:
+    final var projection = new ExaminerBackedProjection(
+        examiner, index, cache, storageInstance.newStatsIndex());
 
     final boolean sorted = !query._sortKeys.isEmpty();
     final long limit = query._limit;
@@ -111,7 +120,9 @@ public final class PipelinedQueryEngine implements QueryEngine {
           settings,
           metrics.register("where"),
           examiner,
+          index,
           cache,
+          projection,
           query.condition,
           // when sorting, the limit selects the top of the full ordering, so every survivor must
           // still be examined - the cap is applied by the ordering stage instead:
@@ -121,9 +132,9 @@ public final class PipelinedQueryEngine implements QueryEngine {
           executor,
           settings,
           metrics.register("order"),
-          examiner,
-          cache,
+          projection,
           query._sortKeys,
+          columns,
           limit)
           : null;
       yieldMetrics = metrics.register("yield");
@@ -131,8 +142,7 @@ public final class PipelinedQueryEngine implements QueryEngine {
           executor,
           settings,
           yieldMetrics,
-          examiner,
-          cache,
+          projection,
           columns);
       final var collector = new ResultCollector();
 
@@ -169,6 +179,8 @@ public final class PipelinedQueryEngine implements QueryEngine {
       // idempotent double close on the happy path; on timeout/failure this releases the walker
       // threads / database cursor even if the producer virtual thread is wedged:
       entries.close();
+      index.close();
+      projection.close();
       if (orderly) {
         executor.close();
       } else {

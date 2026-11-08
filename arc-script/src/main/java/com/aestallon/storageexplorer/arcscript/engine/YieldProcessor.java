@@ -17,22 +17,28 @@ package com.aestallon.storageexplorer.arcscript.engine;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.impl.ExaminerBackedProjection;
 
 /**
  * Computes the {@code show} column projection of each incoming entry, concurrently, preserving the
  * result ordering via the sequence tag carried on each element. When the query has no columns to
  * render, entries pass through as bare rows without any property discovery.
+ *
+ * <p>
+ * The terminal stage touching the query's shared {@link ExaminerBackedProjection}: once a row's
+ * {@code show} cells are rendered, nothing downstream needs its cached cells again, so the row is
+ * dropped from the projection immediately (T8.2) - memory is reclaimed incrementally as results
+ * complete, not held until the whole query finishes.
  */
 final class YieldProcessor extends PipelineStage<IndexedEntry, IndexedRow> {
 
+  private final ExaminerBackedProjection projection;
   private final RowProjector projector;
 
   YieldProcessor(final ExecutorService executor,
                  final QueryEngineSettings settings,
                  final PipelineMetrics.StageMetrics metrics,
-                 final StorageInstanceExaminer examiner,
-                 final StorageInstanceExaminer.ObjectEntryLookupTable cache,
+                 final ExaminerBackedProjection projection,
                  final List<ArcScriptResult.ColumnDescriptor> columns) {
     super(
         executor,
@@ -40,14 +46,16 @@ final class YieldProcessor extends PipelineStage<IndexedEntry, IndexedRow> {
         settings.yieldConcurrency(),
         settings.sourcePrefetch(),
         metrics);
-    this.projector = columns.isEmpty() ? null : new RowProjector(examiner, cache, columns);
+    this.projection = projection;
+    this.projector = columns.isEmpty() ? null : new RowProjector(projection, columns);
   }
 
   @Override
   protected void process(final IndexedEntry item) {
     final ArcScriptResult.QueryResultRow row = (projector == null)
         ? new ArcScriptResult.QueryResultRow(item.entry())
-        : projector.project(item.entry());
+        : projector.project(item.entry(), item.row());
+    projection.dropRow(item.row());
     emit(new IndexedRow(item.seq(), row));
   }
 

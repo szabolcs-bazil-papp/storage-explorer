@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.QueryableIndex;
 
 public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends AbstractEntryEvaluationExecutor<RESULT, EXECUTOR>> {
 
@@ -37,13 +38,16 @@ public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends A
   public abstract static class Builder<E extends AbstractEntryEvaluationExecutor<?, E>, BUILDER extends Builder<E, BUILDER>> {
 
     protected final StorageInstanceExaminer examiner;
+    protected final QueryableIndex index;
     protected final Set<StorageEntry> entries;
     protected boolean useSemaphore;
     protected StorageInstanceExaminer.ObjectEntryLookupTable cache;
 
     protected Builder(final StorageInstanceExaminer examiner,
+                      final QueryableIndex index,
                       final Set<StorageEntry> entries) {
       this.examiner = examiner;
+      this.index = index;
       this.entries = entries == null
           ? Collections.emptySet()
           : Collections.unmodifiableSet(entries);
@@ -69,6 +73,7 @@ public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends A
 
 
   protected final StorageInstanceExaminer examiner;
+  protected final QueryableIndex index;
   protected final Set<StorageEntry> entries;
   protected final boolean useSemaphore;
   protected final StorageInstanceExaminer.ObjectEntryLookupTable cache;
@@ -76,6 +81,7 @@ public abstract class AbstractEntryEvaluationExecutor<RESULT, EXECUTOR extends A
 
   protected <B extends Builder<EXECUTOR, B>> AbstractEntryEvaluationExecutor(B builder) {
     examiner = builder.examiner;
+    index = builder.index;
     entries = builder.entries;
     useSemaphore = builder.useSemaphore;
     cache = (builder.cache == null)

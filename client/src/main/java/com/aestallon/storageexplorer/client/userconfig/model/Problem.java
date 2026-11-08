@@ -54,7 +54,7 @@ public class Problem {
         .timestamp(LocalDateTime.now())
         .type(ProblemType.ENTRY)
         .storageId(entry.storageId().uuid())
-        .uri(entry.uri())
+        .uri(URI.create(entry.uri().toString()))
         .message(message);
   }
 

@@ -32,16 +32,21 @@ import org.springframework.shell.table.TableModel;
 import org.springframework.stereotype.Component;
 import com.aestallon.storageexplorer.cli.command.CommandConstants;
 import com.aestallon.storageexplorer.cli.service.StorageInstanceContext;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.entry.ListEntry;
 import com.aestallon.storageexplorer.core.model.entry.MapEntry;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
 import com.aestallon.storageexplorer.core.model.entry.SequenceEntry;
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryMeta;
-import com.aestallon.storageexplorer.core.service.ObjectEntryLoadingService;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.engine.LoadedContent;
+import com.aestallon.storageexplorer.core.service.index.result.AdjacencyResult;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
+import com.aestallon.storageexplorer.core.service.index.result.EntryResolution;
 import com.aestallon.storageexplorer.core.util.Uris;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Strings;
@@ -99,16 +104,29 @@ public class LoadCommand {
             "Invalid version: [%s]! Accepted values: non-negative integers or the LATEST literal!".formatted(
                 version)));
 
-    final var storageEntry = storageInstance
-        .acquire(uri)
+    final var storageEntry = EntryUri.parse(uri.toString())
+        .map(storageInstance::resolve)
+        .flatMap(res -> switch (res) {
+          case EntryResolution.Known(var entry) -> Optional.of(entry);
+          case EntryResolution.Unknown u -> Optional.<StorageEntry>empty();
+        })
         .orElseThrow(() -> new IllegalArgumentException(
             "Could not acquire entry corresponding to URI: [%s]! Check if your URI is correct!".formatted(
                 uriStr)));
-    StorageEntryInspectorWriter.of(storageEntry, targetVersion, zoom).write(ctx);
-    storageInstanceContext.offerCompletion(storageEntry
-        .uriProperties().stream()
+    StorageEntryInspectorWriter.of(storageInstance, storageEntry, targetVersion, zoom).write(ctx);
+    storageInstanceContext.offerCompletion(outgoingReferences(storageInstance, storageEntry).stream()
         .map(UriProperty::uri)
         .toList());
+  }
+
+  private static java.util.Set<UriProperty> outgoingReferences(final StorageInstance storageInstance,
+                                                                final StorageEntry entry) {
+    try (var index = storageInstance.newGraphIndex()) {
+      return switch (index.outgoingReferences(entry)) {
+        case AdjacencyResult.Ok(var e, var refs) -> refs;
+        case AdjacencyResult.Err err -> java.util.Set.of();
+      };
+    }
   }
 
   private sealed interface TargetVersion {
@@ -150,20 +168,25 @@ public class LoadCommand {
 
   private abstract static sealed class StorageEntryInspectorWriter<T extends StorageEntry> {
 
-    static StorageEntryInspectorWriter<? extends StorageEntry> of(StorageEntry storageEntry,
+    static StorageEntryInspectorWriter<? extends StorageEntry> of(StorageInstance storageInstance,
+                                                                  StorageEntry storageEntry,
                                                                   TargetVersion targetVersion,
                                                                   String targetProp) {
       return switch (storageEntry) {
-        case ObjectEntry oe -> new ObjectEntryInspectorWriter(oe, targetVersion, targetProp);
-        case SequenceEntry se -> new SequenceEntryInspectorWriter(se);
-        case ListEntry le -> new ListEntryInspectorWriter(le);
-        case MapEntry me -> new MapEntryInspectorWriter(me);
+        case ObjectEntry oe -> new ObjectEntryInspectorWriter(storageInstance, oe, targetVersion, targetProp);
+        case SequenceEntry se -> new SequenceEntryInspectorWriter(storageInstance, se);
+        case ListEntry le -> new ListEntryInspectorWriter(storageInstance, le);
+        case MapEntry me -> new MapEntryInspectorWriter(storageInstance, me);
+        default -> throw new IllegalArgumentException(
+            storageEntry.getClass().getSimpleName() + " is not yet representable by this command!");
       };
     }
 
+    protected final StorageInstance storageInstance;
     protected final T storageEntry;
 
-    protected StorageEntryInspectorWriter(T storageEntry) {
+    protected StorageEntryInspectorWriter(StorageInstance storageInstance, T storageEntry) {
+      this.storageInstance = storageInstance;
       this.storageEntry = storageEntry;
     }
 
@@ -198,17 +221,19 @@ public class LoadCommand {
       private final TargetVersion targetVersion;
       private final String targetProp;
 
-      public ObjectEntryInspectorWriter(ObjectEntry storageEntry,
+      public ObjectEntryInspectorWriter(StorageInstance storageInstance,
+                                        ObjectEntry storageEntry,
                                         TargetVersion targetVersion,
                                         String targetProp) {
-        super(storageEntry);
+        super(storageInstance, storageEntry);
         this.targetVersion = targetVersion;
         this.targetProp = targetProp;
       }
 
       @Override
       void write(CommandContext ctx) {
-        final ObjectEntryLoadResult objectEntryLoadResult = storageEntry.tryLoad().get();
+        final ObjectEntryLoadResult objectEntryLoadResult =
+            ObjectEntryLoadResult.load(storageInstance, storageEntry);
         switch (objectEntryLoadResult) {
           case ObjectEntryLoadResult.Err(var msg) -> writeErr(ctx, msg);
           case ObjectEntryLoadResult.SingleVersion sv -> writeSingleVersion(ctx, sv);
@@ -273,15 +298,15 @@ public class LoadCommand {
       }
 
       private String getSubStr(ObjectEntryLoadResult.SingleVersion sv) {
-        return switch (new StorageInstanceExaminer(uri -> Optional.empty()).discoverInlineProperty(
-            storageEntry, targetProp, sv)) {
+        return switch (new StorageInstanceExaminer().discoverInlineProperty(
+            storageEntry, targetProp, sv.objectAsMap())) {
           case StorageInstanceExaminer.None none -> switch (none) {
             case StorageInstanceExaminer.NotFound(String err) -> err;
             case StorageInstanceExaminer.NoValue noValue -> "";
           };
           case StorageInstanceExaminer.Some some -> {
             try {
-              yield ObjectEntryLoadingService.OBJECT_MAPPER
+              yield ObjectEntryLoadResult.OBJECT_MAPPER
                   .writerWithDefaultPrettyPrinter()
                   .writeValueAsString(some.val());
             } catch (JsonProcessingException e) {
@@ -363,14 +388,30 @@ public class LoadCommand {
     private static final class SequenceEntryInspectorWriter
         extends StorageEntryInspectorWriter<SequenceEntry> {
 
-      public SequenceEntryInspectorWriter(SequenceEntry storageEntry) {
-        super(storageEntry);
+      public SequenceEntryInspectorWriter(StorageInstance storageInstance, SequenceEntry storageEntry) {
+        super(storageInstance, storageEntry);
       }
 
       @Override
       void write(CommandContext ctx) {
-        ctx.getTerminal().writer().println(storageEntry.current());
+        ctx.getTerminal().writer().println(currentValue());
         flush(ctx);
+      }
+
+      private long currentValue() {
+        return switch (storageInstance.read(storageEntry)) {
+          case ContentLoadResult.Ok ok -> switch (ok.content().materialize()) {
+            case LoadedContent.JsonObject(var data) -> {
+              try {
+                yield Long.parseLong(String.valueOf(data.get("current")));
+              } catch (final Exception e) {
+                yield -1L;
+              }
+            }
+            default -> -1L;
+          };
+          case ContentLoadResult.Err err -> -1L;
+        };
       }
 
     }
@@ -379,13 +420,13 @@ public class LoadCommand {
     private static final class ListEntryInspectorWriter
         extends StorageEntryInspectorWriter<ListEntry> {
 
-      public ListEntryInspectorWriter(ListEntry storageEntry) {
-        super(storageEntry);
+      public ListEntryInspectorWriter(StorageInstance storageInstance, ListEntry storageEntry) {
+        super(storageInstance, storageEntry);
       }
 
       @Override
       void write(CommandContext ctx) {
-        final var model = new CollectionEntryTableModel(storageEntry);
+        final var model = new CollectionEntryTableModel(storageInstance, storageEntry, "INDEX");
         writeTable(ctx, model);
         flush(ctx);
       }
@@ -396,13 +437,13 @@ public class LoadCommand {
     private static final class MapEntryInspectorWriter
         extends StorageEntryInspectorWriter<MapEntry> {
 
-      MapEntryInspectorWriter(MapEntry storageEntry) {
-        super(storageEntry);
+      MapEntryInspectorWriter(StorageInstance storageInstance, MapEntry storageEntry) {
+        super(storageInstance, storageEntry);
       }
 
       @Override
       void write(CommandContext ctx) {
-        final var model = new CollectionEntryTableModel(storageEntry);
+        final var model = new CollectionEntryTableModel(storageInstance, storageEntry, "KEY");
         writeTable(ctx, model);
         flush(ctx);
       }
@@ -417,20 +458,12 @@ public class LoadCommand {
     private final List<UriProperty> uris;
     private final String firstColHeader;
 
-    private CollectionEntryTableModel(ListEntry listEntry) {
-      uris = listEntry
-          .uriProperties().stream()
+    private CollectionEntryTableModel(StorageInstance storageInstance, StorageEntry entry,
+                                      String firstColHeader) {
+      uris = outgoingReferences(storageInstance, entry).stream()
           .sorted()
           .toList();
-      firstColHeader = "INDEX";
-    }
-
-    private CollectionEntryTableModel(MapEntry mapEntry) {
-      uris = mapEntry
-          .uriProperties().stream()
-          .sorted()
-          .toList();
-      firstColHeader = "KEY";
+      this.firstColHeader = firstColHeader;
     }
 
     @Override

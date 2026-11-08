@@ -31,8 +31,8 @@ public final class JumpToUri {
       return;
     }
 
-    CompletableFuture.runAsync(() -> storageInstance
-        .acquire(latestUri)
+    CompletableFuture.runAsync(() -> StorageEntryResolver
+        .resolve(storageInstance, latestUri)
         .ifPresentOrElse(
             it -> eventPublisher.publishEvent(new EntryAcquired(storageInstance, it)),
             () -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(

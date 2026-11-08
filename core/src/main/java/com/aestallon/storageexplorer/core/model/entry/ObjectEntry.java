@@ -15,164 +15,65 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import static java.util.stream.Collectors.toSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.smartbit4all.core.object.ObjectNode;
-import com.aestallon.storageexplorer.common.util.Pair;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
-import com.aestallon.storageexplorer.core.util.ObjectMaps;
-import com.aestallon.storageexplorer.core.util.Uris;
-import jakarta.annotation.Nullable;
 
+/**
+ * A plain, {@code .o}-rooted object entry — identity only (see {@link StorageEntry}'s class
+ * javadoc). Content, versioning, outgoing-reference, and scoped-child-folding knowledge all
+ * moved out to whichever {@code StorageIndex} implementation is asked (T3.2's
+ * {@code StreamingAdjacencyIndex} for references/scoped folding, T3.3's {@code
+ * HeaderMetadataIndex} for versioning) — this class no longer tracks any of it itself.
+ */
 public sealed class ObjectEntry
     extends AbstractStorageEntry
     implements StorageEntry
     permits ScopedObjectEntry, GodObjectEntry, ObjectReferenceByIdEntry {
 
-  public sealed interface Versioning {
-
-    record Single() implements Versioning {}
-
-
-    record Multi(long head) implements Versioning {}
-
-  }
-
-
-  private static final Logger log = LoggerFactory.getLogger(ObjectEntry.class);
-
+  /** The platform's large-blob holder type ({@code org.smartbit4all.api.binarydata
+   *  .BinaryDataObject}) — its payload is base64-inlined JSON that can be arbitrarily large (it's
+   *  the platform's generic "attach a file" mechanism), so it is never loaded for ArcScript
+   *  property discovery or graph adjacency scanning (see {@link #isBinaryData()}'s callers). */
+  private static final String BINARY_DATA_OBJECT_TYPE_NAME = "BinaryDataObject";
 
   private final String typeName;
   private final String uuid;
-  private final Set<ScopedEntry> scopedEntries = new HashSet<>();
 
-  private final Lock refreshLock = new ReentrantLock(true);
-  private volatile boolean valid = false;
-  private Versioning versioning;
-  private final Set<UriProperty> uriProperties = new ConcurrentSkipListSet<>();
-
-  ObjectEntry(final StorageIndex<?> storageIndex, final Path path, final URI uri) {
-    super(storageIndex, path, uri);
-    this.typeName = Uris.getTypeName(uri);
-    this.uuid = Uris.getUuid(uri);
+  ObjectEntry(final StorageId id, final EntryUri uri) {
+    super(id, uri);
+    this.typeName = typeNameOf(uri);
+    this.uuid = uuidOf(uri);
   }
 
-  public Set<ScopedEntry> scopedEntries() {
-    return scopedEntries;
-  }
-
-  public void addScopedEntry(final ScopedEntry scopedEntry) {
-    scopedEntries.add(scopedEntry);
-  }
-
-  @Override
-  public StorageId storageId() {
-    return id;
-  }
-
-  @Override
-  public URI uri() {
-    return uri;
-  }
-
-  @Override
-  public Set<UriProperty> uriProperties() {
-    if (!valid || uriProperties == null) {
-      refresh();
+  private static String typeNameOf(final EntryUri uri) {
+    final var segments = uri.segments();
+    if (segments.isEmpty()) {
+      return "";
     }
-
-    if (uriProperties == null) {
-      log.warn("!!!!!!!!!! NULL URI PROPERTIES FOR {} !!!!!!!!!!", uri);
-      return Collections.emptySet();
-    }
-    final var ret = new HashSet<>(this.uriProperties);
-    ret.addAll(scopedEntriesAsUriProperties());
-    return ret;
+    final String[] typeElements = segments.get(0).split("_");
+    return typeElements[typeElements.length - 1];
   }
 
-  public Set<UriProperty> scopedEntriesAsUriProperties() {
-    return scopedEntries.stream()
-        .map(e -> UriProperty.of(new UriProperty.Segment[] { UriProperty.Segment.key(
-                (e instanceof ObjectEntry o) ? o.uuid : e.uri().toString()) },
-            e.uri()))
-        .collect(toSet());
+  private static String uuidOf(final EntryUri uri) {
+    final var segments = uri.segments();
+    return segments.isEmpty() ? "" : segments.get(segments.size() - 1);
   }
 
-  @Override
-  public boolean references(StorageEntry that) {
-    return super.references(that)
-        || ((that instanceof ScopedEntry se) && scopedEntries.contains(se));
+  public String uuid() {
+    return uuid;
   }
 
-  @Override
-  public void refresh() {
-    if (valid) {
-      return;
-    }
-
-    refreshLock.lock();
-    try {
-      if (valid) {
-        return;
-      }
-
-      // TODO: maybe explicitly get() here? The whole entrance to the critical section is awful...
-      Objects.requireNonNull(storageIndex.get()).loader().load(this);
-    } finally {
-      refreshLock.unlock();
-    }
+  public String typeName() {
+    return typeName;
   }
 
-  public void refresh(final ObjectNode objectNode) {
-    if (objectNode == null) {
-      refresh(null, 0L);
-    } else {
-      final Long versionNr = objectNode.getVersionNr();
-      final long version = versionNr == null ? -1L : versionNr;
-      refresh(objectNode.getObjectAsMap(), version);
-    }
-  }
-
-  public void refresh(final Map<String, Object> objectAsMap, final long version) {
-    if (valid && uriProperties != null) {
-      return;
-    }
-
-    uriProperties.clear();
-    if (objectAsMap == null) {
-      return;
-    }
-
-    uriProperties.addAll(initUriProperties(objectAsMap));
-    valid = true;
-    versioning = version < 0 ? new Versioning.Single() : new Versioning.Multi(version);
-    storageIndex.get().notifyRefresh(this);
-    storageIndex.get().amendType(this instanceof ScopedObjectEntry scoped
-        ? typeName + "::" + scoped
-        : typeName, objectAsMap);
-  }
-
-  private Set<UriProperty> initUriProperties(final Map<String, Object> objectAsMap) {
-    return ObjectMaps.flatten(objectAsMap)
-        .filter(it -> !UriProperty.Segment.isOwnUri(it.a()))
-        .map(Pair.onB(Uris::parse))
-        .flatMap(Pair.streamOnB())
-        .map(it -> UriProperty.of(it.a(), it.b()))
-        .collect(toSet());
+  /** Zero-I/O: derived purely from the URI's type segment, same as {@link #typeName()} itself —
+   *  callers that must decide whether to even attempt a content read (not just render an icon)
+   *  can check this before ever touching the engine. */
+  public boolean isBinaryData() {
+    return BINARY_DATA_OBJECT_TYPE_NAME.equals(typeName);
   }
 
   public String getDisplayName(final ObjectEntryLoadResult.SingleVersion version) {
@@ -191,7 +92,7 @@ public sealed class ObjectEntry
     return sb.toString();
   }
 
-  private static String getHeuristicName(Map<String, Object> oam) {
+  private static String getHeuristicName(final Map<String, Object> oam) {
     final var name = oam.get("name");
     if (name != null) {
       return String.valueOf(name);
@@ -204,71 +105,6 @@ public sealed class ObjectEntry
       };
       case null, default -> "";
     };
-  }
-
-  @Override
-  public void accept(StorageEntry storageEntry) {
-    refreshLock.lock();
-    try {
-
-      if (Objects.requireNonNull(storageEntry) instanceof ObjectEntry that && that.valid) {
-        uriProperties.clear();
-        uriProperties.addAll(that.uriProperties);
-        valid = true;
-      }
-
-    } finally {
-      refreshLock.unlock();
-    }
-  }
-
-  public String uuid() {
-    return uuid;
-  }
-
-  public String typeName() {
-    return typeName;
-  }
-
-  public Versioning versioning() {
-    if (versioning == null) {
-      return uri.toString().endsWith("-s")
-          ? new Versioning.Single()
-          : new Versioning.Multi(0L);
-    }
-
-    return versioning;
-  }
-
-  @Override
-  public @Nullable Path path() {
-    return path;
-  }
-
-
-  public ObjectEntryLoadRequest tryLoad() {
-    if ("BinaryDataObject".equals(typeName)) {
-      return new ObjectEntryLoadRequest.FileSystemObjectEntryLoadRequest(
-          ObjectEntryLoadResult.err("BinaryData loading not supported!"));
-    }
-    return Objects.requireNonNull(storageIndex.get()).loader().load(this);
-  }
-
-  @Override
-  public boolean valid() {
-    return valid;
-  }
-
-  @Override
-  public void setUriProperties(Set<UriProperty> uriProperties) {
-    refreshLock.lock();
-    try {
-      this.uriProperties.clear();
-      this.uriProperties.addAll(uriProperties);
-      this.valid = true;
-    } finally {
-      refreshLock.unlock();
-    }
   }
 
   @Override

@@ -44,7 +44,7 @@ public final class StorageInstanceTreeNode
     super(storageInstance.name(), true);
     this.storageInstance = storageInstance;
 
-    final var collections = storageInstance.entities()
+    final var collections = storageInstance.entries().stream()
         .filter(it -> !(it instanceof ScopedEntry))
         .filter(it -> it instanceof ListEntry
             || it instanceof MapEntry
@@ -63,11 +63,11 @@ public final class StorageInstanceTreeNode
     sortAndAdd(collections.getOrDefault(StorageSequenceTreeNode.class, new ArrayList<>()));
     sortAndAdd(collections.getOrDefault(StorageGodObjectTreeNode.class, new ArrayList<>()));
 
-    storageInstance.entities()
+    storageInstance.entries().stream()
         .filter(ObjectEntry.class::isInstance)
         .filter(it -> !(it instanceof ScopedEntry) && !(it instanceof GodObjectEntry))
         .map(ObjectEntry.class::cast)
-        .collect(groupingBy(it -> it.uri().getScheme(), TreeMap::new, toList()))
+        .collect(groupingBy(it -> it.uri().scheme(), TreeMap::new, toList()))
         .forEach((schema, entries) -> add(new StorageSchemaTreeNode(
             schema,
             entries,

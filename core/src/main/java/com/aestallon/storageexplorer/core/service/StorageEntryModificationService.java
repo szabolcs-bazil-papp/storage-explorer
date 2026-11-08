@@ -16,11 +16,23 @@
 package com.aestallon.storageexplorer.core.service;
 
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 
 /**
- * 
+ * Saves an edited entry's content back to storage. Reworked for T4.2/T4.3: no longer generic
+ * over the old (deleted) {@code StorageIndex<T>} — a single implementation now covers every
+ * backend, since {@code StorageInstance.amend}/{@code newVersion} already are backend-agnostic
+ * (built on {@code StorageEngine} underneath). Its result shape already matched the
+ * {@code Ok(StorageEntry)}/{@code Err(StorageEntry, String)} convention before this rework, so
+ * it's unchanged here.
  */
-public interface StorageEntryModificationService<T extends StorageIndex<T>> {
+public interface StorageEntryModificationService {
+
+  /** The one implementation, for {@code client}/{@code swing}/{@code app-cli} callers that have
+   *  no other way to reach the package-private {@code StorageEntryModificationServiceImpl}. */
+  static StorageEntryModificationService of(final StorageInstance storageInstance) {
+    return new StorageEntryModificationServiceImpl(storageInstance);
+  }
 
   sealed interface StorageEntryModificationResult {
 

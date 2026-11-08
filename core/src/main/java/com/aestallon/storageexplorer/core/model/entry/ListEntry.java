@@ -15,60 +15,37 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
-import com.aestallon.storageexplorer.core.util.Uris;
 
+/**
+ * A {@code storedlist}-rooted list entry — identity only (see {@link StorageEntry}'s class
+ * javadoc). {@code asSingleVersion()}/{@code uriProperties()}/{@code refresh()} are gone along
+ * with the held index this class used to load through; a stand-in for {@code asSingleVersion()}
+ * (needed by {@code QuerySourceResolver.exists(...)} in {@code arc-script}, per the pre-T4.1
+ * audit) has to be built on {@code ContentLoadable}/{@code StorageEngine} when that module is
+ * migrated (Milestone 5) — not carried forward here in a form that can't actually load anything
+ * without a held index to begin with.
+ */
 public sealed class ListEntry
     extends AbstractStorageEntry
     implements StorageEntry
     permits ScopedListEntry {
 
-  private static final Logger log = LoggerFactory.getLogger(ListEntry.class);
   private final String schema;
   private final String name;
 
-  private final Lock refreshLock = new ReentrantLock(true);
-  private boolean valid = false;
-  private Set<UriProperty> uriProperties;
+  ListEntry(final StorageId id, final EntryUri uri) {
+    super(id, uri);
 
-  ListEntry(StorageIndex<?> storageIndex, Path path, URI uri) {
-    super(storageIndex, path, uri);
-
-    final String fullScheme = uri.getScheme();
+    final String fullScheme = uri.scheme();
     this.schema = fullScheme.substring(0, fullScheme.lastIndexOf('-'));
 
-    final String pathElements[] = uri.getPath().split("/");
-    final String terminalElement = pathElements[pathElements.length - 1];
-    this.name = terminalElement.substring(0, terminalElement.lastIndexOf('-'));
-  }
-
-  @Override
-  public StorageId storageId() {
-    return id;
-  }
-
-  @Override
-  public URI uri() {
-    return uri;
-  }
-
-  @Override
-  public Path path() {
-    return path;
+    final List<String> segments = uri.segments();
+    final String terminalElement = segments.isEmpty() ? "" : segments.get(segments.size() - 1);
+    final int dash = terminalElement.lastIndexOf('-');
+    this.name = (dash >= 0) ? terminalElement.substring(0, dash) : terminalElement;
   }
 
   public String schema() {
@@ -77,91 +54,6 @@ public sealed class ListEntry
 
   public String name() {
     return name;
-  }
-
-  public Optional<ObjectEntryLoadResult.SingleVersion> asSingleVersion() {
-    try {
-      return Optional.of(storageIndex.get().loader().loadExact(uri, 0));
-    } catch (Exception e) {
-      log.error("Cannot load list [ {} ] as a single object version: [ {} ]",
-          uri, e.getMessage());
-      log.debug(e.getMessage(), e);
-      return Optional.empty();
-    }
-  }
-
-  @Override
-  public Set<UriProperty> uriProperties() {
-    if (!valid) {
-      refresh();
-    }
-
-    return uriProperties;
-  }
-
-  @Override
-  public void refresh() {
-    if (valid) {
-      return;
-    }
-
-    refreshLock.lock();
-    try {
-      if (valid) {
-        return;
-      }
-
-      final var list = asSingleVersion().map(this::asUriList).orElseGet(Collections::emptyList);
-      final var uriProperties = new HashSet<UriProperty>();
-      for (int i = 0; i < list.size(); i++) {
-        uriProperties.add(
-            UriProperty.of(new UriProperty.Segment[] { UriProperty.Segment.idx(i) },
-                list.get(i)));
-      }
-
-      this.uriProperties = uriProperties;
-      valid = true;
-    } finally {
-      refreshLock.unlock();
-    }
-  }
-
-  public List<URI> asUriList(ObjectEntryLoadResult.SingleVersion singleVersion) {
-    final Object urisObj = singleVersion.objectAsMap().get("uris");
-    if (urisObj instanceof List<?> uriObjList) {
-      return uriObjList.stream()
-          .map(Uris::parse)
-          .flatMap(Optional::stream)
-          .toList();
-    }
-
-    return Collections.emptyList();
-  }
-
-  @Override
-  public boolean valid() {
-    return valid;
-  }
-
-  @Override
-  public void setUriProperties(Set<UriProperty> uriProperties) {
-    this.uriProperties = uriProperties;
-    this.valid = true;
-  }
-
-  @Override
-  public void accept(StorageEntry storageEntry) {
-    refreshLock.lock();
-    try {
-
-      if (Objects.requireNonNull(storageEntry) instanceof ListEntry that && that.valid) {
-        this.uriProperties = new HashSet<>(that.uriProperties());
-        valid = true;
-      }
-
-    } finally {
-      refreshLock.unlock();
-    }
   }
 
   public String displayName() {

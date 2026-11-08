@@ -15,12 +15,16 @@
 
 package com.aestallon.storageexplorer.client.graph.service;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -29,13 +33,18 @@ import com.aestallon.storageexplorer.client.graph.event.GraphState;
 import com.aestallon.storageexplorer.client.userconfig.model.UmlExportSettings;
 import com.aestallon.storageexplorer.client.userconfig.service.NominalTypeService;
 import com.aestallon.storageexplorer.client.util.OpResult;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.entry.UriProperty;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.type.Association;
 import com.aestallon.storageexplorer.core.model.type.EntityType;
 import com.aestallon.storageexplorer.core.model.type.StructuredType;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.UriLeafScanner;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
+import com.aestallon.storageexplorer.core.service.index.result.EntryResolution;
 import com.aestallon.storageexplorer.core.util.Uris;
 import prefuse.data.Edge;
 import prefuse.data.Graph;
@@ -93,11 +102,9 @@ public final class UmlRenderingService {
   }
 
   public void render(final ObjectEntry objectEntry) {
-    objectEntry.tryLoad().get();
-    final StructuredType type = storageInstance
-        .index()
-        .getOrDescribeTypeOf(objectEntry);
-    cacheInstanceCandidates(objectEntry);
+    final ContentLoadResult result = storageInstance.read(objectEntry);
+    final StructuredType type = storageInstance.getOrDescribeTypeOf(objectEntry);
+    cacheInstanceCandidates(objectEntry, result);
     addType(type);
     originTypename = type.name();
 
@@ -145,20 +152,19 @@ public final class UmlRenderingService {
     final var candidates = instanceCandidatesByTypeName
         .computeIfAbsent(typeName, k -> new HashSet<>());
     final var candidateEntries = candidates.stream()
-        .flatMap(it -> storageInstance.discover(it).stream())
+        .flatMap(it -> resolve(it).stream())
         .collect(Collectors.toSet());
-    final var loadResults = BatchLoaderExecutor
-        .builder(storageInstance.examiner(), candidateEntries)
-        .useCache(cache)
-        .build()
-        .execute();
+    final StructuredType describedType;
+    try (var index = storageInstance.newQueryIndex()) {
+      final var loadResults = BatchLoaderExecutor
+          .builder(new StorageInstanceExaminer(), index, candidateEntries)
+          .useCache(cache)
+          .build()
+          .execute();
 
-    loadResults.stream()
-        .map(BatchLoaderExecutor.EntryWithLoadResult::entry)
-        .forEach(this::cacheInstanceCandidates);
-    final StructuredType describedType = storageInstance
-        .index()
-        .getOrDescribeTypeOf(type.name());
+      loadResults.forEach(it -> cacheInstanceCandidates(it.entry(), it.result()));
+      describedType = storageInstance.getOrDescribeTypeOf(type.name());
+    }
     if (!(describedType instanceof EntityType entity)) {
       return false;
     }
@@ -170,13 +176,38 @@ public final class UmlRenderingService {
     return true;
   }
 
-  private void cacheInstanceCandidates(ObjectEntry oe) {
-    oe.uriProperties().stream()
+  /** {@code oe}'s outgoing references, scanned straight from its already-loaded content — the
+   *  replacement for the removed {@code ObjectEntry#uriProperties()} (T4.1): since the caller
+   *  already holds the {@link ContentLoadResult} from either a single {@link #render} or a
+   *  {@link BatchLoaderExecutor} batch, re-reading via a fresh {@code AdjacencyAware} index would
+   *  waste the read already done. */
+  private void cacheInstanceCandidates(final ObjectEntry oe, final ContentLoadResult result) {
+    if (!(result instanceof ContentLoadResult.Ok ok)) {
+      return;
+    }
+
+    final Set<UriProperty> refs;
+    try (InputStream in = ok.content().openStream()) {
+      refs = UriLeafScanner.scan(in);
+    } catch (final IOException e) {
+      throw new UncheckedIOException(e);
+    }
+
+    refs.stream()
         .map(UriProperty::uri)
         .collect(Collectors.groupingBy(Uris::getTypeName))
         .forEach((typeName, uris) -> instanceCandidatesByTypeName
             .computeIfAbsent(typeName, k -> new HashSet<>())
             .addAll(uris));
+  }
+
+  private Optional<StorageEntry> resolve(final URI uri) {
+    return EntryUri.parse(uri.toString())
+        .map(storageInstance::resolve)
+        .flatMap(res -> switch (res) {
+          case EntryResolution.Known(var entry) -> Optional.of(entry);
+          case EntryResolution.Unknown u -> Optional.<StorageEntry>empty();
+        });
   }
 
   public OpResult exportEntityRelationshipDiagram(final Path target,

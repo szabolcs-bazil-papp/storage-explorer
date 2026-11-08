@@ -16,9 +16,13 @@
 package com.aestallon.storageexplorer.arcscript.engine;
 
 import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
+import com.aestallon.storageexplorer.core.service.index.RowId;
 
 /**
  * A {@link StorageEntry} tagged with its position in the final result ordering, carried through the
- * query pipeline so downstream stages may work concurrently without losing the ordering.
+ * query pipeline so downstream stages may work concurrently without losing the ordering. {@code
+ * row} is this entry's handle into the query's shared {@code ExaminerBackedProjection} - minted
+ * once, by {@link WhereProcessor}, and threaded through every later stage so a property already
+ * resolved for {@code where}/{@code order} isn't resolved again for {@code show}.
  */
-record IndexedEntry(long seq, StorageEntry entry) {}
+record IndexedEntry(long seq, StorageEntry entry, RowId row) {}

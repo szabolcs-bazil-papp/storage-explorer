@@ -22,9 +22,11 @@ import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.*;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
 import com.aestallon.storageexplorer.core.util.Uris;
 import com.formdev.flatlaf.util.SystemFileChooser;
 
@@ -49,8 +51,7 @@ public final class BinaryDataDownloader {
     }
 
     final File target = fileChooser.getSelectedFile();
-    CompletableFuture.runAsync(() -> storageInstance
-        .loadBinaryData(uri)
+    CompletableFuture.runAsync(() -> loadBinaryData(storageInstance, uri)
         .ifPresentOrElse(
             is -> writeBinaryData(is, target, uri, parent),
             () -> SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
@@ -58,6 +59,18 @@ public final class BinaryDataDownloader {
                 "Cannot load binary data: " + uri,
                 "Unreachable URI",
                 JOptionPane.ERROR_MESSAGE))));
+  }
+
+  /** The raw bytes of a {@code BinaryDataObject} entry at {@code uri} — replaces the removed
+   *  {@code StorageInstance#loadBinaryData(URI)} (T4.3) with a resolve + a raw, unmaterialized
+   *  {@code ContentHandle#openStream()} (the content is opaque binary data, never JSON). */
+  private static Optional<InputStream> loadBinaryData(final StorageInstance storageInstance,
+                                                       final URI uri) {
+    return StorageEntryResolver.resolve(storageInstance, uri)
+        .flatMap(entry -> switch (storageInstance.read(entry)) {
+          case ContentLoadResult.Ok ok -> Optional.of(ok.content().openStream());
+          case ContentLoadResult.Err err -> Optional.<InputStream>empty();
+        });
   }
 
   private static void writeBinaryData(final InputStream is,

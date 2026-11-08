@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Szabolcs Bazil Papp
+ * Copyright (C) 2024 it4all Hungary Kft.
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of the
  * GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -15,36 +15,51 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.lang.ref.WeakReference;
-import java.net.URI;
-import java.nio.file.Path;
 import java.util.Objects;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
 
+/**
+ * The shared identity base for every {@link StorageEntry}: a {@link StorageId} and an
+ * {@link EntryUri}, nothing else — no held index reference, no filesystem path (per T4.1; see
+ * {@link StorageEntry}'s own javadoc). Package-private: nothing outside {@code
+ * core.model.entry} constructs or extends these directly — {@link StorageEntryFactory} is the
+ * sole construction choke point (confirmed in the pre-T4.1 audit).
+ */
 abstract sealed class AbstractStorageEntry
     implements StorageEntry
-    permits ListEntry, MapEntry, ObjectEntry, SequenceEntry {
+    permits ListEntry, MapEntry, ObjectEntry, ObjectStreamEntry, SequenceEntry, TableDataEntry {
 
-  protected final WeakReference<StorageIndex<?>> storageIndex;
   protected final StorageId id;
-  protected final Path path;
-  protected final URI uri;
+  protected final EntryUri uri;
 
-  protected AbstractStorageEntry(final StorageIndex<?> storageIndex,
-                                 final Path path,
-                                 final URI uri) {
-    this.storageIndex = new WeakReference<>(storageIndex);
-    this.id = storageIndex.id();
-    this.path = path;
-    this.uri = uri;
+  protected AbstractStorageEntry(final StorageId id, final EntryUri uri) {
+    this.id = Objects.requireNonNull(id, "id cannot be null!");
+    this.uri = Objects.requireNonNull(uri, "uri cannot be null!");
   }
 
   @Override
-  public boolean equals(Object o) {
-    if (o == null || getClass() != o.getClass())
+  public StorageId storageId() {
+    return id;
+  }
+
+  @Override
+  public EntryUri uri() {
+    return uri;
+  }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) {
+      return true;
+    }
+    // strict same-class check, not instanceof: two different leaf types (e.g. a plain
+    // ObjectEntry and a ScopedObjectEntry) must never compare equal even if they somehow shared
+    // an address - preserved from the pre-T4.1 equals, unchanged in spirit.
+    if (o == null || getClass() != o.getClass()) {
       return false;
-    AbstractStorageEntry that = (AbstractStorageEntry) o;
+    }
+    final AbstractStorageEntry that = (AbstractStorageEntry) o;
     return Objects.equals(id, that.id) && Objects.equals(uri, that.uri);
   }
 
@@ -52,5 +67,4 @@ abstract sealed class AbstractStorageEntry
   public int hashCode() {
     return Objects.hash(id, uri);
   }
-
 }

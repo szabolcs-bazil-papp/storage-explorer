@@ -30,7 +30,7 @@ public final class NodeColours {
   }
 
   public static String ofSchema(final StorageEntry entry) {
-    return COLOURS.computeIfAbsent(entry.uri().getScheme(), NodeColours::stringToColour);
+    return COLOURS.computeIfAbsent(entry.uri().scheme(), NodeColours::stringToColour);
   }
 
   public static String ofString(final String string) {

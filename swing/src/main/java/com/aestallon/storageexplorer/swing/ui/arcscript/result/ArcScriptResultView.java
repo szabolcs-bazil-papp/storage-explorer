@@ -529,7 +529,7 @@ public sealed interface ArcScriptResultView extends TabView {
 
       @Override
       public URI uriAt(int idx) {
-        return storageEntries.get(idx).uri();
+        return URI.create(storageEntries.get(idx).uri().toString());
       }
     }
 
@@ -590,7 +590,7 @@ public sealed interface ArcScriptResultView extends TabView {
 
     @Override
     public URI uriAt(int idx) {
-      return rows.get(idx).entry().uri();
+      return URI.create(rows.get(idx).entry().uri().toString());
     }
   }
 }

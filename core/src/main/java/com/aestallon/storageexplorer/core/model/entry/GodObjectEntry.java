@@ -15,30 +15,25 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.net.URI;
-import java.nio.file.Path;
+import com.aestallon.storageexplorer.core.model.EntryUri;
+import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
 import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadResult;
-import com.aestallon.storageexplorer.core.service.StorageIndex;
 
 public final class GodObjectEntry extends ObjectEntry implements StorageEntry {
 
-  private static String determineConciseName(final URI uri) {
-    final String prefix, suffix;
-    final String schema = uri.getScheme();
+  private static String determineConciseName(final EntryUri uri) {
+    final String prefix;
+    final String schema = uri.scheme();
     if (schema.endsWith("-collections")) {
       prefix = schema.substring(0, schema.length() - "-collections".length());
     } else {
       prefix = schema;
     }
 
-    final String path = uri.getPath();
-    final String name;
-    if (path.contains("/")) {
-      name = path.substring(path.lastIndexOf('/') + 1);
-    } else {
-      name = path;
-    }
+    final var segments = uri.segments();
+    final String name = segments.isEmpty() ? "" : segments.get(segments.size() - 1);
 
+    final String suffix;
     if (name.endsWith("-s")) {
       suffix = name.substring(0, name.length() - 2);
     } else {
@@ -49,13 +44,10 @@ public final class GodObjectEntry extends ObjectEntry implements StorageEntry {
 
   private final String conciseName;
 
-  GodObjectEntry(StorageIndex<?> storageIndex,
-                 Path path,
-                 URI uri) {
-    super(storageIndex, path, uri);
+  GodObjectEntry(final StorageId id, final EntryUri uri) {
+    super(id, uri);
     conciseName = determineConciseName(uri);
   }
-
 
   @Override
   public String toString() {
@@ -67,7 +59,7 @@ public final class GodObjectEntry extends ObjectEntry implements StorageEntry {
   }
 
   @Override
-  public String getDisplayName(ObjectEntryLoadResult.SingleVersion version) {
+  public String getDisplayName(final ObjectEntryLoadResult.SingleVersion version) {
     return conciseName;
   }
 

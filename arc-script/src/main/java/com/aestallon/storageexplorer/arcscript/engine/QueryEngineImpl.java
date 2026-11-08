@@ -29,6 +29,7 @@ import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageInstanceType;
 import com.aestallon.storageexplorer.core.service.StorageInstanceExaminer;
+import com.aestallon.storageexplorer.core.service.index.QueryableIndex;
 
 public class QueryEngineImpl implements QueryEngine {
   @Override
@@ -42,62 +43,64 @@ public class QueryEngineImpl implements QueryEngine {
     try (final var s = QuerySourceResolver.resolveStream(storageInstance, query)) {
       entries = s.collect(Collectors.toSet());
     }
-    final var examiner = storageInstance.examiner();
+    final var examiner = new StorageInstanceExaminer();
     final var condition = query.condition;
     final var limit = query._limit;
     final var sortKeys = query._sortKeys;
     final var runningOnFs = StorageInstanceType.FS == storageInstance.type();
     final var cache = StorageInstanceExaminer.ObjectEntryLookupTable.newInstance();
     final var executorLimit = sortKeys.isEmpty() ? limit : -1L;
-    final var res = ConditionEvaluationExecutor
-        .builder(examiner, entries, condition, executorLimit)
-        //.useSemaphore(!runningOnFs)
-        .useCache(cache)
-        .build()
-        .execute();
-    final long end = System.nanoTime();
-
-    final Map<StorageEntry, Integer> sortedIndices;
-    if (!sortKeys.isEmpty()) {
-      final var sorter = new StorageEntrySorter(examiner, cache, sortKeys);
-      sortedIndices = sorter.sort(res);
-      if (limit > 0 && sortedIndices.size() > limit) {
-        sortedIndices.values().removeIf(it -> it >= limit);
-        res.retainAll(sortedIndices.keySet());
-      }
-    } else {
-      sortedIndices = Collections.emptyMap();
-    }
-    final long sortEnd = System.nanoTime();
-
-    final var showColumns = query._columns;
-    final ArcScriptResult.ResultSet resultSet;
-    if (showColumns.isEmpty()) {
-      resultSet = new ArcScriptResult.ResultSet(
-          new ArcScriptResult.ResultSetMeta(Collections.emptyList(), -1L),
-          res.stream().map(ArcScriptResult.QueryResultRow::new).toList());
-    } else {
-      final long renderStart = System.nanoTime();
-      final var columns = showColumns.stream()
-          .map(it -> new ArcScriptResult.ColumnDescriptor(
-              it.propertyInternal(),
-              it.displayNameInternal()))
-          .toList();
-      final var rows = QueryResultRowEvaluationExecutor.builder(examiner, res, columns)
+    try (QueryableIndex index = storageInstance.newQueryIndex()) {
+      final var res = ConditionEvaluationExecutor
+          .builder(examiner, index, entries, condition, executorLimit)
           //.useSemaphore(!runningOnFs)
           .useCache(cache)
           .build()
           .execute();
-      final var resultRows = returnSorted(rows, sortedIndices);
-      final long renderEnd = System.nanoTime();
-      final var meta = new ArcScriptResult.ResultSetMeta(columns, renderEnd - renderStart);
-      resultSet = new ArcScriptResult.ResultSet(meta, resultRows);
-    }
+      final long end = System.nanoTime();
 
-    return new ArcScriptResult.QueryPerformed(
-        query.toString(),
-        resultSet,
-        sortEnd - start);
+      final Map<StorageEntry, Integer> sortedIndices;
+      if (!sortKeys.isEmpty()) {
+        final var sorter = new StorageEntrySorter(examiner, index, cache, sortKeys);
+        sortedIndices = sorter.sort(res);
+        if (limit > 0 && sortedIndices.size() > limit) {
+          sortedIndices.values().removeIf(it -> it >= limit);
+          res.retainAll(sortedIndices.keySet());
+        }
+      } else {
+        sortedIndices = Collections.emptyMap();
+      }
+      final long sortEnd = System.nanoTime();
+
+      final var showColumns = query._columns;
+      final ArcScriptResult.ResultSet resultSet;
+      if (showColumns.isEmpty()) {
+        resultSet = new ArcScriptResult.ResultSet(
+            new ArcScriptResult.ResultSetMeta(Collections.emptyList(), -1L),
+            res.stream().map(ArcScriptResult.QueryResultRow::new).toList());
+      } else {
+        final long renderStart = System.nanoTime();
+        final var columns = showColumns.stream()
+            .map(it -> new ArcScriptResult.ColumnDescriptor(
+                it.propertyInternal(),
+                it.displayNameInternal()))
+            .toList();
+        final var rows = QueryResultRowEvaluationExecutor.builder(examiner, index, res, columns)
+            //.useSemaphore(!runningOnFs)
+            .useCache(cache)
+            .build()
+            .execute();
+        final var resultRows = returnSorted(rows, sortedIndices);
+        final long renderEnd = System.nanoTime();
+        final var meta = new ArcScriptResult.ResultSetMeta(columns, renderEnd - renderStart);
+        resultSet = new ArcScriptResult.ResultSet(meta, resultRows);
+      }
+
+      return new ArcScriptResult.QueryPerformed(
+          query.toString(),
+          resultSet,
+          sortEnd - start);
+    }
   }
 
   private List<ArcScriptResult.QueryResultRow> returnSorted(
@@ -116,6 +119,7 @@ public class QueryEngineImpl implements QueryEngine {
 
   private record StorageEntrySorter(
       StorageInstanceExaminer examiner,
+      QueryableIndex index,
       StorageInstanceExaminer.ObjectEntryLookupTable cache,
       List<SortInstruction.SortKey> sortKeys) {
 
@@ -129,6 +133,7 @@ public class QueryEngineImpl implements QueryEngine {
       return QueryResultRowEvaluationExecutor
           .builder(
               examiner,
+              index,
               entries,
               sortKeys.stream()
                   .map(it -> new ArcScriptResult.ColumnDescriptor(it.target(), it.target()))

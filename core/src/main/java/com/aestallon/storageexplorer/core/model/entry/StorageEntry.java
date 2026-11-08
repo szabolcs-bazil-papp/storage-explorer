@@ -15,19 +15,28 @@
 
 package com.aestallon.storageexplorer.core.model.entry;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.Set;
 import org.smartbit4all.core.utility.StringConstant;
+import com.aestallon.storageexplorer.core.model.EntryUri;
 import com.aestallon.storageexplorer.core.model.instance.dto.StorageId;
-import com.aestallon.storageexplorer.core.util.Uris;
 
+/**
+ * A pure immutable value type: an entry's identity (its {@link StorageId} + {@link EntryUri}) and
+ * what kind of thing it is — nothing else. Per the implementation plan's T4.1 (and the decisions
+ * log's §3 decision 4): no mutable fields, no {@code refresh()}/{@code accept()}/{@code
+ * notifyRefresh()} lifecycle, no cached {@code uriProperties}/{@code scopedEntries}, no
+ * {@code path()} (that had no meaning for a SQL-backed entry anyway — see {@code
+ * StorageInstance.pathOf(StorageEntry)} instead). Content, metadata, and outgoing-reference
+ * knowledge are the responsibility of whichever {@code StorageIndex} implementation is asked —
+ * never the entry itself. Equality is {@code (StorageId, EntryUri)}-based only, deliberately not
+ * content-based: a "duplicate" entry for the same address is, by design, interchangeable with the
+ * original, which is exactly why {@code AbstractStorageEntry} is free to implement {@code equals}/
+ * {@code hashCode} once for the whole hierarchy instead of each leaf reimplementing it.
+ */
 public sealed interface StorageEntry
     permits AbstractStorageEntry, GodObjectEntry, ListEntry, MapEntry, ObjectEntry,
-    ObjectReferenceByIdEntry, ScopedListEntry,
+    ObjectReferenceByIdEntry, ObjectStreamEntry, ScopedListEntry,
     ScopedMapEntry,
-    ScopedObjectEntry, SequenceEntry {
+    ScopedObjectEntry, SequenceEntry, TableDataEntry {
 
   static String typeNameOf(StorageEntry storageEntry) {
     return switch (storageEntry) {
@@ -35,6 +44,8 @@ public sealed interface StorageEntry
       case ListEntry l -> "List";
       case MapEntry m -> "Map";
       case SequenceEntry s -> "Sequence";
+      case ObjectStreamEntry s -> "Object Stream";
+      case TableDataEntry t -> "Table Data";
       case GodObjectEntry g -> "God Object (" + g.typeName() + ")";
       case ObjectReferenceByIdEntry r -> "Reference";
       case ObjectEntry o -> o.typeName();
@@ -43,28 +54,6 @@ public sealed interface StorageEntry
 
   StorageId storageId();
 
-  URI uri();
-
-  Path path();
-
-  Set<UriProperty> uriProperties();
-
-  void refresh();
-
-  boolean valid();
-
-  void accept(StorageEntry storageEntry);
-
-  default boolean references(StorageEntry that) {
-    return uriProperties().stream()
-        .map(it -> it.uri)
-        .anyMatch(Uris.equalsIgnoringVersion(that.uri()));
-  }
-
-  void setUriProperties(Set<UriProperty> uriProperties);
-
-  default Set<UriProperty> uriPropertiesStrict() {
-    return valid() ? uriProperties() : Collections.emptySet();
-  }
+  EntryUri uri();
 
 }

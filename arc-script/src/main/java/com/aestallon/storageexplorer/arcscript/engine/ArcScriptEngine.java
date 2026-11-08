@@ -3,6 +3,7 @@ package com.aestallon.storageexplorer.arcscript.engine;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 import com.aestallon.storageexplorer.arcscript.api.ArcInterpreterFlag;
 import com.aestallon.storageexplorer.arcscript.api.ArcScript;
 import com.aestallon.storageexplorer.arcscript.internal.ArcScriptImpl;
@@ -10,9 +11,9 @@ import com.aestallon.storageexplorer.arcscript.internal.Instruction;
 import com.aestallon.storageexplorer.arcscript.internal.index.IndexInstructionImpl;
 import com.aestallon.storageexplorer.arcscript.internal.query.QueryInstructionImpl;
 import com.aestallon.storageexplorer.arcscript.internal.update.UpdateInstructionImpl;
+import com.aestallon.storageexplorer.core.model.entry.StorageEntry;
 import com.aestallon.storageexplorer.core.model.instance.StorageInstance;
 import com.aestallon.storageexplorer.core.model.loading.IndexingTarget;
-import com.aestallon.storageexplorer.core.service.IndexingStrategy;
 
 /**
  * Interprets and executes a compiled {@link ArcScript}.
@@ -21,17 +22,18 @@ import com.aestallon.storageexplorer.core.service.IndexingStrategy;
  * Historically this engine inserted an <em>implicit</em> {@code index} instruction before every
  * type-sourced query, barrier-waiting on a full discovery pass so query engines could draw their
  * source set from the populated index. Query source acquisition is now streaming
- * ({@code StorageIndex.find} via {@code QuerySourceResolver}): each query lazily discovers - and
- * indexes as a side effect - exactly the entries it needs, so no implicit indexing is performed
- * anymore. Consequences:
+ * ({@link StorageInstance#query(IndexingTarget)} via {@code QuerySourceResolver}): each query
+ * lazily discovers exactly the entries it needs, never caching them, so no implicit indexing is
+ * performed anymore. Consequences:
  *
  * <ul>
  * <li>script results no longer contain implicit {@code IndexingPerformed} elements; discovery
  * cost is part of {@link ArcScriptResult.QueryPerformed#timeTaken()},</li>
  * <li>a query's source set is exactly what discovery finds at execution time - entries deleted
  * from the storage since a previous indexing run no longer linger in query results,</li>
- * <li>explicit {@code index} instructions keep working unchanged, and remain useful for warming
- * the index on demand.</li>
+ * <li>explicit {@code index} instructions keep working, but as a plain discovery-only walk+count
+ * (Milestone 4 removed the eager whole-storage cache there was ever anything to "warm" into) -
+ * {@code index._strategy} is accepted but no longer changes anything.</li>
  * </ul>
  */
 public class ArcScriptEngine {
@@ -80,9 +82,10 @@ public class ArcScriptEngine {
         case IndexInstructionImpl index -> {
           final long start = System.nanoTime();
           final IndexingTarget target = new IndexingTarget(index._schemas, index._types);
-          final int size = storageInstance
-              .index()
-              .refresh(IndexingStrategy.of(index._strategy), target);
+          final long size;
+          try (Stream<StorageEntry> discovered = storageInstance.query(target)) {
+            size = discovered.count();
+          }
           final long end = System.nanoTime();
           instructionResults.add(new ArcScriptResult.IndexingPerformed(
               false,

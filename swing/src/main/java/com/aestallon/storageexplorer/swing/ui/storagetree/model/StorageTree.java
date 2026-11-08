@@ -152,7 +152,7 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
     for (int i = 0; i < sitn.getChildCount(); i++) {
       final var child = (DefaultMutableTreeNode) sitn.getChildAt(i);
       if (child instanceof StorageSchemaTreeNode sstn && Objects.equals(sstn.getUserObject(),
-          objectEntry.uri().getScheme())) {
+          objectEntry.uri().scheme())) {
         schemaNode = sstn;
         break;
       }
@@ -167,7 +167,7 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
         }
 
         if (child instanceof StorageSchemaTreeNode
-            && ((String) child.getUserObject()).compareTo(objectEntry.uri().getScheme()) > 0) {
+            && ((String) child.getUserObject()).compareTo(objectEntry.uri().scheme()) > 0) {
           schemaIdx = i;
           break;
         } else {
@@ -176,7 +176,7 @@ public final class StorageTree extends JTree implements Scrollable, Accessible {
       }
       model.insertNodeInto(
           new StorageSchemaTreeNode(
-              objectEntry.uri().getScheme(),
+              objectEntry.uri().scheme(),
               List.of(objectEntry),
               trackingService),
           sitn,

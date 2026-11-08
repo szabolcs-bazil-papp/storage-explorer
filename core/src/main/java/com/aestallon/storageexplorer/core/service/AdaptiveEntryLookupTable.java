@@ -18,7 +18,7 @@ package com.aestallon.storageexplorer.core.service;
 import java.time.Duration;
 import java.util.function.Function;
 import com.aestallon.storageexplorer.core.model.entry.ObjectEntry;
-import com.aestallon.storageexplorer.core.model.loading.ObjectEntryLoadRequest;
+import com.aestallon.storageexplorer.core.service.index.result.ContentLoadResult;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
@@ -53,8 +53,8 @@ final class AdaptiveEntryLookupTable implements StorageInstanceExaminer.ObjectEn
   }
 
   @Override
-  public ObjectEntryLoadRequest computeIfAbsent(final ObjectEntry objectEntry,
-                                                final Function<? super ObjectEntry, ? extends ObjectEntryLoadRequest> f) {
+  public ContentLoadResult computeIfAbsent(final ObjectEntry objectEntry,
+                                           final Function<? super ObjectEntry, ? extends ContentLoadResult> f) {
     // Caffeine executes its mapping function inside the backing ConcurrentHashMap's bin lock -
     // only a cheap placeholder is created there; the blocking load resolves outside it, under a
     // virtual-thread-friendly lock:
